@@ -896,10 +896,7 @@ namespace Akka.Streams.Dsl
         /// </summary> 
         public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
         {
-            return flow.GroupBy(maxSubstreams, groupingFunc,
-                (f, s) => ((Source<Source<TOut, NotUsed>, TMat>) f).To(s),
-                (f, o) => ((Source<TOut, TMat>) f).DeprecatedAndThen(o)
-                );
+            return flow.GroupBy(maxSubstreams, groupingFunc, (f, s) => ((Source<Source<TOut, NotUsed>, TMat>) f).To(s));
         }
 
         /// <summary>

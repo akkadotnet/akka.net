@@ -884,6 +884,8 @@ namespace Akka.Streams.Dsl
         /// If the group by <paramref name="groupingFunc"/> throws an exception and the supervision decision
         /// is <see cref="Directive.Resume"/> or <see cref="Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
+        /// 
+        /// Function <paramref name="groupingFunc"/>  MUST NOT return null. This will throw exception and trigger supervision decision mechanism.
         /// <para>
         /// Emits when an element for which the grouping function returns a group that has not yet been created.
         /// Emits the new group
@@ -897,9 +899,7 @@ namespace Akka.Streams.Dsl
         public static SubFlow<TOut, TMat, Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
         {
             return flow.GroupBy(maxSubstreams, groupingFunc,
-                (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>) f).To(s),
-                (f, o) => ((Flow<TIn, TOut, TMat>) f).DeprecatedAndThen(o)
-                );
+                (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>) f).To(s));
         }
 
         /// <summary>

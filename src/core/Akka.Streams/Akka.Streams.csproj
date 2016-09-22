@@ -109,7 +109,6 @@
     <Compile Include="Implementation\FanIn.cs" />
     <Compile Include="Implementation\FanOut.cs" />
     <Compile Include="Implementation\FanoutProcessorImpl.cs" />
-    <Compile Include="Implementation\FlowModule.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreter.cs" />
     <Compile Include="Implementation\Fusing\EnumeratorInterpreter.cs" />
     <Compile Include="Implementation\Fusing\Fusing.cs" />
@@ -118,7 +117,6 @@
     <Compile Include="Implementation\Fusing\GraphStages.cs" />
     <Compile Include="Implementation\Fusing\Ops.cs" />
     <Compile Include="Implementation\Fusing\StreamOfStreams.cs" />
-    <Compile Include="Implementation\GroupByProcessorImpl.cs" />
     <Compile Include="Implementation\IO\FilePublisher.cs" />
     <Compile Include="Implementation\IO\FileSubscriber.cs" />
     <Compile Include="Implementation\IO\InputStreamPublisher.cs" />
@@ -133,7 +131,6 @@
     <Compile Include="Implementation\SinkholeSubscriber.cs" />
     <Compile Include="Implementation\Sinks.cs" />
     <Compile Include="Implementation\Sources.cs" />
-    <Compile Include="Implementation\StreamOfStreamProcessors.cs" />
     <Compile Include="Implementation\SubFlowImpl.cs" />
     <Compile Include="Implementation\Throttle.cs" />
     <Compile Include="Implementation\Timers.cs" />

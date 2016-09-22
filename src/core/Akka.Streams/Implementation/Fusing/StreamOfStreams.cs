@@ -13,6 +13,7 @@ using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
+using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -310,6 +311,282 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    internal sealed class GroupBy<T, TKey> : GraphStage<FlowShape<T, Source<T, NotUsed>>>
+    {
+        #region Loigc 
+
+        private sealed class Logic : TimerGraphStageLogic
+        {
+            private readonly GroupBy<T, TKey> _stage;
+            private readonly Dictionary<TKey, SubstreamSource> _activeSubstreams = new Dictionary<TKey, SubstreamSource>();
+            private readonly HashSet<TKey> _closedSubstreams = new HashSet<TKey>();
+            private readonly HashSet<SubstreamSource> _substreamsJustStarted = new HashSet<SubstreamSource>();
+            private readonly Decider _decider;
+            private TimeSpan _timeout;
+            private SubstreamSource _substreamWaitingToBePushed;
+            private Option<TKey> _nextElementKey = Option<TKey>.None;
+            private Option<T> _nextElementValue = Option<T>.None;
+            private long _nextId;
+            private int _firstPushCounter;
+
+
+            public Logic(GroupBy<T, TKey> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                var attribute = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attribute != null ? attribute.Decider : Deciders.StoppingDecider;
+
+                SetHandler(_stage.In, onPush: () =>
+                {
+                    try
+                    {
+                        var element = Grab(_stage.In);
+                        var key = _stage._keyFor(element);
+                        if (key == null)
+                            throw new ArgumentNullException(nameof(key), "Key cannot be null");
+                       
+                        if (_activeSubstreams.ContainsKey(key))
+                        {
+                            var substreamSource = _activeSubstreams[key];
+                            if (substreamSource.IsAvailable)
+                                substreamSource.Push(element);
+                            else
+                            {
+                                _nextElementKey = key;
+                                _nextElementValue = element;
+                            }
+                        }
+                        else
+                        {
+                            if (_activeSubstreams.Count == _stage._maxSubstreams)
+                                Fail(new IllegalStateException($"Cannot open substream for key {key}: too many substreams open"));
+                            else if (_closedSubstreams.Contains(key) && !HasBeenPulled(_stage.In))
+                                Pull(_stage.In);
+                            else
+                                RunSubstream(key, element);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        var directive = _decider(ex);
+                        if (directive == Directive.Stop)
+                            Fail(ex);
+                        else if (!HasBeenPulled(_stage.In))
+                            Pull(_stage.In);
+                    }
+                }, onUpstreamFinish: () =>
+                {
+                    if (!TryCompleteAll())
+                        SetKeepGoing(true);
+                }, onUpstreamFailure: Fail);
+
+                SetHandler(_stage.Out, onPull: () =>
+                {
+                    if (_substreamWaitingToBePushed != null)
+                    {
+                        Push(_stage.Out, Source.FromGraph(_substreamWaitingToBePushed.Source));
+                        ScheduleOnce(_substreamWaitingToBePushed.Key.Value, _timeout);
+                        _substreamWaitingToBePushed = null;
+                    }
+                    else
+                    {
+                        if (HasNextElement)
+                        {
+                            var subSubstreamSource = _activeSubstreams[_nextElementKey.Value];
+                            if (subSubstreamSource.IsAvailable)
+                            {
+                                subSubstreamSource.Push(_nextElementValue.Value);
+                                ClearNextElement();
+                            }
+                        }
+                        else
+                            TryPull(_stage.In);
+                    }
+                }, 
+                onDownstreamFinish: () =>
+                {
+                    if (_activeSubstreams.Count == 0)
+                        CompleteStage();
+                    else
+                        SetKeepGoing(true);
+                });
+            }
+
+            private long NextId => ++_nextId;
+
+            private bool HasNextElement => _nextElementKey.HasValue;
+
+            private void ClearNextElement()
+            {
+                _nextElementKey = Option<TKey>.None;
+                _nextElementValue = Option<T>.None;
+            }
+
+            private bool TryCompleteAll()
+            {
+                if (_activeSubstreams.Count == 0 || (!HasNextElement && _firstPushCounter == 0))
+                {
+                    foreach (var value in _activeSubstreams.Values)
+                        value.Complete();
+                    CompleteStage();
+                    return true;
+                }
+
+                return false;
+            }
+
+            private void Fail(Exception ex)
+            {
+                foreach (var value in _activeSubstreams.Values)
+                    value.Fail(ex);
+
+                FailStage(ex);
+            }
+
+            private bool NeedToPull => !(HasBeenPulled(_stage.In) || IsClosed(_stage.In) || HasNextElement);
+
+            public override void PreStart()
+            {
+                var settings = ActorMaterializer.Downcast(Interpreter.Materializer).Settings;
+                _timeout = settings.SubscriptionTimeoutSettings.Timeout;
+            }
+
+            protected internal override void OnTimer(object timerKey)
+            {
+                if (_activeSubstreams.ContainsKey((TKey)timerKey))
+                {
+                    var substreamSource = _activeSubstreams[(TKey)timerKey];
+                    substreamSource.Timeout(_timeout);
+                    _closedSubstreams.Add((TKey)timerKey);
+                    _activeSubstreams.Remove((TKey)timerKey);
+                    if (IsClosed(_stage.In))
+                        TryCompleteAll();
+                }
+            }
+
+            private void RunSubstream(TKey key, T value)
+            {
+                var substreamSource = new SubstreamSource(this, "GroupBySource " + NextId, key, value);
+                _activeSubstreams.Add(key, substreamSource);
+                _firstPushCounter++;
+                if (IsAvailable(_stage.Out))
+                {
+                    Push(_stage.Out, Source.FromGraph(substreamSource.Source));
+                    ScheduleOnce(key, _timeout);
+                    _substreamWaitingToBePushed = null;
+                }
+                else
+                {
+                    SetKeepGoing(true);
+                    _substreamsJustStarted.Add(substreamSource);
+                    _substreamWaitingToBePushed = substreamSource;
+                }
+            }
+
+            private sealed class SubstreamSource : SubSourceOutlet<T>, IOutHandler
+            {
+                private readonly Logic _logic;
+                private Option<T> _firstElement;
+
+                public SubstreamSource(Logic logic, string name, Option<TKey> key, Option<T> firstElement) : base(logic, name)
+                {
+                    _logic = logic;
+                    _firstElement = firstElement;
+                    Key = key;
+
+                    SetHandler(this);
+                }
+
+                private bool FirstPush => _firstElement.HasValue;
+
+                private bool HasNextForSubSource => _logic.HasNextElement && _logic._nextElementKey.Equals(Key);
+
+                public Option<TKey> Key { get; }
+
+                private void CompleteSubStream()
+                {
+                    Complete();
+                    _logic._activeSubstreams.Remove(Key.Value);
+                    _logic._closedSubstreams.Add(Key.Value);
+                }
+
+                private void TryCompleteHandler()
+                {
+                    if (_logic.IsClosed(_logic._stage.In) && !HasNextForSubSource)
+                    {
+                        CompleteSubStream();
+                        _logic.TryCompleteAll();
+                    }
+                }
+
+                public void OnPull()
+                {
+                    _logic.CancelTimer(Key);
+                    if (FirstPush)
+                    {
+                        _logic._firstPushCounter--;
+                        Push(_firstElement.Value);
+                        _firstElement = Option<T>.None;
+                        _logic._substreamsJustStarted.Remove(this);
+                        if(_logic._substreamsJustStarted.Count == 0)
+                            _logic.SetKeepGoing(false);
+                    }
+                    else if (HasNextForSubSource)
+                    {
+                        Push(_logic._nextElementValue.Value);
+                        _logic.ClearNextElement();
+                    }
+                    else if (_logic.NeedToPull)
+                        _logic.Pull(_logic._stage.In);
+
+                    TryCompleteHandler();
+                }
+
+                public void OnDownstreamFinish()
+                {
+                    if(_logic.HasNextElement && _logic._nextElementKey.Equals(Key))
+                        _logic.ClearNextElement();
+                    if (FirstPush)
+                        _logic._firstPushCounter--;
+                    CompleteSubStream();
+                    if (_logic.IsClosed(_logic._stage.In))
+                        _logic.TryCompleteAll();
+                    else if (_logic.NeedToPull)
+                        _logic.Pull(_logic._stage.In);
+                }
+            }
+        }
+
+        #endregion
+
+        private readonly int _maxSubstreams;
+        private readonly Func<T, TKey> _keyFor;
+
+        public GroupBy(int maxSubstreams, Func<T, TKey> keyFor)
+        {
+            _maxSubstreams = maxSubstreams;
+            _keyFor = keyFor;
+            
+            Shape = new FlowShape<T, Source<T, NotUsed>>(In, Out);
+        }
+
+        private Inlet<T> In { get; } = new Inlet<T>("GroupBy.in");
+
+        private Outlet<Source<T, NotUsed>> Out { get; } = new Outlet<Source<T, NotUsed>>("GroupBy.out");
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.GroupBy;
+
+        public override FlowShape<T, Source<T, NotUsed>> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(this, inheritedAttributes);
+
+        public override string ToString() => "GroupBy";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal static class Split
     {
         internal enum SplitDecision
@@ -447,7 +724,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private TimeSpan _timeout;
             private SubSourceOutlet<T> _substreamSource;
-            private bool _substreamPushed;
+            private bool _substreamWaitingToBePushed;
             private bool _substreamCancelled;
             private readonly Split<T> _stage;
 
@@ -458,16 +735,16 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (_substreamSource == null)
                         Pull(stage._in);
-                    else if (!_substreamPushed)
+                    else if (!_substreamWaitingToBePushed)
                     {
                         Push(stage._out, Source.FromGraph(_substreamSource.Source));
                         ScheduleOnce(SubscriptionTimer, _timeout);
-                        _substreamPushed = true;
+                        _substreamWaitingToBePushed = true;
                     }
                 }, onDownstreamFinish: () =>
                 {
                     // If the substream is already cancelled or it has not been handed out, we can go away
-                    if (!_substreamPushed || _substreamCancelled)
+                    if (!_substreamWaitingToBePushed || _substreamCancelled)
                         CompleteStage();
                 });
 
@@ -509,10 +786,10 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         Push(_stage._out, Source.FromGraph(_substreamSource.Source));
                         ScheduleOnce(SubscriptionTimer, _timeout);
-                        _substreamPushed = true;
+                        _substreamWaitingToBePushed = true;
                     }
                     else
-                        _substreamPushed = false;
+                        _substreamWaitingToBePushed = false;
                 }
             }
 
@@ -540,6 +817,8 @@ namespace Akka.Streams.Implementation.Fusing
         public override FlowShape<T, Source<T, NotUsed>> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "Split";
     }
 
     /// <summary>

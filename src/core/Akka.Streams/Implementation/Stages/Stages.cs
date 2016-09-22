@@ -119,19 +119,6 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes FileSink = Attributes.CreateName("fileSink").And(IODispatcher);
         public static readonly Attributes SeqSink = Attributes.CreateName("seqSink");
     }
-    
-    // FIXME: To be deprecated as soon as stream-of-stream operations are stages
-    internal interface IStageModule
-    {
-        InPort In { get; }
-        OutPort Out { get; }
-    }
-
-    internal abstract class StageModule<TIn, TOut> : FlowModule<TIn, TOut>, IStageModule
-    {
-        InPort IStageModule.In => In;
-        OutPort IStageModule.Out => Out;
-    }
 
     /// <summary>
     /// Stage that is backed by a GraphStage but can be symbolically introspected
@@ -382,62 +369,5 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override string ToString() => "LastOrDefaultStage";
-    }
-
-    // FIXME: These are not yet proper stages, therefore they use the deprecated StageModule infrastructure
-
-    internal interface IGroupBy
-    {
-        int MaxSubstreams { get; }
-        Func<object, object> Extractor { get; }
-    }
-
-    internal sealed class GroupBy<TIn, TKey> : StageModule<TIn, Source<TIn, NotUsed>>, IGroupBy
-    {
-        private readonly Func<TIn, TKey> _extractor;
-        private readonly Func<object, object> _extractorWrapper;
-
-        public GroupBy(int maxSubstreams, Func<TIn, TKey> extractor, Attributes attributes = null)
-        {
-            MaxSubstreams = maxSubstreams;
-            _extractor = extractor;
-            _extractorWrapper = _ => _extractor((TIn) _);
-            Attributes = attributes ?? DefaultAttributes.GroupBy;
-
-            Label = $"GroupBy({maxSubstreams})";
-        }
-
-        public int MaxSubstreams { get; }
-
-        public Func<TIn, TKey> Extractor => _extractor;
-
-        Func<object, object> IGroupBy.Extractor => _extractorWrapper;
-
-        public override IModule CarbonCopy() => new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, Attributes);
-
-        public override Attributes Attributes { get; }
-
-        public override IModule WithAttributes(Attributes attributes)
-            => new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, attributes);
-
-        protected override string Label { get; }
-    }
-
-    internal sealed class DirectProcessor<TIn, TOut> : StageModule<TIn, TOut>
-    {
-        public readonly Func<Tuple<IProcessor<TIn, TOut>, object>> ProcessorFactory;
-
-        public DirectProcessor(Func<Tuple<IProcessor<TIn, TOut>, object>> processorFactory, Attributes attributes = null)
-        {
-            ProcessorFactory = processorFactory;
-            Attributes = attributes ?? DefaultAttributes.Processor;
-        }
-
-        public override IModule CarbonCopy() => new DirectProcessor<TIn, TOut>(ProcessorFactory, Attributes);
-
-        public override Attributes Attributes { get; }
-
-        public override IModule WithAttributes(Attributes attributes)
-            => new DirectProcessor<TIn, TOut>(ProcessorFactory, attributes);
     }
 }

@@ -910,6 +910,8 @@ namespace Akka.Streams.Dsl.Internal
         /// If the group by <paramref name="groupingFunc"/> throws an exception and the supervision decision
         /// is <see cref="Directive.Resume"/> or <see cref="Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
+        /// 
+        /// Function <paramref name="groupingFunc"/>  MUST NOT return null. This will throw exception and trigger supervision decision mechanism.
         /// <para>
         /// Emits when an element for which the grouping function returns a group that has not yet been created.
         /// Emits the new group
@@ -924,15 +926,14 @@ namespace Akka.Streams.Dsl.Internal
             this IFlow<T, TMat> flow,
             int maxSubstreams,
             Func<T, TKey> groupingFunc,
-            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc,
-            Func<IFlow<T, TMat>, StageModule<T, Source<T, NotUsed>>, IFlow<Source<T, NotUsed>, TMat>> deprecatedAndThenFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc)
         {
-            var merge = new GroupByMergeBack<T, TMat, TKey>(flow, deprecatedAndThenFunc, maxSubstreams, groupingFunc);
+            var merge = new GroupByMergeBack<T, TMat, TKey>(flow, maxSubstreams, groupingFunc);
 
             Func<Sink<T, TMat>, TClosed> finish = s =>
             {
                 return toFunc(
-                    deprecatedAndThenFunc(flow, new GroupBy<T, TKey>(maxSubstreams, groupingFunc)),
+                    flow.Via(new Fusing.GroupBy<T, TKey>(maxSubstreams, groupingFunc)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
             };
 
@@ -942,24 +943,21 @@ namespace Akka.Streams.Dsl.Internal
         internal class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
-            private readonly Func<IFlow<TOut, TMat>, StageModule<TOut, Source<TOut, NotUsed>>, IFlow<Source<TOut, NotUsed>, TMat>> _deprecatedAndThenFunc;
             private readonly int _maxSubstreams;
             private readonly Func<TOut, TKey> _groupingFunc;
 
             public GroupByMergeBack(IFlow<TOut, TMat> self,
-                Func<IFlow<TOut, TMat>, StageModule<TOut, Source<TOut, NotUsed>>, IFlow<Source<TOut, NotUsed>, TMat>> deprecatedAndThenFunc,
                 int maxSubstreams,
                 Func<TOut, TKey> groupingFunc)
             {
                 _self = self;
-                _deprecatedAndThenFunc = deprecatedAndThenFunc;
                 _maxSubstreams = maxSubstreams;
                 _groupingFunc = groupingFunc;
             }
 
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
-                return _deprecatedAndThenFunc(_self, new GroupBy<TOut, TKey>(_maxSubstreams, o => _groupingFunc(o)))
+                return _self.Via(new Fusing.GroupBy<TOut, TKey>(_maxSubstreams, _groupingFunc))
                     .Select(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, NotUsed>, T, NotUsed>(breadth));
             }

@@ -13,6 +13,7 @@ using System.Runtime.Serialization;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
 using Akka.Util;
 using Reactive.Streams;
@@ -567,8 +568,7 @@ namespace Akka.Streams.Implementation
 
         public virtual IImmutableDictionary<InPort, OutPort> Upstreams => ImmutableDictionary<InPort, OutPort>.Empty;
 
-        public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this)
-            ;
+        public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);
 
         public abstract Shape Shape { get; }
 
@@ -1681,6 +1681,52 @@ namespace Akka.Streams.Implementation
             }
 
             publisher.Subscribe(UntypedSubscriber.FromTyped(subscriberOrVirtual));
+        }
+    }
+
+    internal interface IProcessorModule
+    {
+        Inlet In { get; }
+        
+        Outlet Out { get; }
+
+        Tuple<object, object> CreateProcessor();
+    }
+
+    internal sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
+    {
+        private readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> _createProcessor;
+
+        public ProcessorModule(Func<Tuple<IProcessor<TIn, TOut>, TMat>> createProcessor, Attributes attributes = null)
+        {
+            _createProcessor = createProcessor;
+            Attributes = attributes ?? DefaultAttributes.Processor;
+            Shape = new FlowShape<TIn, TOut>((Inlet<TIn>)In, (Outlet<TOut>)Out);
+        }
+
+        public Inlet In { get; } = new Inlet<TIn>("ProcessorModule.in");
+
+        public Outlet Out { get; } = new Outlet<TOut>("ProcessorModule.out");
+
+        public override Shape Shape { get; }
+
+        public override IModule ReplaceShape(Shape shape)
+        {
+            if(shape != Shape)
+                throw new NotSupportedException("Cannot replace the shape of a FlowModule");
+            return this;
+        }
+
+        public override IModule CarbonCopy() => WithAttributes(Attributes);
+
+        public override Attributes Attributes { get; }
+
+        public override IModule WithAttributes(Attributes attributes) => new ProcessorModule<TIn, TOut, TMat>(_createProcessor, attributes);
+
+        public Tuple<object, object> CreateProcessor()
+        {
+            var result = _createProcessor();
+            return Tuple.Create<object, object>(result.Item1, result.Item2);
         }
     }
 }
