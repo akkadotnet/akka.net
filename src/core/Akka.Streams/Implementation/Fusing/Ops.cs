@@ -1795,7 +1795,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_buffer.IsFull) overflowStrategy();
                     else
                     {
-                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Capacity < _size - 1);
+                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size - 1);
                         if (!IsTimerActive(TimerName))
                             ScheduleOnce(TimerName, _stage._delay);
                     }

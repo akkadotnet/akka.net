@@ -79,7 +79,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes UnfoldResourceSource = Attributes.CreateName("unfoldResourceSource").And(IODispatcher);
         public static readonly Attributes UnfoldResourceSourceAsync = Attributes.CreateName("unfoldResourceSourceAsync").And(IODispatcher);
         public static readonly Attributes TerminationWatcher = Attributes.CreateName("terminationWatcher");
-        public static readonly Attributes Delay = Attributes.CreateName("delay").And(new Attributes.InputBuffer(16, 16));
+        public static readonly Attributes Delay = Attributes.CreateName("delay");
         public static readonly Attributes ZipN = Attributes.CreateName("zipN");
         public static readonly Attributes ZipWithN = Attributes.CreateName("zipWithN");
 
