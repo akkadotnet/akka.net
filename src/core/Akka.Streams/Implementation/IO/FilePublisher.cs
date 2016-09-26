@@ -77,6 +77,7 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
+                _completionPromise.TrySetResult(new IOResult(0, Result.Failure<NotUsed>(ex)));
                 OnErrorThenStop(ex);
             }
 
