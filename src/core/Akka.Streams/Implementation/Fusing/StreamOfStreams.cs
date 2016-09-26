@@ -321,7 +321,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Dictionary<TKey, SubstreamSource> _activeSubstreams = new Dictionary<TKey, SubstreamSource>();
             private readonly HashSet<TKey> _closedSubstreams = new HashSet<TKey>();
             private readonly HashSet<SubstreamSource> _substreamsJustStarted = new HashSet<SubstreamSource>();
-            private readonly Decider _decider;
+            private readonly Lazy<Decider> _decider;
             private TimeSpan _timeout;
             private SubstreamSource _substreamWaitingToBePushed;
             private Option<TKey> _nextElementKey = Option<TKey>.None;
@@ -333,8 +333,12 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(GroupBy<T, TKey> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
-                var attribute = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                _decider = attribute != null ? attribute.Decider : Deciders.StoppingDecider;
+                
+                _decider = new Lazy<Decider>(() =>
+                {
+                    var attribute = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                    return attribute != null ? attribute.Decider : Deciders.StoppingDecider; ;
+                }); 
 
                 SetHandler(_stage.In, onPush: () =>
                 {
@@ -368,7 +372,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     catch (Exception ex)
                     {
-                        var directive = _decider(ex);
+                        var directive = _decider.Value(ex);
                         if (directive == Directive.Stop)
                             Fail(ex);
                         else if (!HasBeenPulled(_stage.In))
@@ -411,7 +415,7 @@ namespace Akka.Streams.Implementation.Fusing
                         SetKeepGoing(true);
                 });
             }
-
+            
             private long NextId => ++_nextId;
 
             private bool HasNextElement => _nextElementKey.HasValue;
@@ -453,12 +457,13 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (_activeSubstreams.ContainsKey((TKey)timerKey))
+                var key = (TKey) timerKey;
+                if (_activeSubstreams.ContainsKey(key))
                 {
-                    var substreamSource = _activeSubstreams[(TKey)timerKey];
+                    var substreamSource = _activeSubstreams[key];
                     substreamSource.Timeout(_timeout);
-                    _closedSubstreams.Add((TKey)timerKey);
-                    _activeSubstreams.Remove((TKey)timerKey);
+                    _closedSubstreams.Add(key);
+                    _activeSubstreams.Remove(key);
                     if (IsClosed(_stage.In))
                         TryCompleteAll();
                 }
@@ -521,7 +526,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public void OnPull()
                 {
-                    _logic.CancelTimer(Key);
+                    _logic.CancelTimer(Key.Value);
                     if (FirstPush)
                     {
                         _logic._firstPushCounter--;
