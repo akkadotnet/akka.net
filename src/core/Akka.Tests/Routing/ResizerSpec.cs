@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
@@ -189,7 +190,7 @@ namespace Akka.Tests.Routing
             var latch = new TestLatch(3);
             var resizer = new DefaultResizer(lower: 2, upper: 3);
 
-            var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<ResizerTestActor>()));
+            var router = Sys.ActorOf(new RoundRobinPool(0, resizer, Pool.DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId).Props(Props.Create<ResizerTestActor>()));
 
             router.Tell(latch);
             router.Tell(latch);
@@ -228,7 +229,7 @@ namespace Akka.Tests.Routing
                 messagesPerResize: 1,
                 backoffThreshold: 0.0);
 
-            var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<PressureActor>()));
+            var router = Sys.ActorOf(new RoundRobinPool(0, resizer, Pool.DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId).Props(Props.Create<PressureActor>()));
 
             // first message should create the minimum number of routees
             router.Tell("echo");
@@ -279,7 +280,10 @@ namespace Akka.Tests.Routing
                     pressureThreshold: 1,
                     messagesPerResize: 2);
 
-                var router = Sys.ActorOf(new RoundRobinPool(nrOfInstances: 0, resizer : resizer)
+                var router = Sys.ActorOf(new RoundRobinPool(nrOfInstances: 0,
+                        resizer : resizer,
+                        supervisorStrategy: Pool.DefaultSupervisorStrategy,
+                        routerDispatcher: Dispatchers.DefaultDispatcherId)
                     .Props(Props.Create(() => new BackoffActor(Dilated))));
 
                 // put some pressure on the router
