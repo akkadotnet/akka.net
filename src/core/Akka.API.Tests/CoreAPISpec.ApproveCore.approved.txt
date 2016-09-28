@@ -4139,7 +4139,6 @@ namespace Akka.Routing
     {
         public RoundRobinPool(Akka.Configuration.Config config) { }
         public RoundRobinPool(int nrOfInstances) { }
-        public RoundRobinPool(int nrOfInstances, Akka.Routing.Resizer resizer) { }
         public RoundRobinPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem sys) { }
