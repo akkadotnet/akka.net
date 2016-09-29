@@ -216,45 +216,6 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 });
         }
 
-        [Fact]
-        public void Interpreter_error_handling_should_fail_when_OnPull_throws_before_pushing_all_generated_elements()
-        {
-            Action<Decider, bool> test = (decider, absorbTermination) =>
-            {
-                WithOneBoundedSetup(new OneToManyTestStage(decider, absorbTermination),
-                    (lastEvents, upstream, downstream) =>
-                    {
-                        downstream.RequestOne();
-                        lastEvents().Should().BeEquivalentTo(new RequestOne());
-
-                        upstream.OnNext(1);
-                        lastEvents().Should().BeEquivalentTo(new OnNext(1));
-
-                        if (absorbTermination)
-                        {
-                            upstream.OnComplete();
-                            lastEvents().Should().BeEmpty();
-                        }
-
-                        downstream.RequestOne();
-                        lastEvents().Should().BeEquivalentTo(new OnNext(2));
-
-                        downstream.RequestOne();
-                        // 3 => boom
-                        if (absorbTermination)
-                            lastEvents().Should().BeEquivalentTo(new OnError(TE()));
-                        else
-                            lastEvents().Should().BeEquivalentTo(new OnError(TE()), new Cancel());
-                    });
-            };
-
-            test(resumingDecider, false);
-            test(restartingDecider, false);
-            test(resumingDecider, true);
-            test(restartingDecider, true);
-
-        }
-
         private Exception TE()
         {
             return new TestException("TEST");
@@ -264,53 +225,6 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             Func<int> thrower = () => { throw TE(); };
             yield return thrower();
-        }
-
-        public class OneToManyTestStage : PushPullStage<int, int>
-        {
-            private readonly Decider _decider;
-            private readonly bool _absorbTermination;
-            private Queue<int> _buffer;
-
-            public OneToManyTestStage(Decider decider, bool absorbTermination)
-            {
-                _decider = decider;
-                _absorbTermination = absorbTermination;
-                _buffer = new Queue<int>();
-            }
-
-            public override ISyncDirective OnPush(int element, IContext<int> context)
-            {
-                _buffer = new Queue<int>(new [] {element + 1, element + 2, element + 3});
-                return context.Push(element);
-            }
-
-            public override ISyncDirective OnPull(IContext<int> context)
-            {
-                if (_buffer.Count == 0 && context.IsFinishing)
-                    return context.Finish();
-                if (_buffer.Count == 0)
-                    return context.Pull();
-                var element = _buffer.Dequeue();
-                if (element == 3) throw new TestException("TEST");
-                return context.Push(element);
-            }
-
-            public override ITerminationDirective OnUpstreamFinish(IContext<int> context)
-            {
-                return _absorbTermination ? context.AbsorbTermination() : context.Finish();
-            }
-
-            // note that resume will be turned into failure in the Interpreter if exception is thrown from OnPull
-            public override Directive Decide(Exception cause)
-            {
-                return _decider(cause);
-            }
-
-            public override IStage<int, int> Restart()
-            {
-                return new OneToManyTestStage(_decider, _absorbTermination);
-            }
         }
     }
 }
