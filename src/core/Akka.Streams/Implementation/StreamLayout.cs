@@ -1026,6 +1026,9 @@ namespace Akka.Streams.Implementation
             try
             {
                 subscriber.OnSubscribe(wrapped);
+                // Requests will be only allowed once onSubscribe has returned to avoid reentering on an onNext before
+                // onSubscribe completed
+                wrapped.UngateDemandAndRequestBuffered();
             }
             catch (Exception ex)
             {
@@ -1235,12 +1238,37 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        private sealed class WrappedSubscription : ISubscription
+        private interface ISubscriptionState
         {
+            long Demand { get; }
+        }
+
+        private sealed class PassThrough : ISubscriptionState
+        {
+            public static PassThrough Instance { get; } = new PassThrough();
+
+            private PassThrough() { }
+
+            public long Demand { get; } = 0;
+        }
+
+        private sealed class Buffering : ISubscriptionState
+        {
+            public Buffering(long demand)
+            {
+                Demand = demand;
+            }
+
+            public long Demand { get; }
+        }
+
+        private sealed class WrappedSubscription : AtomicReference<ISubscriptionState>, ISubscription
+        {
+            private static readonly Buffering NoBufferedDemand = new Buffering(0);
             private readonly ISubscription _real;
             private readonly VirtualProcessor<T> _processor;
-
-            public WrappedSubscription(ISubscription real, VirtualProcessor<T> processor)
+            
+            public WrappedSubscription(ISubscription real, VirtualProcessor<T> processor) : base(NoBufferedDemand)
             {
                 _real = real;
                 _processor = processor;
@@ -1265,13 +1293,41 @@ namespace Akka.Streams.Implementation
                     }
                 }
                 else
-                    _real.Request(n);
+                {
+                    // NOTE: At this point, batched requests might not have been dispatched, i.e. this can reorder requests.
+                    // This does not violate the Spec though, since we are a "Processor" here and although we, in reality,
+                    // proxy downstream requests, it is virtually *us* that emit the requests here and we are free to follow
+                    // any pattern of emitting them.
+                    // The only invariant we need to keep is to never emit more requests than the downstream emitted so far.
+
+                    while (true)
+                    {
+                        var current = Value;
+                        if (current == PassThrough.Instance)
+                        {
+                            _real.Request(n);
+                            break;
+                        }
+                        if (!CompareAndSet(current, new Buffering(current.Demand + n)))
+                            continue;
+                        break;
+                    }
+                }
             }
 
             public void Cancel()
             {
                 _processor.Value = Inert.Instance;
                 _real.Cancel();
+            }
+
+            public void UngateDemandAndRequestBuffered()
+            {
+                // Ungate demand
+                var requests = GetAndSet(PassThrough.Instance).Demand;
+                // And request buffered demand
+                if(requests > 0)
+                    _real.Request(requests);
             }
         }
     }
