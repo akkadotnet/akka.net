@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.IO
 {
     public class OutputStreamSourceSpec : AkkaSpec
     {
-        private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(300);
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
 
         private readonly ActorMaterializer _materializer;
         private readonly byte[] _bytesArray;
