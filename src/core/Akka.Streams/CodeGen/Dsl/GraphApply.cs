@@ -1,4 +1,4 @@
-﻿// --- auto generated: 19.05.2016 16:27:08 --- //
+﻿// --- auto generated: 30.09.2016 21:17:49 --- //
 //-----------------------------------------------------------------------
 // <copyright file="GraphApply.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
@@ -15,19 +15,14 @@ namespace Akka.Streams.Dsl
 		/// <summary>
 		/// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="Builder{TMat}"/> to the given create function.
 		/// </summary>
-		public static IGraph<TShape, TMat> CreateMaterialized<TShape, TMat>(Func<Builder<TMat>, TShape> buildBlock) where TShape: Shape
+		public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock) where TShape: Shape
 		{
-			var builder = new Builder<TMat>();
+			var builder = new Builder<NotUsed>();
 			var shape = buildBlock(builder);
 			var module = builder.Module.ReplaceShape(shape);
 
-			return new GraphImpl<TShape, TMat>(shape, module);
+			return new GraphImpl<TShape, NotUsed>(shape, module);
 		}
-
-        /// <summary>
-        /// Creates a new <see cref="IGraph{TShape}"/> by passing a <see cref="Builder{NotUsed}"/> to the given create function.
-        /// </summary>
-        public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock) where TShape : Shape => CreateMaterialized(buildBlock);
 		
 		/// <summary>
 		/// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graph <paramref name="g1"/> 

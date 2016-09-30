@@ -477,6 +477,8 @@ namespace Akka.Streams.Tests.IO
                     .BindAndHandle(Flow.Create<ByteString>(), mat2, address.Address.ToString(), address.Port);
 
                 // Ensure server is running
+                bindingTask.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                // and is possible to communicate with 
                 var t = Source.Single(ByteString.FromString(""))
                     .Via(sys2.TcpStream().OutgoingConnection(address))
                     .RunWith(Sink.Ignore<ByteString>(), mat2);
@@ -484,7 +486,6 @@ namespace Akka.Streams.Tests.IO
 
                 sys2.Terminate().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
-                bindingTask.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var binding = bindingTask.Result;
                 binding.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             }
