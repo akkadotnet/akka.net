@@ -106,6 +106,13 @@ namespace Akka.Cluster
                 return;
             }
 
+            var weaklyUp = message as ClusterEvent.MemberWeaklyUp;
+            if (weaklyUp != null)
+            {
+                MemberUp(weaklyUp.Member);
+                return;
+            }
+
             var memberRemoved = message as ClusterEvent.MemberRemoved;
             if (memberRemoved != null)
             {

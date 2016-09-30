@@ -250,7 +250,8 @@ namespace Akka.Cluster.Proto
                 {MemberStatus.Leaving, Msg.MemberStatus.Leaving},
                 {MemberStatus.Exiting, Msg.MemberStatus.Exiting},
                 {MemberStatus.Down, Msg.MemberStatus.Down},
-                {MemberStatus.Removed, Msg.MemberStatus.Removed}
+                {MemberStatus.Removed, Msg.MemberStatus.Removed},
+                {MemberStatus.WeaklyUp, Msg.MemberStatus.WeaklyUp}
             };
 
         private Dictionary<Msg.MemberStatus, MemberStatus> _memberStatusFromProtoCache = null;

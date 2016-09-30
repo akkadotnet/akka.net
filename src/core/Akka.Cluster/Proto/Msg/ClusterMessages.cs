@@ -172,6 +172,7 @@ namespace Akka.Cluster.Proto.Msg {
     Exiting = 3,
     Down = 4,
     Removed = 5,
+    WeaklyUp = 6,
   }
   
   #endregion

@@ -664,7 +664,7 @@ namespace Akka.Cluster.Routing
         /// <returns>TBD</returns>
         public bool IsAvailable(Member member)
         {
-            return member.Status == MemberStatus.Up && SatisfiesRole(member.Roles) &&
+            return (member.Status == MemberStatus.Up || member.Status == MemberStatus.WeaklyUp) && SatisfiesRole(member.Roles) &&
                    (Settings.AllowLocalRoutees || member.Address != Cluster.SelfAddress);
         }
 

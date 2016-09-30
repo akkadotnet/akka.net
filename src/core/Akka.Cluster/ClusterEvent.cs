@@ -292,8 +292,19 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// This class represents a <see cref="MemberStatusChange"/> event where the
-        /// cluster node changed its status to <see cref="MemberStatus.Up"/>.
+        /// Member status changed to WeaklyUp.
+        /// A joining member can be moved to <see cref="MemberStatus.WeaklyUp"/> if convergence
+        /// cannot be reached, i.e. there are unreachable nodes.
+        /// It will be moved to <see cref="MemberStatus.Up"/> when convergence is reached.
+        /// </summary>
+        public sealed class MemberWeaklyUp : MemberStatusChange
+        {
+            public MemberWeaklyUp(Member member)
+                : base(member, MemberStatus.WeaklyUp) { }
+        }
+
+        /// <summary>
+        /// Member status changed to Up.
         /// </summary>
         public sealed class MemberUp : MemberStatusChange
         {
@@ -926,6 +937,7 @@ namespace Akka.Cluster
             foreach (var member in members)
             {
                 if (member.Status == MemberStatus.Joining) yield return new MemberJoined(member);
+                if (member.Status == MemberStatus.WeaklyUp) yield return new MemberWeaklyUp(member);
                 if (member.Status == MemberStatus.Up) yield return new MemberUp(member);
                 if (member.Status == MemberStatus.Leaving) yield return new MemberLeft(member);
                 if (member.Status == MemberStatus.Exiting) yield return new MemberExited(member);

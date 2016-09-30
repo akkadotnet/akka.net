@@ -85,6 +85,7 @@
     <Compile Include="LeaderLeavingSpec.cs" />
     <Compile Include="MembershipChangeListenerExitingSpec.cs" />
     <Compile Include="MembershipChangeListenerUpSpec.cs" />
+    <Compile Include="MemberWeaklyUpSpec.cs" />
     <Compile Include="NodeChurnSpec.cs" />
     <Compile Include="MinMembersBeforeUpSpec.cs" />
     <Compile Include="NodeDowningAndBeingRemovedSpec.cs" />
