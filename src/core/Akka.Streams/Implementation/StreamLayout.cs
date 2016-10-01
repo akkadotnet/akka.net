@@ -599,8 +599,7 @@ namespace Akka.Streams.Implementation
 
         public override bool IsRunnable => false;
 
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => StreamLayout.Ignore.Instance
-            ;
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => StreamLayout.Ignore.Instance;
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -610,11 +609,28 @@ namespace Akka.Streams.Implementation
             throw new NotSupportedException("Cannot replace the shape of empty module");
         }
 
-        public override IModule Compose(IModule other) => other;
+        public override IModule Compose(IModule other) => Compose<object,object,object>(other, Keep.Left);
 
         public override IModule Compose<T1, T2, T3>(IModule other, Func<T1, T2, T3> matFunc)
         {
-            throw new NotSupportedException("It is invalid to combine materialized value with EmptyModule");
+            if (Keep.IsRight(matFunc))
+                return other;
+
+            if (Keep.IsLeft(matFunc))
+            {
+                // If "that" has a fully ignorable materialized value, we ignore it, otherwise we keep the side effect and
+                // explicitly map to NotUsed
+                var materialized =
+                    IgnorableMaterializedValueComposites.Apply(other)
+                        ? (StreamLayout.IMaterializedValueNode) StreamLayout.Ignore.Instance
+                        : new StreamLayout.Transform(_ => NotUsed.Instance, other.MaterializedValueComputation);
+
+                return new CompositeModule(other.IsSealed ? ImmutableArray.Create(other) : other.SubModules, other.Shape,
+                    other.Downstreams, other.Upstreams, materialized, IsSealed ? Attributes.None : Attributes);
+            }
+
+            throw new NotSupportedException(
+                "It is invalid to combine materialized value with EmptyModule except with Keep.Left or Keep.Right");
         }
 
         public override IModule Nest() => this;

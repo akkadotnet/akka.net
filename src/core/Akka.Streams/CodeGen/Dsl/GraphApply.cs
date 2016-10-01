@@ -1,4 +1,4 @@
-﻿// --- auto generated: 30.09.2016 21:17:49 --- //
+﻿// --- auto generated: 01.10.2016 20:12:05 --- //
 //-----------------------------------------------------------------------
 // <copyright file="GraphApply.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
@@ -33,7 +33,7 @@ namespace Akka.Streams.Dsl
 			where TShape1: Shape
 		{
 			var builder = new Builder<TMat>();
-			var shape1 = builder.Add(g1);
+			var shape1 = builder.Add<TShape1, object, TMat, TMat>(g1, Keep.Right);
 			var shape = buildBlock(builder, shape1);
 			var module = builder.Module.ReplaceShape(shape);
 
