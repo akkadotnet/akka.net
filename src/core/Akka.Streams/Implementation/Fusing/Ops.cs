@@ -1738,7 +1738,7 @@ namespace Akka.Streams.Implementation.Fusing
                             _log.Error(ex, $"[{stage._name}] Upstream failed.");
                         else
                             _log.Log(_logLevels.OnFailure,
-                                $"[{stage._name}] Upstream failed, cause {ex.GetType().Name}: {ex.Message}");
+                                $"[{stage._name}] Upstream failed, cause: {ex.GetType()} {ex.Message}");
                     }
 
                     FailStage(ex);
