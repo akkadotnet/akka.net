@@ -1735,7 +1735,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (IsEnabled(_logLevels.OnFailure))
                     {
                         if (_logLevels.OnFailure == LogLevel.ErrorLevel)
-                            _log.Error(ex, $"[{stage._name}] Upstream failed");
+                            _log.Error(ex, $"[{stage._name}] Upstream failed.");
                         else
                             _log.Log(_logLevels.OnFailure,
                                 $"[{stage._name}] Upstream failed, cause {ex.GetType().Name}: {ex.Message}");
@@ -1745,7 +1745,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }, onUpstreamFinish: () =>
                 {
                     if (IsEnabled(_logLevels.OnFinish))
-                        _log.Log(_logLevels.OnFinish, $"[{stage._name}] Upstream finished");
+                        _log.Log(_logLevels.OnFinish, $"[{stage._name}] Upstream finished.");
 
                     CompleteStage();
                 });
@@ -1753,7 +1753,7 @@ namespace Akka.Streams.Implementation.Fusing
                 SetHandler(stage.Outlet, onPull: ()=> Pull(stage.Inlet), onDownstreamFinish: () =>
                 {
                     if (IsEnabled(_logLevels.OnFinish))
-                        _log.Log(_logLevels.OnFinish, $"[{stage._name}] Downstream  finished");
+                        _log.Log(_logLevels.OnFinish, $"[{stage._name}] Downstream finished.");
 
                     CompleteStage();
                 });
