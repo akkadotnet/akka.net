@@ -15,12 +15,15 @@ using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using ActorPublisher = Akka.Streams.Actors.ActorPublisher;
+using Cancel = Akka.Streams.Actors.Cancel;
 
 namespace Akka.Streams.Tests.Actor
 {
@@ -247,7 +250,23 @@ my-dispatcher1 {
             s.ExpectSubscription();
             var s2 = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s2);
-            s2.ExpectSubscriptionAndError().Should().BeOfType<IllegalStateException>();
+            s2.ExpectSubscriptionAndError()
+                .Should()
+                .BeOfType<IllegalStateException>()
+                .Which.Message.Should()
+                .Be($"ActorPublisher {ReactiveStreamsCompliance.SupportsOnlyASingleSubscriber}");
+        }
+
+        [Fact]
+        public void ActorPublisher_should_not_subscribe_the_same_subscriber_multiple_times()
+        {
+            var probe = CreateTestProbe();
+            var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
+            var s = this.CreateManualSubscriberProbe<string>();
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
+            s.ExpectSubscription();
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
+            s.ExpectError().Message.Should().Be(ReactiveStreamsCompliance.CanNotSubscribeTheSameSubscriberMultipleTimes);
         }
 
         [Fact]
@@ -454,7 +473,7 @@ my-dispatcher1 {
         }
     }
 
-    internal class TestPublisher : ActorPublisher<string>
+    internal class TestPublisher : Actors.ActorPublisher<string>
     {
         public static Props Props(IActorRef probe, bool useTestDispatcher = true)
         {
@@ -512,7 +531,7 @@ my-dispatcher1 {
         public IStash Stash { get; set; }
     }
 
-    internal class Sender : ActorPublisher<int>
+    internal class Sender : Actors.ActorPublisher<int>
     {
         public static Props Props { get; } = Props.Create<Sender>().WithDispatcher("akka.test.stream-dispatcher");
 
@@ -559,7 +578,7 @@ my-dispatcher1 {
         }
     }
 
-    internal class TimeoutingPublisher : ActorPublisher<int>
+    internal class TimeoutingPublisher : Actors.ActorPublisher<int>
     {
         public static Props Props(IActorRef probe, TimeSpan timeout) =>
                 Akka.Actor.Props.Create(() => new TimeoutingPublisher(probe, timeout))

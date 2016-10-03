@@ -69,15 +69,6 @@ namespace Akka.Streams
                 flowNames: EnumerableActorName.Create(namePrefix ?? "Flow"));
         }
 
-        internal static ActorMaterializer Downcast(IMaterializer materializer)
-        {
-            //FIXME this method is going to cause trouble for other Materializer implementations
-            if (materializer is ActorMaterializer)
-                return (ActorMaterializer)materializer;
-
-            throw new ArgumentException($"Expected {typeof(ActorMaterializer)} but got {materializer.GetType()}");
-        }
-
         private static ActorSystem ActorSystemOf(IActorRefFactory context)
         {
             if (context is ExtendedActorSystem)
@@ -124,9 +115,25 @@ namespace Akka.Streams
         /// </summary>
         public abstract void Shutdown();
 
-        protected internal abstract IActorRef ActorOf(MaterializationContext context, Props props);
+        public abstract IActorRef ActorOf(MaterializationContext context, Props props);
 
         public void Dispose() => Shutdown();
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal static class ActorMaterializerHelper
+    {
+        internal static ActorMaterializer Downcast(IMaterializer materializer)
+        {
+            //FIXME this method is going to cause trouble for other Materializer implementations
+            var downcast = materializer as ActorMaterializer;
+            if (downcast != null)
+                return downcast;
+
+            throw new ArgumentException($"Expected {typeof(ActorMaterializer)} but got {materializer.GetType()}");
+        }
     }
 
     /// <summary>

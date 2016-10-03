@@ -19,7 +19,10 @@ namespace Akka.Streams.Implementation
         IUntypedPublisher Create(MaterializationContext context, out object materializer);
     }
 
-    internal abstract class SourceModule<TOut, TMat> : AtomicModule, ISourceModule
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public abstract class SourceModule<TOut, TMat> : AtomicModule, ISourceModule
     {
         private readonly SourceShape<TOut> _shape;
 
@@ -71,10 +74,11 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
+    /// INTERNAL API
     /// Holds a `Subscriber` representing the input side of the flow. The `Subscriber` can later be connected to an upstream `Publisher`.
     /// </summary>
     /// <typeparam name="TOut"></typeparam>
-    internal sealed class SubscriberSource<TOut> : SourceModule<TOut, ISubscriber<TOut>>
+    public sealed class SubscriberSource<TOut> : SourceModule<TOut, ISubscriber<TOut>>
     {
         public SubscriberSource(Attributes attributes, SourceShape<TOut> shape) : base(shape)
         {
@@ -98,12 +102,13 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
+    /// INTERNAL API
     /// Construct a transformation starting with given publisher. The transformation steps are executed 
     /// by a series of <see cref="IProcessor{T1,T2}"/> instances that mediate the flow of elements 
     /// downstream and the propagation of back-pressure upstream.
     /// </summary>
     /// <typeparam name="TOut"></typeparam>
-    internal sealed class PublisherSource<TOut> : SourceModule<TOut, NotUsed>
+    public sealed class PublisherSource<TOut> : SourceModule<TOut, NotUsed>
     {
         private readonly IPublisher<TOut> _publisher;
 
@@ -132,7 +137,10 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal sealed class MaybeSource<TOut> : SourceModule<TOut, TaskCompletionSource<TOut>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class MaybeSource<TOut> : SourceModule<TOut, TaskCompletionSource<TOut>>
     {
         public MaybeSource(Attributes attributes, SourceShape<TOut> shape) : base(shape)
         {
@@ -155,10 +163,11 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
+    /// INTERNAL API
     /// Creates and wraps an actor into <see cref="IPublisher{T}"/> from the given <see cref="Props"/>, which should be props for an <see cref="ActorPublisher{T}"/>.
     /// </summary>
     /// <typeparam name="TOut"></typeparam>
-    internal sealed class ActorPublisherSource<TOut> : SourceModule<TOut, IActorRef>
+    public sealed class ActorPublisherSource<TOut> : SourceModule<TOut, IActorRef>
     {
         private readonly Props _props;
 
@@ -178,13 +187,16 @@ namespace Akka.Streams.Implementation
 
         public override IPublisher<TOut> Create(MaterializationContext context, out IActorRef materializer)
         {
-            var publisherRef = ActorMaterializer.Downcast(context.Materializer).ActorOf(context, _props);
+            var publisherRef = ActorMaterializerHelper.Downcast(context.Materializer).ActorOf(context, _props);
             materializer = publisherRef;
             return new ActorPublisherImpl<TOut>(publisherRef);
         }
     }
 
-    internal sealed class ActorRefSource<TOut> : SourceModule<TOut, IActorRef>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class ActorRefSource<TOut> : SourceModule<TOut, IActorRef>
     {
         private readonly int _bufferSize;
         private readonly OverflowStrategy _overflowStrategy;
@@ -210,7 +222,7 @@ namespace Akka.Streams.Implementation
 
         public override IPublisher<TOut> Create(MaterializationContext context, out IActorRef materializer)
         {
-            var mat = ActorMaterializer.Downcast(context.Materializer);
+            var mat = ActorMaterializerHelper.Downcast(context.Materializer);
             materializer = mat.ActorOf(context, ActorRefSourceActor<TOut>.Props(_bufferSize, _overflowStrategy, mat.Settings));
             return new ActorPublisherImpl<TOut>(materializer);
         }

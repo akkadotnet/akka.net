@@ -198,7 +198,7 @@ namespace Akka.Streams
         /// </summary>
         public string GetNameLifted() => GetNameOrDefault(null);
 
-        internal string GetNameOrDefault(string defaultIfNotFound = "unknown-operation")
+        public string GetNameOrDefault(string defaultIfNotFound = "unknown-operation")
         {
             if (_attributes.Length == 0)
                 return null;

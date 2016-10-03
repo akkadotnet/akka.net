@@ -11,7 +11,7 @@ using Reactive.Streams;
 
 namespace Akka.Streams
 {
-    internal interface IUntypedSubscriber
+    public interface IUntypedSubscriber
     {
         void OnSubscribe(ISubscription subscription);
         void OnNext(object element);

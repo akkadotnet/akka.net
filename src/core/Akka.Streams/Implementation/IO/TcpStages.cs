@@ -194,7 +194,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class IncomingConnectionStage : GraphStage<FlowShape<ByteString, ByteString>>
+    public class IncomingConnectionStage : GraphStage<FlowShape<ByteString, ByteString>>
     {
         private readonly IActorRef _connection;
         private readonly EndPoint _remoteAddress;

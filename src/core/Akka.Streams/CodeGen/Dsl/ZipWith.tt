@@ -72,7 +72,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(<#= string.Join(", ", Enumerable.Range(0, i).Select(x => "Grab(_stage.In" + x + ")")) #>));
+				Push(_stage.Out, _stage.Zipper(<#= string.Join(", ", Enumerable.Range(0, i).Select(x => "Grab(_stage.In" + x + ")")) #>));
 				if (_willShutDown) CompleteStage();
                 else {
 <# for (var t = 0; t < i; t++) { #>
@@ -94,10 +94,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<<#= typeParams #>, TOut> _zipper;
 		public ZipWith(Func<<#= typeParams #>, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new <#= fanInShape #>("ZipWith");
 			Out = Shape.Out;
@@ -115,7 +114,11 @@ public Inlet<TIn<#= t #>> In<#= t #> { get; }
 		<# } #>
 
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override <#= fanInShape #> Shape { get; }
+
+		public Func<<#= typeParams #>, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);

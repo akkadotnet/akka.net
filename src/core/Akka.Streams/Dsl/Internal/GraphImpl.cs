@@ -6,10 +6,14 @@
 //-----------------------------------------------------------------------
 
 using Akka.Streams.Implementation;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl.Internal
 {
-    internal class GraphImpl<TShape, TMat> : IGraph<TShape, TMat> where TShape : Shape
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public class GraphImpl<TShape, TMat> : IGraph<TShape, TMat> where TShape : Shape
     {
         public GraphImpl(TShape shape, IModule module)
         {
@@ -30,5 +34,17 @@ namespace Akka.Streams.Dsl.Internal
         public IGraph<TShape, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
 
         public override string ToString() => $"Graph({Shape}, {Module})";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public static class ModuleExtractor
+    {
+        public static Option<IModule> Unapply<TShape, TMat>(IGraph<TShape, TMat> graph) where TShape : Shape
+        {
+            var module = graph as IModule;
+            return module != null ? new Option<IModule>(module) : Option<IModule>.None;
+        }
     }
 }

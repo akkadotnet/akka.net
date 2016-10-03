@@ -15,14 +15,49 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.Implementation.Stages;
 using Akka.Util;
 using Akka.Util.Internal;
-using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
-    public sealed class ActorMaterializerImpl : ActorMaterializer
+    /// <summary>
+    /// ExtendedActorMaterializer used by subtypes which materializer using GraphInterpreterShell
+    /// </summary>
+    public abstract class ExtendedActorMaterializer : ActorMaterializer
+    {
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser);
+
+        public override IActorRef ActorOf(MaterializationContext context, Props props)
+        {
+            var dispatcher = props.Deploy.Dispatcher == Deploy.NoDispatcherGiven
+                ? EffectiveSettings(context.EffectiveAttributes).Dispatcher
+                : props.Dispatcher;
+
+            return ActorOf(props, context.StageName, dispatcher);
+        }
+
+        protected IActorRef ActorOf(Props props, string name, string dispatcher)
+        {
+            if (Supervisor is LocalActorRef)
+            {
+                var aref = (LocalActorRef)Supervisor;
+                return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
+            }
+            if (Supervisor is RepointableActorRef)
+            {
+                var aref = (RepointableActorRef)Supervisor;
+                if (aref.IsStarted)
+                    return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
+
+                var timeout = aref.Underlying.System.Settings.CreationTimeout;
+                var f = Supervisor.Ask<IActorRef>(new StreamSupervisor.Materialize(props.WithDispatcher(dispatcher), name), timeout);
+                return f.Result;
+            }
+            throw new IllegalStateException($"Stream supervisor must be a local actor, was [{Supervisor.GetType()}]");
+        }
+    }
+
+    public sealed class ActorMaterializerImpl : ExtendedActorMaterializer
     {
         #region Materializer session implementation
 
@@ -210,7 +245,7 @@ namespace Akka.Streams.Implementation
 
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable) => Materialize(runnable, null);
 
-        internal TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser)
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser)
         {
             var runnableGraph = _settings.IsAutoFusing
                 ? Fusing.Fusing.Aggressive(runnable)
@@ -237,44 +272,15 @@ namespace Akka.Streams.Implementation
                 Supervisor.Tell(PoisonPill.Instance);
         }
 
-        protected internal override IActorRef ActorOf(MaterializationContext context, Props props)
-        {
-            var dispatcher = props.Deploy.Dispatcher == Deploy.NoDispatcherGiven
-                ? EffectiveSettings(context.EffectiveAttributes).Dispatcher
-                : props.Dispatcher;
-
-            return ActorOf(props, context.StageName, dispatcher);
-        }
-
-        private IActorRef ActorOf(Props props, string name, string dispatcher)
-        {
-            if (Supervisor is LocalActorRef)
-            {
-                var aref = (LocalActorRef)Supervisor;
-                return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
-            }
-            if (Supervisor is RepointableActorRef)
-            {
-                var aref = (RepointableActorRef)Supervisor;
-                if (aref.IsStarted)
-                    return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
-
-                var timeout = aref.Underlying.System.Settings.CreationTimeout;
-                var f = Supervisor.Ask<IActorRef>(new StreamSupervisor.Materialize(props.WithDispatcher(dispatcher), name), timeout);
-                return f.Result;
-            }
-            throw new IllegalStateException($"Stream supervisor must be a local actor, was [{Supervisor.GetType()}]");
-        }
-
         private ILoggingAdapter GetLogger() => _system.Log;
     }
 
-    internal class SubFusingActorMaterializerImpl : IMaterializer
+    public class SubFusingActorMaterializerImpl : IMaterializer
     {
-        private readonly ActorMaterializerImpl _delegateMaterializer;
+        private readonly ExtendedActorMaterializer _delegateMaterializer;
         private readonly Func<GraphInterpreterShell, IActorRef> _registerShell;
 
-        public SubFusingActorMaterializerImpl(ActorMaterializerImpl delegateMaterializer, Func<GraphInterpreterShell, IActorRef> registerShell)
+        public SubFusingActorMaterializerImpl(ExtendedActorMaterializer delegateMaterializer, Func<GraphInterpreterShell, IActorRef> registerShell)
         {
             _delegateMaterializer = delegateMaterializer;
             _registerShell = registerShell;
@@ -295,7 +301,7 @@ namespace Akka.Streams.Implementation
         public MessageDispatcher ExecutionContext => _delegateMaterializer.ExecutionContext;
     }
 
-    internal class FlowNameCounter : ExtensionIdProvider<FlowNameCounter>, IExtension
+    public class FlowNameCounter : ExtensionIdProvider<FlowNameCounter>, IExtension
     {
         public static FlowNameCounter Instance(ActorSystem system)
             => system.WithExtension<FlowNameCounter, FlowNameCounter>();

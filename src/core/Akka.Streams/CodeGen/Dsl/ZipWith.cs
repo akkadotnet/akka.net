@@ -1,5 +1,5 @@
 ﻿
-// --- auto generated: 21.04.2016 07:48:48 --- //
+// --- auto generated: 02.10.2016 19:34:41 --- //
 //-----------------------------------------------------------------------
 // <copyright file="ZipWith.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
@@ -127,7 +127,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1)));
+				Push(_stage.Out, _stage.Zipper(Grab(_stage.In0), Grab(_stage.In1)));
 				if (_willShutDown) CompleteStage();
                 else {
                     Pull(_stage.In0);
@@ -147,10 +147,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<TIn0, TIn1, TOut> _zipper;
 		public ZipWith(Func<TIn0, TIn1, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new FanInShape<TIn0, TIn1, TOut>("ZipWith");
 			Out = Shape.Out;
@@ -166,7 +165,11 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn1> In1 { get; }
 		
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override FanInShape<TIn0, TIn1, TOut> Shape { get; }
+
+		public Func<TIn0, TIn1, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
@@ -220,7 +223,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2)));
+				Push(_stage.Out, _stage.Zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2)));
 				if (_willShutDown) CompleteStage();
                 else {
                     Pull(_stage.In0);
@@ -242,10 +245,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<TIn0, TIn1, TIn2, TOut> _zipper;
 		public ZipWith(Func<TIn0, TIn1, TIn2, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new FanInShape<TIn0, TIn1, TIn2, TOut>("ZipWith");
 			Out = Shape.Out;
@@ -263,7 +265,11 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn2> In2 { get; }
 		
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TOut> Shape { get; }
+
+		public Func<TIn0, TIn1, TIn2, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
@@ -326,7 +332,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3)));
+				Push(_stage.Out, _stage.Zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3)));
 				if (_willShutDown) CompleteStage();
                 else {
                     Pull(_stage.In0);
@@ -350,10 +356,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<TIn0, TIn1, TIn2, TIn3, TOut> _zipper;
 		public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new FanInShape<TIn0, TIn1, TIn2, TIn3, TOut>("ZipWith");
 			Out = Shape.Out;
@@ -373,7 +378,11 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn3> In3 { get; }
 		
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TOut> Shape { get; }
+
+		public Func<TIn0, TIn1, TIn2, TIn3, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
@@ -445,7 +454,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4)));
+				Push(_stage.Out, _stage.Zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4)));
 				if (_willShutDown) CompleteStage();
                 else {
                     Pull(_stage.In0);
@@ -471,10 +480,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> _zipper;
 		public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut>("ZipWith");
 			Out = Shape.Out;
@@ -496,7 +504,11 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn4> In4 { get; }
 		
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> Shape { get; }
+
+		public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
@@ -577,7 +589,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5)));
+				Push(_stage.Out, _stage.Zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5)));
 				if (_willShutDown) CompleteStage();
                 else {
                     Pull(_stage.In0);
@@ -605,10 +617,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> _zipper;
 		public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut>("ZipWith");
 			Out = Shape.Out;
@@ -632,7 +643,11 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn5> In5 { get; }
 		
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> Shape { get; }
+
+		public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
@@ -722,7 +737,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6)));
+				Push(_stage.Out, _stage.Zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6)));
 				if (_willShutDown) CompleteStage();
                 else {
                     Pull(_stage.In0);
@@ -752,10 +767,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> _zipper;
 		public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut>("ZipWith");
 			Out = Shape.Out;
@@ -781,7 +795,11 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn6> In6 { get; }
 		
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> Shape { get; }
+
+		public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
@@ -880,7 +898,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6), Grab(_stage.In7)));
+				Push(_stage.Out, _stage.Zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6), Grab(_stage.In7)));
 				if (_willShutDown) CompleteStage();
                 else {
                     Pull(_stage.In0);
@@ -912,10 +930,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> _zipper;
 		public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut>("ZipWith");
 			Out = Shape.Out;
@@ -943,7 +960,11 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn7> In7 { get; }
 		
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> Shape { get; }
+
+		public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
@@ -1051,7 +1072,7 @@ namespace Akka.Streams.Dsl
 
 			private void PushAll()
 			{
-				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6), Grab(_stage.In7), Grab(_stage.In8)));
+				Push(_stage.Out, _stage.Zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6), Grab(_stage.In7), Grab(_stage.In8)));
 				if (_willShutDown) CompleteStage();
                 else {
                     Pull(_stage.In0);
@@ -1085,10 +1106,9 @@ namespace Akka.Streams.Dsl
             }
 		}
 
-		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> _zipper;
 		public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> zipper)
 		{
-			_zipper = zipper;
+			Zipper = zipper;
 			InitialAttributes = Attributes.CreateName("ZipWith");
 			Shape = new FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut>("ZipWith");
 			Out = Shape.Out;
@@ -1118,7 +1138,11 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn8> In8 { get; }
 		
         protected sealed override Attributes InitialAttributes { get; }
+
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> Shape { get; }
+
+		public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> Zipper { get; }
+
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);

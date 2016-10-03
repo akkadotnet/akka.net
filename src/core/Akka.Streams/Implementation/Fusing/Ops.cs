@@ -18,13 +18,14 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.Fusing
 {
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Select<TIn, TOut> : PushStage<TIn, TOut>
+    public sealed class Select<TIn, TOut> : PushStage<TIn, TOut>
     {
         private readonly Func<TIn, TOut> _func;
         private readonly Decider _decider;
@@ -43,7 +44,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Where<T> : SimpleLinearGraphStage<T>
+    public sealed class Where<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
 
@@ -59,14 +60,14 @@ namespace Akka.Streams.Implementation.Fusing
                     try
                     {
                         var element = Grab(stage.Inlet);
-                        if(stage._predicate(element))
+                        if (stage._predicate(element))
                             Push(stage.Outlet, element);
                         else
                             Pull(stage.Inlet);
                     }
                     catch (Exception ex)
                     {
-                        if(decider(ex) == Directive.Stop)
+                        if (decider(ex) == Directive.Stop)
                             FailStage(ex);
                         else
                             Pull(stage.Inlet);
@@ -79,7 +80,7 @@ namespace Akka.Streams.Implementation.Fusing
             public override string ToString() => "WhereLogic";
         }
 
-        #endregion  
+        #endregion
 
         private readonly Predicate<T> _predicate;
 
@@ -97,7 +98,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class TakeWhile<T> : SimpleLinearGraphStage<T>
+    public sealed class TakeWhile<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
 
@@ -114,14 +115,14 @@ namespace Akka.Streams.Implementation.Fusing
                     try
                     {
                         var element = Grab(take.Inlet);
-                        if(take._predicate(element))
+                        if (take._predicate(element))
                             Push(take.Outlet, element);
                         else
                             CompleteStage();
                     }
                     catch (Exception ex)
                     {
-                        if(decider(ex) == Directive.Stop)
+                        if (decider(ex) == Directive.Stop)
                             FailStage(ex);
                         else
                             Pull(take.Inlet);
@@ -152,7 +153,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class SkipWhile<T> : GraphStage<FlowShape<T,T>>
+    public sealed class SkipWhile<T> : GraphStage<FlowShape<T, T>>
     {
         #region Logic
 
@@ -185,7 +186,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected override void OnResume(Exception ex)
             {
-                if(!HasBeenPulled(_skip.In))
+                if (!HasBeenPulled(_skip.In))
                     Pull(_skip.In);
             }
         }
@@ -213,11 +214,11 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override string ToString() => "SkipWhile";
     }
-    
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal abstract class SupervisedGraphStageLogic : GraphStageLogic
+    public abstract class SupervisedGraphStageLogic : GraphStageLogic
     {
         private readonly Lazy<Decider> _decider;
 
@@ -268,7 +269,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Collect<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    public sealed class Collect<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
 
@@ -286,19 +287,19 @@ namespace Akka.Streams.Implementation.Fusing
                     var result = WithSupervision(() => collect._func(Grab(collect.In)));
                     if (result.HasValue)
                     {
-                        if(result.Value.IsDefaultForType())
+                        if (result.Value.IsDefaultForType())
                             Pull(collect.In);
                         else
                             Push(collect.Out, result.Value);
                     }
                 });
 
-                SetHandler(collect.Out, onPull: ()=> Pull(collect.In));
+                SetHandler(collect.Out, onPull: () => Pull(collect.In));
             }
 
             protected override void OnResume(Exception ex)
             {
-                if(!HasBeenPulled(_collect.In))
+                if (!HasBeenPulled(_collect.In))
                     Pull(_collect.In);
             }
         }
@@ -330,8 +331,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-
-    internal sealed class Recover<T> : GraphStage<FlowShape<T, T>>
+    public sealed class Recover<T> : GraphStage<FlowShape<T, T>>
     {
         #region Logic 
 
@@ -399,11 +399,10 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "Recover";
     }
 
-
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Take<T> : SimpleLinearGraphStage<T>
+    public sealed class Take<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
 
@@ -455,7 +454,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Drop<T> : SimpleLinearGraphStage<T>
+    public sealed class Drop<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
 
@@ -499,7 +498,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Scan<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    public sealed class Scan<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic 
 
@@ -540,7 +539,14 @@ namespace Akka.Streams.Implementation.Fusing
                 };
 
                 // Initial behavior makes sure that the zero gets flushed if upstream is empty
-                SetHandler(stage.In, TotallyIgnorantInput);
+                SetHandler(stage.In, onPush: () => { }, onUpstreamFinish: () =>
+                {
+                    SetHandler(stage.Out, onPull: () =>
+                    {
+                        Push(stage.Out, aggregator);
+                        CompleteStage();
+                    });
+                });
                 SetHandler(stage.Out, onPull: () =>
                 {
                     Push(stage.Out, aggregator);
@@ -571,7 +577,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(this, inheritedAttributes);
 
         public override string ToString() => "Scan";
     }
@@ -579,39 +586,85 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Aggregate<TIn, TOut> : PushPullStage<TIn, TOut>
+    public sealed class Aggregate<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
+        #region Logic
+
+        private sealed class Logic : SupervisedGraphStageLogic
+        {
+            private readonly Aggregate<TIn, TOut> _stage;
+            private TOut _aggregator;
+
+            public Logic(Aggregate<TIn, TOut> stage, Attributes inheritedAttributes)
+                : base(inheritedAttributes, stage.Shape)
+            {
+                _stage = stage;
+                _aggregator = _stage._zero;
+
+                SetHandler(stage.In,
+                    onPush: () =>
+                    {
+                        var element = WithSupervision(() => Grab(stage.In));
+                        if (element.HasValue)
+                            _aggregator = _stage._aggregate(_aggregator, element.Value);
+
+                        Pull(stage.In);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        if (IsAvailable(stage.Out))
+                        {
+                            Push(stage.Out, _aggregator);
+                            CompleteStage();
+                        }
+                    });
+
+                SetHandler(stage.Out, onPull: () =>
+                {
+                    if (IsClosed(stage.In))
+                    {
+                        Push(stage.Out, _aggregator);
+                        CompleteStage();
+                    }
+                    else
+                        Pull(stage.In);
+                });
+            }
+
+            protected override void OnResume(Exception ex) => _aggregator = _stage._zero;
+        }
+
+        #endregion
+
         private readonly TOut _zero;
         private readonly Func<TOut, TIn, TOut> _aggregate;
-        private readonly Decider _decider;
-        private TOut _aggregator;
 
-        public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate, Decider decider)
+        public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate)
         {
-            _zero = _aggregator = zero;
+            _zero = zero;
             _aggregate = aggregate;
-            _decider = decider;
+
+            Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
-        {
-            _aggregator = _aggregate(_aggregator, element);
-            return context.Pull();
-        }
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Aggregate;
 
-        public override ISyncDirective OnPull(IContext<TOut> context) => context.IsFinishing ? (ISyncDirective) context.PushAndFinish(_aggregator) : context.Pull();
+        public Inlet<TIn> In { get; } = new Inlet<TIn>("Aggregate.in");
 
-        public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context) => context.AbsorbTermination();
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Aggregate.out");
 
-        public override Directive Decide(Exception cause) => _decider(cause);
+        public override FlowShape<TIn, TOut> Shape { get; }
 
-        public override IStage<TIn, TOut> Restart() => new Aggregate<TIn, TOut>(_zero, _aggregate, _decider);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(this, inheritedAttributes);
+
+        public override string ToString() => "Aggregate";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Intersperse<T> : GraphStage<FlowShape<T, T>>
+    public sealed class Intersperse<T> : GraphStage<FlowShape<T, T>>
     {
         #region internal class
 
@@ -629,7 +682,8 @@ namespace Akka.Streams.Implementation.Fusing
             public override void OnPush()
             {
                 // if else (to avoid using Iterator[T].flatten in hot code)
-                if (_stage.InjectStartEnd) _logic.EmitMultiple(_stage.Out, new[] {_stage._start, _logic.Grab(_stage.In)});
+                if (_stage.InjectStartEnd)
+                    _logic.EmitMultiple(_stage.Out, new[] {_stage._start, _logic.Grab(_stage.In)});
                 else _logic.Emit(_stage.Out, _logic.Grab(_stage.In));
                 _logic.SetHandler(_stage.In, new RestInHandler(_stage, _logic));
             }
@@ -652,7 +706,8 @@ namespace Akka.Streams.Implementation.Fusing
                 _logic = logic;
             }
 
-            public override void OnPush() => _logic.EmitMultiple(_stage.Out, new[] {_stage._inject, _logic.Grab(_stage.In)});
+            public override void OnPush()
+                => _logic.EmitMultiple(_stage.Out, new[] {_stage._inject, _logic.Grab(_stage.In)});
 
             public override void OnUpstreamFinish()
             {
@@ -706,51 +761,84 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Grouped<T> : PushPullStage<T, IEnumerable<T>>
+    public sealed class Grouped<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly Grouped<T> _stage;
+            private List<T> _buffer;
+            private int _left;
+
+            public Logic(Grouped<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                _buffer = new List<T>(stage._count);
+                _left = stage._count;
+
+                SetHandler(stage.In, onPush: () =>
+                {
+                    _buffer.Add(Grab(stage.In));
+                    _left--;
+
+                    if (_left == 0)
+                        PushAndClearBuffer();
+                    else
+                        Pull(stage.In);
+                }, onUpstreamFinish: () =>
+                {
+                    // This means the buf is filled with some elements but not enough (left < n) to group together.
+                    // Since the upstream has finished we have to push them to downstream though.
+                    if (_left < stage._count)
+                        PushAndClearBuffer();
+
+                    CompleteStage();
+                });
+
+                SetHandler(stage.Out, onPull: () => Pull(stage.In));
+            }
+
+            private void PushAndClearBuffer()
+            {
+                var elements = _buffer;
+                _buffer = new List<T>(_stage._count);
+                _left = _stage._count;
+                Push(_stage.Out, elements);
+            }
+        }
+
+        #endregion
+
         private readonly int _count;
-        private List<T> _buffer;
-        private int _left;
 
         public Grouped(int count)
         {
-            _count = _left = count;
-            _buffer = new List<T>(_count);
+            if (count <= 0)
+                throw new ArgumentException("count must be greater than 0", nameof(count));
+
+            _count = count;
+
+            Shape = new FlowShape<T, IEnumerable<T>>(In, Out);
         }
 
-        public override ISyncDirective OnPush(T element, IContext<IEnumerable<T>> context)
-        {
-            _buffer.Add(element);
-            _left--;
-            if (_left == 0)
-            {
-                var result = _buffer;
-                _buffer = new List<T>(_count);
-                _left = _count;
-                return context.Push(result);
-            }
-            return context.Pull();
-        }
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Grouped;
 
-        public override ISyncDirective OnPull(IContext<IEnumerable<T>> context)
-        {
-            if (context.IsFinishing)
-            {
-                var result = _buffer;
-                _left = _count;
-                _buffer = new List<T>(_count);
-                return context.PushAndFinish(result);
-            }
-            return context.Pull();
-        }
+        public Inlet<T> In { get; } = new Inlet<T>("Grouped.in");
 
-        public override ITerminationDirective OnUpstreamFinish(IContext<IEnumerable<T>> context) => _left == _count ? context.Finish() : context.AbsorbTermination();
+        public Outlet<IEnumerable<T>> Out { get; } = new Outlet<IEnumerable<T>>("Grouped.out");
+
+        public override FlowShape<T, IEnumerable<T>> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "Grouped";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class LimitWeighted<T> : GraphStage<FlowShape<T, T>>
+    public sealed class LimitWeighted<T> : GraphStage<FlowShape<T, T>>
     {
         #region Logic
 
@@ -759,7 +847,8 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly LimitWeighted<T> _limit;
             private long _left;
 
-            public Logic(LimitWeighted<T> limit, Attributes inheritedAttributes) : base(inheritedAttributes, limit.Shape)
+            public Logic(LimitWeighted<T> limit, Attributes inheritedAttributes)
+                : base(inheritedAttributes, limit.Shape)
             {
                 _limit = limit;
                 _left = limit._max;
@@ -816,7 +905,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<T, T> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(this, inheritedAttributes);
 
         public override string ToString() => "LimitWeighted";
     }
@@ -824,55 +914,91 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Sliding<T> : PushPullStage<T, IEnumerable<T>>
+    public sealed class Sliding<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private IImmutableList<T> _buffer;
+
+            public Logic(Sliding<T> stage) : base(stage.Shape)
+            {
+                _buffer = ImmutableList<T>.Empty;
+
+                SetHandler(stage.In, onPush: () =>
+                {
+                    _buffer = _buffer.Add(Grab(stage.In));
+                    if (_buffer.Count < stage._count)
+                        Pull(stage.In);
+                    else if (_buffer.Count == stage._count)
+                        Push(stage.Out, _buffer);
+                    else if (stage._step <= stage._count)
+                    {
+                        _buffer = _buffer.Drop(stage._step).ToImmutableList();
+                        if (_buffer.Count == stage._count)
+                            Push(stage.Out, _buffer);
+                        else
+                            Pull(stage.In);
+                    }
+                    else if (stage._step > stage._count)
+                    {
+                        if (_buffer.Count == stage._step)
+                            _buffer = _buffer.Drop(stage._step).ToImmutableList();
+                        Pull(stage.In);
+                    }
+                }, onUpstreamFinish: () =>
+                {
+                    // We can finish current stage directly if:
+                    //  1. the buf is empty or
+                    //  2. when the step size is greater than the sliding size (step > n) and current stage is in between
+                    //     two sliding (ie. buf.size >= n && buf.size < step).
+                    // Otherwise it means there is still a not finished sliding so we have to push them before finish current stage.
+                    if (_buffer.Count < stage._count && _buffer.Count > 0)
+                        Push(stage.Out, _buffer);
+
+                    CompleteStage();
+                });
+
+                SetHandler(stage.Out, onPull: () => Pull(stage.In));
+            }
+        }
+
+        #endregion
+
         private readonly int _count;
         private readonly int _step;
-        private IImmutableList<T> _buffer;
 
         public Sliding(int count, int step)
         {
+            if (count <= 0)
+                throw new ArgumentException("count must be greater than 0", nameof(count));
+            if (step <= 0)
+                throw new ArgumentException("step must be greater than 0", nameof(step));
+
             _count = count;
             _step = step;
-            _buffer = ImmutableList<T>.Empty;
+
+            Shape = new FlowShape<T, IEnumerable<T>>(In, Out);
         }
 
-        public override ISyncDirective OnPush(T element, IContext<IEnumerable<T>> context)
-        {
-            _buffer = _buffer.Add(element);
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Sliding;
 
-            if (_buffer.Count < _count)
-                return context.Pull();
-            if (_buffer.Count == _count)
-                return context.Push(_buffer);
-            if (_step > _count)
-            {
-                if (_buffer.Count == _step)
-                    _buffer = ImmutableList<T>.Empty;
-                return context.Pull();
-            }
+        public Inlet<T> In { get; } = new Inlet<T>("Sliding.in");
 
-            _buffer = _buffer.Skip(_step).ToImmutableList();
-            return _buffer.Count == _count ? (ISyncDirective) context.Push(_buffer) : context.Pull();
-        }
+        public Outlet<IEnumerable<T>> Out { get; } = new Outlet<IEnumerable<T>>("Sliding.out");
 
-        public override ISyncDirective OnPull(IContext<IEnumerable<T>> context)
-        {
-            if (!context.IsFinishing)
-                return context.Pull();
-            if (_buffer.Count >= _count)
-                return context.Finish();
+        public override FlowShape<T, IEnumerable<T>> Shape { get; }
 
-            return context.PushAndFinish(_buffer);
-        }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-        public override ITerminationDirective OnUpstreamFinish(IContext<IEnumerable<T>> context) => _buffer.Count == 0 ? context.Finish() : context.AbsorbTermination();
+        public override string ToString() => "Sliding";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Buffer<T> : DetachedStage<T, T>
+    public sealed class Buffer<T> : DetachedStage<T, T>
     {
         private readonly int _count;
         private readonly Func<IDetachedContext<T>, T, IUpstreamDirective> _enqueueAction;
@@ -884,9 +1010,11 @@ namespace Akka.Streams.Implementation.Fusing
             _enqueueAction = EnqueueAction(overflowStrategy);
         }
 
-        public override void PreStart(ILifecycleContext context) => _buffer = Buffer.Create<T>(_count, context.Materializer);
+        public override void PreStart(ILifecycleContext context)
+            => _buffer = Buffer.Create<T>(_count, context.Materializer);
 
-        public override IUpstreamDirective OnPush(T element, IDetachedContext<T> context) => context.IsHoldingDownstream ? context.PushAndPull(element) : _enqueueAction(context, element);
+        public override IUpstreamDirective OnPush(T element, IDetachedContext<T> context)
+            => context.IsHoldingDownstream ? context.PushAndPull(element) : _enqueueAction(context, element);
 
         public override IDownstreamDirective OnPull(IDetachedContext<T> context)
         {
@@ -902,7 +1030,8 @@ namespace Akka.Streams.Implementation.Fusing
             return context.Push(_buffer.Dequeue());
         }
 
-        public override ITerminationDirective OnUpstreamFinish(IDetachedContext<T> context) => _buffer.IsEmpty ? context.Finish() : context.AbsorbTermination();
+        public override ITerminationDirective OnUpstreamFinish(IDetachedContext<T> context)
+            => _buffer.IsEmpty ? context.Finish() : context.AbsorbTermination();
 
         private Func<IDetachedContext<T>, T, IUpstreamDirective> EnqueueAction(OverflowStrategy overflowStrategy)
         {
@@ -949,7 +1078,8 @@ namespace Akka.Streams.Implementation.Fusing
                     return (context, element) =>
                     {
                         if (_buffer.IsFull)
-                            return context.Fail(new BufferOverflowException($"Buffer overflow (max capacity was {_count})"));
+                            return
+                                context.Fail(new BufferOverflowException($"Buffer overflow (max capacity was {_count})"));
                         _buffer.Enqueue(element);
                         return context.Pull();
                     };
@@ -962,7 +1092,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class OnCompleted<TIn, TOut> : PushStage<TIn, TOut>
+    public sealed class OnCompleted<TIn, TOut> : PushStage<TIn, TOut>
     {
         private readonly Action _success;
         private readonly Action<Exception> _failure;
@@ -991,7 +1121,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Batch<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    public sealed class Batch<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
@@ -1187,13 +1317,14 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(inheritedAttributes, this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Expand<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    public sealed class Expand<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
@@ -1288,7 +1419,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class SelectAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    public sealed class SelectAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
@@ -1308,7 +1439,9 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public void Invoke(Result<T> result)
                 {
-                    Element = result.IsSuccess && result.Value == null ? Result.Failure<T>(ReactiveStreamsCompliance.ElementMustNotBeNullException) : result;
+                    Element = result.IsSuccess && result.Value == null
+                        ? Result.Failure<T>(ReactiveStreamsCompliance.ElementMustNotBeNullException)
+                        : result;
                     _callback(this);
                 }
             }
@@ -1431,13 +1564,14 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(inheritedAttributes, this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class SelectAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    public sealed class SelectAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
@@ -1471,7 +1605,9 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     else
                     {
-                        var ex = !result.IsSuccess ? result.Exception : ReactiveStreamsCompliance.ElementMustNotBeNullException;
+                        var ex = !result.IsSuccess
+                            ? result.Exception
+                            : ReactiveStreamsCompliance.ElementMustNotBeNullException;
                         if (_decider(ex) == Directive.Stop)
                             FailStage(ex);
                         else if (IsClosed(stage.In) && Todo == 0)
@@ -1545,89 +1681,127 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(inheritedAttributes, this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Log<T> : PushStage<T, T>
+    public sealed class Log<T> : SimpleLinearGraphStage<T>
     {
-        private static readonly Attributes.LogLevels DefaultLogLevels = new Attributes.LogLevels(onElement: LogLevel.DebugLevel, onFinish: LogLevel.DebugLevel, onFailure: LogLevel.ErrorLevel);
+        private static readonly Attributes.LogLevels DefaultLogLevels = new Attributes.LogLevels(
+            onElement: LogLevel.DebugLevel,
+            onFinish: LogLevel.DebugLevel,
+            onFailure: LogLevel.ErrorLevel);
+
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly Log<T> _stage;
+            private readonly Attributes _inheritedAttributes;
+            private readonly Decider _decider;
+            private Attributes.LogLevels _logLevels;
+            private ILoggingAdapter _log;
+
+            public Logic(Log<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                _inheritedAttributes = inheritedAttributes;
+                _decider =
+                    inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider))
+                        .Decider;
+
+                SetHandler(stage.Inlet, onPush: () =>
+                {
+                    try
+                    {
+                        var element = Grab(stage.Inlet);
+                        if (IsEnabled(_logLevels.OnElement))
+                            _log.Log(_logLevels.OnElement, $"[{stage._name}] Element: {stage._extract(element)}");
+
+                        Push(stage.Outlet, element);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_decider(ex) == Directive.Stop)
+                            FailStage(ex);
+                        else
+                            Pull(stage.Inlet);
+                    }
+                }, onUpstreamFailure: ex =>
+                {
+                    if (IsEnabled(_logLevels.OnFailure))
+                    {
+                        if (_logLevels.OnFailure == LogLevel.ErrorLevel)
+                            _log.Error(ex, $"[{stage._name}] Upstream failed");
+                        else
+                            _log.Log(_logLevels.OnFailure,
+                                $"[{stage._name}] Upstream failed, cause {ex.GetType().Name}: {ex.Message}");
+                    }
+
+                    FailStage(ex);
+                }, onUpstreamFinish: () =>
+                {
+                    if (IsEnabled(_logLevels.OnFinish))
+                        _log.Log(_logLevels.OnFinish, $"[{stage._name}] Upstream finished");
+
+                    CompleteStage();
+                });
+
+                SetHandler(stage.Outlet, onPull: ()=> Pull(stage.Inlet), onDownstreamFinish: () =>
+                {
+                    if (IsEnabled(_logLevels.OnFinish))
+                        _log.Log(_logLevels.OnFinish, $"[{stage._name}] Downstream  finished");
+
+                    CompleteStage();
+                });
+
+            }
+
+            public override void PreStart()
+            {
+                _logLevels = _inheritedAttributes.GetAttribute(DefaultLogLevels);
+                if (_stage._adapter != null)
+                    _log = _stage._adapter;
+                else
+                {
+                    try
+                    {
+                        var materializer = ActorMaterializerHelper.Downcast(Materializer);
+                        _log = new BusLogging(materializer.System.EventStream, _stage._name, GetType(), new DefaultLogMessageFormatter());
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception(
+                            "Log stage can only provide LoggingAdapter when used with ActorMaterializer! Provide a LoggingAdapter explicitly or use the actor based flow materializer.",
+                            ex);
+                    }
+                }
+            }
+
+            private bool IsEnabled(LogLevel level) => level != Attributes.LogLevels.Off;
+        }
+
+        #endregion
 
         private readonly string _name;
         private readonly Func<T, object> _extract;
         private readonly ILoggingAdapter _adapter;
-        private readonly Decider _decider;
-        private Attributes.LogLevels _logLevels;
-        private ILoggingAdapter _log;
 
-        public Log(string name, Func<T, object> extract, ILoggingAdapter adapter, Decider decider)
+        public Log(string name, Func<T, object> extract, ILoggingAdapter adapter)
         {
             _name = name;
             _extract = extract;
             _adapter = adapter;
-            _decider = decider;
         }
 
-        public override void PreStart(ILifecycleContext context)
-        {
-            _logLevels = context.Attributes.GetAttribute(DefaultLogLevels);
-            _log = _adapter;
-            if (_log == null)
-            {
-                ActorMaterializer materializer;
-                try
-                {
-                    materializer = ActorMaterializer.Downcast(context.Materializer);
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception("Log stage can only provide LoggingAdapter when used with ActorMaterializer! Provide a LoggingAdapter explicitly or use the actor based flow materializer.", ex);
-                }
+        // TODO more optimisations can be done here - prepare logOnPush function etc
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(this, inheritedAttributes);
 
-                _log = new BusLogging(materializer.System.EventStream, _name, GetType(), new DefaultLogMessageFormatter());
-            }
-        }
-
-        public override ISyncDirective OnPush(T element, IContext<T> context)
-        {
-            if (IsEnabled(_logLevels.OnElement))
-                _log.Log(_logLevels.OnElement, "[{0}] Element: {1}", _name, _extract(element));
-
-            return context.Push(element);
-        }
-
-        public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<T> context)
-        {
-            if (IsEnabled(_logLevels.OnFailure))
-                if (_logLevels.OnFailure == LogLevel.ErrorLevel)
-                    _log.Error(cause, "[{0}] Upstream failed.", _name);
-                else
-                    _log.Log(_logLevels.OnFailure, "[{0}] Upstream failed, cause: {1} {2}", _name, cause.GetType(), cause.Message);
-
-            return base.OnUpstreamFailure(cause, context);
-        }
-
-        public override ITerminationDirective OnUpstreamFinish(IContext<T> context)
-        {
-            if (IsEnabled(_logLevels.OnFinish))
-                _log.Log(_logLevels.OnFinish, "[{0}] Upstream finished.", _name);
-
-            return base.OnUpstreamFinish(context);
-        }
-
-        public override ITerminationDirective OnDownstreamFinish(IContext<T> context)
-        {
-            if (IsEnabled(_logLevels.OnFinish))
-                _log.Log(_logLevels.OnFinish, "[{0}] Downstream finished.", _name);
-
-            return base.OnDownstreamFinish(context);
-        }
-
-        public override Directive Decide(Exception cause) => _decider(cause);
-
-        private bool IsEnabled(LogLevel level) => level != Attributes.LogLevels.Off;
+        public override string ToString() => "Log";
     }
 
     /// <summary>
@@ -1643,7 +1817,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class GroupedWithin<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
+    public sealed class GroupedWithin<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
         #region internal classes
 
@@ -1767,7 +1941,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Delay<T> : SimpleLinearGraphStage<T>
+    public sealed class Delay<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
 
@@ -1917,7 +2091,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class TakeWithin<T> : SimpleLinearGraphStage<T>
+    public sealed class TakeWithin<T> : SimpleLinearGraphStage<T>
     {
         #region internal class
 
@@ -1952,7 +2126,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class SkipWithin<T> : SimpleLinearGraphStage<T>
+    public sealed class SkipWithin<T> : SimpleLinearGraphStage<T>
     {
         private readonly TimeSpan _timeout;
 
@@ -1994,7 +2168,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Sum<T> : SimpleLinearGraphStage<T>
+    public sealed class Sum<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
 
@@ -2047,7 +2221,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
+    public sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
     {
         #region internal classes
 
@@ -2139,7 +2313,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class StatefulSelectMany<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    public sealed class StatefulSelectMany<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 

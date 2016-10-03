@@ -23,7 +23,7 @@ namespace Akka.Streams.Implementation
     ///  - if the timer fires before the event happens, these stages all fail the stream
     ///  - otherwise, these streams do not interfere with the element flow, ordinary completion or failure
     /// </summary>
-    internal static class Timers
+    public static class Timers
     {
         public static TimeSpan IdleTimeoutCheckInterval(TimeSpan timeout)
             => new TimeSpan(Math.Min(Math.Max(timeout.Ticks/8, 100*TimeSpan.TicksPerMillisecond), timeout.Ticks/2));
@@ -31,7 +31,10 @@ namespace Akka.Streams.Implementation
         public const string GraphStageLogicTimer = "GraphStageLogicTimer";
     }
 
-    internal sealed class Initial<T> : SimpleLinearGraphStage<T>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class Initial<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
 
@@ -77,7 +80,10 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "InitialTimeoutTimer";
     }
 
-    internal sealed class Completion<T> : SimpleLinearGraphStage<T>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class Completion<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
 
@@ -114,7 +120,10 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "CompletionTimeout";
     }
 
-    internal sealed class Idle<T> : SimpleLinearGraphStage<T>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class Idle<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
 
@@ -162,7 +171,10 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "IdleTimeout";
     }
 
-    internal sealed class BackpressureTimeout<T> : SimpleLinearGraphStage<T>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class BackpressureTimeout<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
 
@@ -216,7 +228,10 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "BackpressureTimeout";
     }
 
-    internal sealed class IdleTimeoutBidi<TIn, TOut> : GraphStage<BidiShape<TIn, TIn, TOut, TOut>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class IdleTimeoutBidi<TIn, TOut> : GraphStage<BidiShape<TIn, TIn, TOut, TOut>>
     {
         #region Logic
 
@@ -289,7 +304,10 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "IdleTimeoutBidi";
     }
 
-    internal sealed class DelayInitial<T> : GraphStage<FlowShape<T, T>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class DelayInitial<T> : GraphStage<FlowShape<T, T>>
     {
         #region stage logic
 
@@ -346,7 +364,10 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "DelayTimer";
     }
 
-    internal sealed class IdleInject<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>> where TIn : TOut
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class IdleInject<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>> where TIn : TOut
     {
         #region Logic
 

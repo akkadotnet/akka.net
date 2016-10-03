@@ -186,7 +186,7 @@ namespace Akka.Streams.Implementation.Fusing
             
             protected internal override void OnTimer(object timerKey)
             {
-                var materializer = ActorMaterializer.Downcast(Interpreter.Materializer);
+                var materializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
                 var timeoutSettings = materializer.Settings.SubscriptionTimeoutSettings;
                 var timeout = timeoutSettings.Timeout;
 
@@ -213,7 +213,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private Source<T, NotUsed> OpenSubstream()
             {
-                var timeout = ActorMaterializer.Downcast(Interpreter.Materializer).Settings.SubscriptionTimeoutSettings.Timeout;
+                var timeout = ActorMaterializerHelper.Downcast(Interpreter.Materializer).Settings.SubscriptionTimeoutSettings.Timeout;
                 _tailSource = new SubSourceOutlet<T>(this, "TailSource");
                 _tailSource.SetHandler(_subHandler);
                 SetKeepGoing(true);
@@ -403,7 +403,7 @@ namespace Akka.Streams.Implementation.Fusing
                                 ClearNextElement();
                             }
                         }
-                        else
+                        else if(!HasBeenPulled(_stage.In))
                             TryPull(_stage.In);
                     }
                 }, 
@@ -451,7 +451,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void PreStart()
             {
-                var settings = ActorMaterializer.Downcast(Interpreter.Materializer).Settings;
+                var settings = ActorMaterializerHelper.Downcast(Interpreter.Materializer).Settings;
                 _timeout = settings.SubscriptionTimeoutSettings.Timeout;
             }
 
@@ -771,7 +771,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void PreStart()
             {
-                var settings = ActorMaterializer.Downcast(Interpreter.Materializer).Settings;
+                var settings = ActorMaterializerHelper.Downcast(Interpreter.Materializer).Settings;
                 _timeout = settings.SubscriptionTimeoutSettings.Timeout;
             }
 

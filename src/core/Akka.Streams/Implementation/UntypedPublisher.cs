@@ -10,7 +10,7 @@ using Reactive.Streams;
 
 namespace Akka.Streams
 {
-    internal interface IUntypedPublisher
+    public interface IUntypedPublisher
     {
         void Subscribe(IUntypedSubscriber subscriber);
     }

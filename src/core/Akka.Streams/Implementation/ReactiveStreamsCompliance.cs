@@ -162,13 +162,13 @@ namespace Akka.Streams.Implementation
         public static void RejectAdditionalSubscriber<T>(ISubscriber<T> subscriber, string rejector)
         {
             TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-            TryOnError(subscriber, new IllegalStateException(rejector + " supports only a single subscriber"));
+            TryOnError(subscriber, new IllegalStateException(rejector + " " + SupportsOnlyASingleSubscriber));
         }
 
         internal static void RejectAdditionalSubscriber(IUntypedSubscriber subscriber, string rejector)
         {
             TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-            TryOnError(subscriber, new IllegalStateException(rejector + " supports only a single subscriber"));
+            TryOnError(subscriber, new IllegalStateException(rejector + " " + SupportsOnlyASingleSubscriber));
         }
 
         public static void RejectDueToNonPositiveDemand<T>(ISubscriber<T> subscriber)

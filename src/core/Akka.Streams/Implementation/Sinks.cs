@@ -11,11 +11,15 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Actors;
+using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
+using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
 using Reactive.Streams;
+using Decider = Akka.Streams.Supervision.Decider;
+using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Implementation
 {
@@ -25,6 +29,9 @@ namespace Akka.Streams.Implementation
         object Create(MaterializationContext context, out object materializer);
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     public abstract class SinkModule<TIn, TMat> : AtomicModule, ISinkModule
     {
         private readonly SinkShape<TIn> _shape;
@@ -64,7 +71,8 @@ namespace Akka.Streams.Implementation
             if (Equals(_shape, shape))
                 return this;
 
-            throw new NotSupportedException("cannot replace the shape of a Sink, you need to wrap it in a Graph for that");
+            throw new NotSupportedException(
+                "cannot replace the shape of a Sink, you need to wrap it in a Graph for that");
         }
 
         public override IModule CarbonCopy()
@@ -99,10 +107,10 @@ namespace Akka.Streams.Implementation
 
         public override Attributes Attributes { get; }
 
-        public override IModule WithAttributes(Attributes attributes) 
+        public override IModule WithAttributes(Attributes attributes)
             => new PublisherSink<TIn>(attributes, AmendShape(attributes));
 
-        protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape) 
+        protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
             => new PublisherSink<TIn>(Attributes, shape);
 
         /// <summary>
@@ -138,10 +146,10 @@ namespace Akka.Streams.Implementation
 
         public override object Create(MaterializationContext context, out IPublisher<TIn> materializer)
         {
-            var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
+            var actorMaterializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = actorMaterializer.EffectiveSettings(Attributes);
             var impl = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn>.Props(settings));
-            var fanoutProcessor = new ActorProcessor<TIn,TIn>(impl);
+            var fanoutProcessor = new ActorProcessor<TIn, TIn>(impl);
             impl.Tell(new ExposedPublisher(fanoutProcessor));
             // Resolve cyclic dependency with actor. This MUST be the first message no matter what.
             materializer = fanoutProcessor;
@@ -154,7 +162,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// Attaches a subscriber to this stream which will just discard all received elements.
     /// </summary>
-    internal sealed class SinkholeSink<TIn> : SinkModule<TIn, Task>
+    public sealed class SinkholeSink<TIn> : SinkModule<TIn, Task>
     {
         public SinkholeSink(SinkShape<TIn> shape, Attributes attributes) : base(shape)
         {
@@ -182,7 +190,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// Attaches a subscriber to this stream.
     /// </summary>
-    internal sealed class SubscriberSink<TIn> : SinkModule<TIn, NotUsed>
+    public sealed class SubscriberSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly ISubscriber<TIn> _subscriber;
 
@@ -212,7 +220,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// A sink that immediately cancels its upstream upon materialization.
     /// </summary>
-    internal sealed class CancelSink<T> : SinkModule<T, NotUsed>
+    public sealed class CancelSink<T> : SinkModule<T, NotUsed>
     {
         public CancelSink(Attributes attributes, SinkShape<T> shape)
             : base(shape)
@@ -222,7 +230,8 @@ namespace Akka.Streams.Implementation
 
         public override Attributes Attributes { get; }
 
-        protected override SinkModule<T, NotUsed> NewInstance(SinkShape<T> shape) => new CancelSink<T>(Attributes, shape);
+        protected override SinkModule<T, NotUsed> NewInstance(SinkShape<T> shape)
+            => new CancelSink<T>(Attributes, shape);
 
         public override object Create(MaterializationContext context, out NotUsed materializer)
         {
@@ -240,7 +249,7 @@ namespace Akka.Streams.Implementation
     /// Creates and wraps an actor into <see cref="ISubscriber{T}"/> from the given <see cref="Props"/>,
     /// which should be <see cref="Props"/> for an <see cref="ActorSubscriber"/>.
     /// </summary>
-    internal sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
+    public sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
     {
         private readonly Props _props;
         private readonly Attributes _attributes;
@@ -262,7 +271,7 @@ namespace Akka.Streams.Implementation
 
         public override object Create(MaterializationContext context, out IActorRef materializer)
         {
-            var subscriberRef = ActorMaterializer.Downcast(context.Materializer).ActorOf(context, _props);
+            var subscriberRef = ActorMaterializerHelper.Downcast(context.Materializer).ActorOf(context, _props);
             materializer = subscriberRef;
             return ActorSubscriber.Create<TIn>(subscriberRef);
         }
@@ -271,7 +280,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ActorRefSink<TIn> : SinkModule<TIn, NotUsed>
+    public sealed class ActorRefSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly IActorRef _ref;
         private readonly object _onCompleteMessage;
@@ -295,7 +304,7 @@ namespace Akka.Streams.Implementation
 
         public override object Create(MaterializationContext context, out NotUsed materializer)
         {
-            var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
+            var actorMaterializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var effectiveSettings = actorMaterializer.EffectiveSettings(context.EffectiveAttributes);
             var subscriberRef = actorMaterializer.ActorOf(context,
                 ActorRefSinkActor.Props(_ref, effectiveSettings.MaxInputBufferSize, _onCompleteMessage));
@@ -305,9 +314,13 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal sealed class LastOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class LastOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
         #region stage logic
+
         private sealed class Logic : GraphStageLogic
         {
             private readonly LastOrDefaultStage<T> _stage;
@@ -318,27 +331,28 @@ namespace Akka.Streams.Implementation
                 var prev = default(T);
 
                 SetHandler(stage.In, onPush: () =>
-                {
-                    prev = Grab(stage.In);
-                    Pull(stage.In);
-                },
-                onUpstreamFinish: () =>
-                {
-                    var head = prev;
-                    prev = default(T);
-                    promise.TrySetResult(head);
-                    CompleteStage();
-                },
-                onUpstreamFailure: cause =>
-                {
-                    prev = default(T);
-                    promise.TrySetException(cause);
-                    FailStage(cause);
-                });
+                    {
+                        prev = Grab(stage.In);
+                        Pull(stage.In);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        var head = prev;
+                        prev = default(T);
+                        promise.TrySetResult(head);
+                        CompleteStage();
+                    },
+                    onUpstreamFailure: cause =>
+                    {
+                        prev = default(T);
+                        promise.TrySetException(cause);
+                        FailStage(cause);
+                    });
             }
 
             public override void PreStart() => Pull(_stage.In);
         }
+
         #endregion
 
         public readonly Inlet<T> In = new Inlet<T>("LastOrDefault.in");
@@ -350,16 +364,21 @@ namespace Akka.Streams.Implementation
 
         public override SinkShape<T> Shape { get; }
 
-        public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(
+            Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<T>();
             return new LogicAndMaterializedValue<Task<T>>(new Logic(promise, this), promise.Task);
         }
     }
 
-    internal sealed class FirstOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class FirstOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
         #region stage logic
+
         private sealed class Logic : GraphStageLogic
         {
             private readonly FirstOrDefaultStage<T> _stage;
@@ -369,24 +388,25 @@ namespace Akka.Streams.Implementation
                 _stage = stage;
 
                 SetHandler(stage.In, onPush: () =>
-                {
-                    promise.TrySetResult(Grab(stage.In));
-                    CompleteStage();
-                },
-                onUpstreamFinish: () =>
-                {
-                    promise.TrySetResult(default(T));
-                    CompleteStage();
-                },
-                onUpstreamFailure: cause =>
-                {
-                    promise.TrySetException(cause);
-                    FailStage(cause);
-                });
+                    {
+                        promise.TrySetResult(Grab(stage.In));
+                        CompleteStage();
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        promise.TrySetResult(default(T));
+                        CompleteStage();
+                    },
+                    onUpstreamFailure: cause =>
+                    {
+                        promise.TrySetException(cause);
+                        FailStage(cause);
+                    });
             }
 
             public override void PreStart() => Pull(_stage.In);
         }
+
         #endregion
 
         public readonly Inlet<T> In = new Inlet<T>("FirstOrDefault.in");
@@ -398,30 +418,34 @@ namespace Akka.Streams.Implementation
 
         public override SinkShape<T> Shape { get; }
 
-        public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(
+            Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<T>();
             return new LogicAndMaterializedValue<Task<T>>(new Logic(promise, this), promise.Task);
         }
     }
 
-    internal sealed class SeqStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<IImmutableList<T>>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class SeqStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<IImmutableList<T>>>
     {
         #region stage logic
 
         private sealed class Logic : GraphStageLogic
         {
             private readonly SeqStage<T> _stage;
-            private IImmutableList<T> _buf = ImmutableList<T>.Empty; 
+            private IImmutableList<T> _buf = ImmutableList<T>.Empty;
 
             public Logic(SeqStage<T> stage, TaskCompletionSource<IImmutableList<T>> promise) : base(stage.Shape)
             {
                 _stage = stage;
 
-                SetHandler(stage._in, onPush: () =>
+                SetHandler(stage.In, onPush: () =>
                 {
-                    _buf = _buf.Add(Grab(stage._in));
-                    Pull(stage._in);
+                    _buf = _buf.Add(Grab(stage.In));
+                    Pull(stage.In);
                 }, onUpstreamFinish: () =>
                 {
                     promise.TrySetResult(_buf);
@@ -433,23 +457,24 @@ namespace Akka.Streams.Implementation
                 });
             }
 
-            public override void PreStart() => Pull(_stage._in);
+            public override void PreStart() => Pull(_stage.In);
         }
 
         #endregion
 
-        private readonly Inlet<T> _in = new Inlet<T>("Seq.in");
-
         public SeqStage()
         {
-            Shape = new SinkShape<T>(_in);
+            Shape = new SinkShape<T>(In);
         }
 
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.SeqSink;
 
         public override SinkShape<T> Shape { get; }
 
-        public override ILogicAndMaterializedValue<Task<IImmutableList<T>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public readonly Inlet<T> In = new Inlet<T>("Seq.in");
+
+        public override ILogicAndMaterializedValue<Task<IImmutableList<T>>> CreateLogicAndMaterializedValue(
+            Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<IImmutableList<T>>();
             return new LogicAndMaterializedValue<Task<IImmutableList<T>>>(new Logic(this, promise), promise.Task);
@@ -458,15 +483,19 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "SeqStage";
     }
 
-    internal class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>
     {
         #region stage logic
+
         private sealed class Logic : GraphStageLogicWithCallbackWrapper<TaskCompletionSource<Option<T>>>
         {
             private readonly QueueSink<T> _stage;
             private readonly int _maxBuffer;
             private IBuffer<Result<Option<T>>> _buffer;
-            private Option<TaskCompletionSource<Option<T>>>_currentRequest;
+            private Option<TaskCompletionSource<Option<T>>> _currentRequest;
 
             public Logic(QueueSink<T> stage, int maxBuffer) : base(stage.Shape)
             {
@@ -495,7 +524,9 @@ namespace Akka.Streams.Implementation
 
             public override void PostStop()
             {
-                StopCallback(promise => promise.SetException(new IllegalStateException("Stream is terminated. QueueSink is detached")));
+                StopCallback(
+                    promise =>
+                            promise.SetException(new IllegalStateException("Stream is terminated. QueueSink is detached")));
             }
 
             private Action<TaskCompletionSource<Option<T>>> Callback()
@@ -566,6 +597,7 @@ namespace Akka.Streams.Implementation
                 return promise.Task;
             }
         }
+
         #endregion
 
         public readonly Inlet<T> In = new Inlet<T>("QueueSink.in");
@@ -579,7 +611,8 @@ namespace Akka.Streams.Implementation
 
         public override SinkShape<T> Shape { get; }
 
-        public override ILogicAndMaterializedValue<ISinkQueue<T>>  CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<ISinkQueue<T>> CreateLogicAndMaterializedValue(
+            Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0)
@@ -590,5 +623,171 @@ namespace Akka.Streams.Implementation
         }
 
         public override string ToString() => "QueueSink";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class LazySink<TIn, TMat> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TMat>>
+    {
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly LazySink<TIn, TMat> _stage;
+            private readonly TaskCompletionSource<TMat> _completion;
+            private readonly Lazy<Decider> _decider;
+
+            public Logic(LazySink<TIn, TMat> stage, Attributes inheritedAttributes,
+                TaskCompletionSource<TMat> completion) : base(stage.Shape)
+            {
+                _stage = stage;
+                _completion = completion;
+                _decider = new Lazy<Decider>(() =>
+                {
+                    var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                    return attr != null ? attr.Decider : Deciders.StoppingDecider;
+                });
+
+                SetHandler(stage.In, onPush: () =>
+                {
+                    try
+                    {
+                        var element = Grab(_stage.In);
+                        var callback = GetAsyncCallback<Result<Sink<TIn, TMat>>>(result =>
+                        {
+                            if (result.IsSuccess)
+                                InitInternalSource(result.Value, element);
+                            else
+                                Failure(result.Exception);
+                        });
+                        _stage._sinkFactory(element)
+                            .ContinueWith(t => callback(Result.FromTask(t)),
+                                TaskContinuationOptions.ExecuteSynchronously);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_decider.Value(ex) == Directive.Stop)
+                            Failure(ex);
+                        else
+                            Pull(_stage.In);
+                    }
+
+                }, onUpstreamFinish: () =>
+                {
+                    CompleteStage();
+                    try
+                    {
+                        _completion.TrySetResult(_stage._zeroMaterialised());
+                    }
+                    catch (Exception ex)
+                    {
+                        _completion.SetException(ex);
+                    }
+                }, onUpstreamFailure: Failure);
+            }
+
+            public override void PreStart() => Pull(_stage.In);
+
+            private void Failure(Exception ex)
+            {
+                FailStage(ex);
+                _completion.SetException(ex);
+            }
+
+            private void InitInternalSource(Sink<TIn, TMat> sink, TIn firstElement)
+            {
+                var sourceOut = new SubSource(this, firstElement);
+                _completion.TrySetResult(Source.FromGraph(sourceOut.Source)
+                    .RunWith(sink, Interpreter.SubFusingMaterializer));
+            }
+
+            #region SubSource
+
+            private sealed class SubSource : SubSourceOutlet<TIn>
+            {
+                private readonly Logic _logic;
+                private readonly LazySink<TIn, TMat> _stage;
+                private bool _completed;
+
+                public SubSource(Logic logic, TIn firstElement) : base(logic, "LazySink")
+                {
+                    _logic = logic;
+                    _stage = logic._stage;
+
+                    SetHandler(new LambdaOutHandler(onPull: () =>
+                    {
+                        Push(firstElement);
+                        if (_completed)
+                            SourceComplete();
+                        else
+                            SwitchToFinalHandler();
+                    }, onDownstreamFinish: SourceComplete));
+
+                    logic.SetHandler(_stage.In, new LambdaInHandler(
+                        onPush: () => Push(logic.Grab(_stage.In)),
+                        onUpstreamFinish: () =>
+                        {
+                            logic.SetKeepGoing(true);
+                            _completed = true;
+                        },
+                        onUpstreamFailure: SourceFailure));
+                }
+
+                private void SourceFailure(Exception ex)
+                {
+                    Fail(ex);
+                    _logic.FailStage(ex);
+                }
+
+                private void SwitchToFinalHandler()
+                {
+                    SetHandler(new LambdaOutHandler(
+                        onPull: () => _logic.Pull(_stage.In),
+                        onDownstreamFinish: SourceComplete));
+
+                    _logic.SetHandler(_stage.In, new LambdaInHandler(
+                        onPush: () => Push(_logic.Grab(_stage.In)),
+                        onUpstreamFinish: SourceComplete,
+                        onUpstreamFailure: SourceFailure));
+                }
+
+                private void SourceComplete()
+                {
+                    Complete();
+                    _logic.CompleteStage();
+                }
+            }
+
+            #endregion
+        }
+
+        #endregion
+
+        private readonly Func<TIn, Task<Sink<TIn, TMat>>> _sinkFactory;
+        private readonly Func<TMat> _zeroMaterialised;
+
+        public LazySink(Func<TIn, Task<Sink<TIn, TMat>>> sinkFactory, Func<TMat> zeroMaterialised)
+        {
+            _sinkFactory = sinkFactory;
+            _zeroMaterialised = zeroMaterialised;
+
+            Shape = new SinkShape<TIn>(In);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.LazySink;
+
+        public Inlet<TIn> In { get; } = new Inlet<TIn>("lazySink.in");
+
+        public override SinkShape<TIn> Shape { get; }
+
+        public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var completion = new TaskCompletionSource<TMat>();
+            var stageLogic = new Logic(this, inheritedAttributes, completion);
+            return new LogicAndMaterializedValue<Task<TMat>>(stageLogic, completion.Task);
+        }
+
+        public override string ToString() => "LazySink";
     }
 }

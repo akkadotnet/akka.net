@@ -231,10 +231,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_fold()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
-            {
-                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
-            },
+            WithOneBoundedSetup(new Aggregate<int, int>(0, (agg, x) => agg + x),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -259,10 +256,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_fold_with_proper_cancel()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
-            {
-                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
-            },
+            WithOneBoundedSetup(new Aggregate<int, int>(0, (agg, x) => agg + x),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -287,10 +281,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_if_fold_completes_while_not_in_a_push_position()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
-            {
-                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
-            },
+            WithOneBoundedSetup(new Aggregate<int, int>(0, (agg, x) => agg + x),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -306,9 +297,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_grouped()
         {
-            WithOneBoundedSetup(ToGraphStage(
-                new Grouped<int>(3)
-                ),
+            WithOneBoundedSetup(new Grouped<int>(3),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -619,10 +608,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_PushAndFinish_if_upstream_completes_with_PushAndFinish_and_downstream_immediately_pulls()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
+            WithOneBoundedSetup(new IGraphStageWithMaterializedValue<FlowShape<int, int>, object>[]
             {
-                new PushFinishStage<int>(),
-                new Aggregate<int, int>(0, (x, y) => x + y, Deciders.StoppingDecider)
+                ToGraphStage(new PushFinishStage<int>()),
+                new Aggregate<int, int>(0, (x, y) => x + y)
             },
                 (lastEvents, upstream, downstream) =>
                 {

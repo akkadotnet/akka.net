@@ -86,6 +86,7 @@ namespace Akka.Streams.Stage
         }
 
         protected virtual Attributes InitialAttributes => Attributes.None;
+
         public abstract TShape Shape { get; }
 
         public IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes) => new Graph(Shape, Module, attributes);
@@ -1186,7 +1187,7 @@ namespace Akka.Streams.Stage
         {
             if (_stageActorRef == null)
             {
-                var actorMaterializer = ActorMaterializer.Downcast(Interpreter.Materializer);
+                var actorMaterializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
                 var provider = ((IInternalActorRef)actorMaterializer.Supervisor).Provider;
                 var path = actorMaterializer.Supervisor.Path / StageActorRef.Name.Next();
                 _stageActorRef = new StageActorRef(provider, actorMaterializer.Logger, r => GetAsyncCallback<Tuple<IActorRef, object>>(tuple => r(tuple)), receive, path);

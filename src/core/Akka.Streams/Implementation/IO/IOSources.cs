@@ -50,7 +50,7 @@ namespace Akka.Streams.Implementation.IO
         public override IPublisher<ByteString> Create(MaterializationContext context, out Task<IOResult> task)
         {
             // FIXME rewrite to be based on GraphStage rather than dangerous downcasts
-            var materializer = ActorMaterializer.Downcast(context.Materializer);
+            var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = materializer.EffectiveSettings(context.EffectiveAttributes);
 
             var ioResultPromise = new TaskCompletionSource<IOResult>();
@@ -90,7 +90,7 @@ namespace Akka.Streams.Implementation.IO
 
         public override IPublisher<ByteString> Create(MaterializationContext context, out Task<IOResult> task)
         {
-            var materializer = ActorMaterializer.Downcast(context.Materializer);
+            var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var ioResultPromise = new TaskCompletionSource<IOResult>();
             IPublisher<ByteString> pub;
             

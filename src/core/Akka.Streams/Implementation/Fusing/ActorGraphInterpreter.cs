@@ -19,7 +19,10 @@ using Reactive.Streams;
 // ReSharper disable MemberHidesStaticFromOuterClass
 namespace Akka.Streams.Implementation.Fusing
 {
-    internal sealed class GraphModule : AtomicModule
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class GraphModule : AtomicModule
     {
         public readonly IModule[] MaterializedValueIds;
         public readonly GraphAssembly Assembly;
@@ -59,7 +62,10 @@ namespace Akka.Streams.Implementation.Fusing
                                              $"  MaterializedValueIds={string.Join<IModule>("\n   ", MaterializedValueIds)}";
     }
 
-    internal sealed class GraphInterpreterShell
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class GraphInterpreterShell
     {
         private readonly GraphAssembly _assembly;
         private readonly IInHandler[] _inHandlers;
@@ -67,7 +73,7 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly GraphStageLogic[] _logics;
         private readonly Shape _shape;
         private readonly ActorMaterializerSettings _settings;
-        internal readonly ActorMaterializerImpl Materializer;
+        internal readonly ExtendedActorMaterializer Materializer;
 
         /// <summary>
         /// Limits the number of events processed by the interpreter before scheduling
@@ -99,7 +105,7 @@ namespace Akka.Streams.Implementation.Fusing
         private bool _interpreterCompleted;
         private readonly ActorGraphInterpreter.Resume _resume;
 
-        public GraphInterpreterShell(GraphAssembly assembly, IInHandler[] inHandlers, IOutHandler[] outHandlers, GraphStageLogic[] logics, Shape shape, ActorMaterializerSettings settings, ActorMaterializerImpl materializer)
+        public GraphInterpreterShell(GraphAssembly assembly, IInHandler[] inHandlers, IOutHandler[] outHandlers, GraphStageLogic[] logics, Shape shape, ActorMaterializerSettings settings, ExtendedActorMaterializer materializer)
         {
             _assembly = assembly;
             _inHandlers = inHandlers;
@@ -370,7 +376,10 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => $"GraphInterpreterShell\n  {_assembly.ToString().Replace("\n", "\n  ")}";
     }
 
-    internal class ActorGraphInterpreter : ActorBase
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public class ActorGraphInterpreter : ActorBase
     {
         #region messages
 
@@ -766,7 +775,7 @@ namespace Akka.Streams.Implementation.Fusing
             public override string ToString() => $"BatchingActorInputBoundary(id={_id}, fill={_inputBufferElements}/{_size}, completed={_upstreamCompleted}, canceled={_downstreamCanceled})";
         }
 
-        public interface IActorOutputBoundary
+        internal interface IActorOutputBoundary
         {
             void SubscribePending();
             void ExposedPublisher(IActorPublisher publisher);
@@ -775,7 +784,7 @@ namespace Akka.Streams.Implementation.Fusing
             void Fail(Exception reason);
         }
 
-        public class ActorOutputBoundary<T> : GraphInterpreter.DownstreamBoundaryStageLogic, IActorOutputBoundary
+        internal class ActorOutputBoundary<T> : GraphInterpreter.DownstreamBoundaryStageLogic, IActorOutputBoundary
         {
             #region InHandler
             private sealed class InHandler : Stage.InHandler

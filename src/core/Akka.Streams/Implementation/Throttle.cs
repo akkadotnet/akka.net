@@ -13,7 +13,10 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
-    internal class Throttle<T> : SimpleLinearGraphStage<T>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public class Throttle<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
 

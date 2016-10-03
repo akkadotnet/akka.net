@@ -12,7 +12,10 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
-    internal class Unfold<TState, TElement> : GraphStage<SourceShape<TElement>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public class Unfold<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
         #region internal classes
         private sealed class Logic : GraphStageLogic
@@ -55,7 +58,10 @@ namespace Akka.Streams.Implementation
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-    internal class UnfoldAsync<TState, TElement> : GraphStage<SourceShape<TElement>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public class UnfoldAsync<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
         #region stage logic
         private sealed class Logic : GraphStageLogic

@@ -121,7 +121,7 @@ namespace Akka.Streams.Dsl
 
     public static class Sink
     {
-        private static SinkShape<T> Shape<T>(string name) => new SinkShape<T>(new Inlet<T>(name + ".in"));
+        public static SinkShape<T> Shape<T>(string name) => new SinkShape<T>(new Inlet<T>(name + ".in"));
 
         /// <summary>
         /// A graph with the shape of a sink logically is a sink, this method makes
@@ -362,6 +362,18 @@ namespace Akka.Streams.Dsl
         /// </para>
         ///</summary>
         public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>() => FromGraph(new QueueSink<TIn>());
+
+        /// <summary>
+        /// Creates a real <see cref="Sink{TIn,TMat}"/> upon receiving the first element. Internal <see cref="Sink{TIn,TMat}"/> will not be created if there are no elements,
+        /// because of completion or error.
+        /// 
+        /// If <paramref name="sinkFactory"/> throws an exception and the supervision decision is <see cref="Supervision.Directive.Stop"/> 
+        /// the <see cref="Task"/> will be completed with failure. For all other supervision options it will try to create sink with next element.
+        /// 
+        /// <paramref name="fallback"/> will be executed when there was no elements and completed is received from upstream.
+        /// </summary>
+        public static Sink<TIn, Task<TMat>> LazySink<TIn, TMat>(Func<TIn, Task<Sink<TIn, TMat>>> sinkFactory,
+            Func<TMat> fallback) => FromGraph(new LazySink<TIn, TMat>(sinkFactory, fallback));
 
         /// <summary>
         /// A graph with the shape of a sink logically is a sink, this method makes

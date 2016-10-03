@@ -67,13 +67,13 @@ namespace Akka.Streams.Implementation
         protected NormalShutdownException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
-    internal interface IActorPublisher : IUntypedPublisher
+    public interface IActorPublisher : IUntypedPublisher
     {
         void Shutdown(Exception reason);
         IEnumerable<IUntypedSubscriber> TakePendingSubscribers();
     }
 
-    internal static class ActorPublisher
+    public static class ActorPublisher
     {
         public const string NormalShutdownReasonMessage = "Cannot subscribe to shut-down Publisher";
         public static readonly NormalShutdownException NormalShutdownReason = new NormalShutdownException(NormalShutdownReasonMessage);
