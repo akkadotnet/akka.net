@@ -46,7 +46,6 @@ namespace Akka.Streams.Implementation.IO
 
             private Close()
             {
-
             }
         }
 
@@ -80,15 +79,15 @@ namespace Akka.Streams.Implementation.IO
         private sealed class Logic : GraphStageLogic, IStageWithCallback
         {
             private readonly OutputStreamSourceStage _stage;
-            private BlockingCollection<ByteString> _dataQueue;
             private readonly AtomicReference<IDownstreamStatus> _downstreamStatus;
             private readonly string _dispatcherId;
-            private TaskCompletionSource<NotUsed> _flush;
-            private TaskCompletionSource<NotUsed> _close;
             private readonly Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
             private readonly OnPullRunnable _pullTask;
+            private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+            private BlockingCollection<ByteString> _dataQueue;
+            private TaskCompletionSource<NotUsed> _flush;
+            private TaskCompletionSource<NotUsed> _close;
             private MessageDispatcher _dispatcher;
-            private Thread _blockingThread;
 
             public Logic(OutputStreamSourceStage stage, BlockingCollection<ByteString> dataQueue, AtomicReference<IDownstreamStatus> downstreamStatus, string dispatcherId) : base(stage.Shape)
             {
@@ -106,7 +105,7 @@ namespace Akka.Streams.Implementation.IO
                 });
                 _upstreamCallback =
                     GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>>(OnAsyncMessage);
-                _pullTask = new OnPullRunnable(downstreamCallback, dataQueue, ref _blockingThread);
+                _pullTask = new OnPullRunnable(downstreamCallback, dataQueue, _cancellation.Token);
                 SetHandler(_stage._out, onPull: OnPull, onDownstreamFinish: OnDownstreamFinish);
             }
 
@@ -119,7 +118,7 @@ namespace Akka.Streams.Implementation.IO
             public override void PostStop()
             {
                 // interrupt any pending blocking take
-                _blockingThread?.Interrupt();
+                _cancellation.Cancel(false);
                 base.PostStop();
             }
 
@@ -136,35 +135,28 @@ namespace Akka.Streams.Implementation.IO
             {
                 private readonly Action<Either<ByteString, Exception>> _callback;
                 private readonly BlockingCollection<ByteString> _dataQueue;
-                private Thread _blockingThread;
+                private readonly CancellationToken _cancellationToken;
 
-                public OnPullRunnable(Action<Either<ByteString, Exception>> callback, BlockingCollection<ByteString> dataQueue, ref Thread blockingThread)
+                public OnPullRunnable(Action<Either<ByteString, Exception>> callback, BlockingCollection<ByteString> dataQueue, CancellationToken cancellationToken)
                 {
                     _callback = callback;
                     _dataQueue = dataQueue;
-                    _blockingThread = blockingThread;
+                    _cancellationToken = cancellationToken;
                 }
 
                 public void Run()
                 {
-                    // keep track of the thread for postStop interrupt
-                    _blockingThread = Thread.CurrentThread;
-
                     try
                     {
-                        _callback(new Left<ByteString, Exception>(_dataQueue.Take()));
+                        _callback(new Left<ByteString, Exception>(_dataQueue.Take(_cancellationToken)));
                     }
-                    catch (ThreadInterruptedException)
+                    catch (OperationCanceledException)
                     {
                         _callback(new Left<ByteString, Exception>(ByteString.Empty));
                     }
                     catch (Exception ex)
                     {
                         _callback(new Right<ByteString, Exception>(ex));
-                    }
-                    finally
-                    {
-                        _blockingThread = null;
                     }
                 }
             }
