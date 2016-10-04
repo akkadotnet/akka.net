@@ -1881,10 +1881,7 @@ namespace Akka.Streams.Stage
             else if (state is NotInitialized)
                 ((NotInitialized) state).Args.Add(arg);
             else if (state is Stopped)
-            {
-                Monitor.Exit(this);
                 ((Stopped) state).Callback(arg);
-            }
         });
 
         private void Locked(Action body)
@@ -1896,8 +1893,7 @@ namespace Akka.Streams.Stage
             }
             finally
             {
-                if (Monitor.IsEntered(this))
-                    Monitor.Exit(this);
+                Monitor.Exit(this);
             }
         }
     }
