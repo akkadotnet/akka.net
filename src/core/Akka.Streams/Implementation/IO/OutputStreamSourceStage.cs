@@ -126,7 +126,6 @@ namespace Akka.Streams.Implementation.IO
             {
                 //assuming there can be no further in messages
                 _downstreamStatus.Value = Canceled.Instance;
-                _dataQueue.Add(ByteString.Empty);
                 _dataQueue = null;
                 CompleteStage();
             }
