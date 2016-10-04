@@ -24,6 +24,30 @@ namespace Akka.Streams.Dsl
         /// Run this flow and return the materialized instance from the flow.
         /// </summary>
         TMat Run(IMaterializer materializer);
+
+
+        /// <summary>
+        /// Change the attributes of this <see cref="IGraph{TShape}"/> to the given ones
+        /// and seal the list of attributes. This means that further calls will not be able
+        /// to remove these attributes, but instead add new ones. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        new IRunnableGraph<TMat> WithAttributes(Attributes attributes);
+
+        /// <summary>
+        /// Add the given attributes to this <see cref="IGraph{TShape}"/>.
+        /// Further calls to <see cref="WithAttributes"/>
+        /// will not remove these attributes. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        new IRunnableGraph<TMat> AddAttributes(Attributes attributes);
+
+        /// <summary>
+        /// Add a name attribute to this Graph.
+        /// </summary>
+        new IRunnableGraph<TMat> Named(string name);
     }
 
     public sealed class RunnableGraph<TMat> : IRunnableGraph<TMat>
@@ -35,37 +59,33 @@ namespace Akka.Streams.Dsl
         }
 
         public ClosedShape Shape { get; }
+
         public IModule Module { get; }
 
-        public IGraph<ClosedShape, TMat> WithAttributes(Attributes attributes)
-        {
-            return new RunnableGraph<TMat>(Module.WithAttributes(attributes));
-        }
+        IGraph<ClosedShape, TMat> IGraph<ClosedShape, TMat>.WithAttributes(Attributes attributes)
+            => WithAttributes(attributes);
 
-        public IGraph<ClosedShape, TMat> AddAttributes(Attributes attributes)
-        {
-            return WithAttributes(Module.Attributes.And(attributes));
-        }
+        public IRunnableGraph<TMat> AddAttributes(Attributes attributes)
+            => WithAttributes(Module.Attributes.And(attributes));
 
-        public IGraph<ClosedShape, TMat> Named(string name)
-        {
-            return AddAttributes(Attributes.CreateName(name));
-        }
+        public IRunnableGraph<TMat> Named(string name)
+            => AddAttributes(Attributes.CreateName(name));
 
-        public IGraph<ClosedShape, TMat> Async()
-        {
-            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
-        }
+        public IRunnableGraph<TMat> WithAttributes(Attributes attributes)
+            => new RunnableGraph<TMat>(Module.WithAttributes(attributes));
+
+        IGraph<ClosedShape, TMat> IGraph<ClosedShape, TMat>.AddAttributes(Attributes attributes)
+            => AddAttributes(attributes);
+
+        IGraph<ClosedShape, TMat> IGraph<ClosedShape, TMat>.Named(string name)
+            => Named(name);
+
+        public IGraph<ClosedShape, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
 
         public IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> func)
-        {
-            return new RunnableGraph<TMat2>(Module.TransformMaterializedValue(func));
-        }
+            => new RunnableGraph<TMat2>(Module.TransformMaterializedValue(func));
 
-        public TMat Run(IMaterializer materializer)
-        {
-            return materializer.Materialize(this);
-        }
+        public TMat Run(IMaterializer materializer) => materializer.Materialize(this);
     }
 
     public static class RunnableGraph

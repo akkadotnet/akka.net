@@ -161,11 +161,11 @@ namespace Akka.Streams.Tests.Dsl
                 });
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var lazySink = Sink.LazySink((int _) => failedTask, Fallback<TestSubscriber.Probe<int>>());
-                var graph =
+                var taskProbe =
                     Source.FromPublisher(sourceProbe)
                         .ToMaterialized(lazySink, Keep.Right)
-                        .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.StoppingDecider));
-                var taskProbe = RunnableGraph.FromGraph(graph).Run(Materializer);
+                        .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.StoppingDecider))
+                        .Run(Materializer);
 
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
@@ -207,11 +207,11 @@ namespace Akka.Streams.Tests.Dsl
                         return Task.FromResult(this.SinkProbe<int>());
                     },
                    Fallback<TestSubscriber.Probe<int>>());
-                var graph =
+                var taskProbe =
                     Source.FromPublisher(sourceProbe)
                         .ToMaterialized(lazySink, Keep.Right)
-                        .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
-                var taskProbe = RunnableGraph.FromGraph(graph).Run(Materializer);
+                        .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
+                        .Run(Materializer);
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
