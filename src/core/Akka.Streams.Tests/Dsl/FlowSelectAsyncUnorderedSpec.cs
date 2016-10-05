@@ -294,8 +294,9 @@ namespace Akka.Streams.Tests.Dsl
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
                 var queue = new BlockingQueue<Tuple<TaskCompletionSource<int>, long>>();
+                var cancellation = new CancellationTokenSource();
 
-                var timer = new Thread(() =>
+                Task.Run(() =>
                 {
                     var delay = 500; // 50000 nanoseconds
                     var count = 0;
@@ -304,7 +305,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         try
                         {
-                            var t = queue.Take(CancellationToken.None);
+                            var t = queue.Take(cancellation.Token);
                             var promise = t.Item1;
                             var enqueued = t.Item2;
                             var wakeup = enqueued + delay;
@@ -318,10 +319,8 @@ namespace Akka.Streams.Tests.Dsl
                             cont = false;
                         }
                     }
-                });
-
-                timer.Start();
-
+                }, cancellation.Token);
+               
                 Func<Task<int>> deferred = () =>
                 {
                     var promise = new TaskCompletionSource<int>();
@@ -344,7 +343,7 @@ namespace Akka.Streams.Tests.Dsl
                 }
                 finally
                 {
-                    timer.Interrupt();
+                    cancellation.Cancel(false);
                 }
             }, Materializer);
         }

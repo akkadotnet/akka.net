@@ -38,7 +38,7 @@ namespace Akka.Streams.Dsl
                     StreamLayout.Validate(graph.Module);
 
                 var copy = graph.Module.CarbonCopy();
-                _moduleInProgress = _moduleInProgress.Compose(copy.TransformMaterializedValue(transform));
+                _moduleInProgress = _moduleInProgress.Compose<TMat,TMat2,TMat2>(copy.TransformMaterializedValue(transform), Keep.Right);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
             }
 
@@ -70,7 +70,7 @@ namespace Akka.Streams.Dsl
                     StreamLayout.Validate(graph.Module);
 
                 var copy = graph.Module.CarbonCopy();
-                _moduleInProgress = _moduleInProgress.Compose(copy);
+                _moduleInProgress = _moduleInProgress.Compose<object, TMat, object>(copy, Keep.Left);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
             }
 

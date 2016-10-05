@@ -8,9 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.Streams.Tests.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -155,6 +157,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 Source.From(Enumerable.Range(1, 3))
                 .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Backpressure)
+                .WithAttributes(Attributes.CreateInputBuffer(1,1))
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(5)
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
@@ -207,6 +210,37 @@ namespace Akka.Streams.Tests.Dsl
                 // fail will terminate despite of non empty internal buffer
                 pSub.SendError(new Exception());
             }, Materializer);
+        }
+
+        [Fact]
+        public void A_Delay_must_properly_delay_according_to_buffer_size()
+        {
+            // With a buffer size of 1, delays add up 
+            var task = Source.From(Enumerable.Range(1, 5))
+                .Delay(TimeSpan.FromMilliseconds(500), DelayOverflowStrategy.Backpressure)
+                .WithAttributes(Attributes.CreateInputBuffer(1, 1))
+                .RunWith(Sink.Ignore<int>(), Materializer);
+
+            task.Wait(TimeSpan.FromSeconds(2)).ShouldBeFalse();
+            task.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+
+            // With a buffer large enough to hold all arriving elements, delays don't add up 
+            task = Source.From(Enumerable.Range(1, 100))
+                .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.Backpressure)
+                .WithAttributes(Attributes.CreateInputBuffer(100, 100))
+                .RunWith(Sink.Ignore<int>(), Materializer);
+            
+            task.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+
+            // Delays that are already present are preserved when buffer is large enough 
+            task = Source.Tick(TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100), NotUsed.Instance)
+                .Take(10)
+                .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.Backpressure)
+                .WithAttributes(Attributes.CreateInputBuffer(10, 10))
+                .RunWith(Sink.Ignore<NotUsed>(), Materializer);
+
+            task.Wait(TimeSpan.FromMilliseconds(900)).ShouldBeFalse();
+            task.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
         }
     }
 }

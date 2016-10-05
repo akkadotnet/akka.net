@@ -12,6 +12,7 @@ using System.Text;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
+using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
@@ -122,6 +123,13 @@ namespace Akka.Streams.Tests.Dsl
                     .Limit(100)
                     .RunWith(Sink.Seq<string>(), Materializer);
             task2.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+
+            var task3 =
+                Source.Single(ByteString.FromString("aaa"))
+                    .Via(SimpleLines("\n", 2))
+                    .Limit(100)
+                    .RunWith(Sink.Seq<string>(), Materializer);
+            task3.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
         }
 
         [Fact]
@@ -157,8 +165,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<string>>(), Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().ContainSingle(s => s.Equals("I have no end"));
+            task.AwaitResult().Should().ContainSingle(s => s.Equals("I have no end"));
         }
 
         private static string RandomString(int length)

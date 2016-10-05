@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.IO;
@@ -44,7 +46,6 @@ namespace Akka.Streams.Implementation.IO
 
             private Close()
             {
-
             }
         }
 
@@ -78,19 +79,23 @@ namespace Akka.Streams.Implementation.IO
         private sealed class Logic : GraphStageLogic, IStageWithCallback
         {
             private readonly OutputStreamSourceStage _stage;
-            private BlockingCollection<ByteString> _dataQueue;
             private readonly AtomicReference<IDownstreamStatus> _downstreamStatus;
-            private TaskCompletionSource<NotUsed> _flush;
-            private TaskCompletionSource<NotUsed> _close;
+            private readonly string _dispatcherId;
             private readonly Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
             private readonly OnPullRunnable _pullTask;
+            private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+            private BlockingCollection<ByteString> _dataQueue;
+            private TaskCompletionSource<NotUsed> _flush;
+            private TaskCompletionSource<NotUsed> _close;
+            private MessageDispatcher _dispatcher;
 
-            public Logic(OutputStreamSourceStage stage, BlockingCollection<ByteString> dataQueue,
-                AtomicReference<IDownstreamStatus> downstreamStatus) : base(stage.Shape)
+            public Logic(OutputStreamSourceStage stage, BlockingCollection<ByteString> dataQueue, AtomicReference<IDownstreamStatus> downstreamStatus, string dispatcherId) : base(stage.Shape)
             {
                 _stage = stage;
                 _dataQueue = dataQueue;
                 _downstreamStatus = downstreamStatus;
+                _dispatcherId = dispatcherId;
+
                 var downstreamCallback = GetAsyncCallback((Either<ByteString, Exception> result) =>
                 {
                     if (result.IsLeft)
@@ -100,15 +105,27 @@ namespace Akka.Streams.Implementation.IO
                 });
                 _upstreamCallback =
                     GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>>(OnAsyncMessage);
-                _pullTask = new OnPullRunnable(downstreamCallback, dataQueue);
+                _pullTask = new OnPullRunnable(downstreamCallback, dataQueue, _cancellation.Token);
                 SetHandler(_stage._out, onPull: OnPull, onDownstreamFinish: OnDownstreamFinish);
+            }
+
+            public override void PreStart()
+            {
+                _dispatcher = ActorMaterializer.Downcast(Materializer).System.Dispatchers.Lookup(_dispatcherId);
+                base.PreStart();
+            }
+
+            public override void PostStop()
+            {
+                // interrupt any pending blocking take
+                _cancellation.Cancel(false);
+                base.PostStop();
             }
 
             private void OnDownstreamFinish()
             {
                 //assuming there can be no further in messages
                 _downstreamStatus.Value = Canceled.Instance;
-                _dataQueue.Add(ByteString.Empty);
                 _dataQueue = null;
                 CompleteStage();
             }
@@ -117,18 +134,24 @@ namespace Akka.Streams.Implementation.IO
             {
                 private readonly Action<Either<ByteString, Exception>> _callback;
                 private readonly BlockingCollection<ByteString> _dataQueue;
+                private readonly CancellationToken _cancellationToken;
 
-                public OnPullRunnable(Action<Either<ByteString, Exception>> callback, BlockingCollection<ByteString> dataQueue)
+                public OnPullRunnable(Action<Either<ByteString, Exception>> callback, BlockingCollection<ByteString> dataQueue, CancellationToken cancellationToken)
                 {
                     _callback = callback;
                     _dataQueue = dataQueue;
+                    _cancellationToken = cancellationToken;
                 }
 
                 public void Run()
                 {
                     try
                     {
-                        _callback(new Left<ByteString, Exception>(_dataQueue.Take()));
+                        _callback(new Left<ByteString, Exception>(_dataQueue.Take(_cancellationToken)));
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _callback(new Left<ByteString, Exception>(ByteString.Empty));
                     }
                     catch (Exception ex)
                     {
@@ -137,10 +160,7 @@ namespace Akka.Streams.Implementation.IO
                 }
             }
 
-            private void OnPull()
-            {
-                Interpreter.Materializer.ExecutionContext.Schedule(_pullTask);                  
-            }
+            private void OnPull() => _dispatcher.Schedule(_pullTask);
 
             private void OnPush(ByteString data)
             {
@@ -207,7 +227,6 @@ namespace Akka.Streams.Implementation.IO
         private readonly TimeSpan _writeTimeout;
         private readonly Outlet<ByteString> _out = new Outlet<ByteString>("OutputStreamSource.out");
 
-
         public OutputStreamSourceStage(TimeSpan writeTimeout)
         {
             _writeTimeout = writeTimeout;
@@ -227,8 +246,11 @@ namespace Akka.Streams.Implementation.IO
 
             var dataQueue = new BlockingCollection<ByteString>(maxBuffer);
             var downstreamStatus = new AtomicReference<IDownstreamStatus>(Ok.Instance);
-            
-            var logic = new Logic(this, dataQueue, downstreamStatus);
+
+            var dispatcherId =
+                inheritedAttributes.GetAttribute(
+                    DefaultAttributes.IODispatcher.GetAttributeList<ActorAttributes.Dispatcher>().First()).Name;
+            var logic = new Logic(this, dataQueue, downstreamStatus, dispatcherId);
             return new LogicAndMaterializedValue<Stream>(logic,
                 new OutputStreamAdapter(dataQueue, downstreamStatus, logic, _writeTimeout));
         }

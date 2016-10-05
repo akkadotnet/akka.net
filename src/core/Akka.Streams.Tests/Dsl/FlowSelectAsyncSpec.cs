@@ -300,18 +300,13 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
-            // TODO: 9/14/2016: Mono 4.4.2 blows up the XUnit test runner upon calling Thread.Interrupt below (@Aaronontheweb) 
-            // SEE: https://github.com/xunit/xunit/issues/979
-            if (IsMono) 
-                return; 
-
             this.AssertAllStagesStopped(() =>
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
                 var queue = new BlockingQueue<Tuple<TaskCompletionSource<int>, long>>();
-
-                var timer = new Thread(() =>
+                var cancellation = new CancellationTokenSource();
+                Task.Run(() =>
                 {
                     var delay = 500; // 50000 nanoseconds
                     var count = 0;
@@ -320,7 +315,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         try
                         {
-                            var t = queue.Take(CancellationToken.None);
+                            var t = queue.Take(cancellation.Token);
                             var promise = t.Item1;
                             var enqueued = t.Item2;
                             var wakeup = enqueued + delay;
@@ -334,9 +329,7 @@ namespace Akka.Streams.Tests.Dsl
                             cont = false;
                         }
                     }
-                });
-
-                timer.Start();
+                }, cancellation.Token);
 
                 Func<Task<int>> deferred = () =>
                 {
@@ -356,12 +349,11 @@ namespace Akka.Streams.Tests.Dsl
                         .SelectAsync(parallelism, _ => deferred())
                         .RunAggregate(0, (c, _) => c + 1, Materializer);
 
-                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                    task.Result.Should().Be(n);
+                    task.AwaitResult().Should().Be(n);
                 }
                 finally
                 {
-                    timer.Interrupt();
+                    cancellation.Cancel(false);
                 }
             }, Materializer);
         }

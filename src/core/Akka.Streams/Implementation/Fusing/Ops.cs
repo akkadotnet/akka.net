@@ -1795,7 +1795,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_buffer.IsFull) overflowStrategy();
                     else
                     {
-                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Capacity < _size - 1);
+                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size - 1);
                         if (!IsTimerActive(TimerName))
                             ScheduleOnce(TimerName, _stage._delay);
                     }
@@ -2121,6 +2121,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         public RecoverWith(Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunction, int maximumRetries)
         {
+            if (maximumRetries < -1)
+                throw new ArgumentException("number of retries must be non-negative or equal to -1",
+                    nameof(maximumRetries));
+
             _partialFunction = partialFunction;
             _maximumRetries = maximumRetries;
         }

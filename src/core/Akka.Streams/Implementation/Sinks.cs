@@ -140,8 +140,10 @@ namespace Akka.Streams.Implementation
         {
             var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
             var settings = actorMaterializer.EffectiveSettings(Attributes);
-            var fanoutRef = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn>.Props(settings));
-            var fanoutProcessor = ActorProcessorFactory.Create<TIn, TIn>(fanoutRef);
+            var impl = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn>.Props(settings));
+            var fanoutProcessor = new ActorProcessor<TIn,TIn>(impl);
+            impl.Tell(new ExposedPublisher(fanoutProcessor));
+            // Resolve cyclic dependency with actor. This MUST be the first message no matter what.
             materializer = fanoutProcessor;
             return fanoutProcessor;
         }

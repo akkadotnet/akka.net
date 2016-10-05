@@ -246,7 +246,7 @@ namespace Akka.Streams
     /// A <see cref="SharedKillSwitch"/> is a provider for <see cref="IGraph{TShape}"/>s of <see cref="FlowShape{TIn,TOut}"/> that can be completed or failed from the outside.
     ///
     /// A <see cref="IGraph{TShape}"/> returned by the switch can be materialized arbitrary amount of times: every newly materialized<see cref="IGraph{TShape}"/>
-    /// belongs to the switch from which it was aquired.Multiple <see cref="SharedKillSwitch"/> instances are isolated from each other,
+    /// belongs to the switch from which it was acquired. Multiple <see cref="SharedKillSwitch"/> instances are isolated from each other,
     /// shutting down or aborting on instance does not affect the <see cref="IGraph{TShape}"/>s provided by another instance.
     ///
     ///
@@ -338,7 +338,7 @@ namespace Akka.Streams
         public void Abort(Exception cause) => _shutdownPromise.TrySetException(cause);
 
         /// <summary>
-        /// Retrurns a typed Flow of a requested type that will be linked to this <see cref="SharedKillSwitch"/> instance. By invoking
+        /// Returns a typed Flow of a requested type that will be linked to this <see cref="SharedKillSwitch"/> instance. By invoking
         /// <see cref="Shutdown"/> or <see cref="Abort"/> all running instances of all provided <see cref="IGraph{TShape}"/>s by this
         /// switch will be stopped normally or failed.
         /// </summary>

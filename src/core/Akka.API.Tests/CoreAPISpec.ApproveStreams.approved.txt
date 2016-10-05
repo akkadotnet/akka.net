@@ -1220,8 +1220,6 @@ namespace Akka.Streams.Dsl
             where TShape2 : Akka.Streams.Shape
             where TShape3 : Akka.Streams.Shape
             where TShape4 : Akka.Streams.Shape { }
-        public static Akka.Streams.IGraph<TShape, TMat> CreateMaterialized<TShape, TMat>(System.Func<Akka.Streams.Dsl.GraphDsl.Builder<TMat>, TShape> buildBlock)
-            where TShape : Akka.Streams.Shape { }
         public sealed class Builder<T>
         {
             public Akka.Streams.Outlet<T> MaterializedValue { get; }
@@ -1638,6 +1636,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Prepend<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> that)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.SubFlow<Akka.Streams.Util.Option<TOut>, TMat, TClosed> Recover<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<System.Exception, Akka.Streams.Util.Option<TOut>> partialFunc) { }
+        [System.ObsoleteAttribute("Use RecoverWithRetries instead.")]
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> RecoverWith<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> RecoverWithRetries<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc, int attempts) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Scan<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> scan) { }

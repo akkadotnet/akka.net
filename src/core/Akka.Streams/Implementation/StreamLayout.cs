@@ -13,6 +13,7 @@ using System.Runtime.Serialization;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
 using Akka.Util;
 using Reactive.Streams;
@@ -567,8 +568,7 @@ namespace Akka.Streams.Implementation
 
         public virtual IImmutableDictionary<InPort, OutPort> Upstreams => ImmutableDictionary<InPort, OutPort>.Empty;
 
-        public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this)
-            ;
+        public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);
 
         public abstract Shape Shape { get; }
 
@@ -599,8 +599,7 @@ namespace Akka.Streams.Implementation
 
         public override bool IsRunnable => false;
 
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => StreamLayout.Ignore.Instance
-            ;
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => StreamLayout.Ignore.Instance;
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -610,11 +609,28 @@ namespace Akka.Streams.Implementation
             throw new NotSupportedException("Cannot replace the shape of empty module");
         }
 
-        public override IModule Compose(IModule other) => other;
+        public override IModule Compose(IModule other) => Compose<object,object,object>(other, Keep.Left);
 
         public override IModule Compose<T1, T2, T3>(IModule other, Func<T1, T2, T3> matFunc)
         {
-            throw new NotSupportedException("It is invalid to combine materialized value with EmptyModule");
+            if (Keep.IsRight(matFunc))
+                return other;
+
+            if (Keep.IsLeft(matFunc))
+            {
+                // If "that" has a fully ignorable materialized value, we ignore it, otherwise we keep the side effect and
+                // explicitly map to NotUsed
+                var materialized =
+                    IgnorableMaterializedValueComposites.Apply(other)
+                        ? (StreamLayout.IMaterializedValueNode) StreamLayout.Ignore.Instance
+                        : new StreamLayout.Transform(_ => NotUsed.Instance, other.MaterializedValueComputation);
+
+                return new CompositeModule(other.IsSealed ? ImmutableArray.Create(other) : other.SubModules, other.Shape,
+                    other.Downstreams, other.Upstreams, materialized, IsSealed ? Attributes.None : Attributes);
+            }
+
+            throw new NotSupportedException(
+                "It is invalid to combine materialized value with EmptyModule except with Keep.Left or Keep.Right");
         }
 
         public override IModule Nest() => this;
@@ -1026,6 +1042,9 @@ namespace Akka.Streams.Implementation
             try
             {
                 subscriber.OnSubscribe(wrapped);
+                // Requests will be only allowed once onSubscribe has returned to avoid reentering on an onNext before
+                // onSubscribe completed
+                wrapped.UngateDemandAndRequestBuffered();
             }
             catch (Exception ex)
             {
@@ -1235,12 +1254,37 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        private sealed class WrappedSubscription : ISubscription
+        private interface ISubscriptionState
         {
+            long Demand { get; }
+        }
+
+        private sealed class PassThrough : ISubscriptionState
+        {
+            public static PassThrough Instance { get; } = new PassThrough();
+
+            private PassThrough() { }
+
+            public long Demand { get; } = 0;
+        }
+
+        private sealed class Buffering : ISubscriptionState
+        {
+            public Buffering(long demand)
+            {
+                Demand = demand;
+            }
+
+            public long Demand { get; }
+        }
+
+        private sealed class WrappedSubscription : AtomicReference<ISubscriptionState>, ISubscription
+        {
+            private static readonly Buffering NoBufferedDemand = new Buffering(0);
             private readonly ISubscription _real;
             private readonly VirtualProcessor<T> _processor;
-
-            public WrappedSubscription(ISubscription real, VirtualProcessor<T> processor)
+            
+            public WrappedSubscription(ISubscription real, VirtualProcessor<T> processor) : base(NoBufferedDemand)
             {
                 _real = real;
                 _processor = processor;
@@ -1265,13 +1309,41 @@ namespace Akka.Streams.Implementation
                     }
                 }
                 else
-                    _real.Request(n);
+                {
+                    // NOTE: At this point, batched requests might not have been dispatched, i.e. this can reorder requests.
+                    // This does not violate the Spec though, since we are a "Processor" here and although we, in reality,
+                    // proxy downstream requests, it is virtually *us* that emit the requests here and we are free to follow
+                    // any pattern of emitting them.
+                    // The only invariant we need to keep is to never emit more requests than the downstream emitted so far.
+
+                    while (true)
+                    {
+                        var current = Value;
+                        if (current == PassThrough.Instance)
+                        {
+                            _real.Request(n);
+                            break;
+                        }
+                        if (!CompareAndSet(current, new Buffering(current.Demand + n)))
+                            continue;
+                        break;
+                    }
+                }
             }
 
             public void Cancel()
             {
                 _processor.Value = Inert.Instance;
                 _real.Cancel();
+            }
+
+            public void UngateDemandAndRequestBuffered()
+            {
+                // Ungate demand
+                var requests = GetAndSet(PassThrough.Instance).Demand;
+                // And request buffered demand
+                if(requests > 0)
+                    _real.Request(requests);
             }
         }
     }
@@ -1681,6 +1753,52 @@ namespace Akka.Streams.Implementation
             }
 
             publisher.Subscribe(UntypedSubscriber.FromTyped(subscriberOrVirtual));
+        }
+    }
+
+    internal interface IProcessorModule
+    {
+        Inlet In { get; }
+        
+        Outlet Out { get; }
+
+        Tuple<object, object> CreateProcessor();
+    }
+
+    internal sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
+    {
+        private readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> _createProcessor;
+
+        public ProcessorModule(Func<Tuple<IProcessor<TIn, TOut>, TMat>> createProcessor, Attributes attributes = null)
+        {
+            _createProcessor = createProcessor;
+            Attributes = attributes ?? DefaultAttributes.Processor;
+            Shape = new FlowShape<TIn, TOut>((Inlet<TIn>)In, (Outlet<TOut>)Out);
+        }
+
+        public Inlet In { get; } = new Inlet<TIn>("ProcessorModule.in");
+
+        public Outlet Out { get; } = new Outlet<TOut>("ProcessorModule.out");
+
+        public override Shape Shape { get; }
+
+        public override IModule ReplaceShape(Shape shape)
+        {
+            if(shape != Shape)
+                throw new NotSupportedException("Cannot replace the shape of a FlowModule");
+            return this;
+        }
+
+        public override IModule CarbonCopy() => WithAttributes(Attributes);
+
+        public override Attributes Attributes { get; }
+
+        public override IModule WithAttributes(Attributes attributes) => new ProcessorModule<TIn, TOut, TMat>(_createProcessor, attributes);
+
+        public Tuple<object, object> CreateProcessor()
+        {
+            var result = _createProcessor();
+            return Tuple.Create<object, object>(result.Item1, result.Item2);
         }
     }
 }

@@ -39,7 +39,7 @@ namespace Akka.Streams.Dsl
 			where TShape1: Shape
 		{
 			var builder = new Builder<TMat>();
-			var shape1 = builder.Add(g1);
+			var shape1 = builder.Add<TShape1, object, TMat, TMat>(g1, Keep.Right);
 			var shape = buildBlock(builder, shape1);
 			var module = builder.Module.ReplaceShape(shape);
 

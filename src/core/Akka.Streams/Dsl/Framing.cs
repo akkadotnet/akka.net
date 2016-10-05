@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq;
 using Akka.IO;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
 
@@ -32,7 +32,7 @@ namespace Akka.Streams.Dsl
             bool allowTruncation = false)
         {
             return Flow.Create<ByteString>()
-                .Transform(() => new DelimiterFramingStage(delimiter, maximumFrameLength, allowTruncation))
+                .Via(new DelimiterFramingStage(delimiter, maximumFrameLength, allowTruncation))
                 .Named("DelimiterFraming");
         }
 
@@ -162,95 +162,142 @@ namespace Akka.Streams.Dsl
             }
         }
 
-        private sealed class DelimiterFramingStage : PushPullStage<ByteString, ByteString>
+        private sealed class DelimiterFramingStage : GraphStage<FlowShape<ByteString, ByteString>>
         {
+            #region Logic
+
+            private sealed class Logic : GraphStageLogic
+            {
+                private readonly DelimiterFramingStage _stage;
+                private readonly byte _firstSeparatorByte;
+                private ByteString _buffer;
+                private int _nextPossibleMatch;
+
+                public Logic(DelimiterFramingStage stage) : base (stage.Shape)
+                {
+                    _stage = stage;
+                    _firstSeparatorByte = stage._separatorBytes.Head;
+                    _buffer = ByteString.Empty;
+                    
+                    SetHandler(stage.In, onPush: () =>
+                    {
+                        _buffer += Grab(stage.In);
+                        DoParse();
+                    }, onUpstreamFinish: () =>
+                    {
+                        if(_buffer.IsEmpty)
+                            CompleteStage();
+                        else if (IsAvailable(stage.Out))
+                            DoParse();
+                        
+                        // else swallow the termination and wait for pull 
+                    });
+
+                    SetHandler(stage.Out, onPull: DoParse);
+                }
+
+                private void TryPull()
+                {
+                    if (IsClosed(_stage.In))
+                    {
+                        if (_stage._allowTruncation)
+                        {
+                            Push(_stage.Out, _buffer);
+                            CompleteStage();
+                        }
+                        else
+                            FailStage(
+                                new FramingException(
+                                    "Stream finished but there was a truncated final frame in the buffer"));
+                    }
+                    else
+                        Pull(_stage.In);
+                }
+
+                private void DoParse()
+                {
+                    var possibleMatchPosition = -1;
+
+                    for (var i = _nextPossibleMatch; i < _buffer.Count; i++)
+                    {
+                        if (_buffer[i] == _firstSeparatorByte)
+                        {
+                            possibleMatchPosition = i;
+                            break;
+                        }
+                    }
+
+                    if (possibleMatchPosition > _stage._maximumLineBytes)
+                        FailStage(
+                            new FramingException(
+                                $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
+                    else if (possibleMatchPosition == -1)
+                    {
+                        if (_buffer.Count > _stage._maximumLineBytes)
+                            FailStage(
+                                new FramingException(
+                                    $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
+                        else
+                        {
+                            // No matching character, we need to accumulate more bytes into the buffer 
+                            _nextPossibleMatch = _buffer.Count;
+                            TryPull();
+                        }
+                    }
+                    else if (possibleMatchPosition + _stage._separatorBytes.Count > _buffer.Count)
+                    {
+                        // We have found a possible match (we found the first character of the terminator 
+                        // sequence) but we don't have yet enough bytes. We remember the position to 
+                        // retry from next time.
+                        _nextPossibleMatch = possibleMatchPosition;
+                        TryPull();
+                    }
+                    else if (Equals(_buffer.Slice(possibleMatchPosition, possibleMatchPosition + _stage._separatorBytes.Count), _stage._separatorBytes))
+                    {
+                        // Found a match
+                        var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
+                        _buffer = _buffer.Drop(possibleMatchPosition + _stage._separatorBytes.Count);
+                        _nextPossibleMatch = 0;
+                        Push(_stage.Out, parsedFrame);
+
+                        if (IsClosed(_stage.In) && _buffer.IsEmpty)
+                            CompleteStage();
+                    }
+                    else
+                    {
+                        // possibleMatchPos was not actually a match 
+                        _nextPossibleMatch++;
+                        DoParse();
+                    }
+                }
+            }
+
+            #endregion
+
             private readonly ByteString _separatorBytes;
             private readonly int _maximumLineBytes;
             private readonly bool _allowTruncation;
-            private readonly byte _firstSeperatorByte;
-            private ByteString _buffer;
-            private int _nextPossibleMatch;
 
             public DelimiterFramingStage(ByteString separatorBytes, int maximumLineBytes, bool allowTruncation)
             {
                 _separatorBytes = separatorBytes;
                 _maximumLineBytes = maximumLineBytes;
                 _allowTruncation = allowTruncation;
-                _firstSeperatorByte = separatorBytes.Head;
-                _buffer = ByteString.Empty;
+
+                Shape = new FlowShape<ByteString, ByteString>(In, Out);
             }
+            
+            private Inlet<ByteString> In = new Inlet<ByteString>("DelimiterFraming.in");
 
-            public override ISyncDirective OnPush(ByteString element, IContext<ByteString> context)
-            {
-                _buffer += element;
-                return DoParse(context);
-            }
+            private Outlet<ByteString> Out = new Outlet<ByteString>("DelimiterFraming.in");
 
-            public override ISyncDirective OnPull(IContext<ByteString> context) => DoParse(context);
+            public override FlowShape<ByteString, ByteString> Shape { get; }
 
-            public override ITerminationDirective OnUpstreamFinish(IContext<ByteString> context)
-            {
-                return _buffer.NonEmpty ? context.AbsorbTermination() : context.Finish();
-            }
+            protected override Attributes InitialAttributes { get; } = DefaultAttributes.DelimiterFraming;
 
-            public override void PostStop() => _buffer = null;
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-            private ISyncDirective TryPull(IContext<ByteString> context)
-            {
-                if (!context.IsFinishing)
-                    return context.Pull();
-
-                return _allowTruncation
-                    ? context.PushAndFinish(_buffer)
-                    : context.Fail(new FramingException("Stream finished but there was a truncated final frame in the buffer"));
-            }
-
-            private ISyncDirective DoParse(IContext<ByteString> context)
-            {
-                var possibleMatchPosition = -1;
-
-                for (var i = _nextPossibleMatch; i < _buffer.Count; i++)
-                {
-                    if (_buffer[i] == _firstSeperatorByte)
-                    {
-                        possibleMatchPosition = i;
-                        break;
-                    }
-                }
-
-                if (possibleMatchPosition > _maximumLineBytes)
-                    return context.Fail(new FramingException($"Read {_buffer.Count} bytes which is more than {_maximumLineBytes} without seeing a line terminator"));
-
-                if (possibleMatchPosition == -1)
-                {
-                    // No matching character, we need to accumulate more bytes into the buffer
-                    _nextPossibleMatch = _buffer.Count;
-                    return TryPull(context);
-                }
-
-                if (possibleMatchPosition + _separatorBytes.Count > _buffer.Count)
-                {
-                    // We have found a possible match (we found the first character of the terminator
-                    // sequence) but we don't have yet enough bytes. We remember the position to
-                    // retry from next time.
-                    _nextPossibleMatch = possibleMatchPosition;
-                    return TryPull(context);
-                }
-
-                if (_buffer.Slice(possibleMatchPosition, possibleMatchPosition + _separatorBytes.Count).SequenceEqual(_separatorBytes))
-                {
-                    // Found a match
-                    var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
-                    _buffer = _buffer.Drop(possibleMatchPosition + _separatorBytes.Count);
-                    _nextPossibleMatch = 0;
-                    if (context.IsFinishing && _buffer.IsEmpty)
-                        return context.PushAndFinish(parsedFrame);
-                    return context.Push(parsedFrame);
-                }
-
-                _nextPossibleMatch += 1;
-                return DoParse(context);
-            }
+            public override string ToString() => "DelimiterFraming";
         }
 
         private sealed class LengthFieldFramingStage : PushPullStage<ByteString, ByteString>

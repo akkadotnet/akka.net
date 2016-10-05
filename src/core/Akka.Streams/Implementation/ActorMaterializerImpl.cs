@@ -66,16 +66,13 @@ namespace Akka.Streams.Implementation
                     AssignPort(source.Shape.Outlets.First(), publisher);
                     materializedValues.Add(atomic, materialized);
                 }
-                else if (atomic is IStageModule)
+                else if (atomic is IProcessorModule)
                 {
-                    // FIXME: Remove this, only stream-of-stream ops need it
-                    var stage = (IStageModule) atomic;
-                    // assumes BaseType is StageModule<>
-                    var methodInfo = ProcessorForMethod.MakeGenericMethod(atomic.GetType().BaseType.GenericTypeArguments);
-                    var parameters = new object[]
-                    {stage, effectiveAttributes, _materializer.EffectiveSettings(effectiveAttributes), null};
-                    var processor = methodInfo.Invoke(this, parameters);
-                    object materialized = parameters[3];
+                    var stage = atomic as IProcessorModule;
+                    var t = stage.CreateProcessor();
+                    var processor = t.Item1;
+                    var materialized = t.Item2;
+
                     AssignPort(stage.In, UntypedSubscriber.FromTyped(processor));
                     AssignPort(stage.Out, UntypedPublisher.FromTyped(processor));
                     materializedValues.Add(atomic, materialized);
@@ -142,21 +139,6 @@ namespace Akka.Streams.Implementation
                     AssignPort(outletsEnumerator.Current, (IUntypedPublisher) publisher);
                     i++;
                 }
-            }
-
-            // ReSharper disable once UnusedMember.Local
-            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut>(StageModule<TIn, TOut> op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out object materialized)
-            {
-                DirectProcessor<TIn, TOut> processor;
-                if ((processor = op as DirectProcessor<TIn, TOut>) != null)
-                {
-                    var t = processor.ProcessorFactory();
-                    materialized = t.Item2;
-                    return t.Item1;
-                }
-
-                var props = ActorProcessorFactory.Props(_materializer, op, effectiveAttributes, out materialized);
-                return ActorProcessorFactory.Create<TIn, TOut>(_materializer.ActorOf(props, StageName(effectiveAttributes), settings.Dispatcher));
             }
         }
 
@@ -409,38 +391,5 @@ namespace Akka.Streams.Implementation
         }
 
         protected override void PostStop() => HaveShutdown.Value = true;
-    }
-
-    internal static class ActorProcessorFactory
-    {
-        public static Props Props<TIn, TOut>(ActorMaterializer materializer, StageModule<TIn, TOut> op, Attributes parentAttributes, out object materialized)
-        {
-            var attr = parentAttributes.And(op.Attributes);
-            // USE THIS TO AVOID CLOSING OVER THE MATERIALIZER BELOW
-            // Also, otherwise the attributes will not affect the settings properly!
-            var settings = materializer.EffectiveSettings(attr);    
-            Props result;
-            materialized = null;
-
-            if (op is IGroupBy)
-            {
-                var groupBy = (IGroupBy) op;
-                result = GroupByProcessorImpl<TIn>.Props(settings, groupBy.MaxSubstreams, groupBy.Extractor);
-            }
-            else if (op.GetType().IsGenericType && op.GetType().GetGenericTypeDefinition() == typeof(DirectProcessor<,>))
-                throw new ArgumentException("DirectProcessor cannot end up in ActorProcessorFactory");
-            else
-                throw new ArgumentException($"StageModule type {op.GetType()} is not supported");
-
-            return result;
-        }
-
-        public static ActorProcessor<TIn, TOut> Create<TIn, TOut>(IActorRef impl)
-        {
-            var p = new ActorProcessor<TIn,TOut>(impl);
-            // Resolve cyclic dependency with actor. This MUST be the first message no matter what.
-            impl.Tell(new ExposedPublisher(p));
-            return p;
-        }
     }
 }

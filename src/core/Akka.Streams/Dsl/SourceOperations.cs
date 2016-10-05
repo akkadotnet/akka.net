@@ -70,7 +70,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// RecoverWithRetries  allows to switch to alternative Source on flow failure. It will stay in effect after
         /// a failure has been recovered up to <paramref name="attempts"/> number of times so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
-        /// Source may be materialized. Note that if you pass in 0, this won't attempt to recover at all. Passing in a negative number will behave exactly the same as  <see cref="RecoverWithRetries{TOut,TMat}"/>.
+        /// Source may be materialized. Note that if you pass in 0, this won't attempt to recover at all. Passing in -1 will behave exactly the same as  <see cref="RecoverWithRetries{TOut,TMat}"/>.
         /// <para>
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
         /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
@@ -85,7 +85,10 @@ namespace Akka.Streams.Dsl
         /// Completes when upstream completes or upstream failed with exception <paramref name="partialFunc"/> can handle
         /// </para>
         /// Cancels when downstream cancels 
-        /// </summary>
+        /// </summary>        
+        /// /// <param name="partialFunc">Receives the failure cause and returns the new Source to be materialized if any</param>
+        /// <param name="attempts">Maximum number of retries or -1 to retry indefinitely</param>
+        /// <exception cref="ArgumentException">if <paramref name="attempts"/> is a negative number other than -1</exception>
         public static Source<TOut, TMat> RecoverWithRetries<TOut, TMat>(this Source<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
         {
@@ -893,10 +896,7 @@ namespace Akka.Streams.Dsl
         /// </summary> 
         public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
         {
-            return flow.GroupBy(maxSubstreams, groupingFunc,
-                (f, s) => ((Source<Source<TOut, NotUsed>, TMat>) f).To(s),
-                (f, o) => ((Source<TOut, TMat>) f).DeprecatedAndThen(o)
-                );
+            return flow.GroupBy(maxSubstreams, groupingFunc, (f, s) => ((Source<Source<TOut, NotUsed>, TMat>) f).To(s));
         }
 
         /// <summary>
