@@ -393,7 +393,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             var ops = new IGraphStageWithMaterializedValue<FlowShape<string, string>, object>[]
             {
                 new PushFinishStage<string>(() => TestActor.Tell("stop")),
-                ToGraphStage(new Aggregate<string, string>("", (x, y) => x+y, Deciders.StoppingDecider))
+                new Aggregate<string, string>("", (x, y) => x+y)
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>

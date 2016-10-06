@@ -55,7 +55,7 @@ namespace Akka.Streams.Implementation
         public void OnComplete() => Impl.Tell(Actors.OnComplete.Instance);
     }
 
-    internal abstract class BatchingInputBuffer : IInputs
+    public abstract class BatchingInputBuffer : IInputs
     {
         public readonly int Count;
         public readonly IPump Pump;
@@ -217,7 +217,7 @@ namespace Akka.Streams.Implementation
         protected virtual void InputOnError(Exception e) => Clear();
     }
 
-    internal class SimpleOutputs : IOutputs
+    public class SimpleOutputs : IOutputs
     {
         public readonly IActorRef Actor;
         public readonly IPump Pump;

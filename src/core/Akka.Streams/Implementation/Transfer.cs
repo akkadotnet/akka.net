@@ -11,7 +11,7 @@ using Akka.Pattern;
 
 namespace Akka.Streams.Implementation
 {
-    internal class SubReceive
+    public class SubReceive
     {
         private Receive _currentReceive;
 
@@ -78,7 +78,7 @@ namespace Akka.Streams.Implementation
             => new LambdaTransferState(() => outputs.IsDemandAvailable || outputs.IsClosed, () => false);
     }
 
-    internal abstract class TransferState
+    public abstract class TransferState
     {
         public abstract bool IsReady { get; }
         public abstract bool IsCompleted { get; }
@@ -158,7 +158,7 @@ namespace Akka.Streams.Implementation
         public override bool IsCompleted => false;
     }
 
-    internal struct TransferPhase
+    public struct TransferPhase
     {
         public readonly TransferState Precondition;
         public readonly Action Action;
@@ -170,7 +170,7 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal interface IPump
+    public interface IPump
     {
         TransferState TransferState { get; set; }
         Action CurrentAction { get; set; }

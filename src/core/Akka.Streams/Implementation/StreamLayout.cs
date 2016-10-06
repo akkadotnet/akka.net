@@ -1442,7 +1442,10 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal abstract class MaterializerSession
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public abstract class MaterializerSession
     {
         public static readonly bool IsDebug = false;
 
@@ -1503,7 +1506,7 @@ namespace Akka.Streams.Implementation
         /// of the same module.
         /// We don't store the enclosing CopiedModule itself as state since we don't use it anywhere else than exit and enter
         /// </summary>
-        private void EnterScope(CopiedModule enclosing)
+        protected void EnterScope(CopiedModule enclosing)
         {
             if(IsDebug)
                 Console.WriteLine($"entering scope [{GetHashCode()}%08x]");
@@ -1519,7 +1522,7 @@ namespace Akka.Streams.Implementation
         /// leading to port identity collisions)
         /// We don't store the enclosing CopiedModule itself as state since we don't use it anywhere else than exit and enter
         /// </summary>
-        private void ExitScope(CopiedModule enclosing)
+        protected void ExitScope(CopiedModule enclosing)
         {
             var scopeSubscribers = Subscribers;
             var scopePublishers = Publishers;
@@ -1765,7 +1768,10 @@ namespace Akka.Streams.Implementation
         Tuple<object, object> CreateProcessor();
     }
 
-    internal sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
     {
         private readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> _createProcessor;
 

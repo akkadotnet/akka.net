@@ -111,7 +111,7 @@ namespace Akka.Streams.Implementation.IO
 
             public override void PreStart()
             {
-                _dispatcher = ActorMaterializer.Downcast(Materializer).System.Dispatchers.Lookup(_dispatcherId);
+                _dispatcher = ActorMaterializerHelper.Downcast(Materializer).System.Dispatchers.Lookup(_dispatcherId);
                 base.PreStart();
             }
 

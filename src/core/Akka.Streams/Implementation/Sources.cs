@@ -19,11 +19,11 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class QueueSource<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, ISourceQueueWithComplete<TOut>>
+    public sealed class QueueSource<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, ISourceQueueWithComplete<TOut>>
     {
         #region internal classes
 
-        internal interface IInput { }
+        public interface IInput { }
 
         internal sealed class Offer<T> : IInput
         {
@@ -313,7 +313,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class UnfoldResourceSource<TOut, TSource> : GraphStage<SourceShape<TOut>>
+    public sealed class UnfoldResourceSource<TOut, TSource> : GraphStage<SourceShape<TOut>>
     {
         #region Logic
 
@@ -426,7 +426,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class UnfoldResourceSourceAsync<TOut, TSource> : GraphStage<SourceShape<TOut>>
+    public sealed class UnfoldResourceSourceAsync<TOut, TSource> : GraphStage<SourceShape<TOut>>
     {
         #region Logic
 

@@ -15,7 +15,7 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
-    internal class OutputBunch<T>
+    public class OutputBunch<T>
     {
         #region internal classes
 
@@ -287,7 +287,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal static class FanOut
+    public static class FanOut
     {
         [Serializable]
         public struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
@@ -357,7 +357,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal abstract class FanOut<T> : ActorBase, IPump
+    public abstract class FanOut<T> : ActorBase, IPump
     {
 
         #region internal classes

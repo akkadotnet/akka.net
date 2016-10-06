@@ -48,7 +48,7 @@ namespace Akka.Streams.Implementation.IO
 
         public override object Create(MaterializationContext context, out Task<IOResult> materializer)
         {
-            var mat = ActorMaterializer.Downcast(context.Materializer);
+            var mat = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
 
             var ioResultPromise = new TaskCompletionSource<IOResult>();
@@ -88,7 +88,7 @@ namespace Akka.Streams.Implementation.IO
 
         public override object Create(MaterializationContext context, out Task<IOResult> materializer)
         {
-            var mat = ActorMaterializer.Downcast(context.Materializer);
+            var mat = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
             var ioResultPromise = new TaskCompletionSource<IOResult>();
 

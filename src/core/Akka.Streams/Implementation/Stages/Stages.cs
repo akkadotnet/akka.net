@@ -9,14 +9,12 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Event;
-using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Reactive.Streams;
 
 namespace Akka.Streams.Implementation.Stages
 {
-    internal static class DefaultAttributes
+    public static class DefaultAttributes
     {
         public static readonly Attributes IODispatcher = ActorAttributes.CreateDispatcher("akka.stream.default-blocking-io-dispatcher");
 
@@ -115,6 +113,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes ActorRefWithAck = Attributes.CreateName("actorRefWithAckSink");
         public static readonly Attributes ActorSubscriberSink = Attributes.CreateName("actorSubscriberSink");
         public static readonly Attributes QueueSink = Attributes.CreateName("queueSink");
+        public static readonly Attributes LazySink = Attributes.CreateName("lazySink");
         public static readonly Attributes InputStreamSink = Attributes.CreateName("inputStreamSink").And(IODispatcher);
         public static readonly Attributes OutputStreamSink = Attributes.CreateName("outputStreamSink").And(IODispatcher);
         public static readonly Attributes FileSink = Attributes.CreateName("fileSink").And(IODispatcher);
@@ -124,21 +123,21 @@ namespace Akka.Streams.Implementation.Stages
     /// <summary>
     /// Stage that is backed by a GraphStage but can be symbolically introspected
     /// </summary>
-    internal sealed class SymbolicGraphStage<TIn, TOut> : PushPullGraphStage<TIn, TOut>
+    public sealed class SymbolicGraphStage<TIn, TOut> : PushPullGraphStage<TIn, TOut>
     {
         public SymbolicGraphStage(ISymbolicStage<TIn, TOut> symbolicStage) : base(symbolicStage.Create, symbolicStage.Attributes)
         {
         }
     }
 
-    internal interface ISymbolicStage<in TIn, out TOut> : IStage<TIn, TOut>
+    public interface ISymbolicStage<in TIn, out TOut> : IStage<TIn, TOut>
     {
         Attributes Attributes { get; }
 
         IStage<TIn, TOut> Create(Attributes effectiveAttributes);
     }
 
-    internal abstract class SymbolicStage<TIn, TOut> : ISymbolicStage<TIn, TOut>
+    public abstract class SymbolicStage<TIn, TOut> : ISymbolicStage<TIn, TOut>
     {
         protected SymbolicStage(Attributes attributes)
         {
@@ -153,7 +152,7 @@ namespace Akka.Streams.Implementation.Stages
             => attributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
     }
 
-    internal sealed class Select<TIn, TOut> : SymbolicStage<TIn, TOut>
+    public sealed class Select<TIn, TOut> : SymbolicStage<TIn, TOut>
     {
         private readonly Func<TIn, TOut> _mapper;
 
@@ -166,68 +165,7 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.Select<TIn, TOut>(_mapper, Supervision(effectiveAttributes));
     }
 
-    internal sealed class Log<T> : SymbolicStage<T, T>
-    {
-        private readonly string _name;
-        private readonly Func<T, object> _extract;
-        private readonly ILoggingAdapter _loggingAdapter;
-
-        public Log(string name, Func<T, object> extract, ILoggingAdapter loggingAdapter, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Log)
-        {
-            _name = name;
-            _extract = extract;
-            _loggingAdapter = loggingAdapter;
-        }
-
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
-            => new Fusing.Log<T>(_name, _extract, _loggingAdapter, Supervision(effectiveAttributes));
-    }
-
-    internal sealed class Grouped<T> : SymbolicStage<T, IEnumerable<T>>
-    {
-        private readonly int _count;
-
-        public Grouped(int count, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Grouped)
-        {
-            if (count <= 0) throw new ArgumentException("Grouped count must be greater than 0", nameof(count));
-            _count = count;
-        }
-
-        public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes) => new Fusing.Grouped<T>(_count);
-    }
-
-    internal sealed class Sliding<T> : SymbolicStage<T, IEnumerable<T>>
-    {
-        private readonly int _count;
-        private readonly int _step;
-
-        public Sliding(int count, int step, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Sliding)
-        {
-            if (count <= 0) throw new ArgumentException("Sliding count must be greater than 0", nameof(count));
-            if (step <= 0) throw new ArgumentException("Sliding step must be greater than 0", nameof(step));
-            _count = count;
-            _step = step;
-        }
-
-        public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes) => new Fusing.Sliding<T>(_count, _step);
-    }
-
-    internal sealed class Aggregate<TIn, TOut> : SymbolicStage<TIn, TOut>
-    {
-        private readonly TOut _zero;
-        private readonly Func<TOut, TIn, TOut> _aggregate;
-
-        public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Aggregate)
-        {
-            _zero = zero;
-            _aggregate = aggregate;
-        }
-
-        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-            => new Fusing.Aggregate<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
-    }
-
-    internal sealed class Buffer<T> : SymbolicStage<T, T>
+    public sealed class Buffer<T> : SymbolicStage<T, T>
     {
         private readonly int _size;
         private readonly OverflowStrategy _overflowStrategy;
@@ -241,7 +179,7 @@ namespace Akka.Streams.Implementation.Stages
         public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Buffer<T>(_size, _overflowStrategy);
     }
 
-    internal sealed class FirstOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
+    public sealed class FirstOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
     {
         #region internal classes
         
@@ -305,7 +243,7 @@ namespace Akka.Streams.Implementation.Stages
         public override string ToString() => "FirstOrDefaultStage";
     }
 
-    internal sealed class LastOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
+    public sealed class LastOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
     {
         #region internal classes
 

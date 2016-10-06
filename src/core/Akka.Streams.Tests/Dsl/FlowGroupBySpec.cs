@@ -14,6 +14,7 @@ using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -478,6 +479,41 @@ namespace Akka.Streams.Tests.Dsl
                 }
 
                 upstreamSubscription.SendComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void GroupBy_must_Work_if_pull_is_exercised_from_both_substream_and_main()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstreamMaster = this.CreateSubscriberProbe<Source<int, NotUsed>>();
+
+                Source.FromPublisher(upstream)
+                    .Via(new GroupBy<int, bool>(2, element => element == 0))
+                    .RunWith(Sink.FromSubscriber(downstreamMaster), Materializer);
+
+                var substream = this.CreateSubscriberProbe<int>();
+
+                downstreamMaster.Request(1);
+                upstream.SendNext(1);
+                downstreamMaster.ExpectNext().RunWith(Sink.FromSubscriber(substream), Materializer);
+
+                // Read off first buffered element from subsource
+                substream.Request(1);
+                substream.ExpectNext(1);
+
+                // Both will attempt to pull upstream
+                substream.Request(1);
+                substream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                downstreamMaster.Request(1);
+                downstreamMaster.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+
+                // Cleanup, not part of the actual test
+                substream.Cancel();
+                downstreamMaster.Cancel();
+                upstream.SendComplete();
             }, Materializer);
         }
 

@@ -16,7 +16,7 @@ namespace Akka.Streams.Implementation
 {
     using State = Byte;
 
-    internal abstract class InputBunch
+    public abstract class InputBunch
     {
         #region internal classes
 
@@ -284,7 +284,7 @@ namespace Akka.Streams.Implementation
         private void Marked(int index, bool on) => SetState(index, FanIn.Marked, on);
     }
 
-    internal static class FanIn
+    public static class FanIn
     {
         [Serializable]
         public struct OnError : INoSerializationVerificationNeeded, IDeadLetterSuppression
@@ -343,7 +343,7 @@ namespace Akka.Streams.Implementation
         public const State Cancelled = 16;
     }
 
-    internal abstract class FanIn<T> : ActorBase, IPump
+    public abstract class FanIn<T> : ActorBase, IPump
     {
         #region Internal classes
 

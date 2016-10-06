@@ -364,7 +364,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <exception cref="ArgumentException">Thrown, if <paramref name="n"/> is less than or equal zero.</exception>
         public static IFlow<IEnumerable<T>, TMat> Grouped<T, TMat>(this IFlow<T, TMat> flow, int n)
         {
-            return flow.AndThen(new Grouped<T>(n));
+            return flow.Via(new Fusing.Grouped<T>(n));
         }
 
         /// <summary>
@@ -442,7 +442,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <exception cref="ArgumentException">Thrown when <paramref name="n"/> or <paramref name="step"/> is less than or equal zero.</exception>
         public static IFlow<IEnumerable<T>, TMat> Sliding<T, TMat>(this IFlow<T, TMat> flow, int n, int step = 1)
         {
-            return flow.AndThen(new Sliding<T>(n, step));
+            return flow.Via(new Fusing.Sliding<T>(n, step));
         }
 
         /// <summary>
@@ -489,7 +489,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TOut, TMat> Aggregate<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
             Func<TOut, TIn, TOut> fold)
         {
-            return flow.AndThen(new Aggregate<TIn, TOut>(zero, fold));
+            return flow.Via(new Fusing.Aggregate<TIn, TOut>(zero, fold));
         }
 
         /// <summary>
@@ -1390,7 +1390,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, Func<T, object> extract = null,
             ILoggingAdapter log = null)
         {
-            return flow.AndThen(new Log<T>(name, extract ?? Identity<T>(), log));
+            return flow.Via(new Fusing.Log<T>(name, extract ?? Identity<T>(), log));
         }
 
         /// <summary>

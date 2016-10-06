@@ -119,7 +119,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[] {
                 ToGraphStage(new Select<int, int>(x => x + 1, resumingDecider)),
                 ToGraphStage(new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
-                ToGraphStage(new Grouped<int>(3))
+                new Grouped<int>(3)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -145,7 +145,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[] {
                 ToGraphStage(new Select<int, int>(x => x + 1, resumingDecider)),
                 ToGraphStage(new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
-                ToGraphStage(new Grouped<int>(1000))
+                new Grouped<int>(1000)
             },
                 (lastEvents, upstream, downstream) =>
                 {

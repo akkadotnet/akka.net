@@ -49,7 +49,10 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal class GraphStageModule : AtomicModule
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public class GraphStageModule : AtomicModule
     {
         public readonly IGraphStageWithMaterializedValue<Shape, object> Stage;
 
@@ -73,6 +76,9 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => $"GraphStage({Stage}) [{GetHashCode()}%08x]";
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     public abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
     {
         public readonly Inlet<T> Inlet;
@@ -89,7 +95,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override FlowShape<T, T> Shape { get; }
     }
 
-    internal sealed class Identity<T> : SimpleLinearGraphStage<T>
+    public sealed class Identity<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
         private sealed class Logic : GraphStageLogic
@@ -113,7 +119,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-    internal sealed class Detacher<T> : GraphStage<FlowShape<T, T>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class Detacher<T> : GraphStage<FlowShape<T, T>>
     {
         #region internal classes
         private sealed class Logic : GraphStageLogic
@@ -313,7 +322,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "MonitorFlow";
     }
 
-    internal sealed class TickSource<T> : GraphStageWithMaterializedValue<SourceShape<T>, ICancelable>
+    public sealed class TickSource<T> : GraphStageWithMaterializedValue<SourceShape<T>, ICancelable>
     {
         #region internal classes
         
@@ -406,7 +415,12 @@ namespace Akka.Streams.Implementation.Fusing
         void SetValue(object result);
     }
 
-    internal sealed class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// This source is not reusable, it is only created internally.
+    /// </summary>
+    public sealed class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
     {
         #region internal classes
 
@@ -465,7 +479,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => $"MaterializedValueSource({Computation})";
     }
 
-    internal sealed class SingleSource<T> : GraphStage<SourceShape<T>>
+    public sealed class SingleSource<T> : GraphStage<SourceShape<T>>
     {
         #region Internal classes
         private sealed class Logic : GraphStageLogic
@@ -497,7 +511,7 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-    internal sealed class TaskSource<T> : GraphStage<SourceShape<T>>
+    public sealed class TaskSource<T> : GraphStage<SourceShape<T>>
     {
         #region Internal classes
         private sealed class Logic : GraphStageLogic

@@ -233,7 +233,6 @@ namespace Akka.Streams.Actors
             {
                 case LifecycleState.Active:
                 case LifecycleState.PreSubscriber:
-                case LifecycleState.CompleteThenStop:
                     if (_demand > 0)
                     {
                         _demand--;
@@ -245,8 +244,11 @@ namespace Akka.Streams.Actors
                             "OnNext is not allowed when the stream has not requested elements, total demand was 0");
                     }
                     break;
-                case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnNext must not be called after OnError");
-                case LifecycleState.Completed: throw new IllegalStateException("OnNext must not be called after OnComplete");
+                case LifecycleState.ErrorEmitted:
+                    throw new IllegalStateException("OnNext must not be called after OnError");
+                case LifecycleState.Completed:
+                case LifecycleState.CompleteThenStop:
+                    throw new IllegalStateException("OnNext must not be called after OnComplete");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -447,10 +449,10 @@ namespace Akka.Streams.Actors
                         break;
                     case LifecycleState.Active:
                     case LifecycleState.Canceled:
-                        ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-                        ReactiveStreamsCompliance.TryOnError(subscriber, _subscriber == subscriber
-                            ? new IllegalStateException("Cannot subscribe the same subscriber multiple times")
-                            : new IllegalStateException("Only supports one subscriber"));
+                        if(_subscriber == subscriber)
+                            ReactiveStreamsCompliance.RejectDuplicateSubscriber(subscriber);
+                        else
+                            ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "ActorPublisher");
                         break;
                 }
             }

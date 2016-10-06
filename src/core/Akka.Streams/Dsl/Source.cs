@@ -266,7 +266,7 @@ namespace Akka.Streams.Dsl
 
     public static class Source
     {
-        private static SourceShape<T> Shape<T>(string name) => new SourceShape<T>(new Outlet<T>(name + ".out"));
+        public static SourceShape<T> Shape<T>(string name) => new SourceShape<T>(new Outlet<T>(name + ".out"));
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IPublisher{T}"/>.
