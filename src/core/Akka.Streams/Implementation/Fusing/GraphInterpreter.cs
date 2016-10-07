@@ -96,6 +96,7 @@ namespace Akka.Streams.Implementation.Fusing
     public sealed class GraphInterpreter
     {
         #region internal classes
+
         /// <summary>
         /// Marker object that indicates that a port holds no element since it was already grabbed. 
         /// The port is still pullable, but there is no more element to grab.
@@ -103,7 +104,10 @@ namespace Akka.Streams.Implementation.Fusing
         public sealed class Empty
         {
             public static readonly Empty Instance = new Empty();
-            private Empty() { }
+
+            private Empty()
+            {
+            }
 
             public override string ToString() => "Empty";
         }
@@ -124,13 +128,19 @@ namespace Akka.Streams.Implementation.Fusing
         public abstract class UpstreamBoundaryStageLogic : GraphStageLogic
         {
             public abstract Outlet Out { get; }
-            protected UpstreamBoundaryStageLogic() : base(inCount: 0, outCount: 1) { }
+
+            protected UpstreamBoundaryStageLogic() : base(inCount: 0, outCount: 1)
+            {
+            }
         }
 
         public abstract class DownstreamBoundaryStageLogic : GraphStageLogic
         {
             public abstract Inlet In { get; }
-            protected DownstreamBoundaryStageLogic() : base(inCount: 1, outCount: 0) { }
+
+            protected DownstreamBoundaryStageLogic() : base(inCount: 1, outCount: 0)
+            {
+            }
         }
 
         #endregion
@@ -157,6 +167,8 @@ namespace Akka.Streams.Implementation.Fusing
         public const int KeepGoingFlag = 0x4000000;
         public const int KeepGoingMask = 0x3ffffff;
 
+        public const int ChaseLimit = 16;
+
         // Using an Object-array avoids holding on to the GraphInterpreter class
         // when this accidentally leaks onto threads that are not stopped when this
         // class should be unloaded.
@@ -174,7 +186,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public static GraphInterpreter CurrentInterpreterOrNull => (GraphInterpreter) CurrentInterpreter.Value[0];
 
-        public static readonly Attributes[] SingleNoAttribute = { Attributes.None };
+        public static readonly Attributes[] SingleNoAttribute = {Attributes.None};
 
         public readonly GraphStageLogic[] Logics;
         public readonly GraphAssembly Assembly;
@@ -206,6 +218,11 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _mask;
         private int _queueHead;
         private int _queueTail;
+
+        // the first events in preStart blocks should be not chased
+        private int _chaseCounter;
+        private int _chasedPush = NoEvent;
+        private int _chasedPull = NoEvent;
 
         public GraphInterpreter(
             GraphAssembly assembly,
@@ -250,6 +267,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         internal GraphStageLogic ActiveStage { get; private set; }
+
         internal IMaterializer SubFusingMaterializer { get; private set; }
 
         private string QueueStatus()
@@ -273,7 +291,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             logic.PortToConn[logic.Out.Id + logic.InCount] = connection;
             logic.Interpreter = this;
-            OutHandlers[connection] = (OutHandler)logic.Handlers[0];
+            OutHandlers[connection] = (OutHandler) logic.Handlers[0];
         }
 
         /// <summary>
@@ -284,7 +302,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             logic.PortToConn[logic.In.Id] = connection;
             logic.Interpreter = this;
-            InHandlers[connection] = (InHandler)logic.Handlers[0];
+            InHandlers[connection] = (InHandler) logic.Handlers[0];
         }
 
         /// <summary>
@@ -383,14 +401,16 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         private string ShutdownCounters() => string.Join(",",
-                    _shutdownCounter.Select(x => x >= KeepGoingFlag ? $"{x & KeepGoingMask}(KeepGoing)" : x.ToString()));
+            _shutdownCounter.Select(x => x >= KeepGoingFlag ? $"{x & KeepGoingMask}(KeepGoing)" : x.ToString()));
 
         /// <summary>
         /// Executes pending events until the given limit is met. If there were remaining events, <see cref="IsSuspended"/> will return true.
         /// </summary>
         public int Execute(int eventLimit)
         {
-            if (IsDebug) Console.WriteLine($"{Name} ---------------- EXECUTE {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
+            if (IsDebug)
+                Console.WriteLine(
+                    $"{Name} ---------------- EXECUTE {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
             var currentInterpreterHolder = CurrentInterpreter.Value;
             var previousInterpreter = currentInterpreterHolder[0];
             currentInterpreterHolder[0] = this;
@@ -400,24 +420,65 @@ namespace Akka.Streams.Implementation.Fusing
                 while (eventsRemaining > 0 && _queueTail != _queueHead)
                 {
                     var connection = Dequeue();
+                    eventsRemaining--;
+                    _chaseCounter = Math.Min(ChaseLimit, eventsRemaining);
+
                     try
                     {
                         ProcessEvent(connection);
                     }
-                    catch (Exception e)
+                    catch (Exception ex)
                     {
-                        if (ActiveStage == null)
-                            throw;
-
-                        var stage = Assembly.Stages[ActiveStage.StageId];
-                        if (Log.IsErrorEnabled)
-                            Log.Error(e, $"Error in stage [{stage}]: {e.Message}");
-
-                        ActiveStage.FailStage(e);
+                        ReportStageError(ex);
                     }
+
                     AfterStageHasRun(ActiveStage);
-                    eventsRemaining--;
+
+                    // Chasing PUSH events
+                    while (_chasedPush != NoEvent)
+                    {
+                        var con = _chasedPush;
+                        _chasedPush = NoEvent;
+
+                        try
+                        {
+                            ProcessPush(con);
+                        }
+                        catch (Exception ex)
+                        {
+                            ReportStageError(ex);
+                        }
+
+                        AfterStageHasRun(ActiveStage);
+                    }
+
+                    // Chasing PULL events
+                    while (_chasedPull != NoEvent)
+                    {
+                        var con = _chasedPull;
+                        _chasedPull = NoEvent;
+
+                        try
+                        {
+                            ProcessPull(con);
+                        }
+                        catch (Exception ex)
+                        {
+                            ReportStageError(ex);
+                        }
+
+                        AfterStageHasRun(ActiveStage);
+                    }
+
+                    if (_chasedPush != NoEvent)
+                    {
+                        Enqueue(_chasedPush);
+                        _chasedPush = NoEvent;
+                    }
                 }
+
+                // Event *must* be enqueued while not in the execute loop (events enqueued from external, possibly async events)
+                _chaseCounter = 0;
             }
             finally
             {
@@ -427,6 +488,34 @@ namespace Akka.Streams.Implementation.Fusing
             // TODO: deadlock detection
             return eventsRemaining;
         }
+
+        private void ReportStageError(Exception e)
+        {
+            if (ActiveStage == null)
+                throw e;
+
+            var stage = Assembly.Stages[ActiveStage.StageId];
+            if (Log.IsErrorEnabled)
+                Log.Error(e, $"Error in stage [{stage}]: {e.Message}");
+
+            ActiveStage.FailStage(e);
+
+            // Abort chasing
+            _chaseCounter = 0;
+            if (_chasedPush != NoEvent)
+            {
+                Enqueue(_chasedPush);
+                _chasedPush = NoEvent;
+            }
+            
+            if (_chasedPull != NoEvent)
+            {
+                Enqueue(_chasedPull);
+                _chasedPull = NoEvent;
+            }
+
+        }
+        
 
         public void RunAsyncInput(GraphStageLogic logic, object evt, Action<object> handler)
         {
@@ -470,15 +559,12 @@ namespace Akka.Streams.Implementation.Fusing
             if ((code & (Pushing | InClosed | OutClosed)) == Pushing)
             {
                 // PUSH
-                ProcessElement(connection);
+                ProcessPush(connection);
             }
             else if ((code & (Pulling | OutClosed | InClosed)) == Pulling)
             {
                 // PULL
-                if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)} ({OutHandlers[connection]}) [{OutLogicName(connection)}]");
-                PortStates[connection] ^= PullEndFlip;
-                ActiveStage = SafeLogics(Assembly.OutletOwners[connection]);
-                OutHandlers[connection].OnPull();
+                ProcessPull(connection);
             }
             else if ((code & (OutClosed | InClosed)) == InClosed)
             {
@@ -510,7 +596,7 @@ namespace Akka.Streams.Implementation.Fusing
                 else
                 {
                     // Push is pending, first process push, then re-enqueue closing event
-                    ProcessElement(connection);
+                    ProcessPush(connection);
                     Enqueue(connection);
                 }
             }
@@ -518,12 +604,20 @@ namespace Akka.Streams.Implementation.Fusing
 
         private GraphStageLogic SafeLogics(int id) => id == Boundary ? null : Logics[id];
 
-        public void ProcessElement(int connection)
+        private void ProcessPush(int connection)
         {
             if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {ConnectionSlots[connection]} ({InHandlers[connection]}) [{InLogicName(connection)}]");
             ActiveStage = SafeLogics(Assembly.InletOwners[connection]);
             PortStates[connection] ^= PushEndFlip;
             InHandlers[connection].OnPush();
+        }
+
+        private void ProcessPull(int connection)
+        {
+            if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)}, ({OutHandlers[connection]}) [{OutLogicName(connection)}]");
+            ActiveStage = SafeLogics(Assembly.OutletOwners[connection]);
+            PortStates[connection] ^= PullEndFlip;
+            OutHandlers[connection].OnPull();
         }
 
         private int Dequeue()
@@ -598,14 +692,44 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
+        internal void ChasePush(int connection)
+        {
+            if (_chaseCounter > 0 && _chasedPush == NoEvent)
+            {
+                _chaseCounter--;
+                _chasedPush = connection;
+            }
+            else
+                Enqueue(connection);
+        }
+
+        internal void ChasePull(int connection)
+        {
+            if (_chaseCounter > 0 && _chasedPull == NoEvent)
+            {
+                _chaseCounter--;
+                _chasedPull = connection;
+            }
+            else
+                Enqueue(connection);
+        }
+
         internal void Complete(int connection)
         {
             var currentState = PortStates[connection];
             if (IsDebug) Console.WriteLine($"{Name}   Complete({connection}) [{currentState}]");
             PortStates[connection] = currentState | OutClosed;
-            if ((currentState & (InClosed | Pushing | Pulling | OutClosed)) == 0)
+
+            // Push-Close needs special treatment, cannot be chased, convert back to ordinary event
+            if (_chasedPush == connection)
+            {
+                _chasedPush = NoEvent;
                 Enqueue(connection);
-            if ((currentState & OutClosed) == 0)
+            }
+            else if ((currentState & (InClosed |Pushing |Pulling|OutClosed)) == 0)
+                Enqueue(connection);
+
+            if((currentState & OutClosed) == 0)
                 CompleteConnection(Assembly.OutletOwners[connection]);
         }
 

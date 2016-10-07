@@ -711,7 +711,7 @@ namespace Akka.Streams.Stage
             if ((portState & (InReady | InClosed | OutClosed)) == InReady)
             {
                 Interpreter.PortStates[connection] = portState ^ PullStartFlip;
-                Interpreter.Enqueue(connection);
+                Interpreter.ChasePull(connection);
             }
             else
             {
@@ -854,7 +854,7 @@ namespace Akka.Streams.Stage
             if ((portState & (OutReady | OutClosed | InClosed)) == OutReady && (element != null))
             {
                 Interpreter.ConnectionSlots[connection] = element;
-                Interpreter.Enqueue(connection);
+                Interpreter.ChasePush(connection);
             }
             else
             {
