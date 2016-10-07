@@ -23,7 +23,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// From an external viewpoint, the GraphInterpreter takes an assembly of graph processing stages encoded as a
     /// <see cref="Assembly"/> object and provides facilities to execute and interact with this assembly.
     /// <para/> The lifecycle of the Interpreter is roughly the following:
-    /// <para/> - Boundary logics are attached via <see cref="AttachDownstreamBoundary"/> and <see cref="AttachUpstreamBoundary"/>
+    /// <para/> - Boundary logics are attached via <see cref="AttachDownstreamBoundary(Connection,DownstreamBoundaryStageLogic)"/> and <see cref="AttachUpstreamBoundary(Connection,UpstreamBoundaryStageLogic)"/>
     /// <para/> - <see cref="Init"/> is called
     /// <para/> - <see cref="Execute"/> is called whenever there is need for execution, providing an upper limit on the processed events
     /// <para/> - <see cref="Finish"/> is called before the interpreter is disposed, preferably after <see cref="IsCompleted"/> returned true, although
@@ -37,25 +37,26 @@ namespace Akka.Streams.Implementation.Fusing
     /// The internal architecture of the interpreter is based on the usage of arrays and optimized for reducing allocations
     /// on the hot paths.
     ///
-    /// One of the basic abstractions inside the interpreter is the notion of connection. In the abstract sense a
-    /// connection represents an output-input port pair (an analogue for a connected RS Publisher-Subscriber pair),
-    /// while in the practical sense a connection is a number which represents slots in certain arrays.
+    /// One of the basic abstractions inside the interpreter is the <see cref="Connection"/>. A connection represents an output-input port pair
+    /// (an analogue for a connected RS Publisher-Subscriber pair). The Connection object contains all the necessary data for the interpreter 
+    /// to pass elements, demand, completion or errors across the Connection.
     /// <para/> In particular
     /// <para/> - portStates contains a bitfield that tracks the states of the ports (output-input) corresponding to this
     ///    connection. This bitfield is used to decode the event that is in-flight.
-    /// <para/> - connectionSlots is a mapping from a connection id to a potential element or exception that accompanies the
+    /// <para/> - connectionSlot contains a potential element or exception that accompanies the
     ///    event encoded in the portStates bitfield
-    /// <para/> - inHandlers is a mapping from a connection id to the <see cref="InHandlers"/> instance that handles the events corresponding
+    /// <para/> - inHandler contains the <see cref="InHandler"/> instance that handles the events corresponding
     ///    to the input port of the connection
-    /// <para/> - outHandlers is a mapping from a connection id to the <see cref="OutHandlers"/> instance that handles the events corresponding
+    /// <para/> - outHandler contains the <see cref="OutHandler"/> instance that handles the events corresponding
     ///    to the output port of the connection
     ///
-    /// On top of these lookup tables there is an eventQueue, represented as a circular buffer of integers. The integers
-    /// it contains represents connections that have pending events to be processed. The pending event itself is encoded
-    /// in the portStates bitfield. This implies that there can be only one event in flight for a given connection, which
-    /// is true in almost all cases, except a complete-after-push or fail-after-push.
+    /// On top of the Connection table there is an eventQueue, represented as a circular buffer of Connections. The queue
+    /// contains the Connections that have pending events to be processed. The pending event itself is encoded
+    /// in the portState bitfield of the Connection. This implies that there can be only one event in flight for a given
+    /// Connection, which is true in almost all cases, except a complete-after-push or fail-after-push which has to
+    /// be decoded accordingly.
     ///
-    /// The layout of the portStates bitfield is the following:
+    /// The layout of the portState  bitfield is the following:
     ///
     ///             |- state machn.-| Only one bit is hot among these bits
     ///  64  32  16 | 8   4   2   1 |
@@ -79,10 +80,10 @@ namespace Akka.Streams.Implementation.Fusing
     /// Sending an event is usually the following sequence:
     ///  - An action is requested by a stage logic (push, pull, complete, etc.)
     ///  - the state machine in portStates is transitioned from a ready state to a pending event
-    ///  - the id of the affected connection is enqueued
+    ///  - the affected Connection is enqueued
     ///
     /// Receiving an event is usually the following sequence:
-    ///  - id of connection to be processed is dequeued
+    ///  - the connection to be processed is dequeued
     ///  - the type of the event is determined from the bits set on portStates
     ///  - the state machine in portStates is transitioned to a ready state
     ///  - using the inHandlers/outHandlers table the corresponding callback is called on the stage logic.
@@ -143,11 +144,59 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
+        /// <summary>
+        /// INTERNAL API
+        /// 
+        /// Contains all the necessary information for the GraphInterpreter to be able to implement a connection
+        /// between an output and input ports.
+        /// </summary>
+        public sealed class Connection
+        {
+            /// <param name="id">Identifier of the connection. Corresponds to the array slot in the <see cref="GraphAssembly"/></param>
+            /// <param name="inOwnerId">Identifier of the owner of the input side of the connection. Corresponds to the array slot in the <see cref="GraphAssembly"/></param>
+            /// <param name="inOwner">The stage logic that corresponds to the input side of the connection.</param>
+            /// <param name="outOwnerId">Identifier of the owner of the output side of the connection. Corresponds to the array slot in the <see cref="GraphAssembly"/></param>
+            /// <param name="outOwner">The stage logic that corresponds to the output side of the connection.</param>
+            /// <param name="inHandler">The handler that contains the callback for input events.</param>
+            /// <param name="outHandler">The handler that contains the callback for output events.</param>
+            public Connection(int id, int inOwnerId, GraphStageLogic inOwner, int outOwnerId, GraphStageLogic outOwner,
+                IInHandler inHandler, IOutHandler outHandler)
+            {
+                Id = id;
+                InOwnerId = inOwnerId;
+                InOwner = inOwner;
+                OutOwnerId = outOwnerId;
+                OutOwner = outOwner;
+                InHandler = inHandler;
+                OutHandler = outHandler;
+            }
+
+            public int Id { get; }
+
+            public int InOwnerId { get; }
+
+            public GraphStageLogic InOwner { get; }
+
+            public int OutOwnerId { get; }
+
+            public GraphStageLogic OutOwner { get; }
+
+            public IInHandler InHandler { get; set; }
+
+            public IOutHandler OutHandler { get; set; }
+
+            public int PortState { get; set; } = InReady;
+
+            public object Slot { get; set; } = Empty.Instance;
+
+            public override string ToString() => $"Connection({Id}, {PortState}, {Slot}, {InHandler}, {OutHandler})";
+        }
+
         #endregion
 
         public static readonly bool IsDebug = false;
 
-        public const int NoEvent = -1;
+        public const Connection NoEvent = null;
         public const int Boundary = -1;
 
         public const int InReady = 1;
@@ -192,20 +241,11 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly GraphAssembly Assembly;
         public readonly IMaterializer Materializer;
         public readonly ILoggingAdapter Log;
-        public readonly IInHandler[] InHandlers;
-        public readonly IOutHandler[] OutHandlers;
+        public readonly Connection[] Connections;
         public readonly Action<GraphStageLogic, object, Action<object>> OnAsyncInput;
         public readonly bool FuzzingMode;
 
         public IActorRef Context { get; }
-
-        // Maintains additional information for events, basically elements in-flight, or failure.
-        // Other events are encoded in the portStates bitfield.
-        public readonly object[] ConnectionSlots;
-
-        // Bitfield encoding pending events and various states for efficient querying and updates. See the documentation
-        // of the class for a full description.
-        public readonly int[] PortStates;
 
         // The number of currently running stages. Once this counter reaches zero, the interpreter is considered to be completed.
         public int RunningStagesCount;
@@ -214,23 +254,22 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int[] _shutdownCounter;
 
         // An event queue implemented as a circular buffer
-        private readonly int[] _eventQueue;
+        private readonly Connection[] _eventQueue;
         private readonly int _mask;
         private int _queueHead;
         private int _queueTail;
 
         // the first events in preStart blocks should be not chased
         private int _chaseCounter;
-        private int _chasedPush = NoEvent;
-        private int _chasedPull = NoEvent;
+        private Connection _chasedPush = NoEvent;
+        private Connection _chasedPull = NoEvent;
 
         public GraphInterpreter(
             GraphAssembly assembly,
             IMaterializer materializer,
             ILoggingAdapter log,
-            IInHandler[] inHandlers,
-            IOutHandler[] outHandlers,
             GraphStageLogic[] logics,
+            Connection[] connections,
             Action<GraphStageLogic, object, Action<object>> onAsyncInput,
             bool fuzzingMode,
             IActorRef context)
@@ -239,19 +278,18 @@ namespace Akka.Streams.Implementation.Fusing
             Assembly = assembly;
             Materializer = materializer;
             Log = log;
-            InHandlers = inHandlers;
-            OutHandlers = outHandlers;
+            Connections = connections;
             OnAsyncInput = onAsyncInput;
             FuzzingMode = fuzzingMode;
             Context = context;
 
-            ConnectionSlots = new object[assembly.ConnectionCount];
-            for (var i = 0; i < ConnectionSlots.Length; i++)
-                ConnectionSlots[i] = Empty.Instance;
+            //ConnectionSlots = new object[assembly.ConnectionCount];
+            //for (var i = 0; i < ConnectionSlots.Length; i++)
+            //    ConnectionSlots[i] = Empty.Instance;
 
-            PortStates = new int[assembly.ConnectionCount];
-            for (var i = 0; i < PortStates.Length; i++)
-                PortStates[i] = InReady;
+            //PortStates = new int[assembly.ConnectionCount];
+            //for (var i = 0; i < PortStates.Length; i++)
+            //    PortStates[i] = InReady;
 
             RunningStagesCount = Assembly.Stages.Length;
 
@@ -262,7 +300,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _shutdownCounter[i] = shape.Inlets.Count() + shape.Outlets.Count();
             }
 
-            _eventQueue = new int[1 << (32 - (assembly.ConnectionCount - 1).NumberOfLeadingZeros())];
+            _eventQueue = new Connection[1 << (32 - (assembly.ConnectionCount - 1).NumberOfLeadingZeros())];
             _mask = _eventQueue.Length - 1;
         }
 
@@ -272,11 +310,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private string QueueStatus()
         {
-            var contents = Enumerable.Range(_queueHead, _queueTail - _queueHead).Select(i =>
-            {
-                var conn = _eventQueue[i & _mask];
-                return Tuple.Create(conn, PortStates[conn], ConnectionSlots[conn]);
-            });
+            var contents = Enumerable.Range(_queueHead, _queueTail - _queueHead).Select(i => _eventQueue[i & _mask]);
             return $"({_eventQueue.Length}, {_queueHead}, {_queueTail})({string.Join(", ", contents)})";
         }
 
@@ -287,40 +321,46 @@ namespace Akka.Streams.Implementation.Fusing
         /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
         /// (outside the interpreter) to process and inject events.
         /// </summary>
-        public void AttachUpstreamBoundary(int connection, UpstreamBoundaryStageLogic logic)
+        public void AttachUpstreamBoundary(Connection connection, UpstreamBoundaryStageLogic logic)
         {
             logic.PortToConn[logic.Out.Id + logic.InCount] = connection;
             logic.Interpreter = this;
-            OutHandlers[connection] = (OutHandler) logic.Handlers[0];
+            connection.OutHandler = (OutHandler) logic.Handlers[0];
         }
+
+        public void AttachUpstreamBoundary(int connection, UpstreamBoundaryStageLogic logic)
+            => AttachUpstreamBoundary(Connections[connection], logic);
 
         /// <summary>
         /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
         /// (outside the interpreter) to process and inject events.
         /// </summary>
-        public void AttachDownstreamBoundary(int connection, DownstreamBoundaryStageLogic logic)
+        public void AttachDownstreamBoundary(Connection connection, DownstreamBoundaryStageLogic logic)
         {
             logic.PortToConn[logic.In.Id] = connection;
             logic.Interpreter = this;
-            InHandlers[connection] = (InHandler) logic.Handlers[0];
+            connection.InHandler = (InHandler) logic.Handlers[0];
         }
+
+        public void AttachDownstreamBoundary(int connection, DownstreamBoundaryStageLogic logic)
+            => AttachDownstreamBoundary(Connections[connection], logic);
 
         /// <summary>
         /// Dynamic handler changes are communicated from a GraphStageLogic by this method.
         /// </summary>
-        public void SetHandler(int connection, IInHandler handler)
+        public void SetHandler(Connection connection, IInHandler handler)
         {
             if (IsDebug) Console.WriteLine($"{Name} SETHANDLER {OutOwnerName(connection)} (in) {handler}");
-            InHandlers[connection] = handler;
+            connection.InHandler = handler;
         }
 
         /// <summary>
         /// Dynamic handler changes are communicated from a GraphStageLogic by this method.
         /// </summary>
-        public void SetHandler(int connection, IOutHandler handler)
+        public void SetHandler(Connection connection, IOutHandler handler)
         {
             if (IsDebug) Console.WriteLine($"{Name} SETHANDLER {OutOwnerName(connection)} (out) {handler}");
-            OutHandlers[connection] = handler;
+            connection.OutHandler = handler;
         }
 
         /// <summary>
@@ -373,30 +413,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         // Debug name for a connections input part
-        private string InOwnerName(int connection)
+        private string InOwnerName(Connection connection)
         {
-            var owner = Assembly.InletOwners[connection];
+            var owner = Assembly.InletOwners[connection.Id];
             return owner == Boundary ? "DownstreamBoundary" : Assembly.Stages[owner].ToString();
         }
 
         // Debug name for a connections output part
-        private string OutOwnerName(int connection)
+        private string OutOwnerName(Connection connection)
         {
-            var owner = Assembly.OutletOwners[connection];
+            var owner = Assembly.OutletOwners[connection.Id];
             return owner == Boundary ? "UpstreamBoundary" : Assembly.Stages[owner].ToString();
         }
 
         // Debug name for a connections input part
-        private string InLogicName(int connection)
+        private string InLogicName(Connection connection)
         {
-            var owner = Assembly.InletOwners[connection];
+            var owner = Assembly.InletOwners[connection.Id];
             return owner == Boundary ? "DownstreamBoundary" : Logics[owner].ToString();
         }
 
         // Debug name for a connections output part
-        private string OutLogicName(int connection)
+        private string OutLogicName(Connection connection)
         {
-            var owner = Assembly.OutletOwners[connection];
+            var owner = Assembly.OutletOwners[connection.Id];
             return owner == Boundary ? "UpstreamBoundary" : Logics[owner].ToString();
         }
 
@@ -423,6 +463,9 @@ namespace Akka.Streams.Implementation.Fusing
                     eventsRemaining--;
                     _chaseCounter = Math.Min(ChaseLimit, eventsRemaining);
 
+                    // This is the "normal" event processing code which dequeues directly from the internal event queue. Since
+                    // most execution paths tend to produce either a Push that will be propagated along a longer chain we take
+                    // extra steps below to make this more efficient.
                     try
                     {
                         ProcessEvent(connection);
@@ -433,6 +476,29 @@ namespace Akka.Streams.Implementation.Fusing
                     }
 
                     AfterStageHasRun(ActiveStage);
+
+                    /*
+                      * "Event chasing" optimization follows from here. This optimization works under the assumption that a Push or
+                      * Pull is very likely immediately followed by another Push/Pull. The difference from the "normal" event
+                      * dispatch is that chased events are never touching the event queue, they use a "streamlined" execution path
+                      * instead. Looking at the scenario of a Push, the following events will happen.
+                      *  - "normal" dispatch executes an onPush event
+                      *  - stage eventually calls push()
+                      *  - code inside the push() method checks the validity of the call, and also if it can be safely ignored
+                      *    (because the target stage already completed we just have not been notified yet)
+                      *  - if the upper limit of ChaseLimit has not been reached, then the Connection is put into the chasedPush
+                      *    variable
+                      *  - the loop below immediately captures this push and dispatches it
+                      *
+                      * What is saved by this optimization is three steps:
+                      *  - no need to enqueue the Connection in the queue (array), it ends up in a simple variable, reducing
+                      *    pressure on array load-store
+                      *  - no need to dequeue the Connection from the queue, similar to above
+                      *  - no need to decode the event, we know it is a Push already
+                      *  - no need to check for validity of the event because we already checked at the push() call, and there
+                      *    can be no concurrent events interleaved unlike with the normal dispatch (think about a cancel() that is
+                      *    called in the target stage just before the onPush() arrives). This avoids unnecessary branching.
+                    */
 
                     // Chasing PUSH events
                     while (_chasedPush != NoEvent)
@@ -548,12 +614,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Decodes and processes a single event for the given connection
         /// </summary>
-        private void ProcessEvent(int connection)
+        private void ProcessEvent(Connection connection)
         {
             // this must be the state after returning without delivering any signals, to avoid double-finalization of some unlucky stage
             // (this can happen if a stage completes voluntarily while connection close events are still queued)
             ActiveStage = null;
-            var code = PortStates[connection];
+            var code = connection.PortState;
 
             // Manual fast decoding, fast paths are PUSH and PULL
             if ((code & (Pushing | InClosed | OutClosed)) == Pushing)
@@ -569,12 +635,11 @@ namespace Akka.Streams.Implementation.Fusing
             else if ((code & (OutClosed | InClosed)) == InClosed)
             {
                 // CANCEL
-                var stageId = Assembly.OutletOwners[connection];
-                ActiveStage = SafeLogics(stageId);
-                if (IsDebug) Console.WriteLine($"{Name} CANCEL {InOwnerName(connection)} -> {OutOwnerName(connection)} ({OutHandlers[connection]}) [{OutLogicName(connection)}]");
-                PortStates[connection] |= OutClosed;
-                CompleteConnection(stageId);
-                OutHandlers[connection].OnDownstreamFinish();
+                ActiveStage = connection.OutOwner;
+                if (IsDebug) Console.WriteLine($"{Name} CANCEL {InOwnerName(connection)} -> {OutOwnerName(connection)} ({connection.OutHandler}) [{OutLogicName(connection)}]");
+                connection.PortState |= OutClosed;
+                CompleteConnection(connection.OutOwnerId);
+                connection.OutHandler.OnDownstreamFinish();
             }
             else if ((code & (OutClosed | InClosed)) == OutClosed)
             {
@@ -582,16 +647,15 @@ namespace Akka.Streams.Implementation.Fusing
                 if ((code & Pushing) == 0)
                 {
                     // Normal completion (no push pending)
-                    if (IsDebug) Console.WriteLine($"{Name} COMPLETE {OutOwnerName(connection)} -> {InOwnerName(connection)} ({InHandlers[connection]}) [{InLogicName(connection)}]");
-                    PortStates[connection] |= InClosed;
-                    var stageId = Assembly.InletOwners[connection];
-                    ActiveStage = SafeLogics(stageId);
-                    CompleteConnection(stageId);
+                    if (IsDebug) Console.WriteLine($"{Name} COMPLETE {OutOwnerName(connection)} -> {InOwnerName(connection)} ({connection.InHandler}) [{InLogicName(connection)}]");
+                    connection.PortState |= InClosed;
+                    ActiveStage = connection.InOwner;
+                    CompleteConnection(connection.InOwnerId);
 
-                    if ((PortStates[connection] & InFailed) == 0)
-                        InHandlers[connection].OnUpstreamFinish();
+                    if ((connection.PortState & InFailed) == 0)
+                        connection.InHandler.OnUpstreamFinish();
                     else
-                        InHandlers[connection].OnUpstreamFailure(((Failed)ConnectionSlots[connection]).Reason);
+                        connection.InHandler.OnUpstreamFailure(((Failed)connection.Slot).Reason);
                 }
                 else
                 {
@@ -601,26 +665,24 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
         }
-
-        private GraphStageLogic SafeLogics(int id) => id == Boundary ? null : Logics[id];
-
-        private void ProcessPush(int connection)
+        
+        private void ProcessPush(Connection connection)
         {
-            if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {ConnectionSlots[connection]} ({InHandlers[connection]}) [{InLogicName(connection)}]");
-            ActiveStage = SafeLogics(Assembly.InletOwners[connection]);
-            PortStates[connection] ^= PushEndFlip;
-            InHandlers[connection].OnPush();
+            if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {connection.Slot} ({connection.InHandler}) [{InLogicName(connection)}]");
+            ActiveStage = connection.InOwner;
+            connection.PortState ^= PushEndFlip;
+            connection.InHandler.OnPush();
         }
 
-        private void ProcessPull(int connection)
+        private void ProcessPull(Connection connection)
         {
-            if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)}, ({OutHandlers[connection]}) [{OutLogicName(connection)}]");
-            ActiveStage = SafeLogics(Assembly.OutletOwners[connection]);
-            PortStates[connection] ^= PullEndFlip;
-            OutHandlers[connection].OnPull();
+            if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)}, ({connection.OutHandler}) [{OutLogicName(connection)}]");
+            ActiveStage = connection.OutOwner;
+            connection.PortState ^= PullEndFlip;
+            connection.OutHandler.OnPull();
         }
 
-        private int Dequeue()
+        private Connection Dequeue()
         {
             var idx = _queueHead & _mask;
             if (FuzzingMode)
@@ -636,7 +698,7 @@ namespace Akka.Streams.Implementation.Fusing
             return element;
         }
 
-        public void Enqueue(int connection)
+        public void Enqueue(Connection connection)
         {
             if (IsDebug && _queueTail - _queueHead > _mask) throw new Exception($"{Name} internal queue full ({QueueStatus()}) + {connection}");
             _eventQueue[_queueTail & _mask] = connection;
@@ -692,7 +754,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        internal void ChasePush(int connection)
+        internal void ChasePush(Connection connection)
         {
             if (_chaseCounter > 0 && _chasedPush == NoEvent)
             {
@@ -703,7 +765,7 @@ namespace Akka.Streams.Implementation.Fusing
                 Enqueue(connection);
         }
 
-        internal void ChasePull(int connection)
+        internal void ChasePull(Connection connection)
         {
             if (_chaseCounter > 0 && _chasedPull == NoEvent)
             {
@@ -714,11 +776,11 @@ namespace Akka.Streams.Implementation.Fusing
                 Enqueue(connection);
         }
 
-        internal void Complete(int connection)
+        internal void Complete(Connection connection)
         {
-            var currentState = PortStates[connection];
+            var currentState = connection.PortState;
             if (IsDebug) Console.WriteLine($"{Name}   Complete({connection}) [{currentState}]");
-            PortStates[connection] = currentState | OutClosed;
+            connection.PortState = currentState | OutClosed;
 
             // Push-Close needs special treatment, cannot be chased, convert back to ordinary event
             if (_chasedPush == connection)
@@ -730,40 +792,40 @@ namespace Akka.Streams.Implementation.Fusing
                 Enqueue(connection);
 
             if((currentState & OutClosed) == 0)
-                CompleteConnection(Assembly.OutletOwners[connection]);
+                CompleteConnection(connection.OutOwnerId);
         }
 
-        internal void Fail(int connection, Exception reason)
+        internal void Fail(Connection connection, Exception reason)
         {
-            var currentState = PortStates[connection];
+            var currentState = connection.PortState;
             if (IsDebug) Console.WriteLine($"{Name}   Fail({connection}, {reason}) [{currentState}]");
-            PortStates[connection] = currentState | OutClosed;
+            connection.PortState = currentState | OutClosed;
             if ((currentState & (InClosed | OutClosed)) == 0)
             {
-                PortStates[connection] = currentState | (OutClosed | InFailed);
-                ConnectionSlots[connection] = new Failed(reason, ConnectionSlots[connection]);
+                connection.PortState = currentState | (OutClosed | InFailed);
+                connection.Slot = new Failed(reason, connection.Slot);
                 if ((currentState & (Pulling | Pushing)) == 0)
                     Enqueue(connection);
             }
 
             if ((currentState & OutClosed) == 0)
-                CompleteConnection(Assembly.OutletOwners[connection]);
+                CompleteConnection(connection.OutOwnerId);
         }
 
-        internal void Cancel(int connection)
+        internal void Cancel(Connection connection)
         {
-            var currentState = PortStates[connection];
+            var currentState = connection.PortState;
             if (IsDebug) Console.WriteLine($"{Name}   Cancel({connection}) [{currentState}]");
-            PortStates[connection] = currentState | InClosed;
+            connection.PortState = currentState | InClosed;
             if ((currentState & OutClosed) == 0)
             {
-                ConnectionSlots[connection] = Empty.Instance;
+                connection.Slot = Empty.Instance;
                 if ((currentState & (Pulling | Pushing | InClosed)) == 0)
                     Enqueue(connection);
             }
 
             if ((currentState & InClosed) == 0)
-                CompleteConnection(Assembly.InletOwners[connection]);
+                CompleteConnection(connection.InOwnerId);
         }
 
         /// <summary>
@@ -781,9 +843,9 @@ namespace Akka.Streams.Implementation.Fusing
             for (var i = 0; i < Assembly.Stages.Length; i++)
                 builder.AppendLine($"N{i} [label={Assembly.Stages[i]}]");
 
-            for (var i = 0; i < PortStates.Length; i++)
+            for (var i = 0; i < Connections.Length; i++)
             {
-                var state = PortStates[i];
+                var state = Connections[i].PortState;
                 if (state == InReady)
                     builder.Append($"  {NameIn(i)} -> {NameOut(i)} [label=shouldPull; color=blue];");
                 else if (state == OutReady)

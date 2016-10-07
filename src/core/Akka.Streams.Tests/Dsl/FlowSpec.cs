@@ -694,11 +694,10 @@ namespace Akka.Streams.Tests.Dsl
                 var t = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                     new Dictionary<IModule, object>(), _ => { });
 
-                var inHandlers = t.Item1;
-                var outHandlers = t.Item2;
-                var logics = t.Item3;
+                var connections = t.Item1;
+                var logics = t.Item2;
 
-                var shell = new GraphInterpreterShell(assembly, inHandlers, outHandlers, logics, stage.Shape, Settings,
+                var shell = new GraphInterpreterShell(assembly, connections, logics, stage.Shape, Settings,
                     (ActorMaterializerImpl) Materializer);
 
                 var props =
