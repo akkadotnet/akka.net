@@ -311,12 +311,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var ops = new IGraphStageWithMaterializedValue<FlowShape<string, string>, object>[]
             {
-                ToGraphStage(new Select<string, string>(x => x, Deciders.StoppingDecider)),
+                new Select<string, string>(x => x),
                 new PreStartFailer<string>(() =>
                 {
                     throw new TestException("Boom!");
                 }),
-                ToGraphStage(new Select<string, string>(x => x, Deciders.StoppingDecider)),
+                new Select<string, string>(x => x),
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
@@ -369,9 +369,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var ops = new IGraphStageWithMaterializedValue<FlowShape<string, string>, object>[]
             {
-                ToGraphStage(new Select<string, string>(x => x, Deciders.StoppingDecider)),
+                new Select<string, string>(x => x),
                 new PushFinishStage<string>(() => TestActor.Tell("stop")), 
-                ToGraphStage(new Select<string, string>(x => x, Deciders.StoppingDecider))
+                new Select<string, string>(x => x)
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>

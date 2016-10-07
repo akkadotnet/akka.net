@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit.Tests;
@@ -26,19 +27,75 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 {
     public class InterpreterSupervisionSpec : GraphInterpreterSpecKit
     {
-        // ReSharper disable InconsistentNaming
-        private readonly Decider stoppingDecider = Deciders.StoppingDecider;
-        private readonly Decider resumingDecider = Deciders.ResumingDecider;
-        private readonly Decider restartingDecider = Deciders.RestartingDecider;
+        private static readonly Decider ResumingDecider = Deciders.ResumingDecider;
 
         public InterpreterSupervisionSpec(ITestOutputHelper output = null) : base(output)
         {
         }
 
+        private ResumeSelect<TIn, TOut> ResumingSelect<TIn, TOut>(Func<TIn, TOut> func)
+          => new ResumeSelect<TIn, TOut>(func);
+        
+        private sealed class ResumeSelect<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+        {
+            #region Logic
+
+            private sealed class Logic : GraphStageLogic
+            {
+                public Logic(ResumeSelect<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
+                {
+                    var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                    var decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+
+                    SetHandler(stage.In, onPush: () =>
+                    {
+                        try
+                        {
+                            Push(stage.Out, stage._func(Grab(stage.In)));
+                        }
+                        catch (Exception ex)
+                        {
+                            if (decider(ex) == Directive.Stop)
+                                FailStage(ex);
+                            else
+                                Pull(stage.In);
+                        }
+                    });
+
+                    SetHandler(stage.Out, onPull: () => Pull(stage.In));
+                }
+            }
+
+            #endregion
+
+            private readonly Func<TIn, TOut> _func;
+
+            public ResumeSelect(Func<TIn, TOut> func)
+            {
+                _func = func;
+
+                Shape = new FlowShape<TIn, TOut>(In, Out);
+            }
+
+            protected override Attributes InitialAttributes { get; } = DefaultAttributes.Select;
+
+            public Inlet<TIn> In { get; } = new Inlet<TIn>("Select.in");
+
+            public Outlet<TOut> Out { get; } = new Outlet<TOut>("Select.out");
+
+            public override FlowShape<TIn, TOut> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+                => new Logic(this, inheritedAttributes.And(ActorAttributes.CreateSupervisionStrategy(ResumingDecider)));
+
+            public override string ToString() => "Select";
+
+        }
+
         [Fact]
         public void Interpreter_error_handling_should_handle_external_failure()
         {
-            WithOneBoundedSetup(new Select<int, int>(x => x + 1, stoppingDecider),
+            WithOneBoundedSetup(new Select<int, int>(x => x + 1),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -51,7 +108,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_error_handling_should_emit_failure_when_op_throws()
         {
-            WithOneBoundedSetup(new Select<int, int>(x => { if (x == 0) throw TE(); return x; }, stoppingDecider),
+            WithOneBoundedSetup(new Select<int, int>(x => { if (x == 0) throw TE(); return x; }),
                 (lastEvents, upstream, downstream) =>
                 {
                     downstream.RequestOne();
@@ -69,10 +126,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_error_handling_should_emit_failure_when_op_throws_in_middle_of_chain()
         {
-            WithOneBoundedSetup(new IStage<int, int>[] {
-                new Select<int, int>(x => x + 1, stoppingDecider),
-                new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, stoppingDecider),
-                new Select<int, int>(x => x + 100, stoppingDecider)
+            WithOneBoundedSetup(new [] {
+                new Select<int, int>(x => x + 1),
+                new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }),
+                new Select<int, int>(x => x + 100)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -91,10 +148,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_error_handling_should_resume_when_Map_throws_in_middle_of_chain()
         {
-            WithOneBoundedSetup(new IStage<int, int>[] {
-                new Select<int, int>(x => x + 1, resumingDecider),
-                new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider),
-                new Select<int, int>(x => x + 100, resumingDecider)
+            WithOneBoundedSetup(new [] {
+                ResumingSelect<int, int>(x => x + 1),
+                ResumingSelect<int, int>(x => { if (x == 0) throw TE(); return x + 10; }),
+                ResumingSelect<int, int>(x => x + 100)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -117,8 +174,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_error_handling_should_resume_when_Map_throws_before_Grouped()
         {
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[] {
-                ToGraphStage(new Select<int, int>(x => x + 1, resumingDecider)),
-                ToGraphStage(new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
+                ResumingSelect<int, int>(x => x + 1),
+                ResumingSelect<int, int>(x => { if (x == 0) throw TE(); return x + 10; }),
                 new Grouped<int>(3)
             },
                 (lastEvents, upstream, downstream) =>
@@ -143,8 +200,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_error_handling_should_complete_after_resume_when_Map_throws_before_Grouped()
         {
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[] {
-                ToGraphStage(new Select<int, int>(x => x + 1, resumingDecider)),
-                ToGraphStage(new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
+                ResumingSelect<int, int>(x => x + 1),
+                ResumingSelect<int, int>(x => { if (x == 0) throw TE(); return x + 10; }),
                 new Grouped<int>(1000)
             },
                 (lastEvents, upstream, downstream) =>

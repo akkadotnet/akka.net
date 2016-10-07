@@ -687,7 +687,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             Func<Flow<TOut, TOut2, NotUsed>> createGraph = () =>
             {
-                var stage = new FaultyFlowStage<TOut, TOut2>();
+                var stage = new Select<TOut, TOut2>(x => x);
                 var assembly = new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[] { stage }, new[] { Attributes.None },
                     new Inlet[] { stage.Shape.Inlet , null}, new[] { 0, -1 }, new Outlet[] { null, stage.Shape.Outlet }, new[] { -1, 0 });
 
@@ -717,13 +717,6 @@ namespace Akka.Streams.Tests.Dsl
             };
 
             return flow.Via(createGraph());
-        }
-
-        private sealed class FaultyFlowStage<TIn, TOut> : PushPullGraphStage<TIn, TOut> where TIn:TOut
-        {
-            public FaultyFlowStage()  : base(_ => new Select<TIn,TOut>(x => x, Deciders.StoppingDecider), Attributes.None)
-            {
-            }
         }
 
         private sealed class FaultyFlowPublisher<TOut> : ActorPublisher<TOut>
