@@ -626,35 +626,46 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     public sealed class Aggregate<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
 
-        private sealed class Logic : SupervisedGraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
-            private readonly Aggregate<TIn, TOut> _stage;
-            private TOut _aggregator;
-
-            public Logic(Aggregate<TIn, TOut> stage, Attributes inheritedAttributes)
-                : base(inheritedAttributes, stage.Shape)
+            public Logic(Aggregate<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
-                _stage = stage;
-                _aggregator = _stage._zero;
+                var aggregator = stage._zero;
+
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                var decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
                 SetHandler(stage.In,
                     onPush: () =>
                     {
-                        var element = WithSupervision(() => Grab(stage.In));
-                        if (element.HasValue)
-                            _aggregator = _stage._aggregate(_aggregator, element.Value);
-
-                        Pull(stage.In);
+                        try
+                        {
+                            aggregator = stage._aggregate(aggregator, Grab(stage.In));
+                            Pull(stage.In);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (decider(ex) == Directive.Stop)
+                                FailStage(ex);
+                            else
+                            {
+                                aggregator = stage._zero;
+                                Pull(stage.In);
+                            }
+                        }
                     },
                     onUpstreamFinish: () =>
                     {
                         if (IsAvailable(stage.Out))
                         {
-                            Push(stage.Out, _aggregator);
+                            Push(stage.Out, aggregator);
                             CompleteStage();
                         }
                     });
@@ -663,15 +674,13 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (IsClosed(stage.In))
                     {
-                        Push(stage.Out, _aggregator);
+                        Push(stage.Out, aggregator);
                         CompleteStage();
                     }
                     else
                         Pull(stage.In);
                 });
             }
-
-            protected override void OnResume(Exception ex) => _aggregator = _stage._zero;
         }
 
         #endregion
