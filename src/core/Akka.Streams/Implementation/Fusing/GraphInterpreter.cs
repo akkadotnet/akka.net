@@ -542,7 +542,7 @@ namespace Akka.Streams.Implementation.Fusing
             return element;
         }
 
-        private void Enqueue(int connection)
+        public void Enqueue(int connection)
         {
             if (IsDebug && _queueTail - _queueHead > _mask) throw new Exception($"{Name} internal queue full ({QueueStatus()}) + {connection}");
             _eventQueue[_queueTail & _mask] = connection;
@@ -596,25 +596,6 @@ namespace Akka.Streams.Implementation.Fusing
                 if (Log.IsErrorEnabled)
                     Log.Error(err, "Error during PostStop in [{0}]", Assembly.Stages[logic.StageId]);
             }
-        }
-
-        internal void Push(int connection, object element)
-        {
-            var currentState = PortStates[connection];
-            PortStates[connection] = currentState ^ PushStartFlip;
-            if ((currentState & InClosed) == 0)
-            {
-                ConnectionSlots[connection] = element;
-                Enqueue(connection);
-            }
-        }
-
-        internal void Pull(int connection)
-        {
-            var currentState = PortStates[connection];
-            PortStates[connection] = currentState ^ PullStartFlip;
-            if ((currentState & OutClosed) == 0)
-                Enqueue(connection);
         }
 
         internal void Complete(int connection)
