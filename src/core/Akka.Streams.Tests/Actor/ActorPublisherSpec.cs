@@ -471,6 +471,31 @@ my-dispatcher1 {
             probe.ExpectMsg(new TotalDemand(9));
             s.Cancel();
         }
+
+        /// <summary>
+        /// Reproduces https://github.com/akkadotnet/akka.net/issues/2336
+        /// </summary>
+        [Fact]
+        public void BugFix2336_ActorPublisher_with_BaseClass_must_be_created_via_Source()
+        {
+            var materializer = Sys.Materializer();
+            var s = this.CreateManualSubscriberProbe<string>();
+            var actorRef = Source.ActorPublisher<int>(CompositeSender<string, int>.Props);
+
+            s.ExpectSubscription();
+        }
+    }
+
+    /// <summary>
+    /// Used to reproduce https://github.com/akkadotnet/akka.net/issues/2336
+    /// </summary>
+    internal class CompositeSender<TData, TRaw>: Actors.ActorPublisher<TData>
+    {
+        public static Props Props { get; } = Props.Create<CompositeSender<TData, TRaw>>().WithDispatcher("akka.test.stream-dispatcher");
+        protected override bool Receive(object message)
+        {
+            return true;
+        }
     }
 
     internal class TestPublisher : Actors.ActorPublisher<string>
