@@ -22,7 +22,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// Leading whitespace between elements will be trimmed.
     /// </summary>
-    internal class JsonObjectParser
+    public class JsonObjectParser
     {
         private static readonly byte SquareBraceStart = Convert.ToByte('[');
         private static readonly byte SquareBraceEnd = Convert.ToByte(']');

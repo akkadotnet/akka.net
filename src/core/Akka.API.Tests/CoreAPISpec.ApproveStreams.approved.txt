@@ -1285,12 +1285,19 @@ namespace Akka.Streams.Dsl
     }
     public interface IRunnableGraph<TMat> : Akka.Streams.IGraph<Akka.Streams.ClosedShape>, Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat>
     {
+        Akka.Streams.Dsl.IRunnableGraph<TMat> AddAttributes(Akka.Streams.Attributes attributes);
         Akka.Streams.Dsl.IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> func);
+        Akka.Streams.Dsl.IRunnableGraph<TMat> Named(string name);
         TMat Run(Akka.Streams.IMaterializer materializer);
+        Akka.Streams.Dsl.IRunnableGraph<TMat> WithAttributes(Akka.Streams.Attributes attributes);
     }
     public interface IUnzipWithCreator<out TIn, in TOut, out T>
     {
         T Create(System.Func<TIn, TOut> unzipper);
+    }
+    public class static JsonFraming
+    {
+        public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> ObjectScanner(int maximumObjectLength) { }
     }
     public class static Keep
     {
@@ -1403,12 +1410,12 @@ namespace Akka.Streams.Dsl
         public RunnableGraph(Akka.Streams.Implementation.IModule module) { }
         public Akka.Streams.Implementation.IModule Module { get; }
         public Akka.Streams.ClosedShape Shape { get; }
-        public Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> AddAttributes(Akka.Streams.Attributes attributes) { }
+        public Akka.Streams.Dsl.IRunnableGraph<TMat> AddAttributes(Akka.Streams.Attributes attributes) { }
         public Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> Async() { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> func) { }
-        public Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> Named(string name) { }
+        public Akka.Streams.Dsl.IRunnableGraph<TMat> Named(string name) { }
         public TMat Run(Akka.Streams.IMaterializer materializer) { }
-        public Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
+        public Akka.Streams.Dsl.IRunnableGraph<TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
     }
     public class static Sink
     {
@@ -3234,18 +3241,18 @@ namespace Akka.Streams.Implementation.Fusing
         public GraphAssembly(Akka.Streams.Stage.IGraphStageWithMaterializedValue<, >[] stages, Akka.Streams.Attributes[] originalAttributes, Akka.Streams.Inlet[] inlets, int[] inletOwners, Akka.Streams.Outlet[] outlets, int[] outletOwners) { }
         public int ConnectionCount { get; }
         public static Akka.Streams.Implementation.Fusing.GraphAssembly Create(System.Collections.Generic.IList<Akka.Streams.Inlet> inlets, System.Collections.Generic.IList<Akka.Streams.Outlet> outlets, System.Collections.Generic.IList<Akka.Streams.Stage.IGraphStageWithMaterializedValue<Akka.Streams.Shape, object>> stages) { }
-        public System.Tuple<Akka.Streams.Stage.IInHandler[], Akka.Streams.Stage.IOutHandler[], Akka.Streams.Stage.GraphStageLogic[]> Materialize(Akka.Streams.Attributes inheritedAttributes, Akka.Streams.Implementation.IModule[] copiedModules, System.Collections.Generic.IDictionary<Akka.Streams.Implementation.IModule, object> materializedValues, System.Action<Akka.Streams.Implementation.Fusing.IMaterializedValueSource> register) { }
+        public System.Tuple<Connection[], Akka.Streams.Stage.GraphStageLogic[]> Materialize(Akka.Streams.Attributes inheritedAttributes, Akka.Streams.Implementation.IModule[] copiedModules, System.Collections.Generic.IDictionary<Akka.Streams.Implementation.IModule, object> materializedValues, System.Action<Akka.Streams.Implementation.Fusing.IMaterializedValueSource> register) { }
         public override string ToString() { }
     }
     public sealed class GraphInterpreter
     {
         public readonly Akka.Streams.Implementation.Fusing.GraphAssembly Assembly;
         public const int Boundary = -1;
-        public readonly object[] ConnectionSlots;
+        public const int ChaseLimit = 16;
+        public readonly Connection[] Connections;
         public readonly bool FuzzingMode;
         public const int InClosed = 16;
         public const int InFailed = 64;
-        public readonly Akka.Streams.Stage.IInHandler[] InHandlers;
         public const int InReady = 1;
         public static readonly bool IsDebug;
         public const int KeepGoingFlag = 67108864;
@@ -3253,12 +3260,10 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly Akka.Event.ILoggingAdapter Log;
         public readonly Akka.Streams.Stage.GraphStageLogic[] Logics;
         public readonly Akka.Streams.IMaterializer Materializer;
-        public const int NoEvent = -1;
+        public const Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection NoEvent = null;
         public readonly System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Action<object>> OnAsyncInput;
         public const int OutClosed = 32;
-        public readonly Akka.Streams.Stage.IOutHandler[] OutHandlers;
         public const int OutReady = 8;
-        public readonly int[] PortStates;
         public const int PullEndFlip = 10;
         public const int Pulling = 2;
         public const int PullStartFlip = 3;
@@ -3267,23 +3272,39 @@ namespace Akka.Streams.Implementation.Fusing
         public const int PushStartFlip = 12;
         public int RunningStagesCount;
         public static readonly Akka.Streams.Attributes[] SingleNoAttribute;
-        public GraphInterpreter(Akka.Streams.Implementation.Fusing.GraphAssembly assembly, Akka.Streams.IMaterializer materializer, Akka.Event.ILoggingAdapter log, Akka.Streams.Stage.IInHandler[] inHandlers, Akka.Streams.Stage.IOutHandler[] outHandlers, Akka.Streams.Stage.GraphStageLogic[] logics, System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Action<object>> onAsyncInput, bool fuzzingMode, Akka.Actor.IActorRef context) { }
+        public GraphInterpreter(Akka.Streams.Implementation.Fusing.GraphAssembly assembly, Akka.Streams.IMaterializer materializer, Akka.Event.ILoggingAdapter log, Akka.Streams.Stage.GraphStageLogic[] logics, Connection[] connections, System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Action<object>> onAsyncInput, bool fuzzingMode, Akka.Actor.IActorRef context) { }
         public Akka.Actor.IActorRef Context { get; }
         public static Akka.Streams.Implementation.Fusing.GraphInterpreter Current { get; }
         public static Akka.Streams.Implementation.Fusing.GraphInterpreter CurrentInterpreterOrNull { get; }
         public bool IsCompleted { get; }
         public bool IsSuspended { get; }
+        public void AttachDownstreamBoundary(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Implementation.Fusing.GraphInterpreter.DownstreamBoundaryStageLogic logic) { }
         public void AttachDownstreamBoundary(int connection, Akka.Streams.Implementation.Fusing.GraphInterpreter.DownstreamBoundaryStageLogic logic) { }
+        public void AttachUpstreamBoundary(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Implementation.Fusing.GraphInterpreter.UpstreamBoundaryStageLogic logic) { }
         public void AttachUpstreamBoundary(int connection, Akka.Streams.Implementation.Fusing.GraphInterpreter.UpstreamBoundaryStageLogic logic) { }
         public void DumpWaits() { }
+        public void Enqueue(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection) { }
         public int Execute(int eventLimit) { }
         public void Finish() { }
         public void Init(Akka.Streams.IMaterializer subMaterializer) { }
-        public void ProcessElement(int connection) { }
         public void RunAsyncInput(Akka.Streams.Stage.GraphStageLogic logic, object evt, System.Action<object> handler) { }
-        public void SetHandler(int connection, Akka.Streams.Stage.IInHandler handler) { }
-        public void SetHandler(int connection, Akka.Streams.Stage.IOutHandler handler) { }
+        public void SetHandler(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Stage.IInHandler handler) { }
+        public void SetHandler(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Stage.IOutHandler handler) { }
         public override string ToString() { }
+        public sealed class Connection
+        {
+            public Connection(int id, int inOwnerId, Akka.Streams.Stage.GraphStageLogic inOwner, int outOwnerId, Akka.Streams.Stage.GraphStageLogic outOwner, Akka.Streams.Stage.IInHandler inHandler, Akka.Streams.Stage.IOutHandler outHandler) { }
+            public int Id { get; }
+            public Akka.Streams.Stage.IInHandler InHandler { get; set; }
+            public Akka.Streams.Stage.GraphStageLogic InOwner { get; }
+            public int InOwnerId { get; }
+            public Akka.Streams.Stage.IOutHandler OutHandler { get; set; }
+            public Akka.Streams.Stage.GraphStageLogic OutOwner { get; }
+            public int OutOwnerId { get; }
+            public int PortState { get; set; }
+            public object Slot { get; set; }
+            public override string ToString() { }
+        }
         public abstract class DownstreamBoundaryStageLogic : Akka.Streams.Stage.GraphStageLogic
         {
             protected DownstreamBoundaryStageLogic() { }
@@ -3308,7 +3329,7 @@ namespace Akka.Streams.Implementation.Fusing
     }
     public sealed class GraphInterpreterShell
     {
-        public GraphInterpreterShell(Akka.Streams.Implementation.Fusing.GraphAssembly assembly, Akka.Streams.Stage.IInHandler[] inHandlers, Akka.Streams.Stage.IOutHandler[] outHandlers, Akka.Streams.Stage.GraphStageLogic[] logics, Akka.Streams.Shape shape, Akka.Streams.ActorMaterializerSettings settings, Akka.Streams.Implementation.ExtendedActorMaterializer materializer) { }
+        public GraphInterpreterShell(Akka.Streams.Implementation.Fusing.GraphAssembly assembly, Connection[] connections, Akka.Streams.Stage.GraphStageLogic[] logics, Akka.Streams.Shape shape, Akka.Streams.ActorMaterializerSettings settings, Akka.Streams.Implementation.ExtendedActorMaterializer materializer) { }
         public bool CanShutdown { get; }
         public Akka.Streams.Implementation.Fusing.GraphInterpreter Interpreter { get; }
         public bool IsInitialized { get; }
@@ -3451,11 +3472,15 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
-    public sealed class Select<TIn, TOut> : Akka.Streams.Stage.PushStage<TIn, TOut>
+    public sealed class Select<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
-        public Select(System.Func<TIn, TOut> func, Akka.Streams.Supervision.Decider decider) { }
-        public override Akka.Streams.Supervision.Directive Decide(System.Exception cause) { }
-        public override Akka.Streams.Stage.ISyncDirective OnPush(TIn element, Akka.Streams.Stage.IContext<TOut> context) { }
+        public Select(System.Func<TIn, TOut> func) { }
+        public Akka.Streams.Inlet<TIn> In { get; }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<TOut> Out { get; }
+        public override Akka.Streams.FlowShape<TIn, TOut> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+        public override string ToString() { }
     }
     public sealed class SelectAsync<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
@@ -3716,11 +3741,6 @@ namespace Akka.Streams.Implementation.Stages
         public override Akka.Streams.SinkShape<TIn> Shape { get; }
         public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<TIn>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
-    }
-    public sealed class Select<TIn, TOut> : Akka.Streams.Implementation.Stages.SymbolicStage<TIn, TOut>
-    {
-        public Select(System.Func<TIn, TOut> mapper, Akka.Streams.Attributes attributes = null) { }
-        public override Akka.Streams.Stage.IStage<TIn, TOut> Create(Akka.Streams.Attributes effectiveAttributes) { }
     }
     public sealed class SymbolicGraphStage<TIn, TOut> : Akka.Streams.Stage.PushPullGraphStage<TIn, TOut>
     {
