@@ -1122,7 +1122,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Limit<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> LimitWeighted<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max, System.Func<TOut, long> costFunc) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Log<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, string name, System.Func<TOut, object> extract = null, Akka.Event.ILoggingAdapter log = null) { }
-        public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Merge<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> other)
+        public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Merge<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> other, bool eagerComplete = False)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> MergeMany<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, int breadth, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat3> MergeMaterialized<TIn, TOut1, TOut2, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat2> that, System.Func<TMat, TMat2, TMat3> combine)
@@ -1547,7 +1547,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, TMat> Limit<T, TMat>(this Akka.Streams.Dsl.Source<T, TMat> flow, long max) { }
         public static Akka.Streams.Dsl.Source<T, TMat> LimitWeighted<T, TMat>(this Akka.Streams.Dsl.Source<T, TMat> flow, long max, System.Func<T, long> costFunc) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Log<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, string name, System.Func<TOut, object> extract = null, Akka.Event.ILoggingAdapter log = null) { }
-        public static Akka.Streams.Dsl.Source<TOut2, TMat> Merge<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> other)
+        public static Akka.Streams.Dsl.Source<TOut2, TMat> Merge<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> other, bool eagerComplete = False)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> MergeMany<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, int breadth, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat3> MergeMaterialized<TOut1, TOut2, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat2> that, System.Func<TMat, TMat2, TMat3> combine)
@@ -1645,7 +1645,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<T, TMat, TClosed> Limit<T, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<T, TMat, TClosed> flow, long max) { }
         public static Akka.Streams.Dsl.SubFlow<T, TMat, TClosed> LimitWeighted<T, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<T, TMat, TClosed> flow, long max, System.Func<T, long> costFunc) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Log<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, string name, System.Func<TOut, object> extract = null, Akka.Event.ILoggingAdapter log = null) { }
-        public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Merge<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> other)
+        public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Merge<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> other, bool eagerComplete = False)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> MergeMany<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, int breadth, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat3, TClosed> MergeMaterialized<TOut1, TOut2, TMat, TMat2, TMat3, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat2> that, System.Func<TMat, TMat2, TMat3> combine)

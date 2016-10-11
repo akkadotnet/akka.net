@@ -1419,9 +1419,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> Merge<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other) where TOut1 : TOut2
+        public static Source<TOut2, TMat> Merge<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other, bool eagerComplete = false) where TOut1 : TOut2
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.Merge(flow, other);
+            return (Source<TOut2, TMat>)InternalFlowOperations.Merge(flow, other, eagerComplete);
         }
 
 

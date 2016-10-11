@@ -137,5 +137,35 @@ namespace Akka.Streams.Tests.Dsl
                 up2.ExpectSubscription().ExpectCancellation();
             }, Materializer);
         }
+
+        [Fact]
+        public void A_Merge_for_Flow_must_not_try_to_grab_from_closed_input_previously_enqueued()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var up1 = this.CreatePublisherProbe<int>();
+                var up2 = this.CreatePublisherProbe<int>();
+                var down = this.CreateSubscriberProbe<int>();
+
+                Source.FromPublisher(up1)
+                    .Merge(Source.FromPublisher(up2), true)
+                    .To(Sink.FromSubscriber(down))
+                    .Run(Materializer);
+
+                up1.EnsureSubscription();
+                up2.EnsureSubscription();
+                down.EnsureSubscription();
+
+                up1.ExpectRequest();
+                up2.ExpectRequest();
+                up1.SendNext(7);
+                up2.SendNext(8);
+                // there is a race here, the 8 needs to be queued before the
+                // source completes (it failed consistently on my machine before bugfix)
+                up2.SendComplete();
+                down.Request(1);
+                down.ExpectNext();
+            }, Materializer);
+        }
     }
 }
