@@ -17,7 +17,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -594,7 +593,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_borken_Flow_must_cancel_upstream_and_call_onError_on_current_and_future_downstream_subscribers_if_an_internal_error_occurs()
+        public void A_broken_Flow_must_cancel_upstream_and_call_onError_on_current_and_future_downstream_subscribers_if_an_internal_error_occurs()
         {
             var setup = new ChainSetup<string, string, NotUsed>(FaultyFlow<string,string,string>, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
@@ -656,9 +655,13 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_borken_Flow_must_suitably_override_attribute_hanling_methods()
+        public void A_broken_Flow_must_suitably_override_attribute_hanling_methods()
         {
-            Flow.Create<int>().AddAttributes(Attributes.None).Named("");
+            var f = Flow.Create<int>().Select(x => x + 1).Async().AddAttributes(Attributes.None).Named("name");
+            f.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
+            f.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+                .Should()
+                .Be(Attributes.AsyncBoundary.Instance);
         }
 
         private static Flow<TIn, TOut, TMat> Identity<TIn, TOut, TMat>(Flow<TIn, TOut, TMat> flow) => flow.Select(e => e);

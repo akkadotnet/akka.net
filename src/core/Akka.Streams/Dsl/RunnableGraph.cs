@@ -71,6 +71,9 @@ namespace Akka.Streams.Dsl
         public IRunnableGraph<TMat> Named(string name)
             => AddAttributes(Attributes.CreateName(name));
 
+        public IRunnableGraph<TMat> Async()
+           => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
+
         public IRunnableGraph<TMat> WithAttributes(Attributes attributes)
             => new RunnableGraph<TMat>(Module.WithAttributes(attributes));
 
@@ -80,7 +83,7 @@ namespace Akka.Streams.Dsl
         IGraph<ClosedShape, TMat> IGraph<ClosedShape, TMat>.Named(string name)
             => Named(name);
 
-        public IGraph<ClosedShape, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
+        IGraph<ClosedShape, TMat> IGraph<ClosedShape, TMat>.Async() => Async();
 
         public IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> func)
             => new RunnableGraph<TMat2>(Module.TransformMaterializedValue(func));

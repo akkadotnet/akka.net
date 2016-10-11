@@ -1411,7 +1411,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Implementation.IModule Module { get; }
         public Akka.Streams.ClosedShape Shape { get; }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> AddAttributes(Akka.Streams.Attributes attributes) { }
-        public Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> Async() { }
+        public Akka.Streams.Dsl.IRunnableGraph<TMat> Async() { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> func) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> Named(string name) { }
         public TMat Run(Akka.Streams.IMaterializer materializer) { }
@@ -2561,6 +2561,13 @@ namespace Akka.Streams.Implementation
         void WaitForUpstream(int waitForUpstream);
     }
     public interface ISpecViolation { }
+    public class JsonObjectParser
+    {
+        public JsonObjectParser(int maximumObjectLength = 2147483647) { }
+        public bool IsEmpty { get; }
+        public void Offer(Akka.IO.ByteString input) { }
+        public Akka.Streams.Util.Option<Akka.IO.ByteString> Poll() { }
+    }
     public sealed class LastOrDefaultStage<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SinkShape<T>, System.Threading.Tasks.Task<T>>
     {
         public readonly Akka.Streams.Inlet<T> In;

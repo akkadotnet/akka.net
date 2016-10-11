@@ -170,6 +170,7 @@
     <Compile Include="Dsl\HeadSinkSpec.cs" />
     <Compile Include="Dsl\LastSinkSpec.cs" />
     <Compile Include="Dsl\ReverseArrowSpec.cs" />
+    <Compile Include="Dsl\RunnableGraphSpec.cs" />
     <Compile Include="Dsl\SeqSinkSpec.cs" />
     <Compile Include="Dsl\SinkForeachParallelSpec.cs" />
     <Compile Include="Dsl\SinkSpec.cs" />
