@@ -176,7 +176,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var s = Sink.First<int>().Async().AddAttributes(Attributes.None).Named("name");
 
-            s.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
+            s.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("name");
             s.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
