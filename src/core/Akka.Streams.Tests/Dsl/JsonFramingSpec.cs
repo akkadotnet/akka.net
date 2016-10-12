@@ -212,6 +212,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_single_quote()
+        {
+            var buffer = new JsonObjectParser();
+            buffer.Offer(ByteString.FromString("{ \"name\": \"john o'doe\" }"));
+            buffer.Poll().Value.DecodeString().Should().Be("{ \"name\": \"john o'doe\" }");
+        }
+
+        [Fact]
         public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace()
         {
 
