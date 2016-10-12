@@ -836,6 +836,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
+        [Obsolete("Please use GraphStage instead.")]
         public class InvalidAbsorbTermination<T> : PushPullStage<T, T>
         {
             public override ISyncDirective OnPush(T element, IContext<T> context)
