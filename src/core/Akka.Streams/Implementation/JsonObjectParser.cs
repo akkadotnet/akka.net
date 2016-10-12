@@ -17,7 +17,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API: Use <see cref="JsonFraming"/> instead
     /// 
     /// **Mutable** framing implementation that given any number of <see cref="ByteString"/> chunks, can emit JSON objects contained within them.
-    /// Typically JSON objects are separated by new-lines or comas, however a top-level JSON Array can also be understood and chunked up
+    /// Typically JSON objects are separated by new-lines or commas, however a top-level JSON Array can also be understood and chunked up
     /// into valid JSON objects by this framing implementation.
     /// 
     /// Leading whitespace between elements will be trimmed.

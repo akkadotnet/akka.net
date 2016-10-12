@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -153,11 +154,41 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_nothing_is_supplied_should_return_nothing()
+        public void Collecting_multiple_json_should_emit_all_elements_after_input_completes()
+        {
+            var input = this.CreatePublisherProbe<ByteString>();
+            var output = this.CreateSubscriberProbe<string>();
+
+            var result =
+                Source.FromPublisher(input)
+                    .Via(JsonFraming.ObjectScanner(int.MaxValue))
+                    .Select(b => b.DecodeString())
+                    .RunWith(Sink.FromSubscriber(output), Materializer);
+
+            output.Request(1);
+            input.ExpectRequest();
+            input.SendNext(ByteString.FromString("[{\"a\":0}, {\"b\":1}, {\"c\":2}, {\"d\":3}, {\"e\":4}]"));
+            input.SendComplete();
+            Thread.Sleep(100); // another of those races, we don't know the order of next and complete
+            output.ExpectNext("{\"a\":0}");
+            output.Request(1);
+            output.ExpectNext("{\"b\":1}");
+            output.Request(1);
+            output.ExpectNext("{\"c\":2}");
+            output.Request(1);
+            output.ExpectNext("{\"d\":3}");
+            output.Request(1);
+            output.ExpectNext("{\"e\":4}");
+            output.Request(1);
+            output.ExpectComplete();
+        }
+
+        [Fact]
+        public void Collecting_json_buffer_when_nothing_is_supplied_should_return_nothing()
             => new JsonObjectParser().Poll().Should().Be(Option<ByteString>.None);
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_empty_object()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_empty_object()
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{}"));
@@ -165,7 +196,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value()
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{ \"name\": \"john\" }"));
@@ -173,7 +204,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact] 
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_space()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_space()
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{ \"name\": \"john doe\" }"));
@@ -181,7 +212,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace()
         {
 
             var buffer = new JsonObjectParser();
@@ -193,7 +224,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace_and_escape_character()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace_and_escape_character()
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{ \"name\": \"john"));
@@ -209,7 +240,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_integer_value()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_integer_value()
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{ \"age\" : 101}"));
@@ -217,7 +248,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_decimal_value()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_decimal_value()
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{ \"age\" : 10.1}"));
@@ -225,7 +256,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_nested_object()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_nested_object()
         {
             var buffer = new JsonObjectParser();
             const string content = "{ \"name\" : \"john\"," +
@@ -240,7 +271,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_multiple_level_of_nested_object()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_multiple_level_of_nested_object()
         {
             var buffer = new JsonObjectParser();
             const string content = "{ \"name\" : \"john\"," +
@@ -258,7 +289,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_nested_array_should_successfully_parse()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_nested_array_should_successfully_parse()
         {
             var buffer = new JsonObjectParser();
             const string content = "{ \"name\" : \"john\"," +
@@ -274,7 +305,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_complex_object_graph_should_successfully_parse()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_complex_object_graph_should_successfully_parse()
         {
             var buffer = new JsonObjectParser();
             const string content = @"{
@@ -304,7 +335,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_fields_should_parse_successfully()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_fields_should_parse_successfully()
         {
             var buffer = new JsonObjectParser();
             const string content = "{ \"name\": \"john\", \"age\" : 101}";
@@ -313,7 +344,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_fields_should_parse_successfully_despite_valid_whitespaces_around_json()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_fields_should_parse_successfully_despite_valid_whitespaces_around_json()
         {
             var buffer = new JsonObjectParser();
             const string content = "        " +
@@ -325,7 +356,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_objects_should_pops_the_right_object_as_buffer_is_filled()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_objects_should_pops_the_right_object_as_buffer_is_filled()
         {
             var buffer = new JsonObjectParser();
             const string input1 = @"{
@@ -349,7 +380,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_valid_json_is_supplied_which_returns_none_until_valid_json_is_encountered()
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_returns_none_until_valid_json_is_encountered()
         {
             var buffer = new JsonObjectParser();
             @"{ ""name"" : ""john""".ForEach(c =>
@@ -363,7 +394,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_invalid_json_is_supplied_should_fail_if_it_is_broken_from_the_start()
+        public void Collecting_json_buffer_when_invalid_json_is_supplied_should_fail_if_it_is_broken_from_the_start()
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("THIS IS NOT VALID { \name\": \"john\"}"));
@@ -371,7 +402,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_collecting_json_buffer_when_invalid_json_is_supplied_should_fail_if_it_is_broken_at_the_end()
+        public void Collecting_json_buffer_when_invalid_json_is_supplied_should_fail_if_it_is_broken_at_the_end()
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{ \"name\": \"john\"} THIS IS NOT VALID "));

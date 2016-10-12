@@ -42,7 +42,6 @@ namespace Akka.Streams.Dsl
         /// elements are separated by multiple newlines or other whitespace characters. And of course is insensitive
         /// (and does not impact the emitting frame) to the JSON object's internal formatting.
         /// 
-        /// Framing raw JSON values (such as integers or strings) is supported as well.
         /// </summary>
         /// <param name="maximumObjectLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
         /// <returns></returns>
@@ -73,7 +72,7 @@ namespace Akka.Streams.Dsl
                     {
                         var json = _buffer.Poll();
                         if (json.HasValue)
-                            Emit(stage.Outlet, json.Value, CompleteStage);
+                            Emit(stage.Outlet, json.Value);
                         else
                             CompleteStage();
                     });
@@ -105,6 +104,8 @@ namespace Akka.Streams.Dsl
             {
                 _maximumObjectLength = maximumObjectLength;
             }
+
+            protected override Attributes InitialAttributes { get; } = Attributes.CreateName("JsonFraming.objectScanner");
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
