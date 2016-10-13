@@ -888,10 +888,25 @@ namespace Akka.Streams.Dsl
             private void DequeueAndDispatch()
             {
                 var outlet = _pendingQueue.Dequeue();
-                Push(outlet, Grab(_stage.In));
-                if (!NoPending) Pull(_stage.In);
+
+                // outlet is null if depleted _pendingQueue without reaching
+                // an outlet that is not closed, in which case we just return
+
+                if (outlet != null)
+                {
+                    if (!IsClosed(outlet))
+                    {
+                        Push(outlet, Grab(_stage.In));
+                        if (!NoPending)
+                            Pull(_stage.In);
+                    }
+                    else
+                        // try to find one output that isn't closed
+                        DequeueAndDispatch();
+                }
             }
         }
+
         #endregion
 
         private readonly int _outputPorts;

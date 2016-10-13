@@ -863,8 +863,8 @@ namespace Akka.Streams.Stage
 
                 // Detailed error information should not add overhead to the hot path
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
-                if (!IsAvailable(outlet)) throw new ArgumentException("Cannot push port twice");
-                if (IsClosed(outlet)) throw new ArgumentException("Cannot pull closed port");
+                if (IsClosed(outlet)) throw new ArgumentException($"Cannot pull closed port {outlet}");
+                if (!IsAvailable(outlet)) throw new ArgumentException($"Cannot push port twice {outlet}");
 
                 // No error, just InClosed caused the actual pull to be ignored, but the status flag still needs to be flipped
                 connection.PortState = portState ^ PushStartFlip;
