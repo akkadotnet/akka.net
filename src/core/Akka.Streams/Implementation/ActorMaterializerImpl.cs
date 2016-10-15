@@ -142,11 +142,10 @@ namespace Akka.Streams.Implementation
             {
                 var calculatedSettings = _materializer.EffectiveSettings(effectiveAttributes);
                 var t = graph.Assembly.Materialize(effectiveAttributes, graph.MaterializedValueIds, materializedValues, RegisterSource);
-                var inHandlers = t.Item1;
-                var outHandlers = t.Item2;
-                var logics = t.Item3;
+                var connections = t.Item1;
+                var logics = t.Item2;
 
-                var shell = new GraphInterpreterShell(graph.Assembly, inHandlers, outHandlers, logics, graph.Shape, calculatedSettings, _materializer);
+                var shell = new GraphInterpreterShell(graph.Assembly, connections, logics, graph.Shape, calculatedSettings, _materializer);
                 var impl = _subflowFuser != null && !effectiveAttributes.Contains(Attributes.AsyncBoundary.Instance)
                     ? _subflowFuser(shell)
                     : _materializer.ActorOf(ActorGraphInterpreter.Props(shell), StageName(effectiveAttributes), calculatedSettings.Dispatcher);

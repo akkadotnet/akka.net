@@ -84,6 +84,7 @@
     <Compile Include="Dsl\Graph.cs" />
     <Compile Include="Dsl\GraphDsl.cs" />
     <Compile Include="Dsl\Internal\GraphImpl.cs" />
+    <Compile Include="Dsl\JsonFraming.cs" />
     <Compile Include="Dsl\One2OneBidiFlow.cs" />
     <Compile Include="Dsl\RunnableGraph.cs" />
     <Compile Include="Dsl\Sink.cs" />
@@ -126,6 +127,7 @@
     <Compile Include="Implementation\IO\OutputStreamSourceStage.cs" />
     <Compile Include="Implementation\IO\OutputStreamSubscriber.cs" />
     <Compile Include="Implementation\IO\TcpStages.cs" />
+    <Compile Include="Implementation\JsonObjectParser.cs" />
     <Compile Include="Implementation\Modules.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBuffer.cs" />
     <Compile Include="Implementation\SinkholeSubscriber.cs" />

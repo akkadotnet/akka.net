@@ -152,19 +152,6 @@ namespace Akka.Streams.Implementation.Stages
             => attributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
     }
 
-    public sealed class Select<TIn, TOut> : SymbolicStage<TIn, TOut>
-    {
-        private readonly Func<TIn, TOut> _mapper;
-
-        public Select(Func<TIn, TOut> mapper, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Select)
-        {
-            _mapper = mapper;
-        }
-
-        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-            => new Fusing.Select<TIn, TOut>(_mapper, Supervision(effectiveAttributes));
-    }
-
     public sealed class Buffer<T> : SymbolicStage<T, T>
     {
         private readonly int _size;

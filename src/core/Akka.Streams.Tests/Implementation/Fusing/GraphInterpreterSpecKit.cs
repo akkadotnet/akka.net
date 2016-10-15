@@ -140,20 +140,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                         new Dictionary<IModule, object>(), s => { });
-                    var inHandlers = mat.Item1;
-                    var outHandlers = mat.Item2;
-                    var logics = mat.Item3;
-                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false, null);
+                    var connections = mat.Item1;
+                    var logics = mat.Item2;
+                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
 
                     var i = 0;
                     foreach (var upstream in _upstreams)
                     {
-                        interpreter.AttachUpstreamBoundary(i++, upstream.Item1);
+                        interpreter.AttachUpstreamBoundary(connections[i++], upstream.Item1);
                     }
                     i = 0;
                     foreach (var downstream in _downstreams)
                     {
-                        interpreter.AttachDownstreamBoundary((i++) + _upstreams.Count + _connections.Count, downstream.Item2);
+                        interpreter.AttachDownstreamBoundary(connections[i++ + _upstreams.Count + _connections.Count], downstream.Item2);
                     }
                     interpreter.Init(null);
                     _interpreterSetter(interpreter);
@@ -164,10 +163,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                     new Dictionary<IModule, object>(), s => { });
-                var inHandlers = mat.Item1;
-                var outHandlers = mat.Item2;
-                var logics = mat.Item3;
-                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false, null);
+                var connections = mat.Item1;
+                var logics = mat.Item2;
+                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
             }
 
             public AssemblyBuilder Builder(params IGraphStageWithMaterializedValue<Shape, object>[] stages)
@@ -565,8 +563,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 In = new DownstreamPortProbe<int>(this);
 
                 ManualInit(_assembly);
-                Interpreter.AttachDownstreamBoundary(0, In);
-                Interpreter.AttachUpstreamBoundary(0, Out);
+                Interpreter.AttachDownstreamBoundary(Interpreter.Connections[0], In);
+                Interpreter.AttachUpstreamBoundary(Interpreter.Connections[0], Out);
                 Interpreter.Init(null);
             }
 
@@ -610,7 +608,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     SetHandler(In, () =>
                     {
                         // Modified onPush that does not Grab() automatically the element. This access some internals.
-                        var internalEvent = Interpreter.ConnectionSlots[PortToConn[In.Id]];
+                        var internalEvent = PortToConn[In.Id].Slot;
 
                         if (internalEvent is GraphInterpreter.Failed)
                             ((PortTestSetup) setup).LastEvent.Add(new OnNext(probe,

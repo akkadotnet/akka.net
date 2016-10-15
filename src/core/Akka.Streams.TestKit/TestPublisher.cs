@@ -193,7 +193,9 @@ namespace Akka.Streams.TestKit
 
             public long ExpectRequest()
             {
-                return _subscription.Value.ExpectRequest();
+                var requests = _subscription.Value.ExpectRequest();
+                Pending += requests;
+                return requests;
             }
 
             public Probe<T> ExpectCancellation()

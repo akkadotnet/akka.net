@@ -122,7 +122,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> Select<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
-            return flow.AndThen(new Select<TIn, TOut>(mapper));
+            return flow.Via(new Fusing.Select<TIn, TOut>(mapper));
         }
 
         /// <summary>

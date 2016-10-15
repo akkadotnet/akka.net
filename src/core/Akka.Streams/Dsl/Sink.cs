@@ -21,7 +21,7 @@ using Reactive.Streams;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// A <see cref="Sink{TIn,TMat}"/> is a set of stream processing steps that has one open input and an attached output.
+    /// A <see cref="Sink{TIn,TMat}"/> is a set of stream processing steps that has one open input.
     /// Can be used as a <see cref="ISubscriber{T}"/>
     /// </summary>
     public sealed class Sink<TIn, TMat> : IGraph<SinkShape<TIn>, TMat>
@@ -53,6 +53,9 @@ namespace Akka.Streams.Dsl
         public TMat2 RunWith<TMat2>(IGraph<SourceShape<TIn>, TMat2> source, IMaterializer materializer)
             => Source.FromGraph(source).To(this).Run(materializer);
 
+        /// <summary>
+        /// Transform only the materialized value of this Sink, leaving all other properties as they were.
+        /// </summary>
         public Sink<TIn, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> fn)
             => new Sink<TIn, TMat2>(Module.TransformMaterializedValue(fn));
 
@@ -141,7 +144,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the first value received.
         /// If the stream completes before signaling at least a single element, the Task will be failed with a <see cref="NoSuchElementException"/>.
-        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// If the stream signals an error before signaling at least a single element, the Task will be failed with the streams exception.
         /// </summary>
         public static Sink<TIn, Task<TIn>> First<TIn>()
             => FromGraph(new FirstOrDefault<TIn>(throwOnDefault: true))

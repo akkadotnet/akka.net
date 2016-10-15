@@ -424,8 +424,8 @@ namespace Akka.Streams.Tests.Implementation
                 new GraphStage<FlowShape<int, int>>[] {new DoubleTerminateStage(TestActor), new PassThrough()},
                 interpreter =>
                 {
-                    interpreter.Complete(0);
-                    interpreter.Cancel(1);
+                    interpreter.Complete(interpreter.Connections[0]);
+                    interpreter.Cancel(interpreter.Connections[1]);
                     interpreter.Execute(2);
 
                     ExpectMsg("postStop2");

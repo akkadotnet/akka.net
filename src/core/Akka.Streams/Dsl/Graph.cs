@@ -78,7 +78,8 @@ namespace Akka.Streams.Dsl
 
                 SetHandler(outlet, onPull: () =>
                 {
-                    if (IsPending) DequeueAndDispatch();
+                    if (IsPending)
+                        DequeueAndDispatch();
                 });
             }
 
@@ -87,15 +88,32 @@ namespace Akka.Streams.Dsl
 
             public override void PreStart()
             {
-                foreach (var inlet in _stage.Shape.Ins) TryPull(inlet);
+                foreach (var inlet in _stage.Shape.Ins)
+                    TryPull(inlet);
             }
 
             private void DequeueAndDispatch()
             {
                 var inlet = _pendingQueue.Dequeue();
-                Push(_stage.Out, Grab(inlet));
-                if (AreUpstreamsClosed && !IsPending) CompleteStage();
-                else TryPull(inlet);
+                if (inlet == null)
+                {
+                    // inlet is null if we reached the end of the queue
+                    if(AreUpstreamsClosed)
+                        CompleteStage();
+                }
+                else if (IsAvailable(inlet))
+                {
+                    Push(_stage.Out, Grab(inlet));
+                    if(AreUpstreamsClosed && !IsPending)
+                        CompleteStage();
+                    else
+                        TryPull(inlet);
+                }
+                else
+                    // inlet was closed after being enqueued
+                    // try next in queue
+                    DequeueAndDispatch();
+
             }
         }
 
@@ -870,10 +888,25 @@ namespace Akka.Streams.Dsl
             private void DequeueAndDispatch()
             {
                 var outlet = _pendingQueue.Dequeue();
-                Push(outlet, Grab(_stage.In));
-                if (!NoPending) Pull(_stage.In);
+
+                // outlet is null if depleted _pendingQueue without reaching
+                // an outlet that is not closed, in which case we just return
+
+                if (outlet != null)
+                {
+                    if (!IsClosed(outlet))
+                    {
+                        Push(outlet, Grab(_stage.In));
+                        if (!NoPending)
+                            Pull(_stage.In);
+                    }
+                    else
+                        // try to find one output that isn't closed
+                        DequeueAndDispatch();
+                }
             }
         }
+
         #endregion
 
         private readonly int _outputPorts;

@@ -21,6 +21,7 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
+using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 
 namespace Akka.Streams.Stage
 {
@@ -581,7 +582,7 @@ namespace Akka.Streams.Stage
         public readonly int OutCount;
 
         internal readonly object[] Handlers;
-        internal readonly int[] PortToConn;
+        internal readonly Connection[] PortToConn;
         internal int StageId = int.MinValue;
         private GraphInterpreter _interpreter;
 
@@ -601,7 +602,7 @@ namespace Akka.Streams.Stage
             InCount = inCount;
             OutCount = outCount;
             Handlers = new object[InCount + OutCount];
-            PortToConn = new int[Handlers.Length];
+            PortToConn = new Connection[Handlers.Length];
         }
 
         protected GraphStageLogic(Shape shape) : this(shape.Inlets.Count(), shape.Outlets.Count())
@@ -686,9 +687,9 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected IOutHandler GetHandler(Outlet outlet) => (IOutHandler)Handlers[outlet.Id + InCount];
 
-        private int GetConnection(Inlet inlet) => PortToConn[inlet.Id];
+        private Connection GetConnection(Inlet inlet) => PortToConn[inlet.Id];
 
-        private int GetConnection(Outlet outlet) => PortToConn[outlet.Id + InCount];
+        private Connection GetConnection(Outlet outlet) => PortToConn[outlet.Id + InCount];
 
         private IOutHandler GetNonEmittingHandler(Outlet outlet)
         {
@@ -704,9 +705,14 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected internal void Pull(Inlet inlet)
         {
-            var conn = GetConnection(inlet);
-            if ((Interpreter.PortStates[conn] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == GraphInterpreter.InReady)
-                Interpreter.Pull(conn);
+            var connection = GetConnection(inlet);
+            var portState = connection.PortState;
+
+            if ((portState & (InReady | InClosed | OutClosed)) == InReady)
+            {
+                connection.PortState = portState ^ PullStartFlip;
+                Interpreter.ChasePull(connection);
+            }
             else
             {
                 // Detailed error information should not add overhead to the hot path
@@ -715,6 +721,10 @@ namespace Akka.Streams.Stage
                 if (HasBeenPulled(inlet))
                     throw new ArgumentException("Cannot pull port twice");
             }
+
+            // There were no errors, the pull was simply ignored as the target stage already closed its port. We
+            // still need to track proper state though.
+            connection.PortState = portState ^ PullStartFlip;
         }
 
         /// <summary>
@@ -759,12 +769,13 @@ namespace Akka.Streams.Stage
         protected internal T Grab<T>(Inlet inlet)
         {
             var connection = GetConnection(inlet);
-            var element = Interpreter.ConnectionSlots[connection];
-            if ((Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) ==
-                GraphInterpreter.InReady && !ReferenceEquals(element, GraphInterpreter.Empty.Instance))
+            var element = connection.Slot;
+
+            if ((connection.PortState & (InReady | InFailed)) ==
+                InReady && !ReferenceEquals(element, Empty.Instance))
             {
                 // fast path
-                Interpreter.ConnectionSlots[connection] = GraphInterpreter.Empty.Instance;
+                connection.Slot = Empty.Instance;
             }
             else
             {
@@ -773,7 +784,7 @@ namespace Akka.Streams.Stage
                     throw new ArgumentException("Cannot get element from already empty input port");
                 var failed = (GraphInterpreter.Failed)element;
                 element = failed.PreviousElement;
-                Interpreter.ConnectionSlots[connection] = new GraphInterpreter.Failed(failed.Reason, GraphInterpreter.Empty.Instance);
+                connection.Slot = new GraphInterpreter.Failed(failed.Reason, Empty.Instance);
             }
 
             return (T)element;
@@ -793,7 +804,7 @@ namespace Akka.Streams.Stage
         /// then <see cref="IsAvailable(Inlet)"/> must return false for that same port.
         /// </summary>
         protected bool HasBeenPulled(Inlet inlet) 
-            => (Interpreter.PortStates[GetConnection(inlet)] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == 0;
+            => (GetConnection(inlet).PortState & (InReady | InClosed)) == 0;
 
         /// <summary>
         /// Indicates whether there is an element waiting at the given input port. <see cref="Grab{T}(Inlet{T})"/> can be used to retrieve the
@@ -804,21 +815,21 @@ namespace Akka.Streams.Stage
         protected internal bool IsAvailable(Inlet inlet)
         {
             var connection = GetConnection(inlet);
-            var normalArrived = (Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) == GraphInterpreter.InReady;
+            var normalArrived = (connection.PortState & (InReady | InFailed)) == InReady;
 
             if (normalArrived)
             {
                 // fast path
-                return !ReferenceEquals(Interpreter.ConnectionSlots[connection], GraphInterpreter.Empty.Instance);
+                return !ReferenceEquals(connection.Slot, Empty.Instance);
             }
             
             // slow path on failure
-            if ((Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) ==
-                (GraphInterpreter.InReady | GraphInterpreter.InFailed))
+            if ((connection.PortState & (InReady | InFailed)) ==
+                (InReady | InFailed))
             {
-                var failed = Interpreter.ConnectionSlots[connection] as GraphInterpreter.Failed;
+                var failed = connection.Slot as GraphInterpreter.Failed;
                 // This can only be Empty actually (if a cancel was concurrent with a failure)
-                return failed != null && !ReferenceEquals(failed.PreviousElement, GraphInterpreter.Empty.Instance);
+                return failed != null && !ReferenceEquals(failed.PreviousElement, Empty.Instance);
             }
 
             return false;
@@ -827,7 +838,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pulled.
         /// </summary>
-        protected bool IsClosed(Inlet inlet) => (Interpreter.PortStates[GetConnection(inlet)] & GraphInterpreter.InClosed) != 0;
+        protected bool IsClosed(Inlet inlet) => (GetConnection(inlet).PortState & InClosed) != 0;
 
         /// <summary>
         /// Emits an element through the given output port. Calling this method twice before a <see cref="Pull{T}(Inlet{T})"/> has been arrived
@@ -837,14 +848,26 @@ namespace Akka.Streams.Stage
         protected internal void Push<T>(Outlet outlet, T element)
         {
             var connection = GetConnection(outlet);
-            if ((Interpreter.PortStates[connection] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady && (element != null))
-                Interpreter.Push(connection, element);
+            var portState = connection.PortState;
+
+            connection.PortState = portState ^ PushStartFlip;
+            if ((portState & (OutReady | OutClosed | InClosed)) == OutReady && (element != null))
+            {
+                connection.Slot = element;
+                Interpreter.ChasePush(connection);
+            }
             else
             {
+                // Restore state for the error case
+                connection.PortState = portState;
+
                 // Detailed error information should not add overhead to the hot path
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
-                if (!IsAvailable(outlet)) throw new ArgumentException("Cannot push port twice");
-                if (IsClosed(outlet)) throw new ArgumentException("Cannot pull closed port");
+                if (IsClosed(outlet)) throw new ArgumentException($"Cannot pull closed port {outlet}");
+                if (!IsAvailable(outlet)) throw new ArgumentException($"Cannot push port twice {outlet}");
+
+                // No error, just InClosed caused the actual pull to be ignored, but the status flag still needs to be flipped
+                connection.PortState = portState ^ PushStartFlip;
             }
         }
 
@@ -920,13 +943,13 @@ namespace Akka.Streams.Stage
         /// Return true if the given output port is ready to be pushed.
         /// </summary>
         protected internal bool IsAvailable(Outlet outlet) 
-            => (Interpreter.PortStates[GetConnection(outlet)] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady;
+            => (GetConnection(outlet).PortState & (OutReady | OutClosed)) == OutReady;
 
         /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pushed.
         /// </summary>
         protected bool IsClosed(Outlet outlet) 
-            => (Interpreter.PortStates[GetConnection(outlet)] & GraphInterpreter.OutClosed) != 0;
+            => (GetConnection(outlet).PortState & OutClosed) != 0;
 
         /// <summary>
         /// Read a number of elements from the given inlet and continue with the given function,
@@ -1451,12 +1474,12 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFinish() => GraphInterpreter.Current.ActiveStage.CompleteStage();
+        public virtual void OnUpstreamFinish() => Current.ActiveStage.CompleteStage();
 
         /// <summary>
         /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFailure(Exception e) => GraphInterpreter.Current.ActiveStage.FailStage(e);
+        public virtual void OnUpstreamFailure(Exception e) => Current.ActiveStage.FailStage(e);
     }
 
     /// <summary>
@@ -1490,7 +1513,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish() => GraphInterpreter.Current.ActiveStage.CompleteStage();
+        public virtual void OnDownstreamFinish() => Current.ActiveStage.CompleteStage();
     }
 
     /// <summary>
@@ -1508,12 +1531,12 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFinish() => GraphInterpreter.Current.ActiveStage.CompleteStage();
+        public virtual void OnUpstreamFinish() => Current.ActiveStage.CompleteStage();
 
         /// <summary>
         /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFailure(Exception e) => GraphInterpreter.Current.ActiveStage.FailStage(e);
+        public virtual void OnUpstreamFailure(Exception e) => Current.ActiveStage.FailStage(e);
 
         /// <summary>
         /// Called when the output port has received a pull, and therefore ready to emit an element, 
@@ -1524,7 +1547,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish() => GraphInterpreter.Current.ActiveStage.CompleteStage();
+        public virtual void OnDownstreamFinish() => Current.ActiveStage.CompleteStage();
     }
 
 
@@ -1574,7 +1597,7 @@ namespace Akka.Streams.Stage
         public override void OnUpstreamFinish()
         {
             if (_predicate())
-                GraphInterpreter.Current.ActiveStage.CompleteStage();
+                Current.ActiveStage.CompleteStage();
         }
     }
 
@@ -1628,7 +1651,7 @@ namespace Akka.Streams.Stage
         public override void OnDownstreamFinish()
         {
             if (_predicate())
-                GraphInterpreter.Current.ActiveStage.CompleteStage();
+                Current.ActiveStage.CompleteStage();
         }
     }
 
@@ -1881,10 +1904,7 @@ namespace Akka.Streams.Stage
             else if (state is NotInitialized)
                 ((NotInitialized) state).Args.Add(arg);
             else if (state is Stopped)
-            {
-                Monitor.Exit(this);
                 ((Stopped) state).Callback(arg);
-            }
         });
 
         private void Locked(Action body)
@@ -1896,8 +1916,7 @@ namespace Akka.Streams.Stage
             }
             finally
             {
-                if (Monitor.IsEntered(this))
-                    Monitor.Exit(this);
+                Monitor.Exit(this);
             }
         }
     }

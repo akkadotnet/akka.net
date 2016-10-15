@@ -17,7 +17,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -594,7 +593,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_borken_Flow_must_cancel_upstream_and_call_onError_on_current_and_future_downstream_subscribers_if_an_internal_error_occurs()
+        public void A_broken_Flow_must_cancel_upstream_and_call_onError_on_current_and_future_downstream_subscribers_if_an_internal_error_occurs()
         {
             var setup = new ChainSetup<string, string, NotUsed>(FaultyFlow<string,string,string>, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
@@ -656,9 +655,13 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_borken_Flow_must_suitably_override_attribute_hanling_methods()
+        public void A_broken_Flow_must_suitably_override_attribute_hanling_methods()
         {
-            Flow.Create<int>().AddAttributes(Attributes.None).Named("");
+            var f = Flow.Create<int>().Select(x => x + 1).Async().AddAttributes(Attributes.None).Named("name");
+            f.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
+            f.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+                .Should()
+                .Be(Attributes.AsyncBoundary.Instance);
         }
 
         private static Flow<TIn, TOut, TMat> Identity<TIn, TOut, TMat>(Flow<TIn, TOut, TMat> flow) => flow.Select(e => e);
@@ -687,18 +690,17 @@ namespace Akka.Streams.Tests.Dsl
         {
             Func<Flow<TOut, TOut2, NotUsed>> createGraph = () =>
             {
-                var stage = new FaultyFlowStage<TOut, TOut2>();
+                var stage = new Select<TOut, TOut2>(x => x);
                 var assembly = new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[] { stage }, new[] { Attributes.None },
                     new Inlet[] { stage.Shape.Inlet , null}, new[] { 0, -1 }, new Outlet[] { null, stage.Shape.Outlet }, new[] { -1, 0 });
 
                 var t = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                     new Dictionary<IModule, object>(), _ => { });
 
-                var inHandlers = t.Item1;
-                var outHandlers = t.Item2;
-                var logics = t.Item3;
+                var connections = t.Item1;
+                var logics = t.Item2;
 
-                var shell = new GraphInterpreterShell(assembly, inHandlers, outHandlers, logics, stage.Shape, Settings,
+                var shell = new GraphInterpreterShell(assembly, connections, logics, stage.Shape, Settings,
                     (ActorMaterializerImpl) Materializer);
 
                 var props =
@@ -717,13 +719,6 @@ namespace Akka.Streams.Tests.Dsl
             };
 
             return flow.Via(createGraph());
-        }
-
-        private sealed class FaultyFlowStage<TIn, TOut> : PushPullGraphStage<TIn, TOut> where TIn:TOut
-        {
-            public FaultyFlowStage()  : base(_ => new Select<TIn,TOut>(x => x, Deciders.StoppingDecider), Attributes.None)
-            {
-            }
         }
 
         private sealed class FaultyFlowPublisher<TOut> : ActorPublisher<TOut>

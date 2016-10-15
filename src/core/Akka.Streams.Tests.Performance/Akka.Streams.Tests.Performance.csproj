@@ -66,10 +66,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FusedGraphsBenchmark.cs" />
     <Compile Include="InterpreterBenchmark.cs" />
     <Compile Include="GraphBuilderBenchmark.cs" />
     <Compile Include="FlowSelectBenchmark.cs" />
     <Compile Include="IO\FileSourcesBenchmark.cs" />
+    <Compile Include="JsonFramingBenchmark.cs" />
     <Compile Include="MergeManyBenchmark.cs" />
     <Compile Include="MaterializationBenchmark.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
