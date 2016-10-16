@@ -23,7 +23,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using static Akka.Util.RuntimeDetector;
 
 // ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
@@ -66,11 +65,17 @@ namespace Akka.Streams.Tests.Dsl
         {
             var c = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 50))
-                .SelectAsync(4, i => Task.Run(()=>
+                .SelectAsync(4, i =>
                 {
-                    Thread.Sleep(ThreadLocalRandom.Current.Next(1, 10));
-                    return i;
-                }))
+                    if (i%3 == 0)
+                        return Task.FromResult(i);
+
+                    return Task.Run(() =>
+                    {
+                        Thread.Sleep(ThreadLocalRandom.Current.Next(1, 10));
+                        return i;
+                    });
+                })
                 .RunWith(Sink.FromSubscriber(c), Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(1000);
@@ -131,7 +136,38 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_signal_error_from_MapAsync()
+        public void A_Flow_with_SelectAsync_must_signal_task_failure_asap()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var latch = CreateTestLatch();
+                var done = Source.From(Enumerable.Range(1, 5))
+                    .Select(n =>
+                    {
+                        if (n != 1)
+                            // slow upstream should not block the error
+                            latch.Ready(TimeSpan.FromSeconds(10));
+
+                        return n;
+                    })
+                    .SelectAsync(4, n =>
+                    {
+                        if (n == 1) 
+                        {
+                            var c = new TaskCompletionSource<int>();
+                            c.SetException(new Exception("err1"));
+                            return c.Task;
+                        }
+                        return Task.FromResult(n);
+                    }).RunWith(Sink.Ignore<int>(), Materializer);
+
+                done.Invoking(d => d.Wait(RemainingOrDefault)).ShouldThrow<Exception>().WithMessage("err1");
+                latch.CountDown();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Flow_with_SelectAsync_must_signal_error_from_SelectAsync()
         {
             this.AssertAllStagesStopped(() =>
             {

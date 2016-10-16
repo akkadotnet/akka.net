@@ -1472,6 +1472,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
+
         private sealed class Logic : GraphStageLogic
         {
             private class Holder<T>
@@ -1486,11 +1487,16 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public Result<T> Element { get; private set; }
 
-                public void Invoke(Result<T> result)
+                public void SetElement(Result<T> result)
                 {
                     Element = result.IsSuccess && result.Value == null
                         ? Result.Failure<T>(ReactiveStreamsCompliance.ElementMustNotBeNullException)
                         : result;
+                }
+
+                public void Invoke(Result<T> result)
+                {
+                    SetElement(result);
                     _callback(this);
                 }
             }
@@ -1508,34 +1514,23 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                _taskCallback = GetAsyncCallback<Holder<TOut>>(t =>
-                {
-                    var element = t.Element;
-                    if (!element.IsSuccess)
-                    {
-                        if (_decider(element.Exception) == Directive.Stop)
-                        {
-                            FailStage(element.Exception);
-                            return;
-                        }
-                    }
+                _taskCallback = GetAsyncCallback<Holder<TOut>>(HolderCompleted);
 
-                    if (IsAvailable(stage.Out))
-                        PushOne();
-                });
-
-                SetHandler(_stage.In, onPush: () =>
+                SetHandler(stage.In, onPush: () =>
                 {
                     try
                     {
-                        var task = _stage._mapFunc(Grab(_stage.In));
+                        var task = stage._mapFunc(Grab(stage.In));
                         var holder = new Holder<TOut>(NotYetThere, _taskCallback);
                         _buffer.Enqueue(holder);
 
                         // We dispatch the future if it's ready to optimize away
                         // scheduling it to an execution context
                         if (task.IsCompleted)
-                            holder.Invoke(Result.FromTask(task));
+                        {
+                            holder.SetElement(Result.FromTask(task));
+                            HolderCompleted(holder);
+                        }
                         else
                             task.ContinueWith(t => holder.Invoke(Result.FromTask(t)),
                                 TaskContinuationOptions.ExecuteSynchronously);
@@ -1545,14 +1540,14 @@ namespace Akka.Streams.Implementation.Fusing
                         if (_decider(e) == Directive.Stop)
                             FailStage(e);
                     }
-                    if (Todo < _stage._parallelism)
-                        TryPull(_stage.In);
+                    if (Todo < stage._parallelism && !HasBeenPulled(stage.In))
+                        TryPull(stage.In);
                 }, onUpstreamFinish: () =>
                 {
                     if (Todo == 0)
                         CompleteStage();
                 });
-                SetHandler(_stage.Out, onPull: PushOne);
+                SetHandler(stage.Out, onPull: PushOne);
             }
 
             private int Todo => _buffer.Used;
@@ -1590,6 +1585,19 @@ namespace Akka.Streams.Implementation.Fusing
                     break;
                 }
             }
+
+            private void HolderCompleted(Holder<TOut> holder)
+            {
+                var element = holder.Element;
+                if (element.IsSuccess)
+                {
+                    if (IsAvailable(_stage.Out))
+                        PushOne();
+                }
+                else if (_decider(element.Exception) == Directive.Stop)
+                    FailStage(element.Exception);
+            }
+
 
             public override string ToString() => $"SelectAsync.Logic(buffer={_buffer})";
         }
@@ -1638,33 +1646,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                _taskCallback = GetAsyncCallback<Result<TOut>>(result =>
-                {
-                    _inFlight--;
-                    if (result.IsSuccess && result.Value != null)
-                    {
-                        if (IsAvailable(stage.Out))
-                        {
-                            if (!HasBeenPulled(stage.In))
-                                TryPull(stage.In);
-                            Push(stage.Out, result.Value);
-                        }
-                        else
-                            _buffer.Enqueue(result.Value);
-                    }
-                    else
-                    {
-                        var ex = !result.IsSuccess
-                            ? result.Exception
-                            : ReactiveStreamsCompliance.ElementMustNotBeNullException;
-                        if (_decider(ex) == Directive.Stop)
-                            FailStage(ex);
-                        else if (IsClosed(stage.In) && Todo == 0)
-                            CompleteStage();
-                        else if (!HasBeenPulled(stage.In))
-                            TryPull(stage.In);
-                    }
-                });
+                _taskCallback = GetAsyncCallback<Result<TOut>>(TaskCompleted);
 
                 SetHandler(_stage.In, onPush: () =>
                 {
@@ -1674,7 +1656,7 @@ namespace Akka.Streams.Implementation.Fusing
                         _inFlight++;
 
                         if (task.IsCompleted)
-                            _taskCallback(Result.FromTask(task));
+                            TaskCompleted(Result.FromTask(task));
                         else
                             task.ContinueWith(t => _taskCallback(Result.FromTask(t)),
                                 TaskContinuationOptions.ExecuteSynchronously);
@@ -1703,6 +1685,34 @@ namespace Akka.Streams.Implementation.Fusing
                     if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
                         TryPull(inlet);
                 });
+            }
+
+            private void TaskCompleted(Result<TOut> result)
+            {
+                _inFlight--;
+                if (result.IsSuccess && result.Value != null)
+                {
+                    if (IsAvailable(_stage.Out))
+                    {
+                        if (!HasBeenPulled(_stage.In))
+                            TryPull(_stage.In);
+                        Push(_stage.Out, result.Value);
+                    }
+                    else
+                        _buffer.Enqueue(result.Value);
+                }
+                else
+                {
+                    var ex = !result.IsSuccess
+                        ? result.Exception
+                        : ReactiveStreamsCompliance.ElementMustNotBeNullException;
+                    if (_decider(ex) == Directive.Stop)
+                        FailStage(ex);
+                    else if (IsClosed(_stage.In) && Todo == 0)
+                        CompleteStage();
+                    else if (!HasBeenPulled(_stage.In))
+                        TryPull(_stage.In);
+                }
             }
 
             private int Todo => _inFlight + _buffer.Used;

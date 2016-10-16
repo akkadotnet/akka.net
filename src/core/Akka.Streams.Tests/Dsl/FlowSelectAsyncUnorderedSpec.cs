@@ -76,11 +76,20 @@ namespace Akka.Streams.Tests.Dsl
             var probe = CreateTestProbe();
             var c = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 20))
-                .SelectAsyncUnordered(4, n => Task.Run(() =>
+                .SelectAsyncUnordered(4, n => 
                 {
-                    probe.Ref.Tell(n);
-                    return n;
-                }))
+                    if (n%3 == 0)
+                    {
+                        probe.Ref.Tell(n);
+                        return Task.FromResult(n);
+                    }
+
+                    return Task.Run(() =>
+                    {
+                        probe.Ref.Tell(n);
+                        return n;
+                    });
+                })
                 .To(Sink.FromSubscriber(c)).Run(Materializer);
             var sub = c.ExpectSubscription();
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
@@ -120,6 +129,39 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = c.ExpectSubscription();
                 sub.Request(10);
                 c.ExpectError().InnerException.Message.Should().Be("err1");
+                latch.CountDown();
+            }, Materializer);
+        }
+
+
+        [Fact]
+        public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure_asap()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var latch = CreateTestLatch();
+                var done = Source.From(Enumerable.Range(1, 5))
+                    .Select(n =>
+                    {
+                        if (n != 1)
+                            // slow upstream should not block the error
+                            latch.Ready(TimeSpan.FromSeconds(10));
+
+                        return n;
+                    })
+                    .SelectAsyncUnordered(4, n =>
+                    {
+                        if (n == 1)
+                        {
+                            var c = new TaskCompletionSource<int>();
+                            c.SetException(new Exception("err1"));
+                            return c.Task;
+                        }
+
+                        return Task.FromResult(n);
+                    }).RunWith(Sink.Ignore<int>(), Materializer);
+
+                done.Invoking(d => d.Wait(RemainingOrDefault)).ShouldThrow<Exception>().WithMessage("err1");
                 latch.CountDown();
             }, Materializer);
         }
