@@ -70,6 +70,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Zip = Attributes.CreateName("zip");
         public static readonly Attributes Unzip = Attributes.CreateName("unzip");
         public static readonly Attributes Concat = Attributes.CreateName("concat");
+        public static readonly Attributes OrElse = Attributes.CreateName("orElse");
         public static readonly Attributes Repeat = Attributes.CreateName("repeat");
         public static readonly Attributes Unfold = Attributes.CreateName("unfold");
         public static readonly Attributes UnfoldAsync = Attributes.CreateName("unfoldAsync");

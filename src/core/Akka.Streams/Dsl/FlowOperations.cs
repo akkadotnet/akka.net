@@ -1551,5 +1551,45 @@ namespace Akka.Streams.Dsl
         {
             return (Flow<TIn, TOut2, TMat>) InternalFlowOperations.Prepend(flow, that);
         }
+
+
+        /// <summary>
+        /// Provides a secondary source that will be consumed if this stream completes without any
+        /// elements passing by. As soon as the first element comes through this stream, the alternative
+        /// will be cancelled.
+        ///
+        /// Note that this Flow will be materialized together with the <see cref="Source{TOut,TMat}"/> and just kept
+        /// from producing elements by asserting back-pressure until its time comes or it gets
+        /// cancelled.
+        ///
+        /// On errors the stage is failed regardless of source of the error.
+        ///
+        /// '''Emits when''' element is available from first stream or first stream closed without emitting any elements and an element
+        ///                  is available from the second stream
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' the primary stream completes after emitting at least one element, when the primary stream completes
+        ///                      without emitting and the secondary stream already has completed or when the secondary stream completes
+        ///
+        /// '''Cancels when''' downstream cancels and additionally the alternative is cancelled as soon as an element passes
+        ///                    by from this stream.
+        /// </summary>
+        public static Flow<T, T, TMat> OrElse<T, TMat>(this Flow<T, T, TMat> flow, IGraph<SourceShape<T>, TMat> secondary)
+            => (Flow<T, T, TMat>) InternalFlowOperations.OrElse(flow, secondary);
+
+
+        /// <summary>
+        /// Provides a secondary source that will be consumed if this source completes without any
+        /// elements passing by. As soon as the first element comes through this stream, the alternative
+        /// will be cancelled.
+        ///
+        /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// 
+        /// <seealso cref="OrElse{T,TMat}"/>
+        /// </summary>
+        public static Flow<T, T, TMat3> OrElseMaterialized<T, TMat, TMat2, TMat3>(this Flow<T, T, TMat> flow, IGraph<SourceShape<T>, TMat2> secondary, Func<TMat, TMat2, TMat3> materializedFunction)
+            => (Flow<T, T, TMat3>)InternalFlowOperations.OrElseMaterialized(flow, secondary, materializedFunction);
     }
 }

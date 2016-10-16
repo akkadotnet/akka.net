@@ -92,6 +92,7 @@
     <Compile Include="Dsl\FlowExpandSpec.cs" />
     <Compile Include="Dsl\FlowKillSwitchSpec.cs" />
     <Compile Include="Dsl\FlowMonitorSpec.cs" />
+    <Compile Include="Dsl\FlowOrElseSpec.cs" />
     <Compile Include="Dsl\FlowWhereSpec.cs" />
     <Compile Include="Dsl\FlowFlattenMergeSpec.cs" />
     <Compile Include="Dsl\FlowAggregateSpec.cs" />

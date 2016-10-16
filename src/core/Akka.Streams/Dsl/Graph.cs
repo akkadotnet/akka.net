@@ -1230,4 +1230,97 @@ namespace Akka.Streams.Dsl
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
     }
+
+
+    public static class OrElse
+    {
+        public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>() => new OrElse<T>();
+    }
+
+    /// <summary>
+    /// Takes two streams and passes the first through, the secondary stream is only passed
+    /// through if the primary stream completes without passing any elements through. When
+    /// the first element is passed through from the primary the secondary is cancelled.
+    /// Both incoming streams are materialized when the stage is materialized.
+    ///
+    /// On errors the stage is failed regardless of source of the error.
+    ///
+    /// '''Emits when''' element is available from primary stream or the primary stream closed without emitting any elements and an element
+    ///                  is available from the secondary stream
+    ///
+    /// '''Backpressures when''' downstream backpressures
+    ///
+    /// '''Completes when''' the primary stream completes after emitting at least one element, when the primary stream completes
+    ///                      without emitting and the secondary stream already has completed or when the secondary stream completes
+    ///
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
+    public sealed class OrElse<T> : GraphStage<UniformFanInShape<T, T>>
+    {
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            public Logic(OrElse<T> stage):base(stage.Shape)
+            {
+                var currentIn = stage.Primary;
+                var primaryPushed = false;
+
+                SetHandler(stage.Out, onPull: () => Pull(currentIn));
+
+                SetHandler(stage.Primary, onPush: () =>
+                {
+                    // for the primary inHandler
+                    if (!primaryPushed)
+                    {
+                        primaryPushed = true;
+                        Cancel(stage.Secondary);
+                    }
+
+                    var element = Grab(stage.Primary);
+                    Push(stage.Out, element);
+                }, onUpstreamFinish: () =>
+                { 
+                    // for the primary inHandler
+                    if (!primaryPushed && !IsClosed(stage.Secondary))
+                    {
+                        currentIn = stage.Secondary;
+                        if(IsAvailable(stage.Out))
+                            Pull(stage.Secondary);
+                    }
+                    else
+                        CompleteStage();
+                });
+
+                SetHandler(stage.Secondary,
+                    onPush: () => Push(stage.Out, Grab(stage.Secondary)),
+                    onUpstreamFinish: () =>
+                    {
+                        if (IsClosed(stage.Primary))
+                            CompleteStage();
+                    });
+            }
+        }
+
+        #endregion
+
+        public OrElse()
+        {
+            Shape = new UniformFanInShape<T, T>(Out, Primary, Secondary);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.OrElse;
+
+        public Inlet<T> Primary { get; }   = new Inlet<T>("OrElse.primary");
+
+        public Inlet<T> Secondary { get; } = new Inlet<T>("OrElse.secondary");
+
+        public Outlet<T> Out { get; } = new Outlet<T>("OrElse.out");
+
+        public override UniformFanInShape<T, T> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "OrElse";
+    }
 }
