@@ -1550,6 +1550,111 @@ namespace Akka.Streams.Stage
         public virtual void OnDownstreamFinish() => Current.ActiveStage.CompleteStage();
     }
 
+    /// <summary>
+    /// A <see cref="GraphStageLogic"/> that implements <see cref="IInHandler"/>.
+    /// <para/>
+    /// <see cref="OnUpstreamFinish"/> calls <see cref="GraphStageLogic.CompleteStage"/>
+    /// <para/>
+    /// <see cref="OnUpstreamFailure"/> calls <see cref="GraphStageLogic.FailStage"/>
+    /// </summary>
+    public abstract class InGraphStageLogic : GraphStageLogic, IInHandler
+    {
+        protected InGraphStageLogic(int inCount, int outCount) : base(inCount, outCount)
+        {
+        }
+
+        protected InGraphStageLogic(Shape shape) : base(shape)
+        {
+        }
+
+        /// <summary>
+        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}(Inlet{T})"/> method.
+        /// </summary>
+        public abstract void OnPush();
+
+        /// <summary>
+        /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnUpstreamFinish() => CompleteStage();
+        
+        /// <summary>
+        /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnUpstreamFailure(Exception e) => FailStage(e);
+    }
+
+    /// <summary>
+    /// A <see cref="GraphStageLogic"/> that implements <see cref="IOutHandler"/>.
+    /// <para/>
+    /// <see cref="OnDownstreamFinish"/> calls <see cref="GraphStageLogic.CompleteStage"/>
+    /// </summary>
+    public abstract class OutGraphStageLogic : GraphStageLogic, IOutHandler
+    {
+        protected OutGraphStageLogic(int inCount, int outCount) : base(inCount, outCount)
+        {
+        }
+
+        protected OutGraphStageLogic(Shape shape) : base(shape)
+        {
+        }
+
+        /// <summary>
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
+        /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
+        /// </summary>
+        public abstract void OnPull();
+
+        /// <summary>
+        /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnDownstreamFinish() => CompleteStage();
+    }
+
+    /// <summary>
+    /// A <see cref="GraphStageLogic"/> that implements <see cref="IInHandler"/> and <see cref="IOutHandler"/>.
+    /// <para/>
+    /// <see cref="OnUpstreamFinish"/> calls <see cref="GraphStageLogic.CompleteStage"/>
+    /// <para/>
+    /// <see cref="OnUpstreamFailure"/> calls <see cref="GraphStageLogic.FailStage"/>
+    /// <para/>
+    /// <see cref="OnDownstreamFinish"/> calls <see cref="GraphStageLogic.CompleteStage"/>
+    /// </summary>
+    public abstract class InAndOutGraphStageLogic : GraphStageLogic, IInHandler, IOutHandler
+    {
+        protected InAndOutGraphStageLogic(int inCount, int outCount) : base(inCount, outCount)
+        {
+        }
+
+        protected InAndOutGraphStageLogic(Shape shape) : base(shape)
+        {
+        }
+
+        /// <summary>
+        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}(Inlet{T})"/> method.
+        /// </summary>
+        public abstract void OnPush();
+        
+        /// <summary>
+        /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnUpstreamFinish() => CompleteStage();
+
+        /// <summary>
+        /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnUpstreamFailure(Exception e) => FailStage(e);
+
+        /// <summary>
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
+        /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
+        /// </summary>
+        public abstract void OnPull();
+
+        /// <summary>
+        /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnDownstreamFinish() => CompleteStage();
+    }
 
     [Serializable]
     public class StageActorRefNotInitializedException : Exception

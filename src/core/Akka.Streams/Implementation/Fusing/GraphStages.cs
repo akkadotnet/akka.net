@@ -98,13 +98,20 @@ namespace Akka.Streams.Implementation.Fusing
     public sealed class Identity<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Identity<T> _stage;
+
             public Logic(Identity<T> stage) : base(stage.Shape)
             {
-                SetHandler(stage.Inlet, () => Push(stage.Outlet, Grab(stage.Inlet)));
-                SetHandler(stage.Outlet, () => Pull(stage.Inlet));
+                _stage = stage;
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
+
+            public override void OnPull() => Pull(_stage.Inlet);
         }
         #endregion
 
@@ -125,50 +132,55 @@ namespace Akka.Streams.Implementation.Fusing
     public sealed class Detacher<T> : GraphStage<FlowShape<T, T>>
     {
         #region internal classes
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly Detacher<T> _stage;
 
             public Logic(Detacher<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.Inlet,
-                    onPush: () =>
-                    {
-                        var outlet = stage.Outlet;
-                        if (IsAvailable(outlet))
-                        {
-                            var inlet = stage.Inlet;
-                            Push(outlet, Grab(inlet));
-                            TryPull(inlet);
-                        }
-                    },
-                    onUpstreamFinish: () =>
-                    {
-                        if (!IsAvailable(stage.Inlet))
-                            CompleteStage();
-                    });
-                SetHandler(stage.Outlet,
-                    onPull: () =>
-                    {
-                        var inlet = stage.Inlet;
-                        if (IsAvailable(inlet))
-                        {
-                            var outlet = stage.Outlet;
-                            Push(outlet, Grab(inlet));
-                            if (IsClosed(inlet))
-                                CompleteStage();
-                            else
-                                Pull(inlet);
-                        }
-                    });
+
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
 
             public override void PreStart() => TryPull(_stage.Inlet);
+
+            public override void OnPush()
+            {
+                var outlet = _stage.Outlet;
+                if (IsAvailable(outlet))
+                {
+                    var inlet = _stage.Inlet;
+                    Push(outlet, Grab(inlet));
+                    TryPull(inlet);
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (!IsAvailable(_stage.Inlet))
+                    CompleteStage();
+            }
+
+            public override void OnPull()
+            {
+                var inlet = _stage.Inlet;
+                if (IsAvailable(inlet))
+                {
+                    var outlet = _stage.Outlet;
+                    Push(outlet, Grab(inlet));
+                    if (IsClosed(inlet))
+                        CompleteStage();
+                    else
+                        Pull(inlet);
+                }
+            }
         }
         #endregion
 
         public readonly Inlet<T> Inlet;
+
         public readonly Outlet<T> Outlet;
 
         public Detacher()
@@ -194,25 +206,40 @@ namespace Akka.Streams.Implementation.Fusing
 
         #region internal classes 
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
-            public Logic(TerminationWatcher<T> watcher, TaskCompletionSource<NotUsed> finishPromise) : base(watcher.Shape)
-            {
-                SetHandler(watcher._inlet, onPush: ()=> Push(watcher._outlet, Grab(watcher._inlet)), onUpstreamFinish:()=>
-                {
-                    finishPromise.TrySetResult(NotUsed.Instance);
-                    CompleteStage();
-                }, onUpstreamFailure: ex=>
-                {
-                    finishPromise.TrySetException(ex);
-                    FailStage(ex);
-                });
+            private readonly TerminationWatcher<T> _stage;
+            private readonly TaskCompletionSource<NotUsed> _finishPromise;
 
-                SetHandler(watcher._outlet, onPull: ()=> Pull(watcher._inlet), onDownstreamFinish: ()=> 
-                {
-                    finishPromise.TrySetResult(NotUsed.Instance);
-                    CompleteStage();
-                });
+            public Logic(TerminationWatcher<T> stage, TaskCompletionSource<NotUsed> finishPromise) : base(stage.Shape)
+            {
+                _stage = stage;
+                _finishPromise = finishPromise;
+
+                SetHandler(stage._inlet, this);
+                SetHandler(stage._outlet, this);
+            }
+
+            public override void OnPush() => Push(_stage._outlet, Grab(_stage._inlet));
+
+            public override void OnUpstreamFinish()
+            {
+                _finishPromise.TrySetResult(NotUsed.Instance);
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                _finishPromise.TrySetException(e);
+                FailStage(e);
+            }
+
+            public override void OnPull() => Pull(_stage._inlet);
+
+            public override void OnDownstreamFinish()
+            {
+                _finishPromise.TrySetResult(NotUsed.Instance);
+                CompleteStage();
             }
         }
 
@@ -263,37 +290,47 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly MonitorFlow<T> _stage;
+            private readonly FLowMonitorImpl<T> _monitor;
+
             public Logic(MonitorFlow<T> stage, FLowMonitorImpl<T> monitor) : base(stage.Shape)
             {
-                SetHandler(stage.In,
-                    onPush: () =>
-                    {
-                        var message = Grab(stage.In);
-                        Push(stage.Out, message);
-                        monitor.Value = message is FlowMonitor.IStreamState
-                            ? new FlowMonitor.Received<T>(message)
-                            : (object) message;
-                    },
-                    onUpstreamFinish: () =>
-                    {
-                        CompleteStage();
-                        monitor.Value = FlowMonitor.Finished.Instance;
-                    },
-                    onUpstreamFailure: cause =>
-                    {
-                        FailStage(cause);
-                        monitor.Value = new FlowMonitor.Failed(cause);
-                    });
+                _stage = stage;
+                _monitor = monitor;
 
-                SetHandler(stage.Out, 
-                    onPull: () => Pull(stage.In),
-                    onDownstreamFinish: () =>
-                    {
-                        CompleteStage();
-                        monitor.Value = FlowMonitor.Finished.Instance;
-                    });
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
+            }
+
+            public override void OnPush()
+            {
+                var message = Grab(_stage.In);
+                Push(_stage.Out, message);
+                _monitor.Value = message is FlowMonitor.IStreamState
+                    ? new FlowMonitor.Received<T>(message)
+                    : (object)message;
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                CompleteStage();
+                _monitor.Value = FlowMonitor.Finished.Instance;
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                FailStage(e);
+                _monitor.Value = new FlowMonitor.Failed(e);
+            }
+
+            public override void OnPull() => Pull(_stage.In);
+
+            public override void OnDownstreamFinish()
+            {
+                CompleteStage();
+                _monitor.Value = FlowMonitor.Finished.Instance;
             }
 
             public override string ToString() => "MonitorFlowLogic";
@@ -482,15 +519,21 @@ namespace Akka.Streams.Implementation.Fusing
     public sealed class SingleSource<T> : GraphStage<SourceShape<T>>
     {
         #region Internal classes
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
-            public Logic(SingleSource<T> source) : base(source.Shape)
+            private readonly SingleSource<T> _stage;
+
+            public Logic(SingleSource<T> stage) : base(stage.Shape)
             {
-                SetHandler(source.Outlet, onPull: () =>
-                {
-                    Push(source.Outlet, source._element);
-                    CompleteStage();
-                });
+                _stage = stage;
+
+                SetHandler(stage.Outlet, this);
+            }
+
+            public override void OnPull()
+            {
+                Push(_stage.Outlet, _stage._element);
+                CompleteStage();
             }
         }
         #endregion
@@ -514,24 +557,30 @@ namespace Akka.Streams.Implementation.Fusing
     public sealed class TaskSource<T> : GraphStage<SourceShape<T>>
     {
         #region Internal classes
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
-            public Logic(TaskSource<T> source) : base(source.Shape)
+            private readonly TaskSource<T> _stage;
+
+            public Logic(TaskSource<T> stage) : base(stage.Shape)
             {
-                SetHandler(source.Outlet, onPull: () =>
+                _stage = stage;
+
+                SetHandler(stage.Outlet, this);
+            }
+
+            public override void OnPull()
+            {
+                var callback = GetAsyncCallback<Task<T>>(t =>
                 {
-                    var callback = GetAsyncCallback<Task<T>>(t =>
-                    {
-                        if (!t.IsCanceled && !t.IsFaulted)
-                            Emit(source.Outlet, t.Result, CompleteStage);
-                        else
-                            FailStage(t.IsFaulted
-                                ? Flatten(t.Exception)
-                                : new TaskCanceledException("Task was cancelled."));
-                    });
-                    source._task.ContinueWith(t => callback(t), TaskContinuationOptions.ExecuteSynchronously);
-                    SetHandler(source.Outlet, EagerTerminateOutput); // After first pull we won't produce anything more
+                    if (!t.IsCanceled && !t.IsFaulted)
+                        Emit(_stage.Outlet, t.Result, CompleteStage);
+                    else
+                        FailStage(t.IsFaulted
+                            ? Flatten(t.Exception)
+                            : new TaskCanceledException("Task was cancelled."));
                 });
+                _stage._task.ContinueWith(t => callback(t), TaskContinuationOptions.ExecuteSynchronously);
+                SetHandler(_stage.Outlet, EagerTerminateOutput); // After first pull we won't produce anything more
             }
 
             private Exception Flatten(AggregateException exception)

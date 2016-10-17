@@ -325,7 +325,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             logic.PortToConn[logic.Out.Id + logic.InCount] = connection;
             logic.Interpreter = this;
-            connection.OutHandler = (OutHandler) logic.Handlers[0];
+            connection.OutHandler = (IOutHandler) logic.Handlers[0];
         }
 
         public void AttachUpstreamBoundary(int connection, UpstreamBoundaryStageLogic logic)
@@ -339,7 +339,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             logic.PortToConn[logic.In.Id] = connection;
             logic.Interpreter = this;
-            connection.InHandler = (InHandler) logic.Handlers[0];
+            connection.InHandler = (IInHandler) logic.Handlers[0];
         }
 
         public void AttachDownstreamBoundary(int connection, DownstreamBoundaryStageLogic logic)

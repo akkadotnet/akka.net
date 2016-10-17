@@ -166,7 +166,7 @@ namespace Akka.Streams.Dsl
         {
             #region Logic
 
-            private sealed class Logic : GraphStageLogic
+            private sealed class Logic : InAndOutGraphStageLogic
             {
                 private readonly DelimiterFramingStage _stage;
                 private readonly byte _firstSeparatorByte;
@@ -178,23 +178,28 @@ namespace Akka.Streams.Dsl
                     _stage = stage;
                     _firstSeparatorByte = stage._separatorBytes.Head;
                     _buffer = ByteString.Empty;
-                    
-                    SetHandler(stage.In, onPush: () =>
-                    {
-                        _buffer += Grab(stage.In);
-                        DoParse();
-                    }, onUpstreamFinish: () =>
-                    {
-                        if(_buffer.IsEmpty)
-                            CompleteStage();
-                        else if (IsAvailable(stage.Out))
-                            DoParse();
-                        
-                        // else swallow the termination and wait for pull 
-                    });
 
-                    SetHandler(stage.Out, onPull: DoParse);
+                    SetHandler(stage.In, this);
+                    SetHandler(stage.Out, this);
                 }
+
+                public override void OnPush()
+                {
+                    _buffer += Grab(_stage.In);
+                    DoParse();
+                }
+
+                public override void OnUpstreamFinish()
+                {
+                    if (_buffer.IsEmpty)
+                        CompleteStage();
+                    else if (IsAvailable(_stage.Out))
+                        DoParse();
+
+                    // else swallow the termination and wait for pull 
+                }
+
+                public override void OnPull() => DoParse();
 
                 private void TryPull()
                 {

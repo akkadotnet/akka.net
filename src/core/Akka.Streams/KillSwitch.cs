@@ -46,7 +46,7 @@ namespace Akka.Streams
             () => UniqueBidiKillSwitchStage<TIn1, TIn1, TOut1, TOut1>.Instance;
 
 
-        internal abstract class KillableGraphStageLogic : GraphStageLogic
+        internal abstract class KillableGraphStageLogic : InAndOutGraphStageLogic
         {
             private readonly Task _terminationSignal;
 
@@ -80,11 +80,18 @@ namespace Akka.Streams
 
             private sealed class Logic : KillableGraphStageLogic
             {
-                public Logic(Task terminationSignal, UniqueKillSwitchStage<T> killSwitch) : base(terminationSignal, killSwitch.Shape)
+                private readonly UniqueKillSwitchStage<T> _stage;
+
+                public Logic(Task terminationSignal, UniqueKillSwitchStage<T> stage) : base(terminationSignal, stage.Shape)
                 {
-                    SetHandler(killSwitch.In, onPush: () => Push(killSwitch.Out, Grab(killSwitch.In)));
-                    SetHandler(killSwitch.Out, onPull: () => Pull(killSwitch.In));
+                    _stage = stage;
+                    SetHandler(stage.In, this);
+                    SetHandler(stage.Out, this);
                 }
+
+                public override void OnPush() => Push(_stage.Out, Grab(_stage.In));
+
+                public override void OnPull() => Pull(_stage.In);
             }
 
             #endregion
@@ -122,27 +129,35 @@ namespace Akka.Streams
 
             private sealed class Logic : KillableGraphStageLogic
             {
+                private readonly UniqueBidiKillSwitchStage<TIn1, TOut1, TIn2, TOut2> _killSwitch;
+
                 public Logic(Task terminationSignal, UniqueBidiKillSwitchStage<TIn1, TOut1, TIn2, TOut2> killSwitch)
                     : base(terminationSignal, killSwitch.Shape)
                 {
-                    SetHandler(killSwitch.In1,
-                        onPush: () => Push(killSwitch.Out1, Grab(killSwitch.In1)),
-                        onUpstreamFinish: () => Complete(killSwitch.Out1),
-                        onUpstreamFailure: cause => Fail(killSwitch.Out1, cause));
+                    _killSwitch = killSwitch;
+
+                    SetHandler(killSwitch.In1, this);
+                    SetHandler(killSwitch.Out1, this);
 
                     SetHandler(killSwitch.In2,
                         onPush: () => Push(killSwitch.Out2, Grab(killSwitch.In2)),
                         onUpstreamFinish: () => Complete(killSwitch.Out2),
                         onUpstreamFailure: cause => Fail(killSwitch.Out2, cause));
 
-                    SetHandler(killSwitch.Out1, 
-                        onPull: () => Pull(killSwitch.In1),
-                        onDownstreamFinish: () => Cancel(killSwitch.In1));
-
                     SetHandler(killSwitch.Out2,
                         onPull: () => Pull(killSwitch.In2),
                         onDownstreamFinish: () => Cancel(killSwitch.In2));
                 }
+
+                public override void OnPush() => Push(_killSwitch.Out1, Grab(_killSwitch.In1));
+
+                public override void OnUpstreamFinish() => Complete(_killSwitch.Out1);
+
+                public override void OnUpstreamFailure(Exception e) => Fail(_killSwitch.Out1, e);
+
+                public override void OnPull() => Pull(_killSwitch.In1);
+
+                public override void OnDownstreamFinish() => Cancel(_killSwitch.In1);
             }
 
             #endregion
@@ -276,12 +291,19 @@ namespace Akka.Streams
 
             private sealed class Logic : KillSwitches.KillableGraphStageLogic
             {
+                private readonly SharedKillSwitchFlow<T> _killSwitchFlow;
+
                 public Logic(SharedKillSwitchFlow<T> killSwitchFlow)
                     : base(killSwitchFlow._killSwitch._shutdownPromise.Task, killSwitchFlow.Shape)
                 {
-                    SetHandler(killSwitchFlow.In, onPush: () => Push(killSwitchFlow.Out, Grab(killSwitchFlow.In)));
-                    SetHandler(killSwitchFlow.Out, onPull: () => Pull(killSwitchFlow.In));
+                    _killSwitchFlow = killSwitchFlow;
+                    SetHandler(killSwitchFlow.In, this);
+                    SetHandler(killSwitchFlow.Out, this);
                 }
+
+                public override void OnPush() => Push(_killSwitchFlow.Out, Grab(_killSwitchFlow.In));
+
+                public override void OnPull() => Pull(_killSwitchFlow.In);
             }
 
             #endregion

@@ -60,68 +60,70 @@ namespace Akka.Streams.Implementation
 
         #endregion  
 
-        private sealed class Logic : GraphStageLogicWithCallbackWrapper<IInput>
+        private sealed class Logic : GraphStageLogicWithCallbackWrapper<IInput>, IOutHandler
         {
             private readonly TaskCompletionSource<object> _completion;
-            private readonly QueueSource<TOut> _source;
+            private readonly QueueSource<TOut> _stage;
             private IBuffer<TOut> _buffer;
             private Offer<TOut> _pendingOffer;
             private bool _terminating;
 
-            public Logic(QueueSource<TOut> source, TaskCompletionSource<object> completion) : base(source.Shape)
+            public Logic(QueueSource<TOut> stage, TaskCompletionSource<object> completion) : base(stage.Shape)
             {
                 _completion = completion;
-                _source = source;
+                _stage = stage;
 
-                SetHandler(source.Out,
-                    onDownstreamFinish: () =>
-                    {
-                        if (_pendingOffer != null)
-                        {
-                            _pendingOffer.CompletionSource.SetResult(QueueOfferResult.QueueClosed.Instance);
-                            _pendingOffer = null;
-                        }
-                        _completion.SetResult(new object());
-                        CompleteStage();
-                    },
-                    onPull: () =>
-                    {
-                        if (_source._maxBuffer == 0)
-                        {
-                            if (_pendingOffer != null)
-                            {
-                                Push(source.Out, _pendingOffer.Element);
-                                _pendingOffer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
-                                _pendingOffer = null;
-                                if (_terminating)
-                                {
-                                    _completion.SetResult(new object());
-                                    CompleteStage();
-                                }
-                            }
-                        }
-                        else if (_buffer.NonEmpty)
-                        {
-                            Push(source.Out, _buffer.Dequeue());
-                            if (_pendingOffer != null)
-                            {
-                                EnqueueAndSuccess(_pendingOffer);
-                                _pendingOffer = null;
-                            }
-                        }
+                SetHandler(stage.Out, this);
+            }
 
-                        if (_terminating && _buffer.IsEmpty)
+            public void OnPull()
+            {
+                if (_stage._maxBuffer == 0)
+                {
+                    if (_pendingOffer != null)
+                    {
+                        Push(_stage.Out, _pendingOffer.Element);
+                        _pendingOffer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
+                        _pendingOffer = null;
+                        if (_terminating)
                         {
                             _completion.SetResult(new object());
                             CompleteStage();
                         }
-                    });
+                    }
+                }
+                else if (_buffer.NonEmpty)
+                {
+                    Push(_stage.Out, _buffer.Dequeue());
+                    if (_pendingOffer != null)
+                    {
+                        EnqueueAndSuccess(_pendingOffer);
+                        _pendingOffer = null;
+                    }
+                }
+
+                if (_terminating && _buffer.IsEmpty)
+                {
+                    _completion.SetResult(new object());
+                    CompleteStage();
+                }
+            }
+
+            public void OnDownstreamFinish()
+            {
+                if (_pendingOffer != null)
+                {
+                    _pendingOffer.CompletionSource.SetResult(QueueOfferResult.QueueClosed.Instance);
+                    _pendingOffer = null;
+                }
+                _completion.SetResult(new object());
+                CompleteStage();
             }
 
             public override void PreStart()
             {
-                if (_source._maxBuffer > 0)
-                    _buffer = Buffer.Create<TOut>(_source._maxBuffer, Materializer);
+                if (_stage._maxBuffer > 0)
+                    _buffer = Buffer.Create<TOut>(_stage._maxBuffer, Materializer);
                 InitCallback(Callback());
             }
 
@@ -150,7 +152,7 @@ namespace Akka.Streams.Implementation
                     EnqueueAndSuccess(offer);
                 else
                 {
-                    switch (_source._overflowStrategy)
+                    switch (_stage._overflowStrategy)
                     {
                         case OverflowStrategy.DropHead:
                             _buffer.DropHead();
@@ -169,7 +171,7 @@ namespace Akka.Streams.Implementation
                             break;
                         case OverflowStrategy.Fail:
                             var bufferOverflowException =
-                                new BufferOverflowException($"Buffer overflow (max capacity was: {_source._maxBuffer})!");
+                                new BufferOverflowException($"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
                             offer.CompletionSource.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
                             _completion.SetException(bufferOverflowException);
                             FailStage(bufferOverflowException);
@@ -194,22 +196,22 @@ namespace Akka.Streams.Implementation
                         var offer = input as Offer<TOut>;
                         if (offer != null)
                         {
-                            if (_source._maxBuffer != 0)
+                            if (_stage._maxBuffer != 0)
                             {
                                 BufferElement(offer);
-                                if (IsAvailable(_source.Out))
-                                    Push(_source.Out, _buffer.Dequeue());
+                                if (IsAvailable(_stage.Out))
+                                    Push(_stage.Out, _buffer.Dequeue());
                             }
-                            else if (IsAvailable(_source.Out))
+                            else if (IsAvailable(_stage.Out))
                             {
-                                Push(_source.Out, offer.Element);
+                                Push(_stage.Out, offer.Element);
                                 offer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
                             }
                             else if (_pendingOffer == null)
                                 _pendingOffer = offer;
                             else
                             {
-                                switch (_source._overflowStrategy)
+                                switch (_stage._overflowStrategy)
                                 {
                                     case OverflowStrategy.DropHead:
                                     case OverflowStrategy.DropBuffer:
@@ -228,7 +230,7 @@ namespace Akka.Streams.Implementation
                                     case OverflowStrategy.Fail:
                                         var bufferOverflowException =
                                             new BufferOverflowException(
-                                                $"Buffer overflow (max capacity was: {_source._maxBuffer})!");
+                                                $"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
                                         offer.CompletionSource.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
                                         _completion.SetException(bufferOverflowException);
                                         FailStage(bufferOverflowException);
@@ -242,7 +244,7 @@ namespace Akka.Streams.Implementation
                         var completion = input as Completion;
                         if (completion != null)
                         {
-                            if (_source._maxBuffer != 0 && _buffer.NonEmpty || _pendingOffer != null)
+                            if (_stage._maxBuffer != 0 && _buffer.NonEmpty || _pendingOffer != null)
                                 _terminating = true;
                             else
                             {
@@ -317,16 +319,16 @@ namespace Akka.Streams.Implementation
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
-            private readonly UnfoldResourceSource<TOut, TSource> _source;
+            private readonly UnfoldResourceSource<TOut, TSource> _stage;
             private readonly Attributes _inheritedAttributes;
             private readonly Lazy<Decider> _decider;
             private TSource _blockingStream;
 
-            public Logic(UnfoldResourceSource<TOut, TSource> source, Attributes inheritedAttributes) : base(source.Shape)
+            public Logic(UnfoldResourceSource<TOut, TSource> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
-                _source = source;
+                _stage = stage;
                 _inheritedAttributes = inheritedAttributes;
                 _decider = new Lazy<Decider>(() =>
                 {
@@ -334,59 +336,61 @@ namespace Akka.Streams.Implementation
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
                 });
 
-                SetHandler(source.Out,
-                    onPull: () =>
-                    {
-                        var stop = false;
-                        while (!stop)
-                        {
-                            try
-                            {
-                                var data = source._readData(_blockingStream);
-                                if (data.HasValue)
-                                    Push(source.Out, data.Value);
-                                else
-                                    CloseStage();
-
-                                break;
-                            }
-                            catch (Exception ex)
-                            {
-                                var directive = _decider.Value(ex);
-                                switch (directive)
-                                {
-                                    case Directive.Stop:
-                                        _source._close(_blockingStream);
-                                        FailStage(ex);
-                                        stop = true;
-                                        break;
-                                    case Directive.Restart:
-                                        RestartState();
-                                        break;
-                                    case Directive.Resume:
-                                        break;
-                                    default:
-                                        throw new ArgumentOutOfRangeException();
-                                }
-                            }
-                        }
-                    },
-                    onDownstreamFinish: CloseStage);
+                SetHandler(stage.Out, this);
             }
 
-            public override void PreStart() => _blockingStream = _source._create();
+            public override void OnPull()
+            {
+                var stop = false;
+                while (!stop)
+                {
+                    try
+                    {
+                        var data = _stage._readData(_blockingStream);
+                        if (data.HasValue)
+                            Push(_stage.Out, data.Value);
+                        else
+                            CloseStage();
+
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        var directive = _decider.Value(ex);
+                        switch (directive)
+                        {
+                            case Directive.Stop:
+                                _stage._close(_blockingStream);
+                                FailStage(ex);
+                                stop = true;
+                                break;
+                            case Directive.Restart:
+                                RestartState();
+                                break;
+                            case Directive.Resume:
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                }
+            }
+
+            public override void OnDownstreamFinish() => CloseStage();
+            
+            public override void PreStart() => _blockingStream = _stage._create();
 
             private void RestartState()
             {
-                _source._close(_blockingStream);
-                _blockingStream = _source._create();
+                _stage._close(_blockingStream);
+                _blockingStream = _stage._create();
             }
 
             private void CloseStage()
             {
                 try
                 {
-                    _source._close(_blockingStream);
+                    _stage._close(_blockingStream);
                     CompleteStage();
                 }
                 catch (Exception ex)
@@ -430,7 +434,7 @@ namespace Akka.Streams.Implementation
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
             private readonly UnfoldResourceSourceAsync<TOut, TSource> _source;
             private readonly Attributes _inheritedAttributes;
@@ -451,8 +455,31 @@ namespace Akka.Streams.Implementation
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
                 });
 
-                SetHandler(source.Out, onPull: OnPull, onDownstreamFinish: CloseStage);
+                SetHandler(source.Out, this);
             }
+
+            public override void OnPull()
+            {
+                OnResourceReady(source =>
+                {
+                    try
+                    {
+                        _source._readData(source).ContinueWith(t =>
+                        {
+                            if (t.IsCompleted && !t.IsCanceled)
+                                _callback(new Left<Option<TOut>, Exception>(t.Result));
+                            else
+                                _callback(new Right<Option<TOut>, Exception>(t.Exception));
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorHandler(ex);
+                    }
+                });
+            }
+
+            public override void OnDownstreamFinish() => CloseStage();
 
             public override void PreStart()
             {
@@ -539,27 +566,6 @@ namespace Akka.Streams.Implementation
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-            }
-
-            private void OnPull()
-            {
-                OnResourceReady(source =>
-                {
-                    try
-                    {
-                        _source._readData(source).ContinueWith(t =>
-                        {
-                            if(t.IsCompleted && !t.IsCanceled)
-                                _callback(new Left<Option<TOut>, Exception>(t.Result));
-                            else
-                                _callback(new Right<Option<TOut>, Exception>(t.Exception));
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        ErrorHandler(ex);
-                    }
-                });
             }
 
             private void CloseAndThen(Action action)

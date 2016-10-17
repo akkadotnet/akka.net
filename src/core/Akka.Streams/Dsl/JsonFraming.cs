@@ -52,7 +52,7 @@ namespace Akka.Streams.Dsl
 
         private sealed class Scanner : SimpleLinearGraphStage<ByteString>
         {
-            private sealed class Logic : GraphStageLogic
+            private sealed class Logic : InAndOutGraphStageLogic
             {
                 private readonly Scanner _stage;
                 private readonly JsonObjectParser _buffer;
@@ -62,21 +62,26 @@ namespace Akka.Streams.Dsl
                     _stage = stage;
                     _buffer = new JsonObjectParser(stage._maximumObjectLength);
 
-                    SetHandler(stage.Outlet, onPull: TryPopBuffer);
-
-                    SetHandler(stage.Inlet, onPush: () =>
-                    {
-                        _buffer.Offer(Grab(stage.Inlet));
-                        TryPopBuffer();
-                    }, onUpstreamFinish: () =>
-                    {
-                        var json = _buffer.Poll();
-                        if (json.HasValue)
-                            Emit(stage.Outlet, json.Value);
-                        else
-                            CompleteStage();
-                    });
+                    SetHandler(stage.Outlet, this);
+                    SetHandler(stage.Inlet, this);
                 }
+
+                public override void OnPush()
+                {
+                    _buffer.Offer(Grab(_stage.Inlet));
+                    TryPopBuffer();
+                }
+
+                public override void OnUpstreamFinish()
+                {
+                    var json = _buffer.Poll();
+                    if (json.HasValue)
+                        Emit(_stage.Outlet, json.Value);
+                    else
+                        CompleteStage();
+                }
+
+                public override void OnPull() => TryPopBuffer();
 
                 private void TryPopBuffer()
                 {
@@ -89,7 +94,6 @@ namespace Akka.Streams.Dsl
                             CompleteStage();
                         else
                             Pull(_stage.Inlet);
-                            
                     }
                     catch(Exception ex)
                     {

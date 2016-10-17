@@ -29,30 +29,37 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Select<TIn, TOut> _stage;
+            private readonly Decider _decider;
+
             public Logic(Select<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
+                _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                var decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                SetHandler(stage.In, onPush: () =>
-                {
-                    try
-                    {
-                        Push(stage.Out, stage._func(Grab(stage.In)));
-                    }
-                    catch (Exception ex)
-                    {
-                        if (decider(ex) == Directive.Stop)
-                            FailStage(ex);
-                        else
-                            Pull(stage.In);
-                    }
-                });
-
-                SetHandler(stage.Out, onPull: () => Pull(stage.In));
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
+
+            public override void OnPush()
+            {
+                try
+                {
+                    Push(_stage.Out, _stage._func(Grab(_stage.In)));
+                }
+                catch (Exception ex)
+                {
+                    if (_decider(ex) == Directive.Stop)
+                        FailStage(ex);
+                    else
+                        Pull(_stage.In);
+                }
+            }
+
+            public override void OnPull() => Pull(_stage.In);
         }
 
         #endregion
@@ -88,34 +95,40 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Where<T> _stage;
+            private readonly Decider _decider;
+
             public Logic(Where<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
+                _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                var decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                SetHandler(stage.Inlet, onPush: () =>
-                {
-                    try
-                    {
-                        var element = Grab(stage.Inlet);
-                        if (stage._predicate(element))
-                            Push(stage.Outlet, element);
-                        else
-                            Pull(stage.Inlet);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (decider(ex) == Directive.Stop)
-                            FailStage(ex);
-                        else
-                            Pull(stage.Inlet);
-                    }
-                });
-
-                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+            public override void OnPush()
+            {
+                try
+                {
+                    var element = Grab(_stage.Inlet);
+                    if (_stage._predicate(element))
+                        Push(_stage.Outlet, element);
+                    else
+                        Pull(_stage.Inlet);
+                }
+                catch (Exception ex)
+                {
+                    if (_decider(ex) == Directive.Stop)
+                        FailStage(ex);
+                    else
+                        Pull(_stage.Inlet);
+                }
+            }
+
+            public override void OnPull() => Pull(_stage.Inlet);
 
             public override string ToString() => "WhereLogic";
         }
@@ -142,33 +155,41 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
-            public Logic(TakeWhile<T> take, Attributes inheritedAttributes) : base(take.Shape)
-            {
-                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                var decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+            private readonly TakeWhile<T> _stage;
+            private readonly Decider _decider;
 
-                SetHandler(take.Outlet, onPull: () => Pull(take.Inlet));
-                SetHandler(take.Inlet, onPush: () =>
-                {
-                    try
-                    {
-                        var element = Grab(take.Inlet);
-                        if (take._predicate(element))
-                            Push(take.Outlet, element);
-                        else
-                            CompleteStage();
-                    }
-                    catch (Exception ex)
-                    {
-                        if (decider(ex) == Directive.Stop)
-                            FailStage(ex);
-                        else
-                            Pull(take.Inlet);
-                    }
-                });
+            public Logic(TakeWhile<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+
+                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, this);
             }
+
+            public override void OnPush()
+            {
+                try
+                {
+                    var element = Grab(_stage.Inlet);
+                    if (_stage._predicate(element))
+                        Push(_stage.Outlet, element);
+                    else
+                        CompleteStage();
+                }
+                catch (Exception ex)
+                {
+                    if (_decider(ex) == Directive.Stop)
+                        FailStage(ex);
+                    else
+                        Pull(_stage.Inlet);
+                }
+            }
+
+            public override void OnPull() => Pull(_stage.Inlet);
 
             public override string ToString() => "TakeWhileLogic";
         }
@@ -197,37 +218,46 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : SupervisedGraphStageLogic
+        private sealed class Logic : SupervisedGraphStageLogic, IInHandler, IOutHandler
         {
-            private readonly SkipWhile<T> _skip;
+            private readonly SkipWhile<T> _stage;
 
-            public Logic(SkipWhile<T> skip, Attributes inheritedAttributes) : base(inheritedAttributes, skip.Shape)
+            public Logic(SkipWhile<T> stage, Attributes inheritedAttributes) : base(inheritedAttributes, stage.Shape)
             {
-                _skip = skip;
+                _stage = stage;
 
-                SetHandler(skip.In, onPush: () =>
-                {
-                    var element = Grab(skip.In);
-                    var result = WithSupervision(() => skip._predicate(element));
-                    if (result.HasValue)
-                    {
-                        if (result.Value)
-                            Pull(skip.In);
-                        else
-                        {
-                            Push(skip.Out, element);
-                            SetHandler(skip.In, onPush: () => Push(skip.Out, Grab(skip.In)));
-                        }
-                    }
-                });
-
-                SetHandler(skip.Out, onPull: () => Pull(skip.In));
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
+
+            public void OnPush()
+            {
+                var element = Grab(_stage.In);
+                var result = WithSupervision(() => _stage._predicate(element));
+                if (result.HasValue)
+                {
+                    if (result.Value)
+                        Pull(_stage.In);
+                    else
+                    {
+                        Push(_stage.Out, element);
+                        SetHandler(_stage.In, onPush: () => Push(_stage.Out, Grab(_stage.In)));
+                    }
+                }
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.In);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected override void OnResume(Exception ex)
             {
-                if (!HasBeenPulled(_skip.In))
-                    Pull(_skip.In);
+                if (!HasBeenPulled(_stage.In))
+                    Pull(_stage.In);
             }
         }
 
@@ -313,34 +343,43 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : SupervisedGraphStageLogic
+        private sealed class Logic : SupervisedGraphStageLogic, IInHandler, IOutHandler
         {
-            private readonly Collect<TIn, TOut> _collect;
+            private readonly Collect<TIn, TOut> _stage;
 
-            public Logic(Collect<TIn, TOut> collect, Attributes inheritedAttributes)
-                : base(inheritedAttributes, collect.Shape)
+            public Logic(Collect<TIn, TOut> stage, Attributes inheritedAttributes)
+                : base(inheritedAttributes, stage.Shape)
             {
-                _collect = collect;
+                _stage = stage;
 
-                SetHandler(collect.In, onPush: () =>
-                {
-                    var result = WithSupervision(() => collect._func(Grab(collect.In)));
-                    if (result.HasValue)
-                    {
-                        if (result.Value.IsDefaultForType())
-                            Pull(collect.In);
-                        else
-                            Push(collect.Out, result.Value);
-                    }
-                });
-
-                SetHandler(collect.Out, onPull: () => Pull(collect.In));
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
+
+            public void OnPush()
+            {
+                var result = WithSupervision(() => _stage._func(Grab(_stage.In)));
+                if (result.HasValue)
+                {
+                    if (result.Value.IsDefaultForType())
+                        Pull(_stage.In);
+                    else
+                        Push(_stage.Out, result.Value);
+                }
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.In);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected override void OnResume(Exception ex)
             {
-                if (!HasBeenPulled(_collect.In))
-                    Pull(_collect.In);
+                if (!HasBeenPulled(_stage.In))
+                    Pull(_stage.In);
             }
         }
 
@@ -375,40 +414,47 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic 
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Recover<T> _stage;
+            private Option<T> _recovered = Option<T>.None;
+
             public Logic(Recover<T> stage) : base(stage.Shape)
             {
-                var recovered = Option<T>.None;
+                _stage = stage;
 
-                SetHandler(stage.In, onPush: () => Push(stage.Out, Grab(stage.In)),
-                    onUpstreamFailure: ex =>
-                    {
-                        var result = stage._recovery(ex);
-                        if (result.HasValue)
-                        {
-                            if (IsAvailable(stage.Out))
-                            {
-                                Push(stage.Out, result.Value);
-                                CompleteStage();
-                            }
-                            else
-                                recovered = result;
-                        }
-                        else
-                            FailStage(ex);
-                    });
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
+            }
 
-                SetHandler(stage.Out, onPull: () =>
+            public override void OnPush() => Push(_stage.Out, Grab(_stage.In));
+
+            public override void OnUpstreamFailure(Exception ex)
+            {
+                var result = _stage._recovery(ex);
+                if (result.HasValue)
                 {
-                    if (recovered.HasValue)
+                    if (IsAvailable(_stage.Out))
                     {
-                        Push(stage.Out, recovered.Value);
+                        Push(_stage.Out, result.Value);
                         CompleteStage();
                     }
                     else
-                        Pull(stage.In);
-                });
+                        _recovered = result;
+                }
+                else
+                    FailStage(ex);
+            }
+
+            public override void OnPull()
+            {
+                if (_recovered.HasValue)
+                {
+                    Push(_stage.Out, _recovered.Value);
+                    CompleteStage();
+                }
+                else
+                    Pull(_stage.In);
             }
 
 
@@ -446,32 +492,39 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
-            public Logic(Take<T> take) : base(take.Shape)
+            private readonly Take<T> _stage;
+            private long _left;
+
+            public Logic(Take<T> stage) : base(stage.Shape)
             {
-                var left = take._count;
+                _stage = stage;
+                _left = stage._count;
 
-                SetHandler(take.Outlet, onPull: () =>
+                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, this);
+            }
+
+            public override void OnPush()
+            {
+                var leftBefore = _left;
+                if (leftBefore >= 1)
                 {
-                    if (left > 0)
-                        Pull(take.Inlet);
-                    else
-                        CompleteStage();
-                });
+                    _left = leftBefore - 1;
+                    Push(_stage.Outlet, Grab(_stage.Inlet));
+                }
 
-                SetHandler(take.Inlet, onPush: () =>
-                {
-                    var leftBefore = left;
-                    if (leftBefore >= 1)
-                    {
-                        left = leftBefore - 1;
-                        Push(take.Outlet, Grab(take.Inlet));
-                    }
+                if (leftBefore <= 1)
+                    CompleteStage();
+            }
 
-                    if (leftBefore <= 1)
-                        CompleteStage();
-                });
+            public override void OnPull()
+            {
+                if (_left > 0)
+                    Pull(_stage.Inlet);
+                else
+                    CompleteStage();
             }
         }
 
@@ -498,25 +551,32 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
-            public Logic(Drop<T> drop) : base(drop.Shape)
+            private readonly Drop<T> _stage;
+            private long _left;
+
+            public Logic(Drop<T> stage) : base(stage.Shape)
             {
-                var left = drop._count;
+                _stage = stage;
+                _left = stage._count;
 
-                SetHandler(drop.Inlet, onPush: () =>
-                {
-                    if (left > 0)
-                    {
-                        left--;
-                        Pull(drop.Inlet);
-                    }
-                    else
-                        Push(drop.Outlet, Grab(drop.Inlet));
-                });
-
-                SetHandler(drop.Outlet, onPull: () => Pull(drop.Inlet));
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public override void OnPush()
+            {
+                if (_left > 0)
+                {
+                    _left--;
+                    Pull(_stage.Inlet);
+                }
+                else
+                    Push(_stage.Outlet, Grab(_stage.Inlet));
+            }
+
+            public override void OnPull() => Pull(_stage.Inlet);
         }
 
         #endregion
@@ -542,20 +602,25 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic 
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Scan<TIn, TOut> _stage;
+            private readonly Action _rest;
+            private  TOut _stageAggregate;
+
             public Logic(Scan<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
-                var aggregator = stage._zero;
+                _stage = stage;
+                _stageAggregate = stage._zero;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 var decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                Action rest = () =>
+                _rest = () =>
                 {
                     try
                     {
-                        aggregator = stage._aggregate(aggregator, Grab(stage.In));
-                        Push(stage.Out, aggregator);
+                        _stageAggregate = stage._aggregate(_stageAggregate, Grab(stage.In));
+                        Push(stage.Out, _stageAggregate);
                     }
                     catch (Exception ex)
                     {
@@ -569,30 +634,38 @@ namespace Akka.Streams.Implementation.Fusing
                                     Pull(stage.In);
                                 break;
                             case Directive.Restart:
-                                aggregator = stage._zero;
-                                Push(stage.Out, aggregator);
+                                _stageAggregate = stage._zero;
+                                Push(stage.Out, _stageAggregate);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
                     }
                 };
+                
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
+            }
 
+            public override void OnPush()
+            {
                 // Initial behavior makes sure that the zero gets flushed if upstream is empty
-                SetHandler(stage.In, onPush: () => { }, onUpstreamFinish: () =>
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                SetHandler(_stage.Out, onPull: () =>
                 {
-                    SetHandler(stage.Out, onPull: () =>
-                    {
-                        Push(stage.Out, aggregator);
-                        CompleteStage();
-                    });
+                    Push(_stage.Out, _stageAggregate);
+                    CompleteStage();
                 });
-                SetHandler(stage.Out, onPull: () =>
-                {
-                    Push(stage.Out, aggregator);
-                    SetHandler(stage.Out, onPull: () => Pull(stage.In));
-                    SetHandler(stage.In, onPush: rest);
-                });
+            }
+
+            public override void OnPull()
+            {
+                Push(_stage.Out, _stageAggregate);
+                SetHandler(_stage.Out, onPull: () => Pull(_stage.In));
+                SetHandler(_stage.In, onPush: _rest);
             }
         }
 
@@ -633,53 +706,61 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Aggregate<TIn, TOut> _stage;
+            private readonly Decider _decider;
+            private TOut _aggregator;
+
             public Logic(Aggregate<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
-                var aggregator = stage._zero;
+                _stage = stage;
+                _aggregator = stage._zero;
 
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                var decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                SetHandler(stage.In,
-                    onPush: () =>
-                    {
-                        try
-                        {
-                            aggregator = stage._aggregate(aggregator, Grab(stage.In));
-                            Pull(stage.In);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (decider(ex) == Directive.Stop)
-                                FailStage(ex);
-                            else
-                            {
-                                aggregator = stage._zero;
-                                Pull(stage.In);
-                            }
-                        }
-                    },
-                    onUpstreamFinish: () =>
-                    {
-                        if (IsAvailable(stage.Out))
-                        {
-                            Push(stage.Out, aggregator);
-                            CompleteStage();
-                        }
-                    });
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
+            }
 
-                SetHandler(stage.Out, onPull: () =>
+            public override void OnPush()
+            {
+                try
                 {
-                    if (IsClosed(stage.In))
-                    {
-                        Push(stage.Out, aggregator);
-                        CompleteStage();
-                    }
+                    _aggregator = _stage._aggregate(_aggregator, Grab(_stage.In));
+                    Pull(_stage.In);
+                }
+                catch (Exception ex)
+                {
+                    if (_decider(ex) == Directive.Stop)
+                        FailStage(ex);
                     else
-                        Pull(stage.In);
-                });
+                    {
+                        _aggregator = _stage._zero;
+                        Pull(_stage.In);
+                    }
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (IsAvailable(_stage.Out))
+                {
+                    Push(_stage.Out, _aggregator);
+                    CompleteStage();
+                }
+            }
+
+            public override void OnPull()
+            {
+                if (IsClosed(_stage.In))
+                {
+                    Push(_stage.Out, _aggregator);
+                    CompleteStage();
+                }
+                else
+                    Pull(_stage.In);
             }
         }
 
@@ -765,13 +846,20 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic, IOutHandler
         {
+            private readonly Intersperse<T> _stage;
+
             public Logic(Intersperse<T> stage) : base(stage.Shape)
             {
+                _stage = stage;
                 SetHandler(stage.In, new StartInHandler(stage, this));
-                SetHandler(stage.Out, onPull: () => Pull(stage.In));
+                SetHandler(stage.Out, this);
             }
+
+            public void OnPull() => Pull(_stage.In);
+
+            public void OnDownstreamFinish() => CompleteStage();
         }
 
         #endregion
@@ -814,7 +902,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly Grouped<T> _stage;
             private List<T> _buffer;
@@ -826,27 +914,32 @@ namespace Akka.Streams.Implementation.Fusing
                 _buffer = new List<T>(stage._count);
                 _left = stage._count;
 
-                SetHandler(stage.In, onPush: () =>
-                {
-                    _buffer.Add(Grab(stage.In));
-                    _left--;
-
-                    if (_left == 0)
-                        PushAndClearBuffer();
-                    else
-                        Pull(stage.In);
-                }, onUpstreamFinish: () =>
-                {
-                    // This means the buf is filled with some elements but not enough (left < n) to group together.
-                    // Since the upstream has finished we have to push them to downstream though.
-                    if (_left < stage._count)
-                        PushAndClearBuffer();
-
-                    CompleteStage();
-                });
-
-                SetHandler(stage.Out, onPull: () => Pull(stage.In));
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
+
+            public override void OnPush()
+            {
+                _buffer.Add(Grab(_stage.In));
+                _left--;
+
+                if (_left == 0)
+                    PushAndClearBuffer();
+                else
+                    Pull(_stage.In);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                // This means the buf is filled with some elements but not enough (left < n) to group together.
+                // Since the upstream has finished we have to push them to downstream though.
+                if (_left < _stage._count)
+                    PushAndClearBuffer();
+
+                CompleteStage();
+            }
+
+            public override void OnPull() => Pull(_stage.In);
 
             private void PushAndClearBuffer()
             {
@@ -891,46 +984,54 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : SupervisedGraphStageLogic
+        private sealed class Logic : SupervisedGraphStageLogic, IInHandler, IOutHandler
         {
-            private readonly LimitWeighted<T> _limit;
+            private readonly LimitWeighted<T> _stage;
             private long _left;
 
-            public Logic(LimitWeighted<T> limit, Attributes inheritedAttributes)
-                : base(inheritedAttributes, limit.Shape)
+            public Logic(LimitWeighted<T> stage, Attributes inheritedAttributes) : base(inheritedAttributes, stage.Shape)
             {
-                _limit = limit;
-                _left = limit._max;
+                _stage = stage;
+                _left = stage._max;
 
-                SetHandler(limit.In, onPush: () =>
-                {
-                    var element = Grab(limit.In);
-                    var result = WithSupervision(() => limit._costFunc(element));
-                    if (result.HasValue)
-                    {
-                        _left -= result.Value;
-                        if (_left >= 0)
-                            Push(limit.Out, element);
-                        else
-                            FailStage(new StreamLimitReachedException(limit._max));
-                    }
-                });
-
-                SetHandler(limit.Out, onPull: () => Pull(limit.In));
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
+
+            public void OnPush()
+            {
+                var element = Grab(_stage.In);
+                var result = WithSupervision(() => _stage._costFunc(element));
+                if (result.HasValue)
+                {
+                    _left -= result.Value;
+                    if (_left >= 0)
+                        Push(_stage.Out, element);
+                    else
+                        FailStage(new StreamLimitReachedException(_stage._max));
+                }
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.In);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected override void OnResume(Exception ex) => TryPull();
 
             protected override void OnRestart(Exception ex)
             {
-                _left = _limit._max;
+                _left = _stage._max;
                 TryPull();
             }
 
             private void TryPull()
             {
-                if (!HasBeenPulled(_limit.In))
-                    Pull(_limit.In);
+                if (!HasBeenPulled(_stage.In))
+                    Pull(_stage.In);
             }
         }
 
@@ -967,50 +1068,57 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Sliding<T> _stage;
             private IImmutableList<T> _buffer;
 
             public Logic(Sliding<T> stage) : base(stage.Shape)
             {
+                _stage = stage;
                 _buffer = ImmutableList<T>.Empty;
 
-                SetHandler(stage.In, onPush: () =>
-                {
-                    _buffer = _buffer.Add(Grab(stage.In));
-                    if (_buffer.Count < stage._count)
-                        Pull(stage.In);
-                    else if (_buffer.Count == stage._count)
-                        Push(stage.Out, _buffer);
-                    else if (stage._step <= stage._count)
-                    {
-                        _buffer = _buffer.Drop(stage._step).ToImmutableList();
-                        if (_buffer.Count == stage._count)
-                            Push(stage.Out, _buffer);
-                        else
-                            Pull(stage.In);
-                    }
-                    else if (stage._step > stage._count)
-                    {
-                        if (_buffer.Count == stage._step)
-                            _buffer = _buffer.Drop(stage._step).ToImmutableList();
-                        Pull(stage.In);
-                    }
-                }, onUpstreamFinish: () =>
-                {
-                    // We can finish current stage directly if:
-                    //  1. the buf is empty or
-                    //  2. when the step size is greater than the sliding size (step > n) and current stage is in between
-                    //     two sliding (ie. buf.size >= n && buf.size < step).
-                    // Otherwise it means there is still a not finished sliding so we have to push them before finish current stage.
-                    if (_buffer.Count < stage._count && _buffer.Count > 0)
-                        Push(stage.Out, _buffer);
-
-                    CompleteStage();
-                });
-
-                SetHandler(stage.Out, onPull: () => Pull(stage.In));
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
+
+            public override void OnPush()
+            {
+                _buffer = _buffer.Add(Grab(_stage.In));
+                if (_buffer.Count < _stage._count)
+                    Pull(_stage.In);
+                else if (_buffer.Count == _stage._count)
+                    Push(_stage.Out, _buffer);
+                else if (_stage._step <= _stage._count)
+                {
+                    _buffer = _buffer.Drop(_stage._step).ToImmutableList();
+                    if (_buffer.Count == _stage._count)
+                        Push(_stage.Out, _buffer);
+                    else
+                        Pull(_stage.In);
+                }
+                else if (_stage._step > _stage._count)
+                {
+                    if (_buffer.Count == _stage._step)
+                        _buffer = _buffer.Drop(_stage._step).ToImmutableList();
+                    Pull(_stage.In);
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                // We can finish current _stage directly if:
+                //  1. the buf is empty or
+                //  2. when the step size is greater than the sliding size (step > n) and current _stage is in between
+                //     two sliding (ie. buf.size >= n && buf.size < step).
+                // Otherwise it means there is still a not finished sliding so we have to push them before finish current _stage.
+                if (_buffer.Count < _stage._count && _buffer.Count > 0)
+                    Push(_stage.Out, _buffer);
+
+                CompleteStage();
+            }
+
+            public override void OnPull() => Pull(_stage.In);
         }
 
         #endregion
@@ -1174,7 +1282,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly FlowShape<TIn, TOut> _shape;
             private readonly Batch<TIn, TOut> _stage;
@@ -1191,112 +1299,117 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
                 _left = stage._max;
 
-                SetHandler(_shape.Inlet, onPush: () =>
-                {
-                    var element = Grab(_shape.Inlet);
-                    var cost = _stage._costFunc(element);
-                    if (!_aggregate.HasValue)
-                    {
-                        try
-                        {
-                            _aggregate = _stage._seed(element);
-                            _left -= cost;
-                        }
-                        catch (Exception ex)
-                        {
-                            switch (_decider(ex))
-                            {
-                                case Directive.Stop:
-                                    FailStage(ex);
-                                    break;
-                                case Directive.Restart:
-                                    RestartState();
-                                    break;
-                                case Directive.Resume:
-                                    break;
-                            }
-                        }
-                    }
-                    else if (_left < cost)
-                        _pending = element;
-                    else
-                    {
-                        try
-                        {
-                            _aggregate = _stage._aggregate(_aggregate.Value, element);
-                            _left -= cost;
-                        }
-                        catch (Exception ex)
-                        {
-                            switch (_decider(ex))
-                            {
-                                case Directive.Stop:
-                                    FailStage(ex);
-                                    break;
-                                case Directive.Restart:
-                                    RestartState();
-                                    break;
-                                case Directive.Resume:
-                                    break;
-                            }
-                        }
-                    }
+                SetHandler(_shape.Inlet, this);
+                SetHandler(_shape.Outlet, this);
+            }
 
-                    if (IsAvailable(_shape.Outlet))
-                        Flush();
-                    if (!_pending.HasValue)
-                        Pull(_shape.Inlet);
-                }, onUpstreamFinish: () =>
+            public override void OnPush()
+            {
+                var element = Grab(_shape.Inlet);
+                var cost = _stage._costFunc(element);
+                if (!_aggregate.HasValue)
                 {
-                    if (!_aggregate.HasValue)
+                    try
+                    {
+                        _aggregate = _stage._seed(element);
+                        _left -= cost;
+                    }
+                    catch (Exception ex)
+                    {
+                        switch (_decider(ex))
+                        {
+                            case Directive.Stop:
+                                FailStage(ex);
+                                break;
+                            case Directive.Restart:
+                                RestartState();
+                                break;
+                            case Directive.Resume:
+                                break;
+                        }
+                    }
+                }
+                else if (_left < cost)
+                    _pending = element;
+                else
+                {
+                    try
+                    {
+                        _aggregate = _stage._aggregate(_aggregate.Value, element);
+                        _left -= cost;
+                    }
+                    catch (Exception ex)
+                    {
+                        switch (_decider(ex))
+                        {
+                            case Directive.Stop:
+                                FailStage(ex);
+                                break;
+                            case Directive.Restart:
+                                RestartState();
+                                break;
+                            case Directive.Resume:
+                                break;
+                        }
+                    }
+                }
+
+                if (IsAvailable(_shape.Outlet))
+                    Flush();
+                if (!_pending.HasValue)
+                    Pull(_shape.Inlet);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (!_aggregate.HasValue)
+                    CompleteStage();
+            }
+
+            public override void OnPull()
+            {
+                if (!_aggregate.HasValue)
+                {
+                    if (IsClosed(_shape.Inlet))
                         CompleteStage();
-                });
-
-                SetHandler(_shape.Outlet, onPull: () =>
+                    else if (!HasBeenPulled(_shape.Inlet))
+                        Pull(_shape.Inlet);
+                }
+                else if (IsClosed(_shape.Inlet))
                 {
-                    if (!_aggregate.HasValue)
-                    {
-                        if (IsClosed(_shape.Inlet))
-                            CompleteStage();
-                        else if (!HasBeenPulled(_shape.Inlet))
-                            Pull(_shape.Inlet);
-                    }
-                    else if (IsClosed(_shape.Inlet))
-                    {
-                        Push(_shape.Outlet, _aggregate.Value);
-                        if (!_pending.HasValue)
-                            CompleteStage();
-                        else
-                        {
-                            try
-                            {
-                                _aggregate = _stage._seed(_pending.Value);
-                            }
-                            catch (Exception ex)
-                            {
-                                switch (_decider(ex))
-                                {
-                                    case Directive.Stop:
-                                        FailStage(ex);
-                                        break;
-                                    case Directive.Restart:
-                                        RestartState();
-                                        if (!HasBeenPulled(_shape.Inlet)) Pull(_shape.Inlet);
-                                        break;
-                                    case Directive.Resume:
-                                        break;
-                                }
-                            }
-                            _pending = Option<TIn>.None;
-                        }
-                    }
+                    Push(_shape.Outlet, _aggregate.Value);
+                    if (!_pending.HasValue)
+                        CompleteStage();
                     else
                     {
-                        Flush();
-                        if (!HasBeenPulled(_shape.Inlet))
-                            Pull(_shape.Inlet);
+                        try
+                        {
+                            _aggregate = _stage._seed(_pending.Value);
+                        }
+                        catch (Exception ex)
+                        {
+                            switch (_decider(ex))
+                            {
+                                case Directive.Stop:
+                                    FailStage(ex);
+                                    break;
+                                case Directive.Restart:
+                                    RestartState();
+                                    if (!HasBeenPulled(_shape.Inlet)) Pull(_shape.Inlet);
+                                    break;
+                                case Directive.Resume:
+                                    break;
+                            }
+                        }
+                        _pending = Option<TIn>.None;
                     }
-                });
+                }
+                else
+                {
+                    Flush();
+                    if (!HasBeenPulled(_shape.Inlet))
+                        Pull(_shape.Inlet);
+                }
             }
 
             private void Flush()
@@ -1377,69 +1490,74 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Expand<TIn, TOut> _stage;
             private IIterator<TOut> _iterator;
             private bool _expanded;
-            private readonly FlowShape<TIn, TOut> _shape;
 
             public Logic(Expand<TIn, TOut> stage) : base(stage.Shape)
             {
-                _shape = stage.Shape;
-
+                _stage = stage;
                 _iterator = new IteratorAdapter<TOut>(Enumerable.Empty<TOut>().GetEnumerator());
-                SetHandler(_shape.Inlet, onPush: () =>
-                {
-                    _iterator = new IteratorAdapter<TOut>(stage._extrapolate(Grab(_shape.Inlet)));
-                    if (_iterator.HasNext())
-                    {
-                        if (IsAvailable(_shape.Outlet))
-                        {
-                            _expanded = true;
-                            Pull(_shape.Inlet);
-                            Push(_shape.Outlet, _iterator.Next());
-                        }
-                        else
-                            _expanded = false;
-                    }
-                    else
-                        Pull(_shape.Inlet);
-                }, onUpstreamFinish: () =>
-                {
-                    if (_iterator.HasNext() && !_expanded)
-                    {
-                        // need to wait
-                    }
-                    else
-                        CompleteStage();
-                });
 
-                SetHandler(_shape.Outlet, onPull: () =>
-                {
-                    if (_iterator.HasNext())
-                    {
-                        if (!_expanded)
-                        {
-                            _expanded = true;
-                            if (IsClosed(_shape.Inlet))
-                            {
-                                Push(_shape.Outlet, _iterator.Next());
-                                CompleteStage();
-                            }
-                            else
-                            {
-                                // expand needs to pull first to be "fair" when upstream is not actually slow
-                                Pull(_shape.Inlet);
-                                Push(_shape.Outlet, _iterator.Next());
-                            }
-                        }
-                        else
-                            Push(_shape.Outlet, _iterator.Next());
-                    }
-                });
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
 
-            public override void PreStart() => Pull(_shape.Inlet);
+            public override void PreStart() => Pull(_stage.In);
+
+            public override void OnPush()
+            {
+                _iterator = new IteratorAdapter<TOut>(_stage._extrapolate(Grab(_stage.In)));
+                if (_iterator.HasNext())
+                {
+                    if (IsAvailable(_stage.Out))
+                    {
+                        _expanded = true;
+                        Pull(_stage.In);
+                        Push(_stage.Out, _iterator.Next());
+                    }
+                    else
+                        _expanded = false;
+                }
+                else
+                    Pull(_stage.In);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_iterator.HasNext() && !_expanded)
+                {
+                    // need to wait
+                }
+                else
+                    CompleteStage();
+            }
+
+            public override void OnPull()
+            {
+                if (_iterator.HasNext())
+                {
+                    if (!_expanded)
+                    {
+                        _expanded = true;
+                        if (IsClosed(_stage.In))
+                        {
+                            Push(_stage.Out, _iterator.Next());
+                            CompleteStage();
+                        }
+                        else
+                        {
+                            // expand needs to pull first to be "fair" when upstream is not actually slow
+                            Pull(_stage.In);
+                            Push(_stage.Out, _iterator.Next());
+                        }
+                    }
+                    else
+                        Push(_stage.Out, _iterator.Next());
+                }
+            }
         }
 
         #endregion
@@ -1450,13 +1568,14 @@ namespace Akka.Streams.Implementation.Fusing
         {
             _extrapolate = extrapolate;
 
-            var inlet = new Inlet<TIn>("expand.in");
-            var outlet = new Outlet<TOut>("expand.out");
-
-            Shape = new FlowShape<TIn, TOut>(inlet, outlet);
+            Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
         protected override Attributes InitialAttributes => DefaultAttributes.Expand;
+
+        public Inlet<TIn> In { get; } = new Inlet<TIn>("expand.in");
+
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("expand.out");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
@@ -1473,7 +1592,7 @@ namespace Akka.Streams.Implementation.Fusing
         #region internal classes
 
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private class Holder<T>
             {
@@ -1516,39 +1635,45 @@ namespace Akka.Streams.Implementation.Fusing
 
                 _taskCallback = GetAsyncCallback<Holder<TOut>>(HolderCompleted);
 
-                SetHandler(stage.In, onPush: () =>
-                {
-                    try
-                    {
-                        var task = stage._mapFunc(Grab(stage.In));
-                        var holder = new Holder<TOut>(NotYetThere, _taskCallback);
-                        _buffer.Enqueue(holder);
-
-                        // We dispatch the future if it's ready to optimize away
-                        // scheduling it to an execution context
-                        if (task.IsCompleted)
-                        {
-                            holder.SetElement(Result.FromTask(task));
-                            HolderCompleted(holder);
-                        }
-                        else
-                            task.ContinueWith(t => holder.Invoke(Result.FromTask(t)),
-                                TaskContinuationOptions.ExecuteSynchronously);
-                    }
-                    catch (Exception e)
-                    {
-                        if (_decider(e) == Directive.Stop)
-                            FailStage(e);
-                    }
-                    if (Todo < stage._parallelism && !HasBeenPulled(stage.In))
-                        TryPull(stage.In);
-                }, onUpstreamFinish: () =>
-                {
-                    if (Todo == 0)
-                        CompleteStage();
-                });
-                SetHandler(stage.Out, onPull: PushOne);
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
             }
+
+            public override void OnPush()
+            {
+                try
+                {
+                    var task = _stage._mapFunc(Grab(_stage.In));
+                    var holder = new Holder<TOut>(NotYetThere, _taskCallback);
+                    _buffer.Enqueue(holder);
+
+                    // We dispatch the future if it's ready to optimize away
+                    // scheduling it to an execution context
+                    if (task.IsCompleted)
+                    {
+                        holder.SetElement(Result.FromTask(task));
+                        HolderCompleted(holder);
+                    }
+                    else
+                        task.ContinueWith(t => holder.Invoke(Result.FromTask(t)),
+                            TaskContinuationOptions.ExecuteSynchronously);
+                }
+                catch (Exception e)
+                {
+                    if (_decider(e) == Directive.Stop)
+                        FailStage(e);
+                }
+                if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
+                    TryPull(_stage.In);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (Todo == 0)
+                    CompleteStage();
+            }
+
+            public override void OnPull() => PushOne();
 
             private int Todo => _buffer.Used;
 
@@ -1597,8 +1722,7 @@ namespace Akka.Streams.Implementation.Fusing
                 else if (_decider(element.Exception) == Directive.Stop)
                     FailStage(element.Exception);
             }
-
-
+            
             public override string ToString() => $"SelectAsync.Logic(buffer={_buffer})";
         }
 
@@ -1632,7 +1756,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly SelectAsyncUnordered<TIn, TOut> _stage;
             private readonly Decider _decider;
@@ -1648,43 +1772,49 @@ namespace Akka.Streams.Implementation.Fusing
 
                 _taskCallback = GetAsyncCallback<Result<TOut>>(TaskCompleted);
 
-                SetHandler(_stage.In, onPush: () =>
-                {
-                    try
-                    {
-                        var task = _stage._mapFunc(Grab(_stage.In));
-                        _inFlight++;
+                SetHandler(_stage.In, this);
+                SetHandler(_stage.Out, this);
+            }
 
-                        if (task.IsCompleted)
-                            TaskCompleted(Result.FromTask(task));
-                        else
-                            task.ContinueWith(t => _taskCallback(Result.FromTask(t)),
-                                TaskContinuationOptions.ExecuteSynchronously);
-                    }
-                    catch (Exception e)
-                    {
-                        if (_decider(e) == Directive.Stop)
-                            FailStage(e);
-                    }
-
-                    if (Todo < _stage._parallelism)
-                        TryPull(_stage.In);
-                }, onUpstreamFinish: () =>
+            public override void OnPush()
+            {
+                try
                 {
-                    if (Todo == 0)
-                        CompleteStage();
-                });
-                SetHandler(_stage.Out, onPull: () =>
-                {
-                    var inlet = _stage.In;
-                    if (!_buffer.IsEmpty)
-                        Push(_stage.Out, _buffer.Dequeue());
-                    else if (IsClosed(inlet) && Todo == 0)
-                        CompleteStage();
+                    var task = _stage._mapFunc(Grab(_stage.In));
+                    _inFlight++;
 
-                    if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
-                        TryPull(inlet);
-                });
+                    if (task.IsCompleted)
+                        TaskCompleted(Result.FromTask(task));
+                    else
+                        task.ContinueWith(t => _taskCallback(Result.FromTask(t)),
+                            TaskContinuationOptions.ExecuteSynchronously);
+                }
+                catch (Exception e)
+                {
+                    if (_decider(e) == Directive.Stop)
+                        FailStage(e);
+                }
+
+                if (Todo < _stage._parallelism)
+                    TryPull(_stage.In);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (Todo == 0)
+                    CompleteStage();
+            }
+
+            public override void OnPull()
+            {
+                var inlet = _stage.In;
+                if (!_buffer.IsEmpty)
+                    Push(_stage.Out, _buffer.Dequeue());
+                else if (IsClosed(inlet) && Todo == 0)
+                    CompleteStage();
+
+                if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
+                    TryPull(inlet);
             }
 
             private void TaskCompleted(Result<TOut> result)
@@ -1756,7 +1886,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly Log<T> _stage;
             private readonly Attributes _inheritedAttributes;
@@ -1772,51 +1902,59 @@ namespace Akka.Streams.Implementation.Fusing
                     inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider))
                         .Decider;
 
-                SetHandler(stage.Inlet, onPush: () =>
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
+            }
+
+            public override void OnPush()
+            {
+                try
                 {
-                    try
-                    {
-                        var element = Grab(stage.Inlet);
-                        if (IsEnabled(_logLevels.OnElement))
-                            _log.Log(_logLevels.OnElement, $"[{stage._name}] Element: {stage._extract(element)}");
+                    var element = Grab(_stage.Inlet);
+                    if (IsEnabled(_logLevels.OnElement))
+                        _log.Log(_logLevels.OnElement, $"[{_stage._name}] Element: {_stage._extract(element)}");
 
-                        Push(stage.Outlet, element);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_decider(ex) == Directive.Stop)
-                            FailStage(ex);
-                        else
-                            Pull(stage.Inlet);
-                    }
-                }, onUpstreamFailure: ex =>
+                    Push(_stage.Outlet, element);
+                }
+                catch (Exception ex)
                 {
-                    if (IsEnabled(_logLevels.OnFailure))
-                    {
-                        if (_logLevels.OnFailure == LogLevel.ErrorLevel)
-                            _log.Error(ex, $"[{stage._name}] Upstream failed.");
-                        else
-                            _log.Log(_logLevels.OnFailure,
-                                $"[{stage._name}] Upstream failed, cause: {ex.GetType()} {ex.Message}");
-                    }
+                    if (_decider(ex) == Directive.Stop)
+                        FailStage(ex);
+                    else
+                        Pull(_stage.Inlet);
+                }
+            }
 
-                    FailStage(ex);
-                }, onUpstreamFinish: () =>
+            public override void OnUpstreamFinish()
+            {
+                if (IsEnabled(_logLevels.OnFinish))
+                    _log.Log(_logLevels.OnFinish, $"[{_stage._name}] Upstream finished.");
+
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception ex)
+            {
+                if (IsEnabled(_logLevels.OnFailure))
                 {
-                    if (IsEnabled(_logLevels.OnFinish))
-                        _log.Log(_logLevels.OnFinish, $"[{stage._name}] Upstream finished.");
+                    if (_logLevels.OnFailure == LogLevel.ErrorLevel)
+                        _log.Error(ex, $"[{_stage._name}] Upstream failed.");
+                    else
+                        _log.Log(_logLevels.OnFailure,
+                            $"[{_stage._name}] Upstream failed, cause: {ex.GetType()} {ex.Message}");
+                }
 
-                    CompleteStage();
-                });
+                FailStage(ex);
+            }
 
-                SetHandler(stage.Outlet, onPull: ()=> Pull(stage.Inlet), onDownstreamFinish: () =>
-                {
-                    if (IsEnabled(_logLevels.OnFinish))
-                        _log.Log(_logLevels.OnFinish, $"[{stage._name}] Downstream finished.");
+            public override void OnPull() => Pull(_stage.Inlet);
 
-                    CompleteStage();
-                });
+            public override void OnDownstreamFinish()
+            {
+                if (IsEnabled(_logLevels.OnFinish))
+                    _log.Log(_logLevels.OnFinish, $"[{_stage._name}] Downstream finished.");
 
+                CompleteStage();
             }
 
             public override void PreStart()
@@ -1880,7 +2018,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private const string GroupedWithinTimer = "GroupedWithinTimer";
 
@@ -1901,25 +2039,34 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _buffer = new List<T>(_stage._count);
 
-                SetHandler(_stage._in, onPush: () =>
-                {
-                    if (!_groupClosed)
-                        NextElement(Grab(_stage._in)); // otherwise keep the element for next round
-                }, onUpstreamFinish: () =>
-                {
-                    _finished = true;
-                    if (_groupEmitted)
-                        CompleteStage();
-                    else
-                        CloseGroup();
-                });
-
-                SetHandler(_stage._out, onPull: () =>
-                {
-                    if (_groupClosed)
-                        EmitGroup();
-                });
+                SetHandler(_stage._in, this);
+                SetHandler(_stage._out, this);
             }
+
+            public void OnPush()
+            {
+                if (!_groupClosed)
+                    NextElement(Grab(_stage._in)); // otherwise keep the element for next round
+            }
+
+            public void OnUpstreamFinish()
+            {
+                _finished = true;
+                if (_groupEmitted)
+                    CompleteStage();
+                else
+                    CloseGroup();
+            }
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull()
+            {
+                if (_groupClosed)
+                    EmitGroup();
+            }
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             public override void PreStart()
             {
@@ -2004,52 +2151,62 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
             private IBuffer<Tuple<long, T>> _buffer; // buffer has pairs timestamp with upstream element
             private bool _willStop;
             private readonly int _size;
+            private readonly Action _overflowStrategy;
 
             public Logic(Attributes inheritedAttributes, Delay<T> stage) : base(stage.Shape)
             {
-                _stage = stage;
-
                 var inputBuffer = inheritedAttributes.GetAttribute<Attributes.InputBuffer>(null);
                 if (inputBuffer == null)
                     throw new IllegalStateException($"Couldn't find InputBuffer Attribute for {this}");
+
+                _stage = stage;
                 _size = inputBuffer.Max;
+                _overflowStrategy = OnPushStrategy(_stage._strategy);
 
-                var overflowStrategy = OnPushStrategy(_stage._strategy);
-
-                SetHandler(_stage.Inlet, onPush: () =>
-                {
-                    if (_buffer.IsFull) overflowStrategy();
-                    else
-                    {
-                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size - 1);
-                        if (!IsTimerActive(TimerName))
-                            ScheduleOnce(TimerName, _stage._delay);
-                    }
-                }, onUpstreamFinish: () =>
-                {
-                    if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName))
-                        _willStop = true;
-                    else
-                        CompleteStage();
-                });
-
-                SetHandler(_stage.Outlet, onPull: () =>
-                {
-                    if (!IsTimerActive(TimerName) && !_buffer.IsEmpty && NextElementWaitTime < 0)
-                        Push(_stage.Outlet, _buffer.Dequeue().Item2);
-
-                    if (!_willStop && !HasBeenPulled(_stage.Inlet))
-                        Pull(_stage.Inlet);
-                    CompleteIfReady();
-                });
+                SetHandler(_stage.Inlet, this);
+                SetHandler(_stage.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                if (_buffer.IsFull)
+                    _overflowStrategy();
+                else
+                {
+                    GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size - 1);
+                    if (!IsTimerActive(TimerName))
+                        ScheduleOnce(TimerName, _stage._delay);
+                }
+            }
+
+            public void OnUpstreamFinish()
+            {
+                if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName))
+                    _willStop = true;
+                else
+                    CompleteStage();
+            }
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull()
+            {
+                if (!IsTimerActive(TimerName) && !_buffer.IsEmpty && NextElementWaitTime < 0)
+                    Push(_stage.Outlet, _buffer.Dequeue().Item2);
+
+                if (!_willStop && !HasBeenPulled(_stage.Inlet))
+                    Pull(_stage.Inlet);
+                CompleteIfReady();
+            }
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             private long NextElementWaitTime => (long) _stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1)*1000*10;
 
@@ -2154,16 +2311,27 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal class
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly TakeWithin<T> _stage;
 
             public Logic(TakeWithin<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.Inlet, onPush: () => Push(stage.Outlet, Grab(stage.Inlet)));
-                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.Inlet);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey) => CompleteStage();
 
@@ -2191,7 +2359,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         #region internal classes
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly SkipWithin<T> _stage;
             private bool _allow;
@@ -2199,15 +2367,26 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(SkipWithin<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(_stage.Inlet, onPush: () =>
-                {
-                    if (_allow)
-                        Push(_stage.Outlet, Grab(_stage.Inlet));
-                    else
-                        Pull(_stage.Inlet);
-                });
-                SetHandler(_stage.Outlet, onPull: () => Pull(_stage.Inlet));
+
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                if (_allow)
+                    Push(_stage.Outlet, Grab(_stage.Inlet));
+                else
+                    Pull(_stage.Inlet);
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.Inlet);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             public override void PreStart() => ScheduleOnce("DropWithinTimer", _stage._timeout);
 
@@ -2231,13 +2410,16 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
+            private readonly Sum<T> _stage;
             private T _aggregator;
+            private readonly LambdaInHandler _rest;
 
             public Logic(Sum<T> stage) : base(stage.Shape)
             {
-                var rest = new LambdaInHandler(onPush: () =>
+                _stage = stage;
+                _rest = new LambdaInHandler(onPush: () =>
                 {
                     _aggregator = stage._reduce(_aggregator, Grab(stage.Inlet));
                     Pull(stage.Inlet);
@@ -2248,15 +2430,20 @@ namespace Akka.Streams.Implementation.Fusing
                 });
 
                 // Initial input handler
-                SetHandler(stage.Inlet, onPush: () =>
-                {
-                    _aggregator = Grab(stage.Inlet);
-                    Pull(stage.Inlet);
-                    SetHandler(stage.Inlet, rest);
-                }, onUpstreamFinish: () => FailStage(new NoSuchElementException("sum over empty stream")));
-
-                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public override void OnPush()
+            {
+                _aggregator = Grab(_stage.Inlet);
+                Pull(_stage.Inlet);
+                SetHandler(_stage.Inlet, _rest);
+            }
+
+            public override void OnUpstreamFinish() => FailStage(new NoSuchElementException("sum over empty stream"));
+
+            public override void OnPull() => Pull(_stage.Inlet);
 
             public override string ToString() => $"Sum.Logic(aggregator={_aggregator}";
         }
@@ -2284,24 +2471,31 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private const int InfiniteRetries = -1;
-            private readonly RecoverWith<TOut, TMat> _recover;
+            private readonly RecoverWith<TOut, TMat> _stage;
             private int _attempt;
 
-            public Logic(RecoverWith<TOut, TMat> recover) : base(recover.Shape)
+            public Logic(RecoverWith<TOut, TMat> stage) : base(stage.Shape)
             {
-                _recover = recover;
-                SetHandler(recover.Outlet, onPull: () => Pull(recover.Inlet));
-                SetHandler(recover.Inlet, onPush: () => Push(recover.Outlet, Grab(recover.Inlet)), onUpstreamFailure: OnFailure);
+                _stage = stage;
+
+                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, this);
             }
+
+            public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
+
+            public override void OnUpstreamFailure(Exception e) => OnFailure(e);
+
+            public override void OnPull() => Pull(_stage.Inlet);
 
             private void OnFailure(Exception ex)
             {
-                var result = _recover._partialFunction(ex);
+                var result = _stage._partialFunction(ex);
                 if (result != null &&
-                    (_recover._maximumRetries == InfiniteRetries || _attempt < _recover._maximumRetries))
+                    (_stage._maximumRetries == InfiniteRetries || _attempt < _stage._maximumRetries))
                 {
                     SwitchTo(result);
                     _attempt++;
@@ -2315,9 +2509,9 @@ namespace Akka.Streams.Implementation.Fusing
                 var sinkIn = new SubSinkInlet<TOut>(this, "RecoverWithSink");
                 sinkIn.SetHandler(new LambdaInHandler(onPush: () =>
                 {
-                    if (IsAvailable(_recover.Outlet))
+                    if (IsAvailable(_stage.Outlet))
                     {
-                        Push(_recover.Outlet, sinkIn.Grab());
+                        Push(_stage.Outlet, sinkIn.Grab());
                         sinkIn.Pull();
                     }
                 }, onUpstreamFinish: () =>
@@ -2328,7 +2522,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 Action pushOut = () =>
                 {
-                    Push(_recover.Outlet, sinkIn.Grab());
+                    Push(_stage.Outlet, sinkIn.Grab());
                     if (!sinkIn.IsClosed)
                         sinkIn.Pull();
                     else
@@ -2342,7 +2536,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }, onDownstreamFinish: () => sinkIn.Cancel());
 
                 Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
-                SetHandler(_recover.Outlet, outHandler);
+                SetHandler(_stage.Outlet, outHandler);
                 sinkIn.Pull();
             }
         }
@@ -2376,7 +2570,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly StatefulSelectMany<TIn, TOut> _stage;
             private IteratorAdapter<TOut> _currentIterator;
@@ -2389,42 +2583,47 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
                 _plainConcat = stage._concatFactory();
 
-                SetHandler(stage._in, onPush: () =>
-                {
-                    try
-                    {
-                        _currentIterator = new IteratorAdapter<TOut>(_plainConcat(Grab(stage._in)).GetEnumerator());
-                        PushPull();
-                    }
-                    catch (Exception ex)
-                    {
-                        var directive = _decider(ex);
-                        switch (directive)
-                        {
-                            case Directive.Stop:
-                                FailStage(ex);
-                                break;
-                            case Directive.Resume:
-                                if (!HasBeenPulled(_stage._in))
-                                    Pull(_stage._in);
-                                break;
-                            case Directive.Restart:
-                                RestartState();
-                                if (!HasBeenPulled(_stage._in))
-                                    Pull(_stage._in);
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
-                    }
-                }, onUpstreamFinish: () =>
-                {
-                    if (!HasNext)
-                        CompleteStage();
-                });
-
-                SetHandler(stage._out, onPull: PushPull);
+                SetHandler(stage._in, this);
+                SetHandler(stage._out, this);
             }
+
+            public override void OnPush()
+            {
+                try
+                {
+                    _currentIterator = new IteratorAdapter<TOut>(_plainConcat(Grab(_stage._in)).GetEnumerator());
+                    PushPull();
+                }
+                catch (Exception ex)
+                {
+                    var directive = _decider(ex);
+                    switch (directive)
+                    {
+                        case Directive.Stop:
+                            FailStage(ex);
+                            break;
+                        case Directive.Resume:
+                            if (!HasBeenPulled(_stage._in))
+                                Pull(_stage._in);
+                            break;
+                        case Directive.Restart:
+                            RestartState();
+                            if (!HasBeenPulled(_stage._in))
+                                Pull(_stage._in);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (!HasNext)
+                    CompleteStage();
+            }
+
+            public override void OnPull() => PushPull();
 
             private void RestartState()
             {

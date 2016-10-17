@@ -43,7 +43,7 @@ namespace Akka.Streams.Dsl
 
 	public class ZipWith<<#= typeParams #>, TOut> : GraphStage<<#= fanInShape #>>
 	{
-		private sealed class Logic : GraphStageLogic
+		private sealed class Logic : OutGraphStageLogic
 		{
 			private readonly ZipWith<<#= typeParams #>, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
@@ -64,10 +64,13 @@ namespace Akka.Streams.Dsl
 				});
 				<# } #>
 
-				SetHandler(_stage.Out, onPull: () => {
-					_pending += stage.Shape.Inlets.Length;
-                    if (_pending == 0) PushAll();
-				});
+				SetHandler(_stage.Out, this);
+			}
+
+			public override void OnPull()
+			{
+				_pending += _stage.Shape.Inlets.Length;
+                if (_pending == 0) PushAll();
 			}
 
 			private void PushAll()
