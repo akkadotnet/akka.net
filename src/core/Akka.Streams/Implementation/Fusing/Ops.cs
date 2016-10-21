@@ -699,9 +699,6 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <summary>
-    /// INTERNAL API
-    /// </summary>
     public sealed class Aggregate<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -789,6 +786,147 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         public override string ToString() => "Aggregate";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class AggregateAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    {
+        #region Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly AggregateAsync<TIn, TOut> _stage;
+            private readonly Decider _decider;
+            private readonly Action<Result<TOut>> _taskCallback;
+            private TOut _aggregator;
+            private Task<TOut> _aggregating;
+            
+
+            public Logic(AggregateAsync<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                _aggregator = stage._zero;
+                _aggregating = Task.FromResult(_aggregator);
+
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+
+                _taskCallback = GetAsyncCallback<Result<TOut>>(result =>
+                {
+                    if (result.IsSuccess && result.Value != null)
+                    {
+                        var update = result.Value;
+                        _aggregator = update;
+
+                        if (IsClosed(stage.In))
+                        {
+                            Push(stage.Out, update);
+                            CompleteStage();
+                        }
+                        else if (IsAvailable(stage.Out) && !HasBeenPulled(stage.In))
+                            TryPull(stage.In);
+                    }
+                    else
+                    {
+                        var ex = !result.IsSuccess
+                            ? result.Exception
+                            : ReactiveStreamsCompliance.ElementMustNotBeNullException;
+
+                        var supervision = _decider(ex);
+                        if (supervision == Directive.Stop)
+                            FailStage(ex);
+                        else
+                        {
+                            if(supervision == Directive.Restart)
+                                OnRestart();
+
+                            if (IsClosed(stage.In))
+                            {
+                                Push(stage.Out, _aggregator);
+                                CompleteStage();
+                            }
+                            else if (IsAvailable(stage.Out) && !HasBeenPulled(stage.In))
+                                TryPull(stage.In);
+                        }
+                    }
+                });
+
+                SetHandler(stage.In, this);
+                SetHandler(stage.Out, this);
+            }
+
+            public override void OnPush()
+            {
+                try
+                {
+                    _aggregating = _stage._aggregate(_aggregator, Grab(_stage.In));
+                    if (_aggregating.IsCompleted)
+                        _taskCallback(Result.FromTask(_aggregating));
+                    else
+                        _aggregating.ContinueWith(t => _taskCallback(Result.FromTask(t)),
+                            TaskContinuationOptions.ExecuteSynchronously);
+
+                }
+                catch (Exception ex)
+                {
+                    var supervision = _decider(ex);
+                    if (supervision == Directive.Stop)
+                    {
+                        FailStage(ex);
+                        return;
+                    }
+
+                    if (supervision == Directive.Restart)
+                        OnRestart();
+
+                    // just ignore on Resume
+
+                    TryPull(_stage.In);
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+            }
+
+            public override void OnPull()
+            {
+                if(!HasBeenPulled(_stage.In))
+                    TryPull(_stage.In);
+            }
+
+            private void OnRestart() => _aggregator = _stage._zero;
+
+            public override string ToString() => $"AggregateAsync.Logic(completed={_aggregating.IsCompleted})";
+        }
+
+        #endregion
+
+        private readonly TOut _zero;
+        private readonly Func<TOut, TIn, Task<TOut>> _aggregate;
+
+        public AggregateAsync(TOut zero, Func<TOut, TIn, Task<TOut>> aggregate)
+        {
+            _zero = zero;
+            _aggregate = aggregate;
+
+            Shape = new FlowShape<TIn, TOut>(In, Out);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.AggregateAsync;
+
+        public Inlet<TIn> In { get; } = new Inlet<TIn>("AggregateAsync.in");
+
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("AggregateAsync.out");
+
+        public override FlowShape<TIn, TOut> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(this, inheritedAttributes);
+
+        public override string ToString() => "AggregateAsync";
     }
 
     /// <summary>

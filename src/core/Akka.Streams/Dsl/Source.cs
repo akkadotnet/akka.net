@@ -201,6 +201,17 @@ namespace Akka.Streams.Dsl
             => RunWith(Sink.Aggregate(zero, aggregate), materializer);
 
         /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a asnyc <paramref name="aggregate"/> function.
+        /// The given function is invoked for every received element, giving it its previous
+        /// output (or the given <paramref name="zero"/> value) and the element as input.
+        /// The returned <see cref="Task{TOut2}"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with Failure
+        /// if there is a failure signaled in the stream.
+        /// </summary>
+        public Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, Func<TOut2, TOut, Task<TOut2>> aggregate, IMaterializer materializer)
+            => RunWith(Sink.AggregateAsync(zero, aggregate), materializer);
+
+        /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a reduce function.
         /// The given function is invoked for every received element, giving it its previous
         /// output (from the second element) and the element as input.

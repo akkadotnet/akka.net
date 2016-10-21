@@ -78,6 +78,7 @@
     <Compile Include="Dsl\ActorRefSourceSpec.cs" />
     <Compile Include="Dsl\AttributesSpec.cs" />
     <Compile Include="Dsl\BidiFlowSpec.cs" />
+    <Compile Include="Dsl\FlowAggregateAsyncSpec.cs" />
     <Compile Include="Dsl\FlowBatchSpec.cs" />
     <Compile Include="Dsl\FlowBatchWeightedSpec.cs" />
     <Compile Include="Dsl\FlowCollectSpec.cs" />

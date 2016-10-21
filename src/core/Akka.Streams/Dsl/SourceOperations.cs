@@ -477,6 +477,31 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Similar to <see cref="Aggregate{TOut1,TOut2,TMat}"/> but with an asynchronous function.
+        /// Applies the given function towards its current and next value,
+        /// yielding the next current value.
+        /// 
+        /// If the function <paramref name="fold"/> returns a failure and the supervision decision is
+        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// the stream will continue.
+        /// <para>
+        /// Emits when upstream completes
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes when upstream completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// 
+        /// <seealso cref="Aggregate{TOut1,TOut2,TMat}"/>
+        /// </summary>
+        public static Source<TOut2, TMat> AggregateAsync<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero,
+            Func<TOut2, TOut1, Task<TOut2>> fold)
+        {
+            return (Source<TOut2, TMat>)InternalFlowOperations.AggregateAsync(flow, zero, fold);
+        }
+
+        /// <summary>
         /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 

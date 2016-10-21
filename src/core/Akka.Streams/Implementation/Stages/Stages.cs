@@ -39,6 +39,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes SkipWhile = Attributes.CreateName("skipWhile");
         public static readonly Attributes Scan = Attributes.CreateName("scan");
         public static readonly Attributes Aggregate = Attributes.CreateName("aggregate");
+        public static readonly Attributes AggregateAsync = Attributes.CreateName("aggregateAsync");
         public static readonly Attributes Buffer = Attributes.CreateName("buffer");
         public static readonly Attributes Batch = Attributes.CreateName("batch");
         public static readonly Attributes BatchWeighted = Attributes.CreateName("batchWeighted");

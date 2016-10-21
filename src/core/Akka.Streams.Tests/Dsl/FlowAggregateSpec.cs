@@ -29,72 +29,59 @@ namespace Akka.Streams.Tests.Dsl
 
         private static IEnumerable<int> Input => Enumerable.Range(1, 100);
         private static int Expected => Input.Sum();
-        private static Source<int, NotUsed> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
-
-        private static Source<int, NotUsed> FoldSource =>
-            InputSource.Aggregate(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
-
-        private static Flow<int, int, NotUsed> FoldFlow =>
-            Flow.Create<int>().Where(_ => true).Select(x => x).Aggregate(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
-
-        private static Sink<int, Task<int>> FoldSink => Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
+        private static Source<int, NotUsed> InputSource => Source.From(Input);
+        private static Source<int, NotUsed> AggregateSource => InputSource.Aggregate(0, (sum, i) => sum + i);
+        private static Flow<int, int, NotUsed> AggregateFlow => Flow.Create<int>().Aggregate(0, (sum, i) => sum + i);
+        private static Sink<int, Task<int>> AggregateSink => Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
 
         [Fact]
-        public void A_Aggregate_must_work_when_using_Source_RunFold()
+        public void A_Aggregate_must_work_when_using_Source_RunAggregate()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var task = InputSource.RunAggregate(0, (sum, i) => sum + i, Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Be(Expected);
+                task.AwaitResult().Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
-        public void A_Aggregate_must_work_when_using_Source_Fold()
+        public void A_Aggregate_must_work_when_using_Source_Aggregate()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var task = FoldSource.RunWith(Sink.First<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Be(Expected);
+                var task = AggregateSource.RunWith(Sink.First<int>(), Materializer);
+                task.AwaitResult().Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
-        public void A_Aggregate_must_work_when_using_Sink_Fold()
+        public void A_Aggregate_must_work_when_using_Sink_Aggregate()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var task = InputSource.RunWith(FoldSink, Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Be(Expected);
+                var task = InputSource.RunWith(AggregateSink, Materializer);
+                task.AwaitResult().Should().Be(Expected);
             }, Materializer);
-
         }
 
         [Fact]
-        public void A_Aggregate_must_work_when_using_Flow_Fold()
+        public void A_Aggregate_must_work_when_using_Flow_Aggregate()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var task = InputSource.Via(FoldFlow).RunWith(Sink.First<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Be(Expected);
+                var task = InputSource.Via(AggregateFlow).RunWith(Sink.First<int>(), Materializer);
+                task.AwaitResult().Should().Be(Expected);
             }, Materializer);
-
         }
 
         [Fact]
-        public void A_Aggregate_must_work_when_using__Source_Aggregate_and_Flow_Aggregate_and_Sink_Fold()
+        public void A_Aggregate_must_work_when_using_Source_Aggregate_and_Flow_Aggregate_and_Sink_Aggregate()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var task = FoldSource.Via(FoldFlow).RunWith(FoldSink, Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().Be(Expected);
+                var task = AggregateSource.Via(AggregateFlow).RunWith(AggregateSink, Materializer);
+                task.AwaitResult().Should().Be(Expected);
             }, Materializer);
-
         }
 
         [Fact]
@@ -115,11 +102,10 @@ namespace Akka.Streams.Tests.Dsl
                     .And.Should()
                     .Be(error);
             }, Materializer);
-
         }
 
         [Fact]
-        public void A_Aggregate_must_complete_future_with_failure_when_folding_functions_throws()
+        public void A_Aggregate_must_complete_task_with_failure_when_Aggregateing_functions_throws()
         {
             this.AssertAllStagesStopped(() =>
             {
