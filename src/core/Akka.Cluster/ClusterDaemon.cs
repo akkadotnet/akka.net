@@ -1191,8 +1191,10 @@ namespace Akka.Cluster
         /// <param name="address">The address.</param>
         public void Leaving(Address address)
         {
+            var member = _latestGossip.Members.FirstOrDefault(m => m.Address.Equals(address));
+
             // only try to update if the node is available (in the member ring)
-            if (_latestGossip.Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up))
+            if (member?.Status == MemberStatus.Up)
             {
                 // mark node as LEAVING
                 var newMembers = _latestGossip.Members.Select(m =>
@@ -1206,6 +1208,10 @@ namespace Akka.Cluster
 
                 _log.Info("Marked address [{0}] as [{1}]", address, MemberStatus.Leaving);
                 Publish(_latestGossip);
+            }
+            else if (member?.Status == MemberStatus.Joining)
+            {
+                Downing(address);
             }
         }
 
