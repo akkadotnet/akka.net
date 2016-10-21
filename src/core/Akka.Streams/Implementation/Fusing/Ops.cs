@@ -1647,7 +1647,7 @@ namespace Akka.Streams.Implementation.Fusing
                     var holder = new Holder<TOut>(NotYetThere, _taskCallback);
                     _buffer.Enqueue(holder);
 
-                    // We dispatch the future if it's ready to optimize away
+                    // We dispatch the task if it's ready to optimize away
                     // scheduling it to an execution context
                     if (task.IsCompleted)
                     {
@@ -1714,13 +1714,10 @@ namespace Akka.Streams.Implementation.Fusing
             private void HolderCompleted(Holder<TOut> holder)
             {
                 var element = holder.Element;
-                if (element.IsSuccess)
-                {
-                    if (IsAvailable(_stage.Out))
-                        PushOne();
-                }
-                else if (_decider(element.Exception) == Directive.Stop)
+                if(!element.IsSuccess && _decider(element.Exception) == Directive.Stop)
                     FailStage(element.Exception);
+                else if (IsAvailable(_stage.Out))
+                    PushOne();
             }
             
             public override string ToString() => $"SelectAsync.Logic(buffer={_buffer})";
@@ -1795,7 +1792,7 @@ namespace Akka.Streams.Implementation.Fusing
                         FailStage(e);
                 }
 
-                if (Todo < _stage._parallelism)
+                if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
                     TryPull(_stage.In);
             }
 

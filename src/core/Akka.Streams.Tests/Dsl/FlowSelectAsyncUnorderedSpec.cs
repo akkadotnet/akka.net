@@ -236,8 +236,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be("happy");
+                t.AwaitResult().Should().Be("happy");
             }, Materializer);
         }
 

@@ -258,9 +258,8 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.ShouldAllBeEquivalentTo(new[] {1, 2});
+                
+                t.AwaitResult().ShouldAllBeEquivalentTo(new[] {1, 2});
             }, Materializer);
         }
 
