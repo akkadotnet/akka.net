@@ -56,8 +56,8 @@ namespace Akka.Streams.Tests.Dsl
                 var nextChunkSize = _rechunkBuffer.IsEmpty
                     ? 0
                     : ThreadLocalRandom.Current.Next(0, _rechunkBuffer.Count + 1);
-                var newChunk = _rechunkBuffer.Take(nextChunkSize);
-                _rechunkBuffer = _rechunkBuffer.Drop(nextChunkSize);
+                var newChunk = _rechunkBuffer.Take(nextChunkSize).Compact();
+                _rechunkBuffer = _rechunkBuffer.Drop(nextChunkSize).Compact();
                 return context.IsFinishing && _rechunkBuffer.IsEmpty
                     ? context.PushAndFinish(newChunk)
                     : context.Push(newChunk);
@@ -93,15 +93,15 @@ namespace Akka.Streams.Tests.Dsl
             {
                 foreach (var delimiter in DelimiterBytes)
                 {
-                    var task = Source.From(CompleteTestSequence(delimiter))
+                    var testSequence = CompleteTestSequence(delimiter).ToList();
+                    var task = Source.From(testSequence)
                         .Select(x => x + delimiter)
                         .Via(Rechunk)
                         .Via(Framing.Delimiter(delimiter, 256))
-                        .Grouped(1000)
-                        .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
+                        .RunWith(Sink.Seq<ByteString>(), Materializer);
 
                     task.Wait(TimeSpan.FromDays(3)).Should().BeTrue();
-                    task.Result.ShouldAllBeEquivalentTo(CompleteTestSequence(delimiter));
+                    task.Result.ShouldAllBeEquivalentTo(testSequence);
                 }
             }
         }

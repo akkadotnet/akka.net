@@ -261,7 +261,7 @@ namespace Akka.Streams.Dsl
                     {
                         // Found a match
                         var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
-                        _buffer = _buffer.Drop(possibleMatchPosition + _stage._separatorBytes.Count);
+                        _buffer = _buffer.Drop(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
                         _nextPossibleMatch = 0;
                         Push(_stage.Out, parsedFrame);
 
