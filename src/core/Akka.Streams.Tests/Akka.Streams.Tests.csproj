@@ -146,6 +146,7 @@
     <Compile Include="Dsl\GraphZipNSpec.cs" />
     <Compile Include="Dsl\GraphZipWithNSpec.cs" />
     <Compile Include="Dsl\GraphZipWithSpec.cs" />
+    <Compile Include="Dsl\HubSpec.cs" />
     <Compile Include="Dsl\JsonFramingSpec.cs" />
     <Compile Include="Dsl\LazySinkSpec.cs" />
     <Compile Include="Dsl\LiftExtensions.cs" />
