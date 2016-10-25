@@ -216,8 +216,6 @@ namespace Akka.Streams.Implementation.Fusing
         public const int KeepGoingFlag = 0x4000000;
         public const int KeepGoingMask = 0x3ffffff;
 
-        public const int ChaseLimit = 16;
-
         // Using an Object-array avoids holding on to the GraphInterpreter class
         // when this accidentally leaks onto threads that are not stopped when this
         // class should be unloaded.
@@ -283,14 +281,6 @@ namespace Akka.Streams.Implementation.Fusing
             FuzzingMode = fuzzingMode;
             Context = context;
 
-            //ConnectionSlots = new object[assembly.ConnectionCount];
-            //for (var i = 0; i < ConnectionSlots.Length; i++)
-            //    ConnectionSlots[i] = Empty.Instance;
-
-            //PortStates = new int[assembly.ConnectionCount];
-            //for (var i = 0; i < PortStates.Length; i++)
-            //    PortStates[i] = InReady;
-
             RunningStagesCount = Assembly.Stages.Length;
 
             _shutdownCounter = new int[assembly.Stages.Length];
@@ -303,6 +293,8 @@ namespace Akka.Streams.Implementation.Fusing
             _eventQueue = new Connection[1 << (32 - (assembly.ConnectionCount - 1).NumberOfLeadingZeros())];
             _mask = _eventQueue.Length - 1;
         }
+
+        private int ChaseLimit => FuzzingMode ? 0 : 16;
 
         internal GraphStageLogic ActiveStage { get; private set; }
 
