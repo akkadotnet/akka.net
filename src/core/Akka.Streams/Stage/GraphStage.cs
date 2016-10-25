@@ -1195,7 +1195,7 @@ namespace Akka.Streams.Stage
         /// The messages are looped through the <see cref="GetAsyncCallback{T}"/> mechanism of <see cref="GraphStage{TShape}"/> so they are safe to modify
         /// internal state of this stage.
         /// 
-        /// This method must not (the earliest) be called after the <see cref="GraphStageLogic"/> constructor has finished running,
+        /// This method must (the earliest) be called after the <see cref="GraphStageLogic"/> constructor has finished running,
         /// for example from the <see cref="PreStart"/> callback the graph stage logic provides.
         /// 
         /// Created <see cref="StageActorRef"/> to get messages and watch other actors in synchronous way.
