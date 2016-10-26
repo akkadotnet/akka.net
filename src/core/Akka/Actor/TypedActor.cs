@@ -33,14 +33,17 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         protected override sealed bool Receive(object message)
         {
-            MethodInfo method = GetType().GetMethod("Handle", new[] {message.GetType()});
-            if (method == null)
-            {
-                return false;
-            }
-
-            method.Invoke(this, new[] {message});
+            //dynamic method resolution will resolve the method on runtime
+            //it is static cached for each type to perform well
+            Handle((dynamic)message); 
             return true;
+        }
+        
+        //default handler
+        protected virtual void Handle(Object message)
+        {          
+            //todo: Handle should return wasHandled as Receive
+            Unhandled(message);
         }
     }
 }
