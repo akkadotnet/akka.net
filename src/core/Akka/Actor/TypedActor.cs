@@ -40,7 +40,7 @@ namespace Akka.Actor
         }
         
         //default handler
-        protected virtual void Handle(Object message)
+        protected virtual void Handle(object message)
         {          
             //todo: Handle should return wasHandled as Receive
             Unhandled(message);
