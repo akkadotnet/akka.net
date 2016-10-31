@@ -82,13 +82,12 @@ namespace Akka.Serialization
 
                 Serializer serializer;
 
-                namedSerializers.TryGetValue(serializerName, out serializer);
-
-                if (serializer == null)
+                if (!namedSerializers.TryGetValue(serializerName, out serializer))
                 {
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
                 }
+
                 _serializerMap.Add(messageType, serializer);
             }
         }
