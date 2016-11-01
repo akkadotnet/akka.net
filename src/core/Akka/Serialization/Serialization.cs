@@ -80,12 +80,14 @@ namespace Akka.Serialization
                     continue;
                 }
 
-                var serializer = namedSerializers[serializerName];
-                if (serializer == null)
+                Serializer serializer;
+
+                if (!namedSerializers.TryGetValue(serializerName, out serializer))
                 {
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
                 }
+
                 _serializerMap.Add(messageType, serializer);
             }
         }
