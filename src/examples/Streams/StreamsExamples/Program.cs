@@ -5,17 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-﻿using System;
-using System.IO;
-using System.Net;
 using Akka.Actor;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Akka.Configuration;
-using Akka.IO;
 
 namespace StreamsExamples
 {
@@ -23,9 +18,10 @@ namespace StreamsExamples
     {
         static void Main(string[] args)
         {
+            Run().Wait();
         }
 
-        static async Task Run(Stream instream)
+        static async Task Run()
         {
             var oneSecond = TimeSpan.FromSeconds(1);
 
@@ -38,8 +34,8 @@ namespace StreamsExamples
                     .Intersperse(", ");
                 var sink = Sink.ForEach<string>(Console.WriteLine);
 
-                var runnableGraph = source.Via(flow).To(sink);
-                runnableGraph.Run(materializer);
+                var runnableGraph = source.Via(flow).ToMaterialized(sink, Keep.Right);
+                await runnableGraph.Run(materializer);
             }
         }
     }
