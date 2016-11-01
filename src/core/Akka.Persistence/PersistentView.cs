@@ -209,7 +209,7 @@ namespace Akka.Persistence
         {
             if (_log.IsErrorEnabled)
                 _log.Error(cause, "Persistence view failure when replaying events for persistenceId [{0}]. " +
-                                  "Last known sequence number [{}]", PersistenceId, LastSequenceNr);
+                                  "Last known sequence number [{1}]", PersistenceId, LastSequenceNr);
         }
 
         private void ChangeState(ViewState state)
