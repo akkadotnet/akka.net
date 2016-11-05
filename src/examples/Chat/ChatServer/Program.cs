@@ -24,9 +24,6 @@ akka {
     }
     remote {
         helios.tcp {
-            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-            applied-adapters = []
-            transport-protocol = tcp
             port = 8081
             hostname = 0.0.0.0
             public-hostname = localhost
