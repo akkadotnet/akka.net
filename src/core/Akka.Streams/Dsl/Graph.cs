@@ -34,7 +34,7 @@ namespace Akka.Streams.Dsl
     {
         #region graph stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
             private readonly Merge<TIn, TOut> _stage;
             private readonly FixedSizeBuffer<Inlet<TIn>> _pendingQueue;
@@ -76,14 +76,17 @@ namespace Akka.Streams.Dsl
                     });
                 }
 
-                SetHandler(outlet, onPull: () =>
-                {
-                    if (IsPending)
-                        DequeueAndDispatch();
-                });
+                SetHandler(outlet, this);
+            }
+
+            public override void OnPull()
+            {
+                if (IsPending)
+                    DequeueAndDispatch();
             }
 
             private bool AreUpstreamsClosed => _runningUpstreams == 0;
+
             private bool IsPending => _pendingQueue.NonEmpty;
 
             public override void PreStart()
@@ -113,7 +116,6 @@ namespace Akka.Streams.Dsl
                     // inlet was closed after being enqueued
                     // try next in queue
                     DequeueAndDispatch();
-
             }
         }
 
@@ -209,7 +211,7 @@ namespace Akka.Streams.Dsl
             public Inlet<T> Preferred { get; }
         }
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             /// <summary>
             /// This determines the unfairness of the merge:
@@ -235,14 +237,7 @@ namespace Akka.Streams.Dsl
                 }
 
                 SetHandler(_stage.Out, EagerTerminateOutput);
-
-                SetHandler(_stage.Preferred,
-                    onUpstreamFinish: OnComplete,
-                    onPush: () =>
-                    {
-                        if (_preferredEmitting == MaxEmitting) { /* blocked */ }
-                        else EmitPreferred();
-                    });
+                SetHandler(_stage.Preferred, this);
 
                 for (int i = 0; i < stage._secondaryPorts; i++)
                 {
@@ -251,12 +246,28 @@ namespace Akka.Streams.Dsl
 
                     SetHandler(port, onPush: () =>
                     {
-                        if (_preferredEmitting > 0) { /* blocked */ }
-                        else Emit(_stage.Out, Grab(port), pullPort);
+                        if (_preferredEmitting > 0)
+                        {
+                             /* blocked */
+                        }
+                        else
+                            Emit(_stage.Out, Grab(port), pullPort);
                     },
                     onUpstreamFinish: OnComplete);
                 }
             }
+
+            public override void OnPush()
+            {
+                if (_preferredEmitting == MaxEmitting)
+                {
+                     /* blocked */
+                }
+                else
+                    EmitPreferred();
+            }
+
+            public override void OnUpstreamFinish() => OnComplete();
 
             private void OnComplete()
             {
@@ -346,7 +357,7 @@ namespace Akka.Streams.Dsl
     {
         #region stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
             private readonly Interleave<TIn, TOut> _stage;
             private int _counter;
@@ -387,11 +398,13 @@ namespace Akka.Streams.Dsl
                     });
                 }
 
-                SetHandler(_stage.Out, onPull: () =>
-                {
-                    if (!HasBeenPulled(CurrentUpstream))
-                        TryPull(CurrentUpstream);
-                });
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void OnPull()
+            {
+                if (!HasBeenPulled(CurrentUpstream))
+                    TryPull(CurrentUpstream);
             }
 
             private bool IsUpstreamClosed => _runningUpstreams == 0;
@@ -578,7 +591,7 @@ namespace Akka.Streams.Dsl
     public sealed class Broadcast<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region stage logic
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             private readonly Broadcast<T> _stage;
             private readonly bool[] _pending;
@@ -590,26 +603,10 @@ namespace Akka.Streams.Dsl
                 _stage = stage;
                 _pendingCount = _downstreamsRunning = stage._outputPorts;
                 _pending = new bool[stage._outputPorts];
-                for (int i = 0; i < stage._outputPorts; i++) _pending[i] = true;
+                for (int i = 0; i < stage._outputPorts; i++)
+                    _pending[i] = true;
 
-                SetHandler(_stage.In, onPush: () =>
-                {
-                    _pendingCount = _downstreamsRunning;
-                    var element = Grab(stage.In);
-                    var idx = 0;
-                    var enumerator = stage.Shape.Outlets.GetEnumerator();
-                    while (enumerator.MoveNext())
-                    {
-                        var o = (Outlet<T>)enumerator.Current;
-                        var i = idx;
-                        if (!IsClosed(o))
-                        {
-                            Push(o, element);
-                            _pending[i] = true;
-                        }
-                        idx++;
-                    }
-                });
+                SetHandler(_stage.In, this);
 
                 var outIdx = 0;
                 var outEnumerator = stage.Shape.Outlets.GetEnumerator();
@@ -639,6 +636,25 @@ namespace Akka.Streams.Dsl
                         }
                     });
                     outIdx++;
+                }
+            }
+
+            public override void OnPush()
+            {
+                _pendingCount = _downstreamsRunning;
+                var element = Grab(_stage.In);
+                var idx = 0;
+                var enumerator = _stage.Shape.Outlets.GetEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    var o = (Outlet<T>)enumerator.Current;
+                    var i = idx;
+                    if (!IsClosed(o))
+                    {
+                        Push(o, element);
+                        _pending[i] = true;
+                    }
+                    idx++;
                 }
             }
 
@@ -694,45 +710,19 @@ namespace Akka.Streams.Dsl
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
+            private readonly Partition<T> _stage;
             private object _outPendingElement;
             private int _outPendingIndex;
             private int _downstreamRunning;
 
             public Logic(Partition<T> stage) : base(stage.Shape)
             {
+                _stage = stage;
                 _downstreamRunning = stage._outputPorts;
 
-                SetHandler(stage.In, onPush: () =>
-                {
-                    var element = Grab(stage.In);
-                    var index = stage._partitioner(element);
-                    if (index < 0 || index >= stage._outputPorts)
-                        FailStage(
-                            new PartitionOutOfBoundsException(
-                                $"partitioner must return an index in the range [0,{stage._outputPorts - 1}]. returned: [{index}] for input [{element.GetType().Name}]."));
-                    else if (!IsClosed(stage.Out(index)))
-                    {
-                        if (IsAvailable(stage.Out(index)))
-                        {
-                            Push(stage.Out(index), element);
-                            if (stage.Shape.Outlets.Any(IsAvailable))
-                                Pull(stage.In);
-                        }
-                        else
-                        {
-                            _outPendingElement = element;
-                            _outPendingIndex = index;
-                        }
-                    }
-                    else if (stage.Shape.Outlets.Any(IsAvailable))
-                        Pull(stage.In);
-                }, onUpstreamFinish: () =>
-                {
-                    if(_outPendingElement == null)
-                        CompleteStage();
-                });
+                SetHandler(stage.In, this);
 
                 for (var i = 0; i < stage._outputPorts; i++)
                 {
@@ -775,6 +765,38 @@ namespace Akka.Streams.Dsl
                         }
                     });
                 }
+            }
+
+            public override void OnPush()
+            {
+                var element = Grab(_stage.In);
+                var index = _stage._partitioner(element);
+                if (index < 0 || index >= _stage._outputPorts)
+                    FailStage(
+                        new PartitionOutOfBoundsException(
+                            $"partitioner must return an index in the range [0,{_stage._outputPorts - 1}]. returned: [{index}] for input [{element.GetType().Name}]."));
+                else if (!IsClosed(_stage.Out(index)))
+                {
+                    if (IsAvailable(_stage.Out(index)))
+                    {
+                        Push(_stage.Out(index), element);
+                        if (_stage.Shape.Outlets.Any(IsAvailable))
+                            Pull(_stage.In);
+                    }
+                    else
+                    {
+                        _outPendingElement = element;
+                        _outPendingIndex = index;
+                    }
+                }
+                else if (_stage.Shape.Outlets.Any(IsAvailable))
+                    Pull(_stage.In);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_outPendingElement == null)
+                    CompleteStage();
             }
         }
 
@@ -829,7 +851,7 @@ namespace Akka.Streams.Dsl
     public sealed class Balance<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region stage logic
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             private readonly Balance<T> _stage;
             private readonly FixedSizeBuffer<Outlet<T>> _pendingQueue;
@@ -843,7 +865,7 @@ namespace Akka.Streams.Dsl
 
                 _needDownstreamPulls = _stage._waitForAllDownstreams ? _stage._outputPorts : 0;
 
-                SetHandler(_stage.In, onPush: DequeueAndDispatch);
+                SetHandler(_stage.In, this);
 
                 foreach (var outlet in _stage.Shape.Outs)
                 {
@@ -882,6 +904,8 @@ namespace Akka.Streams.Dsl
                     });
                 }
             }
+
+            public override void OnPush() => DequeueAndDispatch();
 
             private bool NoPending => _pendingQueue.IsEmpty;
 
@@ -1069,7 +1093,7 @@ namespace Akka.Streams.Dsl
     {
         #region Logic 
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWithN<TIn, TOut> _stage;
             private int _pending;
@@ -1095,12 +1119,14 @@ namespace Akka.Streams.Dsl
                     });
                 });
 
-                SetHandler(stage.Out, onPull: () =>
-                {
-                    _pending += stage._n;
-                    if(_pending == 0)
-                        PushAll();
-                });
+                SetHandler(stage.Out, this);
+            }
+
+            public override void OnPull()
+            {
+                _pending += _stage._n;
+                if (_pending == 0)
+                    PushAll();
             }
 
             private void PushAll()
@@ -1173,11 +1199,14 @@ namespace Akka.Streams.Dsl
     {
         #region stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
-            public Logic(Shape shape, Concat<TIn, TOut> stage) : base(shape)
+            private readonly Concat<TIn, TOut> _stage;
+            private int _activeStream = 0;
+
+            public Logic(Concat<TIn, TOut> stage) : base(stage.Shape)
             {
-                var activeStream = 0;
+                _stage = stage;
                 var iidx = 0;
                 var inEnumerator = stage.Shape.Ins.GetEnumerator();
                 while (inEnumerator.MoveNext())
@@ -1188,20 +1217,22 @@ namespace Akka.Streams.Dsl
                         onPush: () => Push(stage.Out, Grab(i)),
                         onUpstreamFinish: () =>
                         {
-                            if (idx == activeStream)
+                            if (idx == _activeStream)
                             {
-                                activeStream++;
+                                _activeStream++;
                                 // skip closed inputs
-                                while (activeStream < stage._inputPorts && IsClosed(stage.In(activeStream))) activeStream++;
-                                if (activeStream == stage._inputPorts) CompleteStage();
-                                else if (IsAvailable(stage.Out)) Pull(stage.In(activeStream));
+                                while (_activeStream < stage._inputPorts && IsClosed(stage.In(_activeStream))) _activeStream++;
+                                if (_activeStream == stage._inputPorts) CompleteStage();
+                                else if (IsAvailable(stage.Out)) Pull(stage.In(_activeStream));
                             }
                         });
                     iidx++;
                 }
 
-                SetHandler(stage.Out, onPull: () => Pull(stage.In(activeStream)));
+                SetHandler(stage.Out, this);
             }
+
+            public override void OnPull() => Pull(_stage.In(_activeStream));
         }
 
         #endregion
@@ -1228,6 +1259,108 @@ namespace Akka.Streams.Dsl
 
         public override UniformFanInShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    }
+
+
+    public static class OrElse
+    {
+        public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>() => new OrElse<T>();
+    }
+
+    /// <summary>
+    /// Takes two streams and passes the first through, the secondary stream is only passed
+    /// through if the primary stream completes without passing any elements through. When
+    /// the first element is passed through from the primary the secondary is cancelled.
+    /// Both incoming streams are materialized when the stage is materialized.
+    ///
+    /// On errors the stage is failed regardless of source of the error.
+    ///
+    /// '''Emits when''' element is available from primary stream or the primary stream closed without emitting any elements and an element
+    ///                  is available from the secondary stream
+    ///
+    /// '''Backpressures when''' downstream backpressures
+    ///
+    /// '''Completes when''' the primary stream completes after emitting at least one element, when the primary stream completes
+    ///                      without emitting and the secondary stream already has completed or when the secondary stream completes
+    ///
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
+    public sealed class OrElse<T> : GraphStage<UniformFanInShape<T, T>>
+    {
+        #region Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly OrElse<T> _stage;
+            private Inlet<T> _currentIn;
+            private bool _primaryPushed;
+
+            public Logic(OrElse<T> stage):base(stage.Shape)
+            {
+                _stage = stage;
+                _currentIn = stage.Primary;
+
+                SetHandler(stage.Out, this);
+                SetHandler(stage.Primary, this);
+
+                SetHandler(stage.Secondary,
+                    onPush: () => Push(stage.Out, Grab(stage.Secondary)),
+                    onUpstreamFinish: () =>
+                    {
+                        if (IsClosed(stage.Primary))
+                            CompleteStage();
+                    });
+            }
+
+            public override void OnPush()
+            {
+                // for the primary inHandler
+                if (!_primaryPushed)
+                {
+                    _primaryPushed = true;
+                    Cancel(_stage.Secondary);
+                }
+
+                var element = Grab(_stage.Primary);
+                Push(_stage.Out, element);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                // for the primary inHandler
+                if (!_primaryPushed && !IsClosed(_stage.Secondary))
+                {
+                    _currentIn = _stage.Secondary;
+                    if (IsAvailable(_stage.Out))
+                        Pull(_stage.Secondary);
+                }
+                else
+                    CompleteStage();
+            }
+
+            public override void OnPull() => Pull(_currentIn);
+        }
+
+        #endregion
+
+        public OrElse()
+        {
+            Shape = new UniformFanInShape<T, T>(Out, Primary, Secondary);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.OrElse;
+
+        public Inlet<T> Primary { get; }   = new Inlet<T>("OrElse.primary");
+
+        public Inlet<T> Secondary { get; } = new Inlet<T>("OrElse.secondary");
+
+        public Outlet<T> Out { get; } = new Outlet<T>("OrElse.out");
+
+        public override UniformFanInShape<T, T> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "OrElse";
     }
 }

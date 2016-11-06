@@ -262,12 +262,28 @@ namespace Akka.Streams.Dsl
         /// The returned <see cref="Task"/> will be completed with value of the final
         /// function evaluation when the input stream ends, or completed with the streams exception
         /// if there is a failure signaled in the stream.
+        /// <seealso cref="AggregateAsync{TIn,TOut}"/>
         /// </summary>
         public static Sink<TIn, Task<TOut>> Aggregate<TIn, TOut>(TOut zero, Func<TOut, TIn, TOut> aggregate)
             => Flow.Create<TIn>()
                 .Aggregate(zero, aggregate)
                 .ToMaterialized(First<TOut>(), Keep.Right)
                 .Named("AggregateSink");
+
+        /// <summary>
+        /// A <see cref="Sink{TIn, Task}"/> that will invoke the given asynchronous function for every received element,
+        /// giving it its previous output (or the given <paramref name="zero"/> value) and the element as input.
+        /// The returned <see cref="Task"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with "Failure"
+        /// if there is a failure signaled in the stream.
+        /// 
+        /// <seealso cref="Aggregate{TIn,TOut}"/>
+        /// </summary>
+        public static Sink<TIn, Task<TOut>> AggregateAsync<TIn, TOut>(TOut zero, Func<TOut, TIn, Task<TOut>> aggregate)
+            => Flow.Create<TIn, Task<TOut>>()
+                .AggregateAsync(zero, aggregate)
+                .ToMaterialized(First<TOut>(), Keep.Right)
+                .Named("AggregateAsyncSink");
 
         /// <summary>
         /// A <see cref="Sink{TIn,Task}"/> that will invoke the given <paramref name="reduce"/> for every received element, giving it its previous

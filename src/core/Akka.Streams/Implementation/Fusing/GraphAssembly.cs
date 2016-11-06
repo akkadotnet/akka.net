@@ -180,7 +180,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var owner = InletOwners[i];
                     var logic = logics[owner];
-                    var h = logic.Handlers[inlet.Id] as InHandler;
+                    var h = logic.Handlers[inlet.Id] as IInHandler;
 
                     if (h == null) throw new IllegalStateException($"No handler defined in stage {logic} for port {inlet}");
                     connection.InHandler = h;
@@ -194,7 +194,7 @@ namespace Akka.Streams.Implementation.Fusing
                     var owner = OutletOwners[i];
                     var logic = logics[owner];
                     var inCount = logic.InCount;
-                    var h = logic.Handlers[outlet.Id + inCount] as OutHandler;
+                    var h = logic.Handlers[outlet.Id + inCount] as IOutHandler;
 
                     if (h == null) throw new IllegalStateException($"No handler defined in stage {logic} for port {outlet}");
                     connection.OutHandler = h;
