@@ -148,7 +148,13 @@ namespace Akka.Cluster.Tests
                 // current node should be marked as leaving, but not removed yet
                 AwaitCondition(() => _cluster.State.Members
                     .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving);
-                ExpectNoMsg();
+            });
+
+            // can't run this inside Within block
+            ExpectNoMsg();
+
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
                 leaveTask.IsCompleted.Should().BeFalse();
 
                 LeaderActions(); // Leaving --> Exiting
