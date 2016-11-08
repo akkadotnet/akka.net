@@ -143,19 +143,22 @@ namespace Akka.Cluster.Tests
 
             var leaveTask = _cluster.LeaveAsync();
 
-            // current node should be marked as leaving, but not removed yet
-            AwaitCondition(() => _cluster.State.Members
-                .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving);
-            ExpectNoMsg();
-            leaveTask.IsCompleted.Should().BeFalse();
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                // current node should be marked as leaving, but not removed yet
+                AwaitCondition(() => _cluster.State.Members
+                    .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving);
+                ExpectNoMsg();
+                leaveTask.IsCompleted.Should().BeFalse();
 
-            LeaderActions(); // Leaving --> Exiting
-            AwaitCondition(() => _cluster.State.Members
-               .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting);
+                LeaderActions(); // Leaving --> Exiting
+                AwaitCondition(() => _cluster.State.Members
+                   .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting);
 
-            LeaderActions(); // Exiting --> Removed
-            ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
-            leaveTask.IsCompleted.Should().BeTrue();
+                LeaderActions(); // Exiting --> Removed
+                ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
+                leaveTask.IsCompleted.Should().BeTrue();
+            });
 
             // A second call for LeaveAsync should complete immediately
             _cluster.LeaveAsync().IsCompleted.Should().BeTrue();
