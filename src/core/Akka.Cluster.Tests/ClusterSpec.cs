@@ -143,12 +143,11 @@ namespace Akka.Cluster.Tests
 
             var leaveTask = _cluster.LeaveAsync();
 
-            Within(TimeSpan.FromSeconds(10), () =>
-            {
-                // current node should be marked as leaving, but not removed yet
-                AwaitCondition(() => _cluster.State.Members
-                    .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving);
-            });
+            // current node should be marked as leaving, but not removed yet
+            AwaitCondition(() => _cluster.State.Members
+                .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving, 
+                TimeSpan.FromSeconds(10), 
+                message: "Failed to observe node as Leaving.");
 
             // can't run this inside Within block
             ExpectNoMsg();
@@ -159,7 +158,8 @@ namespace Akka.Cluster.Tests
 
                 LeaderActions(); // Leaving --> Exiting
                 AwaitCondition(() => _cluster.State.Members
-                   .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting);
+                   .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting, 
+                   TimeSpan.FromSeconds(10), message: "Failed to observe node as Exiting.");
 
                 LeaderActions(); // Exiting --> Removed
                 ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
