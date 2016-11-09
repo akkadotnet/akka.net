@@ -7,7 +7,10 @@
 
 using Akka.Cluster;
 using System;
+using System.Collections.Immutable;
 using System.Numerics;
+using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -20,7 +23,7 @@ namespace Akka.DistributedData
     /// PN-Counters allow the counter to be incremented by tracking the
     /// increments (P) separate from the decrements (N). Both P and N are represented
     /// as two internal [[GCounter]]s. Merge is handled by merging the internal P and N
-    /// counters. The value of the counter is the value of the P counter minus
+    /// counters. The value of the counter is the value of the P _counter minus
     /// the value of the N counter.
     /// 
     /// This class is immutable, i.e. "modifying" methods return a new instance.

@@ -23,7 +23,7 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// Key for the key-value data in <see cref="Replicator"/>. The type of the data value
-    /// is defined in the key. Keys are compared equal if the `id` strings are equal,
+    /// is defined in the key. KeySet are compared equal if the `id` strings are equal,
     /// i.e. use unique identifiers.
     /// 
     /// Specific classes are provided for the built in data types, e.g. <see cref="ORSetKey{T}"/>,

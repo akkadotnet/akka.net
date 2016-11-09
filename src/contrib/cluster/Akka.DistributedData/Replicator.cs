@@ -122,7 +122,7 @@ namespace Akka.DistributedData
             .With<FlushChanges>(x => ReceiveFlushChanges())
             .With<GossipTick>(_ => ReceiveGossipTick())
             .With<ClockTick>(c => ReceiveClockTick())
-            .With<Internal.Status>(s => ReceiveStatus(s.Digests, s.Chunk, s.TotChunks))
+            .With<Internal.Status>(s => ReceiveStatus(s.Digests, s.Chunk, s.TotalChunks))
             .With<Gossip>(g => ReceiveGossip(g.UpdatedData, g.SendBack))
             .With<Subscribe>(s => ReceiveSubscribe(s.Key, s.Subscriber))
             .With<Unsubscribe>(u => ReceiveUnsubscribe(u.Key, u.Subscriber))

@@ -6,10 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
+using System.Text;
+using Akka.Actor;
+using Akka.Util;
 using UniqueAddress = Akka.Cluster.UniqueAddress;
 
 namespace Akka.DistributedData
@@ -19,7 +23,11 @@ namespace Akka.DistributedData
     /// with <see cref="PNCounter"/> values. 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
-    public class PNCounterDictionary<TKey> : IReplicatedData<PNCounterDictionary<TKey>>, IRemovedNodePruning<PNCounterDictionary<TKey>>, IReplicatedDataSerialization, IEquatable<PNCounterDictionary<TKey>>
+    public class PNCounterDictionary<TKey> : IReplicatedData<PNCounterDictionary<TKey>>, 
+        IRemovedNodePruning<PNCounterDictionary<TKey>>, 
+        IReplicatedDataSerialization, 
+        IEquatable<PNCounterDictionary<TKey>>,
+        IEnumerable<KeyValuePair<TKey, BigInteger>>
     {
         public static readonly PNCounterDictionary<TKey> Empty = new PNCounterDictionary<TKey>(ORDictionary<TKey, PNCounter>.Empty);
 
@@ -30,17 +38,60 @@ namespace Akka.DistributedData
             _underlying = underlying;
         }
 
+        /// <summary>
+        /// Returns all entries stored within current <see cref="PNCounterDictionary{TKey}"/>
+        /// </summary>
         public IImmutableDictionary<TKey, BigInteger> Entries => _underlying.Entries
             .Select(kv => new KeyValuePair<TKey, BigInteger>(kv.Key, kv.Value.Value))
             .ToImmutableDictionary();
 
+        /// <summary>
+        /// Returns a counter value stored within current <see cref="PNCounterDictionary{TKey}"/>
+        /// under provided <paramref name="key"/>
+        /// </summary>
         public BigInteger this[TKey key] => _underlying[key].Value;
 
+        /// <summary>
+        /// Determines if current <see cref="PNCounterDictionary{TKey}"/> has a counter
+        /// registered under provided <paramref name="key"/>.
+        /// </summary>
         public bool ContainsKey(TKey key) => _underlying.ContainsKey(key);
 
+        /// <summary>
+        /// Determines if current <see cref="PNCounterDictionary{TKey}"/> is empty.
+        /// </summary>
         public bool IsEmpty => _underlying.IsEmpty;
 
+        /// <summary>
+        /// Returns number of entries stored within current <see cref="PNCounterDictionary{TKey}"/>.
+        /// </summary>
         public int Count => _underlying.Count;
+
+        /// <summary>
+        /// Returns all keys of the current <see cref="PNCounterDictionary{TKey}"/>.
+        /// </summary>
+        public IEnumerable<TKey> Keys => _underlying.Keys;
+
+        /// <summary>
+        /// Returns all values stored within current <see cref="PNCounterDictionary{TKey}"/>.
+        /// </summary>
+        public IEnumerable<BigInteger> Values => _underlying.Values.Select(x => x.Value);
+
+        /// <summary>
+        /// Tries to return a value under provided <paramref name="key"/>, if such entry exists.
+        /// </summary>
+        public bool TryGetValue(TKey key, out BigInteger value)
+        {
+            PNCounter counter;
+            if (_underlying.TryGetValue(key, out counter))
+            {
+                value = counter.Value;
+                return true;
+            }
+
+            value = BigInteger.Zero;
+            return false;
+        }
 
         /// <summary>
         /// Increment the counter with the delta specified.
@@ -87,10 +138,25 @@ namespace Akka.DistributedData
             return Equals(_underlying, other._underlying);
         }
 
+        public IEnumerator<KeyValuePair<TKey, BigInteger>> GetEnumerator() => 
+            _underlying.Select(x => new KeyValuePair<TKey, BigInteger>(x.Key, x.Value.Value)).GetEnumerator();
+
         public override bool Equals(object obj) => 
             obj is PNCounterDictionary<TKey> && Equals((PNCounterDictionary<TKey>) obj);
 
         public override int GetHashCode() => _underlying.GetHashCode();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder("PNCounterDictionary(");
+            foreach (var entry in Entries)
+            {
+                sb.Append(entry.Key).Append("->").Append(entry.Value).Append(", ");
+            }
+            sb.Append(')');
+            return sb.ToString();
+        }
     }
 
     public class PNCounterDictionaryKey<T> : Key<PNCounterDictionary<T>>

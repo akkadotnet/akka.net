@@ -6,8 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using Akka.Actor;
 using Akka.Cluster;
+using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -27,8 +31,6 @@ namespace Akka.DistributedData
         {
         }
     }
-
-    public interface ILWWRegister {}
     
     /// <summary>
     /// Implements a 'Last Writer Wins Register' CRDT, also called a 'LWW-Register'.
@@ -53,7 +55,7 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public class LWWRegister<T> : ILWWRegister, IReplicatedData<LWWRegister<T>>, IReplicatedDataSerialization, IEquatable<LWWRegister<T>>
+    public class LWWRegister<T> : IReplicatedData<LWWRegister<T>>, IReplicatedDataSerialization, IEquatable<LWWRegister<T>>
     {
         /// <summary>
         /// Default clock is using max between DateTime.UtcNow.Ticks and current timestamp + 1.
@@ -89,10 +91,19 @@ namespace Akka.DistributedData
             Timestamp = clock(0L, initial);
         }
 
+        /// <summary>
+        /// Returns a timestamp used to determine predecende in current register updates.
+        /// </summary>
         public long Timestamp { get; }
 
+        /// <summary>
+        /// Returns value of the current register.
+        /// </summary>
         public T Value { get; }
 
+        /// <summary>
+        /// Returns a unique address of the last cluster node, that updated current register value.
+        /// </summary>
         public UniqueAddress UpdatedBy { get; }
 
         /// <summary>
@@ -138,5 +149,7 @@ namespace Akka.DistributedData
                 return hashCode;
             }
         }
+
+        public override string ToString() => $"LWWRegister(value={Value}, timestamp={Timestamp}, updatedBy={UpdatedBy})";
     }
 }

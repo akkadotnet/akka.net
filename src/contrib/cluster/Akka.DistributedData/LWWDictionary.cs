@@ -6,10 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
+using Akka.Actor;
 using Akka.Cluster;
+using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -34,7 +38,7 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// Specialized <see cref="ORDictionary{TKey, TValue}"/> with <see cref="LWWRegister{T}"/> values.
+    /// Specialized <see cref="LWWDictionary{TKey, TValue}"/> with <see cref="LWWRegister{T}"/> values.
     /// 
     /// <see cref="LWWRegister{T}"/> relies on synchronized clocks and should only be used when the choice of
     /// value is not important for concurrent updates occurring within the clock skew.
@@ -50,8 +54,14 @@ namespace Akka.DistributedData
     /// </summary>
     [Serializable]
     public sealed class LWWDictionary<TKey, TValue> : IReplicatedData<LWWDictionary<TKey, TValue>>,
-        IRemovedNodePruning<LWWDictionary<TKey, TValue>>, IReplicatedDataSerialization, IEquatable<LWWDictionary<TKey, TValue>>
+        IRemovedNodePruning<LWWDictionary<TKey, TValue>>, 
+        IReplicatedDataSerialization, 
+        IEquatable<LWWDictionary<TKey, TValue>>,
+        IEnumerable<KeyValuePair<TKey, TValue>>
     {
+        /// <summary>
+        /// An empty instance of the <see cref="LWWDictionary{TKey,TValue}"/>
+        /// </summary>
         public static readonly LWWDictionary<TKey, TValue> Empty = new LWWDictionary<TKey, TValue>(ORDictionary<TKey, LWWRegister<TValue>>.Empty);
 
         private readonly ORDictionary<TKey, LWWRegister<TValue>> _underlying;
@@ -61,16 +71,41 @@ namespace Akka.DistributedData
             _underlying = underlying;
         }
 
+        /// <summary>
+        /// Returns all entries stored within current <see cref="LWWDictionary{TKey,TValue}"/>
+        /// </summary>
         public IImmutableDictionary<TKey, TValue> Entries => _underlying.Entries
                 .Select(kv => new KeyValuePair<TKey, TValue>(kv.Key, kv.Value.Value))
                 .ToImmutableDictionary();
 
+        /// <summary>
+        /// Returns collection of keys stored within current <see cref="LWWDictionary{TKey,TValue}"/>.
+        /// </summary>
+        public IEnumerable<TKey> Keys => _underlying.Keys;
+
+        /// <summary>
+        /// Returns collection of values stored within current <see cref="LWWDictionary{TKey,TValue}"/>.
+        /// </summary>
+        public IEnumerable<TValue> Values => _underlying.Values.Select(x => x.Value);
+
+        /// <summary>
+        /// Returns value stored under provided <paramref name="key"/>.
+        /// </summary>
         public TValue this[TKey key] => _underlying[key].Value;
 
+        /// <summary>
+        /// Determines current <see cref="LWWDictionary{TKey,TValue}"/> contains entry with provided <paramref name="key"/>.
+        /// </summary>
         public bool ContainsKey(TKey key) => _underlying.ContainsKey(key);
 
+        /// <summary>
+        /// Determines if current <see cref="LWWDictionary{TKey,TValue}"/> is empty.
+        /// </summary>
         public bool IsEmpty => _underlying.IsEmpty;
 
+        /// <summary>
+        /// Returns number of entries stored within current <see cref="LWWDictionary{TKey,TValue}"/>.
+        /// </summary>
         public int Count => _underlying.Count;
 
         /// <summary>
@@ -100,6 +135,22 @@ namespace Akka.DistributedData
         public LWWDictionary<TKey, TValue> Remove(UniqueAddress node, TKey key) => 
             new LWWDictionary<TKey, TValue>(_underlying.Remove(node, key));
 
+        /// <summary>
+        /// Tries to return a value under provided <paramref name="key"/> is such value exists.
+        /// </summary>
+        public bool TryGetValue(TKey key, out TValue value)
+        {
+            LWWRegister<TValue> register;
+            if (_underlying.TryGetValue(key, out register))
+            {
+                value = register.Value;
+                return true;
+            }
+
+            value = default(TValue);
+            return false;
+        }
+
         public LWWDictionary<TKey, TValue> Merge(LWWDictionary<TKey, TValue> other) => 
             new LWWDictionary<TKey, TValue>(_underlying.Merge(other._underlying));
 
@@ -123,12 +174,24 @@ namespace Akka.DistributedData
             return _underlying.Equals(other._underlying);
         }
 
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => 
+            _underlying.Select(x => new KeyValuePair<TKey, TValue>(x.Key, x.Value.Value)).GetEnumerator();
+
         public override bool Equals(object obj) => 
             obj is LWWDictionary<TKey, TValue> && Equals((LWWDictionary<TKey, TValue>) obj);
 
-        public override int GetHashCode()
+        public override int GetHashCode() => _underlying.GetHashCode();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public override string ToString()
         {
-            return _underlying.GetHashCode();
+            var sb = new StringBuilder("LWWDictionary(");
+            foreach (var entry in Entries)
+            {
+                sb.Append(entry.Key).Append("->").Append(entry.Value).Append(", ");
+            }
+            sb.Append(')');
+            return sb.ToString();
         }
     }
 }

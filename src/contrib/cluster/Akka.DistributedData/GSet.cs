@@ -6,8 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
+using Akka.Cluster;
 
 namespace Akka.DistributedData
 {
@@ -35,7 +39,7 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed class GSet<T> : FastMerge<GSet<T>>, IReplicatedDataSerialization, IGSet, IEquatable<GSet<T>>
+    public sealed class GSet<T> : FastMerge<GSet<T>>, IReplicatedDataSerialization, IGSet, IEquatable<GSet<T>>, IEnumerable<T>
     {
         public static readonly GSet<T> Empty = new GSet<T>();
 
@@ -77,9 +81,24 @@ namespace Akka.DistributedData
             return Elements.SetEquals(other.Elements);
         }
 
+        public IEnumerator<T> GetEnumerator() => Elements.GetEnumerator();
+
         public override bool Equals(object obj) => obj is GSet<T> && Equals((GSet<T>) obj);
 
         public override int GetHashCode() => Elements.GetHashCode();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder("GSet(");
+            foreach (var element in Elements)
+            {
+                sb.Append(element).Append(',');
+            }
+            sb.Append(")");
+
+            return sb.ToString();
+        }
     }
 
     internal interface IGSetKey

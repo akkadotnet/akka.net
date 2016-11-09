@@ -10,6 +10,8 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
+using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -45,13 +47,14 @@ namespace Akka.DistributedData
         /// <summary>
         /// Current total value of the counter.
         /// </summary>
-        public BigInteger Value => State.Aggregate(Zero, (v, acc) => v + acc.Value);
+        public BigInteger Value { get; }
 
         public GCounter() : this(ImmutableDictionary<UniqueAddress, BigInteger>.Empty) { }
 
         public GCounter(IImmutableDictionary<UniqueAddress, BigInteger> state)
         {
             State = state;
+            Value = State.Aggregate(Zero, (v, acc) => v + acc.Value);
         }
 
         /// <summary>
@@ -146,5 +149,7 @@ namespace Akka.DistributedData
         }
 
         public override string ToString() => $"GCounter({Value})";
+
+        public static implicit operator BigInteger(GCounter counter) => counter.Value;
     }
 }

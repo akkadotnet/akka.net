@@ -7,11 +7,13 @@
 
 using Akka.Cluster;
 using System.Numerics;
+using Akka.Actor;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class GCounterSpec
     {
         private readonly UniqueAddress _node1 = new UniqueAddress(new Actor.Address("akka.tcp", "Sys", "localhost", 2551), 1);

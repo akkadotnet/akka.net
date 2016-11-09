@@ -46,6 +46,8 @@ namespace Akka.DistributedData
         public IReplicatedData Merge(IReplicatedData other) => Merge((Flag) other);
         public Flag Merge(Flag other) => other.Enabled ? other : this;
         public Flag SwitchOn() => Enabled ? this : new Flag(true);
+
+        public static implicit operator bool(Flag flag) => flag.Enabled;
     }
 
     [Serializable]

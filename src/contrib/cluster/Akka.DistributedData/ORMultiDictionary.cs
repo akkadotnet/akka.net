@@ -6,10 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
+using Akka.Actor;
 using Akka.Cluster;
+using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -31,7 +35,8 @@ namespace Akka.DistributedData
     public class ORMultiDictionary<TKey, TValue> :
         IReplicatedData<ORMultiDictionary<TKey, TValue>>,
         IRemovedNodePruning<ORMultiDictionary<TKey, TValue>>,
-        IReplicatedDataSerialization, IEquatable<ORMultiDictionary<TKey, TValue>>
+        IReplicatedDataSerialization, IEquatable<ORMultiDictionary<TKey, TValue>>,
+        IEnumerable<KeyValuePair<TKey, IImmutableSet<TValue>>>
     {
         public static readonly ORMultiDictionary<TKey, TValue> Empty = new ORMultiDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty);
 
@@ -67,14 +72,42 @@ namespace Akka.DistributedData
 
         public int Count => _underlying.Count;
 
-        public ORMultiDictionary<TKey, TValue> SetItem(UniqueAddress node, TKey key, IImmutableSet<TValue> value)
+        /// <summary>
+        /// Returns all keys stored within current ORMultiDictionary.
+        /// </summary>
+        public IEnumerable<TKey> Keys => _underlying.KeySet;
+
+        /// <summary>
+        /// Returns all values stored in all buckets within current ORMultiDictionary.
+        /// </summary>
+        public IEnumerable<TValue> Values
+        {
+            get
+            {
+                foreach (var value in _underlying.Values)
+                    foreach (var v in value)
+                    {
+                        yield return v;
+                    }
+            }
+        }
+
+        /// <summary>
+        /// Sets a <paramref name="bucket"/> of values inside current dictionary under provided <paramref name="key"/>
+        /// in the context of the provided cluster <paramref name="node"/>.
+        /// </summary>
+        public ORMultiDictionary<TKey, TValue> SetItems(UniqueAddress node, TKey key, IImmutableSet<TValue> bucket)
         {
             var newUnderlying = _underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, old => 
-                value.Aggregate(old.Clear(node), (set, element) => set.Add(node, element)));
+                bucket.Aggregate(old.Clear(node), (set, element) => set.Add(node, element)));
 
             return new ORMultiDictionary<TKey, TValue>(newUnderlying);
         }
 
+        /// <summary>
+        /// Removes all values inside current dictionary stored under provided <paramref name="key"/>
+        /// in the context of the provided cluster <paramref name="node"/>.
+        /// </summary>
         public ORMultiDictionary<TKey, TValue> Remove(UniqueAddress node, TKey key) => 
             new ORMultiDictionary<TKey, TValue>(_underlying.Remove(node, key));
 
@@ -132,9 +165,29 @@ namespace Akka.DistributedData
             return Equals(_underlying, other._underlying);
         }
 
+        public IEnumerator<KeyValuePair<TKey, IImmutableSet<TValue>>> GetEnumerator() => 
+            _underlying.Select(x => new KeyValuePair<TKey, IImmutableSet<TValue>>(x.Key, x.Value.Elements)).GetEnumerator();
+
         public override bool Equals(object obj) => 
             obj is ORMultiDictionary<TKey, TValue> && Equals((ORMultiDictionary<TKey, TValue>) obj);
 
         public override int GetHashCode() => _underlying.GetHashCode();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder("ORMutliDictionary(");
+            foreach (var entry in Entries)
+            {
+                sb.Append(entry.Key).Append("-> [");
+                foreach (var value in entry.Value)
+                {
+                    sb.Append(value).Append(", ");
+                }
+                sb.Append("], ");
+            }
+            sb.Append(')');
+            return sb.ToString();
+        }
     }
 }

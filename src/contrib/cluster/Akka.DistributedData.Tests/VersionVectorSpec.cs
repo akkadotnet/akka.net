@@ -12,6 +12,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class VersionVectorSpec
     {
         private readonly UniqueAddress _node1 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2551), 1);

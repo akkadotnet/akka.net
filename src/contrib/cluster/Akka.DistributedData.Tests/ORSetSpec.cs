@@ -12,6 +12,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class ORSetSpec
     {
         private readonly string _user1 = "{\"username\":\"john\",\"password\":\"coltrane\"}";

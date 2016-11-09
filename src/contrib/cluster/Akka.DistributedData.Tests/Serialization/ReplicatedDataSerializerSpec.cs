@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Collections;
+using System.Linq;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster;
@@ -15,6 +18,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests.Serialization
 {
+    [Collection("DistributedDataSpec")]
     public class ReplicatedDataSerializerSpec : TestKit.Xunit2.TestKit
     {
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
@@ -159,11 +163,11 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(ORMultiDictionary<string, string>.Empty.AddItem(_address1, "a", "A"));
             CheckSerialization(ORMultiDictionary<string, string>.Empty
                 .AddItem(_address1, "a", "A1")
-                .SetItem(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }))
+                .SetItems(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }))
                 .AddItem(_address2, "a", "A2"));
 
             var m1 = ORMultiDictionary<string, string>.Empty.AddItem(_address1, "a", "A1").AddItem(_address2, "a", "A2");
-            var m2 = ORMultiDictionary<string, string>.Empty.SetItem(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }));
+            var m2 = ORMultiDictionary<string, string>.Empty.SetItems(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }));
             CheckSameContent(m1.Merge(m2), m2.Merge(m1));
         }
 
@@ -185,18 +189,24 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSameContent(v1.Merge(v2), v2.Merge(v1));
         }
 
-        private void CheckSerialization(object expected)
+        private void CheckSerialization<T>(T expected)
         {
             var serializer = Sys.Serialization.FindSerializerFor(expected);
             var blob = serializer.ToBinary(expected);
             var actual = serializer.FromBinary(blob, expected.GetType());
-
-            Assert.Equal(expected, actual);
+            
+            // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
+            // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets
+            // fails on structural equality
+            Assert.True(expected.Equals(actual), $"Expected: {expected}\nActual: {actual}");
         }
 
         private void CheckSameContent(object a, object b)
         {
-            Assert.Equal(a, b);
+            // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
+            // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets
+            // fails on structural equality
+            Assert.True(a.Equals(b));
             var serializer = Sys.Serialization.FindSerializerFor(a);
             var blobA = serializer.ToBinary(a);
             var blobB = serializer.ToBinary(b);

@@ -11,6 +11,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class PNCounterSpec
     {
         readonly UniqueAddress _address1;

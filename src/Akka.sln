@@ -245,6 +245,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.Tests.TCK", "core\Akka.Streams.Tests.TCK\Akka.Streams.Tests.TCK.csproj", "{805908F6-8792-47C0-8E4F-4DB4C5736A47}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Sharding.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Sharding.Tests.MultiNode\Akka.Cluster.Sharding.Tests.MultiNode.csproj", "{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData", "contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj", "{59CFFC88-8A73-445D-B191-281E40BE9421}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.Tests", "contrib\cluster\Akka.DistributedData.Tests\Akka.DistributedData.Tests.csproj", "{0DBF3D66-6E5E-4A89-AA3D-674B92FE81B7}"

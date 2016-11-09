@@ -19,6 +19,7 @@ using UniqueAddress = Akka.Cluster.UniqueAddress;
 
 namespace Akka.DistributedData.Tests.Serialization
 {
+    [Collection("DistributedDataSpec")]
     public class ReplicatorMessageSerializerSpec : TestKit.Xunit2.TestKit
     {
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
@@ -87,7 +88,7 @@ namespace Akka.DistributedData.Tests.Serialization
             var blob = serializer.ToBinary(expected);
             var actual = serializer.FromBinary(blob, expected.GetType());
 
-            Assert.Equal(expected, actual);
+            Assert.True(expected.Equals(actual), $"Expected: {expected}\nActual: {actual}");
         }
     }
 }

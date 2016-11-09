@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using Akka.IO;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Event;
@@ -19,24 +20,24 @@ namespace Akka.DistributedData.Internal
     internal sealed class GossipTick
     {
         internal static readonly GossipTick Instance = new GossipTick();
-
         private GossipTick() { }
+        public override string ToString() => "GossipTick";
     }
 
     [Serializable]
     internal class RemovedNodePruningTick
     {
         internal static readonly RemovedNodePruningTick Instance = new RemovedNodePruningTick();
-
         private RemovedNodePruningTick() { }
+        public override string ToString() => "RemovedNodePruningTick";
     }
 
     [Serializable]
     internal class ClockTick
     {
         internal static readonly ClockTick Instance = new ClockTick();
-
         private ClockTick() { }
+        public override string ToString() => "ClockTick";
     }
 
     [Serializable]
@@ -65,9 +66,11 @@ namespace Akka.DistributedData.Internal
         {
             unchecked
             {
-                return ((Key != null ? Key.GetHashCode() : 0)*397) ^ (Envelope != null ? Envelope.GetHashCode() : 0);
+                return ((Key != null ? Key.GetHashCode() : 0) * 397) ^ (Envelope != null ? Envelope.GetHashCode() : 0);
             }
         }
+
+        public override string ToString() => $"Write(key={Key}, envelope={Envelope})";
     }
 
     [Serializable]
@@ -76,20 +79,10 @@ namespace Akka.DistributedData.Internal
         internal static readonly WriteAck Instance = new WriteAck();
 
         private WriteAck() { }
-        public bool Equals(WriteAck other)
-        {
-            return true;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is WriteAck;
-        }
-
-        public override int GetHashCode()
-        {
-            return 1;
-        }
+        public bool Equals(WriteAck other) => true;
+        public override bool Equals(object obj) => obj is WriteAck;
+        public override int GetHashCode() => 1;
+        public override string ToString() => "WriteAck";
     }
 
     [Serializable]
@@ -107,9 +100,11 @@ namespace Akka.DistributedData.Internal
             return other != null && Key == other.Key;
         }
 
-        public override bool Equals(object obj) => obj is Read && Equals((Read) obj);
+        public override bool Equals(object obj) => obj is Read && Equals((Read)obj);
 
         public override int GetHashCode() => Key?.GetHashCode() ?? 0;
+
+        public override string ToString() => $"Read(key={Key})";
     }
 
     [Serializable]
@@ -130,9 +125,11 @@ namespace Akka.DistributedData.Internal
             return Equals(Envelope, other.Envelope);
         }
 
-        public override bool Equals(object obj) => obj is ReadResult && Equals((ReadResult) obj);
+        public override bool Equals(object obj) => obj is ReadResult && Equals((ReadResult)obj);
 
         public override int GetHashCode() => Envelope?.GetHashCode() ?? 0;
+
+        public override string ToString() => $"ReadResult(envelope={Envelope})";
     }
 
     [Serializable]
@@ -155,15 +152,17 @@ namespace Akka.DistributedData.Internal
             return Equals(Key, other.Key) && Equals(Envelope, other.Envelope);
         }
 
-        public override bool Equals(object obj) => obj is ReadRepair && Equals((ReadRepair) obj);
+        public override bool Equals(object obj) => obj is ReadRepair && Equals((ReadRepair)obj);
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((Key?.GetHashCode() ?? 0)*397) ^ (Envelope?.GetHashCode() ?? 0);
+                return ((Key?.GetHashCode() ?? 0) * 397) ^ (Envelope?.GetHashCode() ?? 0);
             }
         }
+
+        public override string ToString() => $"ReadRepair(key={Key}, envelope={Envelope})";
     }
 
     [Serializable]
@@ -172,6 +171,8 @@ namespace Akka.DistributedData.Internal
         public static readonly ReadRepairAck Instance = new ReadRepairAck();
 
         private ReadRepairAck() { }
+
+        public override string ToString() => $"ReadRepairAck";
     }
 
     [Serializable]
@@ -197,7 +198,7 @@ namespace Akka.DistributedData.Internal
             return r != null && r.NeedPruningFrom(removedNode);
         }
 
-        internal DataEnvelope InitRemovedNodePruning(UniqueAddress removed, UniqueAddress owner) => 
+        internal DataEnvelope InitRemovedNodePruning(UniqueAddress removed, UniqueAddress owner) =>
             new DataEnvelope(Data, Pruning.Add(removed, new PruningState(owner, new PruningInitialized(ImmutableHashSet<Address>.Empty))));
 
         internal DataEnvelope Prune(UniqueAddress from)
@@ -243,10 +244,10 @@ namespace Akka.DistributedData.Internal
 
         private IReplicatedData Cleaned(IReplicatedData c, IImmutableDictionary<UniqueAddress, PruningState> p) => p.Aggregate(c, (state, kvp) =>
         {
-            if (c is IRemovedNodePruning 
+            if (c is IRemovedNodePruning
                 && kvp.Value.Phase is PruningPerformed
                 && ((IRemovedNodePruning)c).NeedPruningFrom(kvp.Key))
-                return ((IRemovedNodePruning) c).PruningCleanup(kvp.Key);
+                return ((IRemovedNodePruning)c).PruningCleanup(kvp.Key);
             return c;
         });
 
@@ -273,14 +274,27 @@ namespace Akka.DistributedData.Internal
             return Data.Equals(other.Data) && pruningCountsEqual && elementsEqual;
         }
 
-        public override bool Equals(object obj) => obj is DataEnvelope && Equals((DataEnvelope) obj);
+        public override bool Equals(object obj) => obj is DataEnvelope && Equals((DataEnvelope)obj);
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((Data != null ? Data.GetHashCode() : 0)*397) ^ (Pruning != null ? Pruning.GetHashCode() : 0);
+                return ((Data != null ? Data.GetHashCode() : 0) * 397) ^ (Pruning != null ? Pruning.GetHashCode() : 0);
             }
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder("{");
+            if (Pruning != null)
+                foreach (var entry in Pruning)
+                {
+                    sb.Append(entry.Key).Append("->").Append(entry.Value).Append(",");
+                }
+            sb.Append('}');
+
+            return $"DataEnvelope(data={Data}, prunning={sb})";
         }
     }
 
@@ -293,56 +307,62 @@ namespace Akka.DistributedData.Internal
 
         public DeletedData Merge(DeletedData other) => this;
 
-        public IReplicatedData Merge(IReplicatedData other) => Merge((DeletedData) other);
-        public bool Equals(DeletedData other)
-        {
-            return true;
-        }
+        public IReplicatedData Merge(IReplicatedData other) => Merge((DeletedData)other);
+        public bool Equals(DeletedData other) => true;
 
-        public override bool Equals(object obj)
-        {
-            return obj is DeletedData;
-        }
+        public override bool Equals(object obj) => obj is DeletedData;
 
-        public override int GetHashCode()
-        {
-            return 1;
-        }
+        public override int GetHashCode() => 1;
+
+        public override string ToString() => "DeletedData";
     }
-    
+
     [Serializable]
     internal sealed class Status : IReplicatorMessage, IEquatable<Status>
     {
         public IImmutableDictionary<string, ByteString> Digests { get; }
         public int Chunk { get; }
-        public int TotChunks { get; }
+        public int TotalChunks { get; }
 
-        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totChunks)
+        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks)
         {
             Digests = digests;
             Chunk = chunk;
-            TotChunks = totChunks;
+            TotalChunks = totalChunks;
         }
 
         public bool Equals(Status other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
-            
-            return other.Chunk.Equals(Chunk) && other.TotChunks.Equals(TotChunks) && Digests.SequenceEqual(other.Digests);
+
+            return other.Chunk.Equals(Chunk) && other.TotalChunks.Equals(TotalChunks) && Digests.SequenceEqual(other.Digests);
         }
 
-        public override bool Equals(object obj) => obj is Status && Equals((Status) obj);
+        public override bool Equals(object obj) => obj is Status && Equals((Status)obj);
 
         public override int GetHashCode()
         {
             unchecked
             {
                 var hashCode = (Digests != null ? Digests.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ Chunk;
-                hashCode = (hashCode*397) ^ TotChunks;
+                hashCode = (hashCode * 397) ^ Chunk;
+                hashCode = (hashCode * 397) ^ TotalChunks;
                 return hashCode;
             }
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder("{");
+            if (Digests != null)
+                foreach (var entry in Digests)
+                {
+                    sb.Append(entry.Key).Append("->").Append(entry.Value).Append(",");
+                }
+            sb.Append('}');
+
+            return $"Status(chunk={Chunk}, totalChunks={TotalChunks}, digest={sb})";
         }
     }
 
@@ -366,7 +386,7 @@ namespace Akka.DistributedData.Internal
             return other.SendBack.Equals(SendBack) && UpdatedData.SequenceEqual(other.UpdatedData);
         }
 
-        public override bool Equals(object obj) => obj is Gossip && Equals((Gossip) obj);
+        public override bool Equals(object obj) => obj is Gossip && Equals((Gossip)obj);
 
         public override int GetHashCode()
         {
@@ -376,5 +396,17 @@ namespace Akka.DistributedData.Internal
             }
         }
 
+        public override string ToString()
+        {
+            var sb = new StringBuilder("{");
+            if (UpdatedData != null)
+                foreach (var entry in UpdatedData)
+                {
+                    sb.Append(entry.Key).Append("->").Append(entry.Value).Append(",");
+                }
+            sb.Append('}');
+
+            return $"Gossip(sendBack={SendBack}, updatedData={sb})";
+        }
     }
 }

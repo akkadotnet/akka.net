@@ -54,6 +54,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Local\ClusterReplicatedDataExtensions.cs" />
     <Compile Include="DistributedData.cs" />
     <Compile Include="Dsl.cs" />
     <Compile Include="FastMerge.cs" />
@@ -63,6 +64,13 @@
     <Compile Include="Internal\Internal.cs" />
     <Compile Include="IReplicatedDataSerialization.cs" />
     <Compile Include="Key.cs" />
+    <Compile Include="Local\LocalLWWDictionary.cs" />
+    <Compile Include="Local\LocalLWWRegister.cs" />
+    <Compile Include="Local\LocalORDictionary.cs" />
+    <Compile Include="Local\LocalORMultiDictionary.cs" />
+    <Compile Include="Local\LocalORSet.cs" />
+    <Compile Include="Local\LocalPNCounter.cs" />
+    <Compile Include="Local\LocalPNCounterDictionary.cs" />
     <Compile Include="LWWDictionary.cs" />
     <Compile Include="LWWRegister.cs" />
     <Compile Include="ORDictionary.cs" />
@@ -78,6 +86,7 @@
     <Compile Include="Replicator.cs" />
     <Compile Include="Replicator.Messages.cs" />
     <Compile Include="ReplicatorSettings.cs" />
+    <Compile Include="Local\LocalGCounter.cs" />
     <Compile Include="VersionVector.cs" />
     <Compile Include="WriteAggregator.cs" />
   </ItemGroup>

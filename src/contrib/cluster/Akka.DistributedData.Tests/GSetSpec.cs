@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class GSetSpec
     {
         const string user1 = "{\"username\":\"john\",\"password\":\"coltrane\"}";

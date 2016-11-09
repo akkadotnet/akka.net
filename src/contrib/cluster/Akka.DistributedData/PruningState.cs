@@ -130,5 +130,7 @@ namespace Akka.DistributedData
                 return ((Owner != null ? Owner.GetHashCode() : 0)*397) ^ (Phase != null ? Phase.GetHashCode() : 0);
             }
         }
+
+        public override string ToString() => $"PrunningState(owner={Owner}, phase={Phase})";
     }
 }

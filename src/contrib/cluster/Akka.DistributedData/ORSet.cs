@@ -6,10 +6,15 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Numerics;
+using System.Text;
+using Akka.Actor;
 using Akka.Cluster;
+using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -18,16 +23,8 @@ namespace Akka.DistributedData
     {
         public ORSetKey(string id) : base(id) { }
     }
-
-    public interface IORSet
-    {
-        
-    }
-
-    public interface IORSet<T> : IORSet
-    {
-        
-    }
+    
+    internal interface IORSet { }
 
     public static class ORSet
     {
@@ -71,7 +68,7 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public class ORSet<T> : FastMerge<ORSet<T>>, IORSet<T>, IReplicatedDataSerialization, IRemovedNodePruning<ORSet<T>>, IEquatable<ORSet<T>>
+    public class ORSet<T> : FastMerge<ORSet<T>>, IORSet, IReplicatedDataSerialization, IRemovedNodePruning<ORSet<T>>, IEquatable<ORSet<T>>, IEnumerable<T>
     {
         public static readonly ORSet<T> Empty = new ORSet<T>();
 
@@ -309,6 +306,8 @@ namespace Akka.DistributedData
             return _versionVector == other._versionVector && _elementsMap.SequenceEqual(other._elementsMap);
         }
 
+        public IEnumerator<T> GetEnumerator() => _elementsMap.Keys.GetEnumerator();
+
         public override bool Equals(object obj) => obj is ORSet<T> && Equals((ORSet<T>)obj);
 
         public override int GetHashCode()
@@ -317,6 +316,19 @@ namespace Akka.DistributedData
             {
                 return (_elementsMap.GetHashCode() * 397) ^ (_versionVector.GetHashCode());
             }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder("ORSet(");
+            foreach (var element in Elements)
+            {
+                sb.Append(element).Append(", ");
+            }
+            sb.Append(')');
+            return sb.ToString();
         }
     }
 }

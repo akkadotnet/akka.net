@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class FlagSpec
     {
         public FlagSpec(ITestOutputHelper output)

@@ -14,6 +14,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class LWWRegisterSpec
     {
         private readonly UniqueAddress _node1;

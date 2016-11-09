@@ -17,6 +17,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class WriteAggregatorSpec : Akka.TestKit.Xunit2.TestKit
     {
         internal class TestWriteAggregator : WriteAggregator

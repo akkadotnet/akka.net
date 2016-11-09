@@ -14,6 +14,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class ORMultiDictionarySpec
     {
         private readonly UniqueAddress _node1;
@@ -139,7 +140,7 @@ namespace Akka.DistributedData.Tests
             m.TryGetValue("a", out a);
             Assert.Equal(ImmutableHashSet.Create("A1", "A2"), a);
 
-            var m2 = m.SetItem(_node1, "a", a.Remove("A1"));
+            var m2 = m.SetItems(_node1, "a", a.Remove("A1"));
             Assert.Equal(ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A2")),

@@ -13,6 +13,7 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
+    [Collection("DistributedDataSpec")]
     public class LocalConcurrencySpec : Akka.TestKit.Xunit2.TestKit
     {
         public sealed class Updater : ReceiveActor, IWithUnboundedStash
