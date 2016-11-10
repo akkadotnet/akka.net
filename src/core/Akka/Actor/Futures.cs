@@ -91,13 +91,15 @@ namespace Akka.Actor
                 timeoutCancellation = new CancellationTokenSource();
                 timeoutCancellation.Token.Register(() => result.TrySetCanceled());
                 timeoutCancellation.CancelAfter(timeout.Value);
-                result.Task.ContinueWith(_ => timeoutCancellation.Dispose());
+                result.Task.ContinueWith(_ => timeoutCancellation.Dispose(),
+                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
 
             if (cancellationToken.CanBeCanceled)
             {
                 var ctr = cancellationToken.Register(() => result.TrySetCanceled());
-                result.Task.ContinueWith(_ => ctr.Dispose());
+                result.Task.ContinueWith(_ => ctr.Dispose(), 
+                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }                
         
             //create a new tempcontainer path
