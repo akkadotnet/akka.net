@@ -9,6 +9,7 @@ using Akka.Actor;
 using Akka.Cluster;
 using System;
 using System.Collections.Immutable;
+using System.Text;
 
 namespace Akka.DistributedData
 {
@@ -38,10 +39,24 @@ namespace Akka.DistributedData
             return Seen.SetEquals(other.Seen);
         }
 
-        public override bool Equals(object obj) => 
-            obj is PruningInitialized && Equals((PruningInitialized) obj);
+        public override bool Equals(object obj) =>
+            obj is PruningInitialized && Equals((PruningInitialized)obj);
 
         public override int GetHashCode() => Seen.GetHashCode();
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder("PruningInitialized(");
+            if (Seen != null)
+            {
+                foreach (var entry in Seen)
+                {
+                    sb.Append(entry).Append(", ");
+                }
+            }
+            sb.Append(')');
+            return sb.ToString();
+        }
     }
 
     internal sealed class PruningPerformed : IPruningPhase
@@ -51,6 +66,8 @@ namespace Akka.DistributedData
         private PruningPerformed() { }
 
         public override bool Equals(object obj) => obj != null && obj is PruningPerformed;
+
+        public override int GetHashCode() => -1798412870; // "PruningPerformed".GetHashCode()
     }
 
     internal sealed class PruningState
@@ -70,7 +87,7 @@ namespace Akka.DistributedData
             if (Phase is PruningPerformed) return this;
             if (Phase is PruningInitialized)
             {
-                var p = (PruningInitialized) Phase;
+                var p = (PruningInitialized)Phase;
                 if (p.Seen.Contains(node) || Owner.Address == node)
                 {
                     return this;
@@ -92,8 +109,8 @@ namespace Akka.DistributedData
             if (that.Phase is PruningPerformed) return that;
             if (Phase is PruningInitialized && that.Phase is PruningInitialized)
             {
-                var p1 = (PruningInitialized) Phase;
-                var p2 = (PruningInitialized) that.Phase;
+                var p1 = (PruningInitialized)Phase;
+                var p2 = (PruningInitialized)that.Phase;
                 if (this.Owner == that.Owner)
                     return new PruningState(Owner, new PruningInitialized(p1.Seen.Union(p2.Seen)));
                 else if (Member.AddressOrdering.Compare(this.Owner.Address, that.Owner.Address) > 0)
@@ -107,19 +124,13 @@ namespace Akka.DistributedData
             }
         }
 
-        public override bool Equals(object obj)
-        {
-            var other = obj as PruningState;
-            if (other != null)
-            {
-                var equal = Owner.Equals(other.Owner) && Phase.Equals(other.Phase);
-                return equal;
-            }
-            return false;
-        }
+        public override bool Equals(object obj) => obj is PruningState && Equals((PruningState) obj);
 
         private bool Equals(PruningState other)
         {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+
             return Equals(Owner, other.Owner) && Equals(Phase, other.Phase);
         }
 
@@ -127,7 +138,7 @@ namespace Akka.DistributedData
         {
             unchecked
             {
-                return ((Owner != null ? Owner.GetHashCode() : 0)*397) ^ (Phase != null ? Phase.GetHashCode() : 0);
+                return ((Owner != null ? Owner.GetHashCode() : 0) * 397) ^ (Phase != null ? Phase.GetHashCode() : 0);
             }
         }
 

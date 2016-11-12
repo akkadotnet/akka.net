@@ -269,9 +269,15 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            var pruningCountsEqual = Pruning.Count == other.Pruning.Count;
-            var elementsEqual = !Pruning.Except(other.Pruning).Any();
-            return Data.Equals(other.Data) && pruningCountsEqual && elementsEqual;
+            if (!Equals(Data, other.Data)) return false;
+            if (Pruning.Count != other.Pruning.Count) return false;
+
+            foreach (var entry in Pruning)
+            {
+                if (!Equals(entry.Value, other.Pruning[entry.Key])) return false;
+            }
+
+            return true;
         }
 
         public override bool Equals(object obj) => obj is DataEnvelope && Equals((DataEnvelope)obj);
