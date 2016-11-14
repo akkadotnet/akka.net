@@ -301,10 +301,12 @@ namespace Akka.Streams.Tests.Dsl
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
                 // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                Thread.Sleep(500);
+                Thread.Sleep(100);
                 firstElement.SetResult(1);
-                f1.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
-                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+
+                foreach (var result in Task.WhenAll(f1, f2).AwaitResult())
+                    result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+
             }, Materializer);
         }
 
