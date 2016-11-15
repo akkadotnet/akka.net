@@ -798,6 +798,13 @@ namespace Akka.Streams.Implementation.Fusing
                 connection.Slot = new Failed(reason, connection.Slot);
                 if ((currentState & (Pulling | Pushing)) == 0)
                     Enqueue(connection);
+                else if (_chasedPush == connection)
+                {
+                    // Abort chasing so Failure is not lost (chasing does NOT decode the event but assumes it to be a PUSH
+                    // but we just changed the event!)
+                    _chasedPush = NoEvent;
+                    Enqueue(connection);
+                }
             }
 
             if ((currentState & OutClosed) == 0)
@@ -814,6 +821,13 @@ namespace Akka.Streams.Implementation.Fusing
                 connection.Slot = Empty.Instance;
                 if ((currentState & (Pulling | Pushing | InClosed)) == 0)
                     Enqueue(connection);
+                else if (_chasedPull == connection)
+                {
+                    // Abort chasing so Cancel is not lost (chasing does NOT decode the event but assumes it to be a PULL
+                    // but we just changed the event!)
+                    _chasedPull = NoEvent;
+                    Enqueue(connection);
+                }
             }
 
             if ((currentState & InClosed) == 0)
