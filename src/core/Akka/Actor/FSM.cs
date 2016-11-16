@@ -146,7 +146,7 @@ namespace Akka.Actor
             public long Generation { get; private set; }
         }
         [DebuggerDisplay("Timer {Name,nq}, message: {Message")]
-        internal class Timer : INoSerializationVerificationNeeded
+        internal class Timer : INoSerializationVerificationNeeded, IAutoReceivedMessage
         {
             private readonly ILoggingAdapter _debugLog;
 

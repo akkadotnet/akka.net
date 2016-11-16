@@ -13,6 +13,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Debug = Akka.Event.Debug;
+using System.Globalization;
 
 namespace Akka.Actor
 {
@@ -167,11 +168,18 @@ namespace Akka.Actor
         {
             var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
 
-            if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
+            if (System.Settings.AddLoggingReceive && !(_actor is ILogReceive))
             {
                 //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
-                Publish(new Debug(Self.Path.ToString(), _actor.GetType(),
-                    "received " + (wasHandled ? "handled" : "unhandled") + " message " + message));
+                var msg = string.Format(
+                    CultureInfo.InvariantCulture, "received {0} message {1} from {2} to {3}",
+                    (wasHandled ? "handled" : "unhandled"),
+                    message,
+                    Self.Path,
+                    Sender.Path
+                );
+
+                Publish(new Debug(Self.Path.ToString(), _actor.GetType(), msg));
             }
         }
 

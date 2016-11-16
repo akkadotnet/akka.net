@@ -209,7 +209,7 @@ namespace Akka.Remote
 
         #region Messages internal to EndpointManager
 
-        public sealed class Prune : INoSerializationVerificationNeeded { }
+        public sealed class Prune : INoSerializationVerificationNeeded, IAutoReceivedMessage { }
 
         public sealed class ListensResult : INoSerializationVerificationNeeded
         {

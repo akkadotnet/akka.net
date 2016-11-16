@@ -1385,7 +1385,7 @@ namespace Akka.Remote
             public static FlushAndStop Instance { get { return _instance; } }
         }
 
-        public sealed class AckIdleCheckTimer
+        public sealed class AckIdleCheckTimer: IAutoReceivedMessage
         {
             private AckIdleCheckTimer() { }
             private static readonly AckIdleCheckTimer _instance = new AckIdleCheckTimer();
