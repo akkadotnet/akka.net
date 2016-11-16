@@ -112,7 +112,7 @@ namespace Akka.Remote
         }
 
         // sent to self only
-        public class HeartbeatTick : IAutoReceivedMessage
+        public class HeartbeatTick
         {
             private HeartbeatTick() { }
             private static readonly HeartbeatTick _instance = new HeartbeatTick();
@@ -126,7 +126,7 @@ namespace Akka.Remote
             }
         }
 
-        public class ReapUnreachableTick: IAutoReceivedMessage
+        public class ReapUnreachableTick
         {
             private ReapUnreachableTick() { }
             private static readonly ReapUnreachableTick _instance = new ReapUnreachableTick();

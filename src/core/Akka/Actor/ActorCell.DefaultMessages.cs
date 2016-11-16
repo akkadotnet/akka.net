@@ -175,8 +175,8 @@ namespace Akka.Actor
                     CultureInfo.InvariantCulture, "received {0} message {1} from {2} to {3}",
                     (wasHandled ? "handled" : "unhandled"),
                     message,
-                    Self.Path,
-                    Sender.Path
+                    Self.Path.ToString(),
+                    Sender.Path.ToString()
                 );
 
                 Publish(new Debug(Self.Path.ToString(), _actor.GetType(), msg));
