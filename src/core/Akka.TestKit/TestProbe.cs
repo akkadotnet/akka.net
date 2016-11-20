@@ -150,6 +150,11 @@ namespace Akka.TestKit
             ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
+        public void SetToStringStrategy(Func<IInternalActorRef, string> toStringStrategy)
+        {
+            ((IInternalActorRef)TestActor).SetToStringStrategy(toStringStrategy);
+        }
+
         public int CompareTo(object obj)
         {
             return TestActor.CompareTo(obj);

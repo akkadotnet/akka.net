@@ -143,7 +143,7 @@ namespace Akka.Remote
                 RemoteSettings.WatchFailureDetectorConfig, _system));
         }
 
-        public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
+        public virtual IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             if (systemService) return LocalActorOf(system, props, supervisor, path, true, deploy, lookupDeploy, async);
 

@@ -27,6 +27,8 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterActorRefProvider : RemoteActorRefProvider
     {
+        private Cluster _cluster;
+
         public ClusterActorRefProvider(string systemName, Settings settings, EventStream eventStream /*DynamicAccess*/)
             : base(systemName, settings, eventStream)
         {
@@ -41,13 +43,13 @@ namespace Akka.Cluster
             base.Init(system);
 
             // initialize/load the Cluster extension
-            Cluster.Get(system);
+            _cluster = Cluster.Get(system);
         }
 
         protected override IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             // make sure Cluster extension is initialized/loaded from init thread
-            Cluster.Get(system);
+            _cluster = Cluster.Get(system);
 
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
             return system.SystemActorOf(ClusterRemoteWatcher.Props(
@@ -57,9 +59,26 @@ namespace Akka.Cluster
                 RemoteSettings.WatchHeartbeatExpectedResponseAfter), "remote-watcher");
         }
 
-        
-    }
+        public override IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor,
+            ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
+        {
+            var internalActorRef = base.ActorOf(system, props, supervisor, path, systemService, deploy, lookupDeploy,
+                async);
 
+            if (_cluster != null)
+            {
+                internalActorRef.SetToStringStrategy(iActorRef =>
+                {
+                    var clusterSelfAddress = _cluster.SelfAddress;
+                    if (iActorRef.Path.Uid == ActorCell.UndefinedUid) return $"[{clusterSelfAddress}#{iActorRef.Path}]";
+                    return $"[{clusterSelfAddress}#{iActorRef.Path}#{iActorRef.Path.Uid}]";
+                });
+            }
+
+            return internalActorRef;
+        }
+    }
+        
     /// <summary>
     /// This class represents a binding of an actor deployment to a cluster-aware system.
     /// </summary>
