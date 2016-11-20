@@ -32,7 +32,7 @@ namespace Akka.Persistence.Sqlite.Tests
                     journal {
                         plugin = ""akka.persistence.journal.sqlite""
                         sqlite {
-                            class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
+                            class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
                             plugin-dispatcher = ""akka.actor.default-dispatcher""
                             table-name = event_journal
                             metadata-table-name = journal_metadata
