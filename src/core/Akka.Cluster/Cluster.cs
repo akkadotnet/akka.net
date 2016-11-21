@@ -231,6 +231,30 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Causes the CURRENT node, i.e. the one calling this function, to leave the cluster.
+        /// 
+        /// Once the returned <see cref="Task"/> completes, it means that the member has successfully been removed
+        /// from the cluster.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> that will return true upon the current node being removed from the cluster.</returns>
+        public Task LeaveAsync()
+        {
+            var tcs = _leaveTask.Value;
+
+            // short-circuit - check to see if we've already successfully left.
+            if (tcs.Task.IsCompleted)
+                return tcs.Task;
+
+            // Register it such that our TCS is automatically completed when we're removed
+            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() => tcs.TrySetResult(true)));
+
+            // Issue the leave command
+            Leave(SelfAddress);
+
+            return tcs.Task;
+        }
+
+        /// <summary>
         /// Send command to DOWN the node specified by <paramref name="address"/>.
         /// 
         /// When a member is considered by the failure detector to be unreachable the leader is not
@@ -328,6 +352,7 @@ namespace Akka.Cluster
         private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
 
+        private Lazy<TaskCompletionSource<bool>> _leaveTask = new Lazy<TaskCompletionSource<bool>>(() => new TaskCompletionSource<bool>(), LazyThreadSafetyMode.ExecutionAndPublication);
         public IDowningProvider DowningProvider => _downingProvider.Value;
 
         // ========================================================

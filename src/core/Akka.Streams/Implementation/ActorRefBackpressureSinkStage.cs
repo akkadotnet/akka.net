@@ -20,7 +20,7 @@ namespace Akka.Streams.Implementation
     {
         #region internal classes 
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             private bool _acknowledgementReceived;
             private bool _completeReceived;
@@ -38,27 +38,33 @@ namespace Akka.Streams.Implementation
 
                 _buffer = new List<TIn>();
 
-                SetHandler(_stage._inlet, onPush: () =>
+                SetHandler(_stage._inlet, this);
+            }
+
+            public override void OnPush()
+            {
+                _buffer.Add(Grab(_stage._inlet));
+                if (_acknowledgementReceived)
                 {
-                    _buffer.Add(Grab(_stage._inlet));
-                    if (_acknowledgementReceived)
-                    {
-                        DequeueAndSend();
-                        _acknowledgementReceived = false;
-                    }
-                    if(_buffer.Count < maxBuffer)
-                        Pull(stage._inlet);
-                }, onUpstreamFinish: () =>
-                {
-                    if (_buffer.Count == 0)
-                        Finish();
-                    else
-                        _completeReceived = true;
-                }, onUpstreamFailure: ex =>
-                {
-                    stage._actorRef.Tell(stage._onFailureMessage(ex), _self);
-                    FailStage(ex);
-                });
+                    DequeueAndSend();
+                    _acknowledgementReceived = false;
+                }
+                if (_buffer.Count < _maxBuffer)
+                    Pull(_stage._inlet);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_buffer.Count == 0)
+                    Finish();
+                else
+                    _completeReceived = true;
+            }
+
+            public override void OnUpstreamFailure(Exception ex)
+            {
+                _stage._actorRef.Tell(_stage._onFailureMessage(ex), _self);
+                FailStage(ex);
             }
 
             private void Receive(Tuple<IActorRef, object> evt)

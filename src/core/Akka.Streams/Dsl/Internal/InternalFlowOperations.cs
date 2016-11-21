@@ -493,6 +493,31 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
+        /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but with an asynchronous function.
+        /// Applies the given function towards its current and next value,
+        /// yielding the next current value.
+        /// 
+        /// If the function <paramref name="fold"/> returns a failure and the supervision decision is
+        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// the stream will continue.
+        /// <para>
+        /// Emits when upstream completes
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes when upstream completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// 
+        /// <seealso cref="Aggregate{TIn,TOut,TMat}"/>
+        /// </summary>
+        public static IFlow<TOut, TMat> AggregateAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
+            Func<TOut, TIn, Task<TOut>> fold)
+        {
+            return flow.Via(new Fusing.AggregateAsync<TIn, TOut>(zero, fold));
+        }
+
+        /// <summary>
         /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
@@ -1704,6 +1729,66 @@ namespace Akka.Streams.Dsl.Internal
                 return new FlowShape<TIn, TOut>(merge.In(1), merge.Out);
             });
         }
+
+        /// <summary>
+        /// Provides a secondary source that will be consumed if this stream completes without any
+        /// elements passing by. As soon as the first element comes through this stream, the alternative
+        /// will be cancelled.
+        ///
+        /// Note that this Flow will be materialized together with the <see cref="Source{TOut,TMat}"/> and just kept
+        /// from producing elements by asserting back-pressure until its time comes or it gets
+        /// cancelled.
+        ///
+        /// On errors the stage is failed regardless of source of the error.
+        ///
+        /// '''Emits when''' element is available from first stream or first stream closed without emitting any elements and an element
+        ///                  is available from the second stream
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' the primary stream completes after emitting at least one element, when the primary stream completes
+        ///                      without emitting and the secondary stream already has completed or when the secondary stream completes
+        ///
+        /// '''Cancels when''' downstream cancels and additionally the alternative is cancelled as soon as an element passes
+        ///                    by from this stream.
+        /// </summary>
+        public static IFlow<T, TMat> OrElse<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> secondary)
+            => flow.Via(OrElseGraph(secondary));
+
+        private static IGraph<FlowShape<T, T>, TMat> OrElseGraph<T, TMat>(IGraph<SourceShape<T>, TMat> secondary)
+        {
+            return GraphDsl.Create(secondary, (builder, shape) =>
+            {
+                var orElse = builder.Add(Dsl.OrElse.Create<T>());
+                builder.From(shape).To(orElse.In(1));
+                return new FlowShape<T, T>(orElse.In(0), orElse.Out);
+            });
+        }
+
+        /// <summary>
+        /// Provides a secondary source that will be consumed if this stream completes without any
+        /// elements passing by. As soon as the first element comes through this stream, the alternative
+        /// will be cancelled.
+        ///
+        /// Note that this Flow will be materialized together with the <see cref="Source{TOut,TMat}"/> and just kept
+        /// from producing elements by asserting back-pressure until its time comes or it gets
+        /// cancelled.
+        ///
+        /// On errors the stage is failed regardless of source of the error.
+        ///
+        /// '''Emits when''' element is available from first stream or first stream closed without emitting any elements and an element
+        ///                  is available from the second stream
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' the primary stream completes after emitting at least one element, when the primary stream completes
+        ///                      without emitting and the secondary stream already has completed or when the secondary stream completes
+        ///
+        /// '''Cancels when''' downstream cancels and additionally the alternative is cancelled as soon as an element passes
+        ///                    by from this stream.
+        /// </summary>
+        public static IFlow<T, TMat3> OrElseMaterialized<T, TMat, TMat2, TMat3>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat2> secondary, Func<TMat, TMat2, TMat3> materializedFunction)
+            => flow.ViaMaterialized(OrElseGraph(secondary), materializedFunction);
 
         /// <summary>
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes

@@ -26,12 +26,13 @@ namespace ClusterSharding.Node.AutomaticJoin
 
         public AutomaticCluster(ActorSystem system)
         {
-            _system = system;
+            _system = system;        
             _cluster = Cluster.Get(system);
             _persistence = SqlitePersistence.Get(system);
             _dbHelper = new DbHelper(() =>
             {
-                var conn = new SQLiteConnection(_persistence.DefaultJournalConfig.GetString("connection-string"));
+                var str = _system.Settings.Config.GetString("akka.persistence.journal.sqlite.connection-string");
+                var conn = new SQLiteConnection(str);
                 conn.Open();
                 return conn;
             });

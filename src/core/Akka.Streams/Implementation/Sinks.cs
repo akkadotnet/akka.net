@@ -321,33 +321,39 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
+            private readonly TaskCompletionSource<T> _promise;
             private readonly LastOrDefaultStage<T> _stage;
+            private T _prev;
 
             public Logic(TaskCompletionSource<T> promise, LastOrDefaultStage<T> stage) : base(stage.Shape)
             {
+                _promise = promise;
                 _stage = stage;
-                var prev = default(T);
 
-                SetHandler(stage.In, onPush: () =>
-                    {
-                        prev = Grab(stage.In);
-                        Pull(stage.In);
-                    },
-                    onUpstreamFinish: () =>
-                    {
-                        var head = prev;
-                        prev = default(T);
-                        promise.TrySetResult(head);
-                        CompleteStage();
-                    },
-                    onUpstreamFailure: cause =>
-                    {
-                        prev = default(T);
-                        promise.TrySetException(cause);
-                        FailStage(cause);
-                    });
+                SetHandler(stage.In, this);
+            }
+
+            public override void OnPush()
+            {
+                _prev = Grab(_stage.In);
+                Pull(_stage.In);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                var head = _prev;
+                _prev = default(T);
+                _promise.TrySetResult(head);
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                _prev = default(T);
+                _promise.TrySetException(e);
+                FailStage(e);
             }
 
             public override void PreStart() => Pull(_stage.In);
@@ -379,30 +385,36 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
+            private readonly TaskCompletionSource<T> _promise;
             private readonly FirstOrDefaultStage<T> _stage;
 
             public Logic(TaskCompletionSource<T> promise, FirstOrDefaultStage<T> stage) : base(stage.Shape)
             {
+                _promise = promise;
                 _stage = stage;
 
-                SetHandler(stage.In, onPush: () =>
-                    {
-                        promise.TrySetResult(Grab(stage.In));
-                        CompleteStage();
-                    },
-                    onUpstreamFinish: () =>
-                    {
-                        promise.TrySetResult(default(T));
-                        CompleteStage();
-                    },
-                    onUpstreamFailure: cause =>
-                    {
-                        promise.TrySetException(cause);
-                        FailStage(cause);
-                    });
+                SetHandler(stage.In, this);
             }
+            public override void OnPush()
+            {
+                _promise.TrySetResult(Grab(_stage.In));
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                _promise.TrySetResult(default(T));
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                _promise.TrySetException(e);
+                FailStage(e);
+            }
+
 
             public override void PreStart() => Pull(_stage.In);
         }
@@ -433,28 +445,36 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             private readonly SeqStage<T> _stage;
+            private readonly TaskCompletionSource<IImmutableList<T>> _promise;
             private IImmutableList<T> _buf = ImmutableList<T>.Empty;
 
             public Logic(SeqStage<T> stage, TaskCompletionSource<IImmutableList<T>> promise) : base(stage.Shape)
             {
                 _stage = stage;
+                _promise = promise;
 
-                SetHandler(stage.In, onPush: () =>
-                {
-                    _buf = _buf.Add(Grab(stage.In));
-                    Pull(stage.In);
-                }, onUpstreamFinish: () =>
-                {
-                    promise.TrySetResult(_buf);
-                    CompleteStage();
-                }, onUpstreamFailure: ex =>
-                {
-                    promise.TrySetException(ex);
-                    FailStage(ex);
-                });
+                SetHandler(stage.In, this);
+            }
+
+            public override void OnPush()
+            {
+                _buf = _buf.Add(Grab(_stage.In));
+                Pull(_stage.In);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                _promise.TrySetResult(_buf);
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                _promise.TrySetException(e);
+                FailStage(e);
             }
 
             public override void PreStart() => Pull(_stage.In);
@@ -490,7 +510,7 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : GraphStageLogicWithCallbackWrapper<TaskCompletionSource<Option<T>>>
+        private sealed class Logic : GraphStageLogicWithCallbackWrapper<TaskCompletionSource<Option<T>>>, IInHandler
         {
             private readonly QueueSink<T> _stage;
             private readonly int _maxBuffer;
@@ -503,15 +523,18 @@ namespace Akka.Streams.Implementation
                 _maxBuffer = maxBuffer;
                 _currentRequest = new Option<TaskCompletionSource<Option<T>>>();
 
-                SetHandler(_stage.In,
-                    onPush: () =>
-                    {
-                        EnqueueAndNotify(new Result<Option<T>>(Grab(_stage.In)));
-                        if (_buffer.Used < _maxBuffer) Pull(_stage.In);
-                    },
-                    onUpstreamFinish: () => EnqueueAndNotify(new Result<Option<T>>(Option<T>.None)),
-                    onUpstreamFailure: ex => EnqueueAndNotify(new Result<Option<T>>(ex)));
+                SetHandler(stage.In, this);
             }
+
+            public void OnPush()
+            {
+                EnqueueAndNotify(new Result<Option<T>>(Grab(_stage.In)));
+                if (_buffer.Used < _maxBuffer) Pull(_stage.In);
+            }
+
+            public void OnUpstreamFinish() => EnqueueAndNotify(new Result<Option<T>>(Option<T>.None));
+
+            public void OnUpstreamFailure(Exception e) => EnqueueAndNotify(new Result<Option<T>>(e));
 
             public override void PreStart()
             {
@@ -632,7 +655,7 @@ namespace Akka.Streams.Implementation
     {
         #region Logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             private readonly LazySink<TIn, TMat> _stage;
             private readonly TaskCompletionSource<TMat> _completion;
@@ -649,43 +672,48 @@ namespace Akka.Streams.Implementation
                     return attr != null ? attr.Decider : Deciders.StoppingDecider;
                 });
 
-                SetHandler(stage.In, onPush: () =>
-                {
-                    try
-                    {
-                        var element = Grab(_stage.In);
-                        var callback = GetAsyncCallback<Result<Sink<TIn, TMat>>>(result =>
-                        {
-                            if (result.IsSuccess)
-                                InitInternalSource(result.Value, element);
-                            else
-                                Failure(result.Exception);
-                        });
-                        _stage._sinkFactory(element)
-                            .ContinueWith(t => callback(Result.FromTask(t)),
-                                TaskContinuationOptions.ExecuteSynchronously);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_decider.Value(ex) == Directive.Stop)
-                            Failure(ex);
-                        else
-                            Pull(_stage.In);
-                    }
-
-                }, onUpstreamFinish: () =>
-                {
-                    CompleteStage();
-                    try
-                    {
-                        _completion.TrySetResult(_stage._zeroMaterialised());
-                    }
-                    catch (Exception ex)
-                    {
-                        _completion.SetException(ex);
-                    }
-                }, onUpstreamFailure: Failure);
+                SetHandler(stage.In, this);
             }
+
+            public override void OnPush()
+            {
+                try
+                {
+                    var element = Grab(_stage.In);
+                    var callback = GetAsyncCallback<Result<Sink<TIn, TMat>>>(result =>
+                    {
+                        if (result.IsSuccess)
+                            InitInternalSource(result.Value, element);
+                        else
+                            Failure(result.Exception);
+                    });
+                    _stage._sinkFactory(element)
+                        .ContinueWith(t => callback(Result.FromTask(t)),
+                            TaskContinuationOptions.ExecuteSynchronously);
+                }
+                catch (Exception ex)
+                {
+                    if (_decider.Value(ex) == Directive.Stop)
+                        Failure(ex);
+                    else
+                        Pull(_stage.In);
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                CompleteStage();
+                try
+                {
+                    _completion.TrySetResult(_stage._zeroMaterialised());
+                }
+                catch (Exception ex)
+                {
+                    _completion.SetException(ex);
+                }
+            }
+
+            public override void OnUpstreamFailure(Exception e) => Failure(e);
 
             public override void PreStart() => Pull(_stage.In);
 

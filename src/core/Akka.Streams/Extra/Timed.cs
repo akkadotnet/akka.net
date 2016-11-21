@@ -96,23 +96,30 @@ namespace Akka.Streams.Extra
         {
             #region Loigc 
 
-            private sealed class Logic : GraphStageLogic
+            private sealed class Logic : InAndOutGraphStageLogic
             {
+                private readonly StartTimed<T> _stage;
+                private bool _started;
+
                 public Logic(StartTimed<T> stage) : base(stage.Shape)
                 {
-                    var started = false;
-                    SetHandler(stage.Outlet, onPull:()=> Pull(stage.Inlet));
-                    SetHandler(stage.Inlet, onPush: () =>
-                    {
-                        if (!started)
-                        {
-                            stage._timedContext.Start();
-                            started = true;
-                        }
-
-                        Push(stage.Outlet, Grab(stage.Inlet));
-                    });
+                    _stage = stage;
+                    SetHandler(stage.Outlet, this);
+                    SetHandler(stage.Inlet, this);
                 }
+
+                public override void OnPush()
+                {
+                    if (!_started)
+                    {
+                        _stage._timedContext.Start();
+                        _started = true;
+                    }
+
+                    Push(_stage.Outlet, Grab(_stage.Inlet));
+                }
+
+                public override void OnPull() => Pull(_stage.Inlet);
             }
 
             #endregion  
@@ -131,7 +138,7 @@ namespace Akka.Streams.Extra
         {
             #region Loigc 
 
-            private sealed class Logic : GraphStageLogic
+            private sealed class Logic : InAndOutGraphStageLogic
             {
                 private readonly StopTime<T> _stage;
 
@@ -139,20 +146,26 @@ namespace Akka.Streams.Extra
                 {
                     _stage = stage;
 
-                    SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
-                    SetHandler(stage.Inlet, onPush: () => Push(stage.Outlet, Grab(stage.Inlet)),
-                        onUpstreamFailure: ex =>
-                        {
-                            StopTime();
-                            FailStage(ex);
-                        },
-                        onUpstreamFinish: () =>
-                        {
-                            StopTime();
-                            CompleteStage();
-                        });
+                    SetHandler(stage.Outlet, this);
+                    SetHandler(stage.Inlet, this);
                 }
 
+                public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
+
+                public override void OnUpstreamFinish()
+                {
+                    StopTime();
+                    CompleteStage();
+                }
+
+                public override void OnUpstreamFailure(Exception e)
+                {
+                    StopTime();
+                    FailStage(e);
+                }
+
+                public override void OnPull() => Pull(_stage.Inlet);
+                
                 private void StopTime()
                 {
                     var d = _stage._timedContext.Stop();
@@ -178,27 +191,34 @@ namespace Akka.Streams.Extra
         {
             #region Loigc 
 
-            private sealed class Logic : GraphStageLogic
+            private sealed class Logic : InAndOutGraphStageLogic
             {
+                private readonly TimedIntervall<T> _stage;
                 private long _previousTicks;
                 private long _matched;
 
                 public Logic(TimedIntervall<T> stage) : base(stage.Shape)
                 {
-                    SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
-                    SetHandler(stage.Inlet, onPush: () =>
-                        {
-                            var element = Grab(stage.Inlet);
-                            if (stage._matching(element))
-                            {
-                                var d = UpdateInterval();
-                                if (_matched > 1)
-                                    stage._onInterval(d);
-                            }
+                    _stage = stage;
 
-                            Push(stage.Outlet, element);
-                        });
+                    SetHandler(stage.Outlet, this);
+                    SetHandler(stage.Inlet, this);
                 }
+
+                public override void OnPush()
+                {
+                    var element = Grab(_stage.Inlet);
+                    if (_stage._matching(element))
+                    {
+                        var d = UpdateInterval();
+                        if (_matched > 1)
+                            _stage._onInterval(d);
+                    }
+
+                    Push(_stage.Outlet, element);
+                }
+
+                public override void OnPull() => Pull(_stage.Inlet);
 
                 private TimeSpan UpdateInterval()
                 {

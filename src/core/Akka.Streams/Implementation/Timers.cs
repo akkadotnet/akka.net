@@ -38,7 +38,7 @@ namespace Akka.Streams.Implementation
     {
         #region Logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly Initial<T> _stage;
             private bool _initialHasPassed;
@@ -47,13 +47,23 @@ namespace Akka.Streams.Implementation
             {
                 _stage = stage;
 
-                SetHandler(stage.Inlet, onPush: () =>
-                {
-                    _initialHasPassed = true;
-                    Push(stage.Outlet, Grab(stage.Inlet));
-                });
-                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                _initialHasPassed = true;
+                Push(_stage.Outlet, Grab(_stage.Inlet));
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.Inlet);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -87,16 +97,26 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly Completion<T> _stage;
 
             public Logic(Completion<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.Inlet, onPush: () => Push(stage.Outlet, Grab(stage.Inlet)));
-                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.Inlet);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
                 => FailStage(new TimeoutException($"The stream has not been completed in {_stage.Timeout}."));
@@ -127,7 +147,7 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly Idle<T> _stage;
             private long _nextDeadline;
@@ -137,13 +157,23 @@ namespace Akka.Streams.Implementation
                 _stage = stage;
                 _nextDeadline = DateTime.UtcNow.Ticks + stage.Timeout.Ticks;
 
-                SetHandler(stage.Inlet, onPush: () =>
-                {
-                    _nextDeadline = DateTime.UtcNow.Ticks + stage.Timeout.Ticks;
-                    Push(stage.Outlet, Grab(stage.Inlet));
-                });
-                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                _nextDeadline = DateTime.UtcNow.Ticks + _stage.Timeout.Ticks;
+                Push(_stage.Outlet, Grab(_stage.Inlet));
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.Inlet);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -178,7 +208,7 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly BackpressureTimeout<T> _stage;
             private long _nextDeadline;
@@ -189,18 +219,28 @@ namespace Akka.Streams.Implementation
                 _stage = stage;
                 _nextDeadline = DateTime.UtcNow.Ticks + stage.Timeout.Ticks;
 
-                SetHandler(stage.Inlet, onPush: () =>
-                {
-                    Push(stage.Outlet, Grab(stage.Inlet));
-                    _nextDeadline = DateTime.UtcNow.Ticks + stage.Timeout.Ticks;
-                    _waitingDemand = true;
-                });
-                SetHandler(stage.Outlet, onPull: () =>
-                {
-                    _waitingDemand = false;
-                    Pull(stage.Inlet);
-                });
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                Push(_stage.Outlet, Grab(_stage.Inlet));
+                _nextDeadline = DateTime.UtcNow.Ticks + _stage.Timeout.Ticks;
+                _waitingDemand = true;
+            }
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull()
+            {
+                _waitingDemand = false;
+                Pull(_stage.Inlet);
+            }
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -235,7 +275,7 @@ namespace Akka.Streams.Implementation
     {
         #region Logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly IdleTimeoutBidi<TIn, TOut> _stage;
             private long _nextDeadline;
@@ -245,12 +285,8 @@ namespace Akka.Streams.Implementation
                 _stage = stage;
                 _nextDeadline = DateTime.UtcNow.Ticks + _stage.Timeout.Ticks;
 
-                SetHandler(_stage.In1, onPush: () =>
-                {
-                    OnActivity();
-                    Push(_stage.Out1, Grab(_stage.In1));
-                },
-                onUpstreamFinish: () => Complete(_stage.Out1));
+                SetHandler(_stage.In1, this);
+                SetHandler(_stage.Out1, this);
 
                 SetHandler(_stage.In2, onPush: () =>
                 {
@@ -259,14 +295,24 @@ namespace Akka.Streams.Implementation
                 },
                 onUpstreamFinish: () => Complete(_stage.Out2));
 
-                SetHandler(_stage.Out1,
-                    onPull: () => Pull(_stage.In1),
-                    onDownstreamFinish: () => Cancel(_stage.In1));
-
                 SetHandler(_stage.Out2,
                     onPull: () => Pull(_stage.In2),
                     onDownstreamFinish: () => Cancel(_stage.In2));
             }
+
+            public void OnPush()
+            {
+                OnActivity();
+                Push(_stage.Out1, Grab(_stage.In1));
+            }
+
+            public void OnUpstreamFinish() => Complete(_stage.Out1);
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.In1);
+
+            public void OnDownstreamFinish() => Cancel(_stage.In1);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -311,7 +357,7 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly DelayInitial<T> _stage;
             private bool _isOpen;
@@ -319,13 +365,23 @@ namespace Akka.Streams.Implementation
             public Logic(DelayInitial<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(_stage.In, onPush: () => Push(_stage.Out, Grab(_stage.In)));
-                SetHandler(_stage.Out, onPull: () =>
-                {
-                    if (_isOpen)
-                        Pull(_stage.In);
-                });
+                SetHandler(_stage.In, this);
+                SetHandler(_stage.Out, this);
             }
+
+            public void OnPush() => Push(_stage.Out, Grab(_stage.In));
+
+            public void OnUpstreamFinish() => CompleteStage();
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull()
+            {
+                if (_isOpen)
+                    Pull(_stage.In);
+            }
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -371,7 +427,7 @@ namespace Akka.Streams.Implementation
     {
         #region Logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly IdleInject<TIn, TOut> _stage;
             private long _nextDeadline;
@@ -381,45 +437,53 @@ namespace Akka.Streams.Implementation
                 _stage = stage;
                 _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
 
-                SetHandler(_stage._in, onPush: () =>
-                {
-                    _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
-                    CancelTimer(Timers.GraphStageLogicTimer);
-                    if (IsAvailable(_stage._out))
-                    {
-                        Push(_stage._out, Grab(_stage._in));
-                        Pull(_stage._in);
-                    }
-                },
-                onUpstreamFinish: () =>
-                {
-                    if(!IsAvailable(_stage._in))
-                        CompleteStage();
-                });
+                SetHandler(_stage._in, this);
+                SetHandler(_stage._out, this);
+            }
 
-                SetHandler(_stage._out, onPull: () =>
+            public void OnPush()
+            {
+                _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
+                CancelTimer(Timers.GraphStageLogicTimer);
+                if (IsAvailable(_stage._out))
                 {
-                    if (IsAvailable(_stage._in))
+                    Push(_stage._out, Grab(_stage._in));
+                    Pull(_stage._in);
+                }
+            }
+
+            public void OnUpstreamFinish()
+            {
+                if (!IsAvailable(_stage._in))
+                    CompleteStage();
+            }
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull()
+            {
+                if (IsAvailable(_stage._in))
+                {
+                    Push(_stage._out, Grab(_stage._in));
+                    if (IsClosed(_stage._in))
+                        CompleteStage();
+                    else
+                        Pull(_stage._in);
+                }
+                else
+                {
+                    var time = DateTime.UtcNow.Ticks;
+                    if (_nextDeadline - time < 0)
                     {
-                        Push(_stage._out, Grab(_stage._in));
-                        if (IsClosed(_stage._in))
-                            CompleteStage();
-                        else
-                            Pull(_stage._in);
+                        _nextDeadline = time + _stage._timeout.Ticks;
+                        Push(_stage._out, _stage._inject());
                     }
                     else
-                    {
-                        var time = DateTime.UtcNow.Ticks;
-                        if (_nextDeadline - time < 0)
-                        {
-                            _nextDeadline = time + _stage._timeout.Ticks;
-                            Push(_stage._out, _stage._inject());
-                        }
-                        else
-                            ScheduleOnce(Timers.GraphStageLogicTimer, TimeSpan.FromTicks(_nextDeadline - time));
-                    }
-                });
+                        ScheduleOnce(Timers.GraphStageLogicTimer, TimeSpan.FromTicks(_nextDeadline - time));
+                }
             }
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {
