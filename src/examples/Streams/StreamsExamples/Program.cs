@@ -18,10 +18,11 @@ namespace StreamsExamples
     {
         static void Main(string[] args)
         {
-            Run().Wait();
+            Run();
+            Console.ReadLine();
         }
 
-        static async Task Run()
+        static void Run()
         {
             var oneSecond = TimeSpan.FromSeconds(1);
 
@@ -34,8 +35,17 @@ namespace StreamsExamples
                     .Intersperse(", ");
                 var sink = Sink.ForEach<string>(Console.WriteLine);
 
-                var runnableGraph = source.Via(flow).ToMaterialized(sink, Keep.Right);
-                await runnableGraph.Run(materializer);
+                var t = source.Via(flow).ToMaterialized(sink, Keep.Both).Run(materializer);
+                var cancelTickSource = t.Item1;
+                var foreachTask = t.Item2;
+
+                foreachTask = foreachTask.ContinueWith(_ => Console.WriteLine("Foreach finished"));
+
+                cancelTickSource.CancelAfter(TimeSpan.FromSeconds(5));
+
+                foreachTask.Wait(TimeSpan.FromSeconds(10));
+
+                Console.WriteLine("Task finished");
             }
         }
     }
