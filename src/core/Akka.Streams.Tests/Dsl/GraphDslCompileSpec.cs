@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -469,6 +470,21 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(In1.Via(F1)).To(F2.To(Out1));
                 return ClosedShape.Instance;
             })).Run(Materializer);
+        }
+
+        [Fact]
+        public void A_Graph_should_suitably_override_attribute_handling_methods()
+        {
+            var ga = GraphDsl.Create(b =>
+            {
+                var id = b.Add(GraphStages.Identity<int>());
+                return new FlowShape<int, int>(id.Inlet, id.Outlet);
+            }).Async().AddAttributes(Attributes.None).Named("useless");
+
+            ga.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("useless");
+            ga.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+                .Should()
+                .Be(Attributes.AsyncBoundary.Instance);
         }
     }
 }

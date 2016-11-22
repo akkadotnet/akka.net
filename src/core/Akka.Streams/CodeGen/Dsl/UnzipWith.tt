@@ -53,47 +53,53 @@ namespace Akka.Streams.Dsl
 
 	public class UnzipWith<TIn, <#= typeParams #>> : GraphStage<FanOutShape<TIn, <#= typeParams #>>>
 	{
-		private sealed class UnzipWithStageLogic : GraphStageLogic 
+		private sealed class UnzipWithStageLogic : InGraphStageLogic 
 		{
+			private readonly UnzipWith<TIn, <#= typeParams #>> _stage;
+			private int _pendingCount = <#=i#>;
+			private int _downstreamRunning = <#=i#>;
+	<# for (var t = 0; t < i; t++) { #>
+		private bool _pending<#=t#> = true;
+	<# } #>
+
 			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, <#= typeParams #>> stage) : base(shape)
 			{
-				var pendingCount = <#=i#>;
-				var downstreamRunning = <#=i#>;
-				<# for (var t = 0; t < i; t++) { #>
-var pending<#=t#> = true;
-				<# } #>
+				_stage = stage;
 
-				SetHandler(stage.In, onPush: () => {
-					var elements = stage._unzipper(Grab(stage.In));
-					
-					<# for (var t = 0; t < i; t++) { #>
-if (!IsClosed(stage.Out<#=t#>)) 
-					{
-						Push(stage.Out<#=t#>, elements.Item<#=t+1#>);
-						pending<#=t#> = true;
-					}
-					<# } #>
-
-					pendingCount = downstreamRunning;
-				});				
+				SetHandler(stage.In, this);				
 				<# for (var t = 0; t < i; t++) { #>
 
 				SetHandler(stage.Out<#=t#>, onPull: () => {
-					pendingCount--;
-					pending<#=t#> = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending<#=t#> = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending<#=t#>) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending<#=t#>) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				<# } #>
 
+			}
+
+			public override void  OnPush()
+			{
+				var elements = _stage._unzipper(Grab(_stage.In));
+					
+				<# for (var t = 0; t < i; t++) { #>
+if (!IsClosed(_stage.Out<#=t#>)) 
+				{
+					Push(_stage.Out<#=t#>, elements.Item<#=t+1#>);
+					_pending<#=t#> = true;
+				}
+				<# } #>
+
+				_pendingCount = _downstreamRunning;
 			}
 		}		
 

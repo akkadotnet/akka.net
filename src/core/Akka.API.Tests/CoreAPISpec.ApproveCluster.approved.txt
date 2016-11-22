@@ -28,6 +28,7 @@ namespace Akka.Cluster
         public void Join(Akka.Actor.Address address) { }
         public void JoinSeedNodes(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes) { }
         public void Leave(Akka.Actor.Address address) { }
+        public System.Threading.Tasks.Task LeaveAsync() { }
         public void RegisterOnMemberRemoved(System.Action callback) { }
         public void RegisterOnMemberUp(System.Action callback) { }
         public Akka.Actor.ActorPath RemotePathOf(Akka.Actor.IActorRef actorRef) { }

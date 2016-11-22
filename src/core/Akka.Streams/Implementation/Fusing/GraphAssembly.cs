@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Pattern;
 using Akka.Streams.Stage;
+using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -61,7 +62,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             return new GraphAssembly(
                 stages: stages.ToArray(),
-                originalAttributes: GraphInterpreter.SingleNoAttribute,
+                originalAttributes: SingleNoAttribute,
                 inlets: Add(inlets, new Inlet[connectionsCount], 0),
                 inletOwners: MarkBoundary(new int[connectionsCount], inletsCount, connectionsCount),
                 outlets: Add(outlets, new Outlet[connectionsCount], inletsCount),
@@ -71,7 +72,7 @@ namespace Akka.Streams.Implementation.Fusing
         private static int[] MarkBoundary(int[] owners, int from, int to)
         {
             for (var i = from; i < to; i++)
-                owners[i] = GraphInterpreter.Boundary;
+                owners[i] = Boundary;
             return owners;
         }
 
@@ -118,7 +119,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <para/> - array of the logics
         /// <para/> - materialized value
         /// </summary>
-        public Tuple<IInHandler[], IOutHandler[], GraphStageLogic[]> Materialize(
+        public Tuple<Connection[], GraphStageLogic[]> Materialize(
             Attributes inheritedAttributes,
             IModule[] copiedModules,
             IDictionary<IModule, object> materializedValues,
@@ -165,22 +166,26 @@ namespace Akka.Streams.Implementation.Fusing
                 logics[i] = logicAndMaterialized.Logic;
             }
 
-            var inHandlers = new IInHandler[ConnectionCount];
-            var outHandlers = new IOutHandler[ConnectionCount];
-
+            var connections = new Connection[ConnectionCount];
+            
             for (var i = 0; i < ConnectionCount; i++)
             {
+                var connection = new Connection(i, InletOwners[i],
+                    InletOwners[i] == Boundary ? null : logics[InletOwners[i]], OutletOwners[i],
+                    OutletOwners[i] == Boundary ? null : logics[OutletOwners[i]], null, null);
+                connections[i] = connection;
+
                 var inlet = Inlets[i];
                 if (inlet != null)
                 {
                     var owner = InletOwners[i];
                     var logic = logics[owner];
-                    var h = logic.Handlers[inlet.Id] as InHandler;
+                    var h = logic.Handlers[inlet.Id] as IInHandler;
 
                     if (h == null) throw new IllegalStateException($"No handler defined in stage {logic} for port {inlet}");
-                    inHandlers[i] = h;
+                    connection.InHandler = h;
 
-                    logic.PortToConn[inlet.Id] = i;
+                    logic.PortToConn[inlet.Id] = connection;
                 }
 
                 var outlet = Outlets[i];
@@ -189,16 +194,16 @@ namespace Akka.Streams.Implementation.Fusing
                     var owner = OutletOwners[i];
                     var logic = logics[owner];
                     var inCount = logic.InCount;
-                    var h = logic.Handlers[outlet.Id + inCount] as OutHandler;
+                    var h = logic.Handlers[outlet.Id + inCount] as IOutHandler;
 
                     if (h == null) throw new IllegalStateException($"No handler defined in stage {logic} for port {outlet}");
-                    outHandlers[i] = h;
+                    connection.OutHandler = h;
 
-                    logic.PortToConn[outlet.Id + inCount] = i;
+                    logic.PortToConn[outlet.Id + inCount] = connection;
                 }
             }
 
-            return Tuple.Create(inHandlers, outHandlers, logics);
+            return Tuple.Create(connections, logics);
         }
 
         public override string ToString()

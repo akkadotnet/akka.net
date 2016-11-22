@@ -352,5 +352,41 @@ namespace Akka.Streams.Tests.Dsl
                 bsub.ExpectCancellation();
             }, Materializer);
         }
+
+        [Fact]
+        public void A_Balance_must_not_push_output_twice()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var p1 = this.CreateManualPublisherProbe<int>();
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<int>();
+
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
+                {
+                    var balance = b.Add(new Balance<int>(2));
+                    b.From(Source.FromPublisher(p1.Publisher)).To(balance.In);
+                    b.From(balance.Out(0)).To(Sink.FromSubscriber(c1));
+                    b.From(balance.Out(1)).To(Sink.FromSubscriber(c2));
+                    return ClosedShape.Instance;
+                })).Run(Materializer);
+
+                var bsub = p1.ExpectSubscription();
+                var sub1 = c1.ExpectSubscription();
+                var sub2 = c2.ExpectSubscription();
+
+                sub1.Request(1);
+                p1.ExpectRequest(bsub, 16);
+                bsub.SendNext(1);
+                c1.ExpectNext(1);
+
+                sub2.Request(1);
+                sub2.Cancel();
+                bsub.SendNext(2);
+
+                sub1.Cancel();
+                bsub.ExpectCancellation();
+            }, Materializer);
+        }
     }
 }

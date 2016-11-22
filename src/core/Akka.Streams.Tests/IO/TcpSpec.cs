@@ -93,6 +93,28 @@ namespace Akka.Streams.Tests.IO
             resultFuture.Result.ShouldBeEquivalentTo(expectedOutput);
         }
 
+        [Fact]
+        public void Outgoing_TCP_stream_must_fail_the_materialized_task_when_the_connection_fails()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var tcpWriteProbe = new TcpWriteProbe(this);
+                var task =
+                    Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                        .ViaMaterialized(
+                            Sys.TcpStream()
+                                .OutgoingConnection(new DnsEndPoint("example.com", 666),
+                                    connectionTimeout: TimeSpan.FromSeconds(1)), Keep.Right)
+                        .ToMaterialized(Sink.Ignore<ByteString>(), Keep.Left)
+                        .Run(Materializer);
+
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<Exception>()
+                    .And.Message.Should()
+                    .Contain("Connection failed");
+            }, Materializer);
+        }
+
         [Fact(Skip = "Fix me")]
         public void Outgoing_TCP_stream_must_work_when_client_closes_write_then_remote_closes_write()
         {

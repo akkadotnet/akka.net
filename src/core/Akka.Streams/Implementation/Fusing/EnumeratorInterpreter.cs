@@ -167,16 +167,14 @@ namespace Akka.Streams.Implementation.Fusing
 
             var assembly = new GraphAssembly(stages, attributes, ins, inOwners, outs, outOwners);
             var tup = assembly.Materialize(Attributes.None, assembly.Stages.Select(x => x.Module).ToArray(), new Dictionary<IModule, object>(), _ => { });
-            var inHandlers = tup.Item1;
-            var outHandlers = tup.Item2;
-            var logics = tup.Item3;
+            var connections = tup.Item1;
+            var logics = tup.Item2;
 
             var interpreter = new GraphInterpreter(
                 assembly: assembly, 
                 materializer: NoMaterializer.Instance, 
-                log: NoLogger.Instance, 
-                inHandlers: inHandlers,
-                outHandlers: outHandlers,
+                log: NoLogger.Instance,
+                connections: connections,
                 logics: logics,
                 onAsyncInput: (_1, _2, _3) => { throw new NotSupportedException("IteratorInterpreter does not support asynchronous events.");},
                 fuzzingMode: false,

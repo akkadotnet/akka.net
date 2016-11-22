@@ -33,14 +33,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var c = this.CreateManualSubscriberProbe<string>();
-                Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick")
+                Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
                     .To(Sink.FromSubscriber(c))
                     .Run(Materializer);
                 var sub = c.ExpectSubscription();
-                sub.Request(3);
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(600));
-                c.ExpectNext("tick");
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+                sub.Request(2);
                 c.ExpectNext("tick");
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
                 c.ExpectNext("tick");
@@ -125,13 +122,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var c = this.CreateManualSubscriberProbe<string>();
-                var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
+                var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick");
                 var cancelable = tickSource.To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = c.ExpectSubscription();
-                sub.Request(3);
+                sub.Request(2);
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(600));
-                c.ExpectNext("tick");
-                c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
                 c.ExpectNext("tick");
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
                 c.ExpectNext("tick");

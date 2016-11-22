@@ -9,6 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -36,21 +37,19 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(AttributesSink.Create().WithAttributes(Attributes.CreateName("new-name")),
                         Keep.Right);
             var task = runnable.Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.GetAttribute<Attributes.Name>().Value.Should().Contain("new-name");
+
+            task.AwaitResult().GetAttribute<Attributes.Name>().Value.Should().Contain("new-name");
         }
 
         [Fact]
         public void Attributes_must_keep_the_outermost_attribute_as_the_least_specific()
         {
-            var runnable =
-                RunnableGraph.FromGraph(
-                    Source.Empty<NotUsed>()
-                        .ToMaterialized(AttributesSink.Create(), Keep.Right)
-                        .WithAttributes(Attributes.CreateName("new-name")));
-            var task = runnable.Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.GetAttribute<Attributes.Name>().Value.Should().Contain("attributesSink");
+            var task = Source.Empty<NotUsed>()
+                .ToMaterialized(AttributesSink.Create(), Keep.Right)
+                .WithAttributes(Attributes.CreateName("new-name"))
+                .Run(Materializer);
+            
+            task.AwaitResult().GetAttribute<Attributes.Name>().Value.Should().Contain("attributesSink");
         }
 
         [Fact]

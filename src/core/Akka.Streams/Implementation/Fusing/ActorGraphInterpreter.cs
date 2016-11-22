@@ -15,6 +15,7 @@ using Akka.Pattern;
 using Akka.Streams.Stage;
 using Akka.Util.Internal;
 using Reactive.Streams;
+using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 
 // ReSharper disable MemberHidesStaticFromOuterClass
 namespace Akka.Streams.Implementation.Fusing
@@ -68,8 +69,7 @@ namespace Akka.Streams.Implementation.Fusing
     public sealed class GraphInterpreterShell
     {
         private readonly GraphAssembly _assembly;
-        private readonly IInHandler[] _inHandlers;
-        private readonly IOutHandler[] _outHandlers;
+        private readonly Connection[] _connections;
         private readonly GraphStageLogic[] _logics;
         private readonly Shape _shape;
         private readonly ActorMaterializerSettings _settings;
@@ -105,11 +105,10 @@ namespace Akka.Streams.Implementation.Fusing
         private bool _interpreterCompleted;
         private readonly ActorGraphInterpreter.Resume _resume;
 
-        public GraphInterpreterShell(GraphAssembly assembly, IInHandler[] inHandlers, IOutHandler[] outHandlers, GraphStageLogic[] logics, Shape shape, ActorMaterializerSettings settings, ExtendedActorMaterializer materializer)
+        public GraphInterpreterShell(GraphAssembly assembly, Connection[] connections, GraphStageLogic[] logics, Shape shape, ActorMaterializerSettings settings, ExtendedActorMaterializer materializer)
         {
             _assembly = assembly;
-            _inHandlers = inHandlers;
-            _outHandlers = outHandlers;
+            _connections = connections;
             _logics = logics;
             _shape = shape;
             _settings = settings;
@@ -141,7 +140,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 var input = new ActorGraphInterpreter.BatchingActorInputBoundary(_settings.MaxInputBufferSize, i);
                 _inputs[i] = input;
-                Interpreter.AttachUpstreamBoundary(i, input);
+                Interpreter.AttachUpstreamBoundary(_connections[i], input);
             }
 
             var offset = _assembly.ConnectionCount - _outputs.Length;
@@ -150,7 +149,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var outputType = _shape.Outlets[i].GetType().GetGenericArguments().First();
                 var output = (ActorGraphInterpreter.IActorOutputBoundary) typeof(ActorGraphInterpreter.ActorOutputBoundary<>).Instantiate(outputType, Self, this, i);
                 _outputs[i] = output;
-                Interpreter.AttachDownstreamBoundary(i + offset, (GraphInterpreter.DownstreamBoundaryStageLogic) output);
+                Interpreter.AttachDownstreamBoundary(_connections[i + offset], (DownstreamBoundaryStageLogic) output);
             }
 
             Interpreter.Init(subMat);
@@ -191,7 +190,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (e is ActorGraphInterpreter.OnNext)
             {
                 var onNext = (ActorGraphInterpreter.OnNext) e;
-                if (GraphInterpreter.IsDebug)
+                if (IsDebug)
                     Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
                 _inputs[onNext.Id].OnNext(onNext.Event);
                 return RunBatch(eventLimit);
@@ -200,7 +199,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (e is ActorGraphInterpreter.RequestMore)
             {
                 var requestMore = (ActorGraphInterpreter.RequestMore) e;
-                if (GraphInterpreter.IsDebug)
+                if (IsDebug)
                     Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
                 _outputs[requestMore.Id].RequestMore(requestMore.Demand);
                 return RunBatch(eventLimit);
@@ -208,7 +207,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             if (e is ActorGraphInterpreter.Resume)
             {
-                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
                 if (Interpreter.IsSuspended)
                     return RunBatch(eventLimit);
                 return eventLimit;
@@ -230,7 +229,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (e is ActorGraphInterpreter.OnError)
             {
                 var onError = (ActorGraphInterpreter.OnError) e;
-                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
                 _inputs[onError.Id].OnError(onError.Cause);
                 return RunBatch(eventLimit);
             }
@@ -238,7 +237,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (e is ActorGraphInterpreter.OnComplete)
             {
                 var onComplete = (ActorGraphInterpreter.OnComplete) e;
-                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnComplete id={onComplete.Id}");
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnComplete id={onComplete.Id}");
                 _inputs[onComplete.Id].OnComplete();
                 return RunBatch(eventLimit);
             }
@@ -246,7 +245,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (e is ActorGraphInterpreter.OnSubscribe)
             {
                 var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
-                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnSubscribe id={onSubscribe.Id}");
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnSubscribe id={onSubscribe.Id}");
                 _subscribersPending--;
                 _inputs[onSubscribe.Id].OnSubscribe(onSubscribe.Subscription);
                 return RunBatch(eventLimit);
@@ -255,7 +254,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (e is ActorGraphInterpreter.Cancel)
             {
                 var cancel = (ActorGraphInterpreter.Cancel) e;
-                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Cancel id={cancel.Id}");
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Cancel id={cancel.Id}");
                 _outputs[cancel.Id].Cancel();
                 return RunBatch(eventLimit);
             }
@@ -356,11 +355,11 @@ namespace Akka.Streams.Implementation.Fusing
 
         private GraphInterpreter GetInterpreter()
         {
-            return new GraphInterpreter(_assembly, Materializer, Log, _inHandlers, _outHandlers, _logics,
+            return new GraphInterpreter(_assembly, Materializer, Log, _logics, _connections,
                 (logic, @event, handler) =>
                 {
                     var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler);
-                    var currentInterpreter = GraphInterpreter.CurrentInterpreterOrNull;
+                    var currentInterpreter = CurrentInterpreterOrNull;
                     if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
                         Self.Tell(new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
                     else
@@ -606,7 +605,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        public class BatchingActorInputBoundary : GraphInterpreter.UpstreamBoundaryStageLogic
+        public class BatchingActorInputBoundary : UpstreamBoundaryStageLogic
         {
             #region OutHandler
             private sealed class OutHandler : Stage.OutHandler
@@ -784,7 +783,7 @@ namespace Akka.Streams.Implementation.Fusing
             void Fail(Exception reason);
         }
 
-        internal class ActorOutputBoundary<T> : GraphInterpreter.DownstreamBoundaryStageLogic, IActorOutputBoundary
+        internal class ActorOutputBoundary<T> : DownstreamBoundaryStageLogic, IActorOutputBoundary
         {
             #region InHandler
             private sealed class InHandler : Stage.InHandler
@@ -866,7 +865,7 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         _subscriber = subscriber;
                         ReactiveStreamsCompliance.TryOnSubscribe(_subscriber, new BoundarySubscription(_actor, _shell, _id));
-                        if (GraphInterpreter.IsDebug)
+                        if (IsDebug)
                             Console.WriteLine($"{Interpreter.Name} Subscribe subscriber={subscriber}");
                     }
                     else ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, GetType().FullName);
@@ -972,7 +971,7 @@ namespace Akka.Streams.Implementation.Fusing
             try
             {
                 _currentLimit = shell.Init(Self, _subFusingMaterializerImpl, EnqueueToShortCircuit, _currentLimit);
-                if (GraphInterpreter.IsDebug)
+                if (IsDebug)
                     Console.WriteLine($"registering new shell in {_initial}\n  {shell.ToString().Replace("\n", "\n  ")}");
                 if (shell.IsTerminated)
                     return false;

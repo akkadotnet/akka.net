@@ -20,7 +20,7 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private const string TimerName = "ThrottleTimer";
             private readonly Throttle<T> _stage;
@@ -36,34 +36,41 @@ namespace Akka.Streams.Implementation
                 _tokenBucket = new TickTimeTokenBucket(stage._maximumBurst, stage._ticksBetweenTokens);
                 _enforcing = stage._mode == ThrottleMode.Enforcing;
 
-                SetHandler(_stage.Inlet,
-                    onPush: () =>
-                    {
-                        var element = Grab(stage.Inlet);
-                        var cost = stage._costCalculation(element);
-                        var delayTicks = _tokenBucket.Offer(cost);
-
-                        if (delayTicks == 0)
-                            Push(stage.Outlet, element);
-                        else
-                        {
-                            if (_enforcing)
-                                throw new OverflowException("Maximum throttle throughput exceeded.");
-
-                            _currentElement = element;
-                            ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
-                        }
-                    },
-                    onUpstreamFinish: () =>
-                    {
-                        if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName))
-                            _willStop = true;
-                        else
-                            CompleteStage();
-                    });
-
-                SetHandler(_stage.Outlet, onPull: () => Pull(_stage.Inlet));
+                SetHandler(_stage.Inlet, this);
+                SetHandler(_stage.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                var element = Grab(_stage.Inlet);
+                var cost = _stage._costCalculation(element);
+                var delayTicks = _tokenBucket.Offer(cost);
+
+                if (delayTicks == 0)
+                    Push(_stage.Outlet, element);
+                else
+                {
+                    if (_enforcing)
+                        throw new OverflowException("Maximum throttle throughput exceeded.");
+
+                    _currentElement = element;
+                    ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
+                }
+            }
+
+            public void OnUpstreamFinish()
+            {
+                if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName))
+                    _willStop = true;
+                else
+                    CompleteStage();
+            }
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.Inlet);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {

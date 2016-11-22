@@ -29,7 +29,7 @@ namespace Akka.Streams.Implementation.IO
     {
         #region internal classes
 
-        private sealed class ConnectionSourceStageLogic : TimerGraphStageLogic
+        private sealed class ConnectionSourceStageLogic : TimerGraphStageLogic, IOutHandler
         {
             private const string BindShutdownTimer = "BindTimer";
 
@@ -44,13 +44,17 @@ namespace Akka.Streams.Implementation.IO
                 _stage = stage;
                 _bindingPromise = bindingPromise;
 
-                SetHandler(_stage._out, onPull: () =>
-                {
-                    // Ignore if still binding
-                    _listener?.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
-                }, onDownstreamFinish: TryUnbind);
+                SetHandler(_stage._out, this);
             }
-            
+
+            public void OnPull()
+            {
+                // Ignore if still binding
+                _listener?.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
+            }
+
+            public void OnDownstreamFinish() => TryUnbind();
+
             private StreamTcp.IncomingConnection ConnectionFor(Tcp.Connected connected, IActorRef connection)
             {
                 _connectionFlowsAwaitingInitialization.IncrementAndGet();
