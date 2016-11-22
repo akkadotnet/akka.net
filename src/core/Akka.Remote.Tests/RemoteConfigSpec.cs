@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Remote.Transport.Helios;
@@ -13,6 +15,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using System.Net;
+using Akka.Remote.Transport;
 using static Akka.Util.RuntimeDetector;
 
 namespace Akka.Remote.Tests
@@ -60,9 +63,16 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
             Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("min-std-deviation"));
 
-            //TODO add adapter support
+            var remoteSettingsAdaptersStandart = new List<KeyValuePair<string, Type>>()
+            {
+                new KeyValuePair<string, Type>("gremlin", typeof(FailureInjectorProvider)),
+                new KeyValuePair<string, Type>("trttl", typeof(ThrottlerProvider))
+            };
 
-            // TODO add WatchFailureDetectorConfig assertions
+            var remoteSettingsAdapters =
+                remoteSettings.Adapters.Select(kv => new KeyValuePair<string, Type>(kv.Key, Type.GetType(kv.Value)));
+
+            Assert.Equal(0, remoteSettingsAdapters.Except(remoteSettingsAdaptersStandart).Count());
 
             remoteSettings.Config.GetString("akka.remote.log-frame-size-exceeding").ShouldBe("off");
         }
