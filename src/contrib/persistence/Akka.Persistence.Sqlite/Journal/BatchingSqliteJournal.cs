@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
+using System.Data.Common;
 using System.Data.SQLite;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -46,56 +47,7 @@ namespace Akka.Persistence.Sqlite.Journal
                 Requests = requests;
             }
         }
-
-        internal sealed class Desequenced
-        {
-            public Desequenced(object message, long sequenceNr, IActorRef target, IActorRef sender)
-            {
-                Message = message;
-                SequenceNr = sequenceNr;
-                Target = target;
-                Sender = sender;
-            }
-
-            public readonly object Message;
-            public readonly long SequenceNr;
-            public readonly IActorRef Target;
-            public readonly IActorRef Sender;
-        }
-
-        internal class Resequencer : ActorBase
-        {
-            private readonly IDictionary<long, Desequenced> _delayed = new Dictionary<long, Desequenced>();
-            private long _delivered = 0L;
-
-            protected override bool Receive(object message)
-            {
-                var desequenced = message as Desequenced;
-                while (desequenced != null)
-                {
-                    if (desequenced.SequenceNr == _delivered + 1)
-                    {
-                        _delivered = desequenced.SequenceNr;
-                        desequenced.Target.Tell(desequenced.Message, desequenced.Sender);
-                    }
-                    else
-                    {
-                        _delayed.Add(desequenced.SequenceNr, desequenced);
-                    }
-
-                    var delivered = _delivered + 1;
-                    if (!_delayed.TryGetValue(delivered, out desequenced))
-                    {
-                        break;
-                    }
-
-                    _delayed.Remove(delivered);
-                }
-
-                return true;
-            }
-        }
-
+        
         #endregion
 
         protected const int PersistenceIdIndex = 0;
@@ -116,14 +68,18 @@ namespace Akka.Persistence.Sqlite.Journal
         protected readonly string ByTagSql;
         protected readonly string CreateJournalSql;
         protected readonly string CreateMetadataSql;
+        protected readonly ILoggingAdapter Log;
 
         protected readonly bool CanPublish;
+
+        private readonly Dictionary<string, HashSet<IActorRef>> _persistenceIdSubscribers;
+        private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
+        private readonly HashSet<IActorRef> _allIdsSubscribers;
+        private readonly HashSet<string> _allPersistenceIds;
 
         private readonly Queue<IJournalRequest> _buffer;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly Func<Type, Serializer> _getSerializer;
-        private readonly IActorRef _requencer;
-        private readonly ILoggingAdapter _log;
         private int _remainingOperations;
         private readonly CircuitBreaker _circuitBreaker;
 
@@ -133,17 +89,25 @@ namespace Akka.Persistence.Sqlite.Journal
         private readonly SQLiteConnection _anchor;
 
         protected BatchingSqliteJournalSettings BatchingJournalSettings { get; }
+        protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
+        protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
+        protected bool HasAllIdsSubscribers => _allIdsSubscribers.Count != 0;
 
         public BatchingSqliteJournal(Config config)
         {
             BatchingJournalSettings = BatchingSqliteJournalSettings.Create(config);
             CanPublish = Persistence.Instance.Apply(Context.System).Settings.Internal.PublishPluginCommands;
+
+            _persistenceIdSubscribers = new Dictionary<string, HashSet<IActorRef>>();
+            _tagSubscribers = new Dictionary<string, HashSet<IActorRef>>();
+            _allIdsSubscribers = new HashSet<IActorRef>();
+            _allPersistenceIds = new HashSet<string>();
+
             _remainingOperations = BatchingJournalSettings.MaxConcurrentOperations;
             _buffer = new Queue<IJournalRequest>(BatchingJournalSettings.MaxBatchSize);
             _cancellationTokenSource = new CancellationTokenSource(BatchingJournalSettings.ConnectionTimeout);
             _getSerializer = Context.System.Serialization.FindSerializerFor;
-            _requencer = Context.ActorOf<Resequencer>("resequencer");
-            _log = Context.GetLogger();
+            Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
                 maxFailures: BatchingJournalSettings.CircuitBreakerSettings.MaxFailures,
                 callTimeout: BatchingJournalSettings.CircuitBreakerSettings.CallTimeout,
@@ -273,6 +237,7 @@ namespace Akka.Persistence.Sqlite.Journal
         protected override void PostStop()
         {
             _anchor.Dispose();
+            _cancellationTokenSource.Cancel(false);
             base.PostStop();
         }
 
@@ -283,10 +248,86 @@ namespace Akka.Persistence.Sqlite.Journal
             else if (message is BatchComplete) CompleteBatch((BatchComplete)message);
             else if (message is ReadHighestSequenceNr) BatchRequest((IJournalRequest)message);
             else if (message is DeleteMessagesTo) BatchRequest((IJournalRequest)message);
+            else if (message is ReplayTaggedMessages) BatchRequest((IJournalRequest)message);
+            else if (message is SubscribePersistenceId) AddPersistenceIdSubscriber((SubscribePersistenceId)message);
+            else if (message is SubscribeAllPersistenceIds) AddAllSubscriber((SubscribeAllPersistenceIds)message); 
+            else if (message is SubscribeTag) AddTagSubscriber((SubscribeTag)message);
+            else if (message is Terminated) RemoveSubscriber(((Terminated) message).ActorRef);
             else return false;
             return true;
         }
-        
+
+        #region subscriptions
+
+        private void RemoveSubscriber(IActorRef subscriberRef)
+        {
+            _allIdsSubscribers.Remove(subscriberRef);
+            _persistenceIdSubscribers.RemoveItem(subscriberRef);
+            _tagSubscribers.RemoveItem(subscriberRef);
+        }
+
+        private void AddTagSubscriber(SubscribeTag message)
+        {
+            var subscriber = Sender;
+            _tagSubscribers.AddItem(message.Tag, subscriber);
+            Context.Watch(subscriber);
+        }
+
+        private void AddAllSubscriber(SubscribeAllPersistenceIds message)
+        {
+            var subscriber = Sender;
+            _allIdsSubscribers.Add(subscriber);
+            Context.Watch(subscriber);
+        }
+
+        private void AddPersistenceIdSubscriber(SubscribePersistenceId message)
+        {
+            var subscriber = Sender;
+            _persistenceIdSubscribers.AddItem(message.PersistenceId, subscriber);
+            Context.Watch(subscriber);
+        }
+
+        private void NotifyTagChanged(string tag)
+        {
+            HashSet<IActorRef> bucket;
+            if (_tagSubscribers.TryGetValue(tag, out bucket))
+            {
+                var changed = new TaggedEventAppended(tag);
+                foreach (var subscriber in bucket)
+                {
+                    subscriber.Tell(changed);
+                }
+            }
+        }
+
+        private void NotifyPersistenceIdChanged(string persitenceId)
+        {
+            HashSet<IActorRef> bucket;
+            if (_persistenceIdSubscribers.TryGetValue(persitenceId, out bucket))
+            {
+                var changed = new EventAppended(persitenceId);
+                foreach (var subscriber in bucket)
+                {
+                    subscriber.Tell(changed);
+                }
+            }
+        }
+
+        private void NotifyNewPersistenceIdAdded(string persistenceId)
+        {
+            _allPersistenceIds.Add(persistenceId);
+            if (HasAllIdsSubscribers)
+            {
+                var added = new PersistenceIdAdded(persistenceId);
+                foreach (var subscriber in _allIdsSubscribers)
+                {
+                    subscriber.Tell(added, ActorRefs.NoSender);
+                }
+            }
+        }
+
+        #endregion
+
         private void BatchRequest(IJournalRequest message)
         {
             _buffer.Enqueue(message);
@@ -327,7 +368,9 @@ namespace Akka.Persistence.Sqlite.Journal
                                 await HandleReadHighestSequenceNr((ReadHighestSequenceNr)req, command, _cancellationTokenSource.Token);
                             else if (req is DeleteMessagesTo)
                                 await HandleDeleteMessagesTo((DeleteMessagesTo)req, command, _cancellationTokenSource.Token);
-                            else throw new NotSupportedException($"{GetType()} doesn't support journal request of type {req.GetType()}");
+                            else if (req is ReplayTaggedMessages)
+                                await HandleReplayTaggedMessages((ReplayTaggedMessages)req, command, _cancellationTokenSource.Token);
+                            else Unhandled(req);
                         }
 
                         transaction.Commit();
@@ -415,6 +458,47 @@ namespace Akka.Persistence.Sqlite.Journal
             return highestSequenceNr;
         }
 
+        private async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, SQLiteCommand command, CancellationToken token)
+        {
+            var replyTo = req.ReplyTo;
+            try
+            {
+                var maxSequenceNr = 0L;
+                var tag = req.Tag;
+                var toOffset = req.ToOffset;
+                var fromOffset = req.FromOffset;
+                var take = Math.Min(toOffset - fromOffset, req.Max);
+
+                command.CommandText = ByTagSql;
+                command.Parameters.Clear();
+
+                AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
+                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                AddParameter(command, "@Take", DbType.Int64, take);
+
+                using (var reader = await command.ExecuteReaderAsync(token))
+                {
+                    while (await reader.ReadAsync(token))
+                    {
+                        var persistent = ReadEvent(reader);
+                        var ordering = reader.GetInt64(OrderingIndex);
+                        maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
+
+                        foreach (var adapted in AdaptFromJournal(persistent))
+                        {
+                            replyTo.Tell(new ReplayedTaggedMessage(adapted, tag, ordering), ActorRefs.NoSender);
+                        }
+                    }
+                }
+
+                replyTo.Tell(new RecoverySuccess(maxSequenceNr));
+            }
+            catch (Exception cause)
+            {
+                replyTo.Tell(new ReplayMessagesFailure(cause));
+            }
+        }
+
         private async Task HandleReplayMessages(ReplayMessages req, SQLiteCommand command, CancellationToken token)
         {
             var persistentRef = req.PersistentActor;
@@ -435,17 +519,7 @@ namespace Akka.Persistence.Sqlite.Journal
                     var i = 0L;
                     while ((i++) < req.Max && await reader.ReadAsync(token))
                     {
-                        var persistenceId = reader.GetString(PersistenceIdIndex);
-                        var sequenceNr = reader.GetInt64(SequenceNrIndex);
-                        var isDeleted = reader.GetBoolean(IsDeletedIndex);
-                        var manifest = reader.GetString(ManifestIndex);
-                        var payload = reader[PayloadIndex];
-
-                        var type = Type.GetType(manifest, true);
-                        var deserializer = _getSerializer(type);
-                        var deserialized = deserializer.FromBinary((byte[])payload, type);
-
-                        var persistent = new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
+                        var persistent = ReadEvent(reader);
 
                         if (!persistent.IsDeleted) // old records from pre 1.5 may still have the IsDeleted flag
                         {
@@ -469,7 +543,7 @@ namespace Akka.Persistence.Sqlite.Journal
 
         private async Task HandleWriteMessages(WriteMessages req, SQLiteCommand command, CancellationToken token)
         {
-            var failures = new List<Exception>(0);
+            IJournalResponse summary;
             var responses = new List<IJournalResponse>();
 
             try
@@ -530,11 +604,10 @@ namespace Akka.Persistence.Sqlite.Journal
                             }
                             catch (Exception cause)
                             {
-                                failures.Add(cause);
                                 //TODO: this scope wraps atomic write. Atomic writes have all-or-nothing commits.
                                 // so we should revert transaction here. But we need to check how this affect performance.
 
-                                var response = new WriteMessageFailure(e, cause, req.ActorInstanceId);
+                                var response = new WriteMessageRejected(e, cause, req.ActorInstanceId);
                                 responses.Add(response);
                             }
                         }
@@ -542,17 +615,17 @@ namespace Akka.Persistence.Sqlite.Journal
                     else
                     {
                         //TODO: other cases?
+                        var response = new LoopMessageSuccess(envelope.Payload, req.ActorInstanceId);
                     }
                 }
+
+                summary = WriteMessagesSuccessful.Instance;
             }
             catch (Exception cause)
             {
-                failures.Add(cause);
+                summary = new WriteMessagesFailed(cause);
             }
-
-            var summary = failures.Count == 0
-                ? (IJournalResponse)WriteMessagesSuccessful.Instance
-                : new WriteMessagesFailed(new AggregateException("An exception occured, while trying to write event batch", failures));
+            
             var aref = req.PersistentActor;
 
             aref.Tell(summary);
@@ -560,6 +633,22 @@ namespace Akka.Persistence.Sqlite.Journal
             {
                 aref.Tell(response);    
             }
+        }
+
+        private Persistent ReadEvent(DbDataReader reader)
+        {
+            var persistenceId = reader.GetString(PersistenceIdIndex);
+            var sequenceNr = reader.GetInt64(SequenceNrIndex);
+            var isDeleted = reader.GetBoolean(IsDeletedIndex);
+            var manifest = reader.GetString(ManifestIndex);
+            var payload = reader[PayloadIndex];
+
+            var type = Type.GetType(manifest, true);
+            var deserializer = _getSerializer(type);
+            var deserialized = deserializer.FromBinary((byte[])payload, type);
+
+            var persistent = new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
+            return persistent;
         }
 
         private SQLiteConnection CreateConnection()
@@ -598,7 +687,7 @@ namespace Akka.Persistence.Sqlite.Journal
             _remainingOperations++;
             if (msg.Cause != null)
             {
-                _log.Error(msg.Cause, "An error occurred during event batch processing");    
+                Log.Error(msg.Cause, "An error occurred during event batch processing");    
             }
 
             TryProcess();
