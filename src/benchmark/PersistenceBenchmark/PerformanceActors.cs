@@ -28,6 +28,15 @@ namespace PersistenceBenchmark
         public static readonly Done Instance = new Done();
         private Done() { }
     }
+    public sealed class Finished
+    {
+        public readonly long State;
+
+        public Finished(long state)
+        {
+            State = state;
+        }
+    }
 
     public sealed class Store
     {
@@ -74,13 +83,13 @@ namespace PersistenceBenchmark
             .With<Init>(_ =>
             {
                 var sender = Sender;
-                Persist(new Stored(1), s =>
+                Persist(new Stored(0), s =>
                 {
                     state += s.Value;
                     sender.Tell(Done.Instance);
                 });
             })
-            .With<Finish>(_ => Sender.Tell(Done.Instance))
+            .With<Finish>(_ => Sender.Tell(new Finished(state)))
             .WasHandled;
     }
 

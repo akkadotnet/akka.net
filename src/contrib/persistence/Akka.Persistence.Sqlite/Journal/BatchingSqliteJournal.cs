@@ -36,6 +36,13 @@ namespace Akka.Persistence.Sqlite.Journal
             }
         }
 
+        // this little guy will be called only once, only by the current journal
+        private sealed class GetCurrentPersistenceIds
+        {
+            public static readonly GetCurrentPersistenceIds Instance = new GetCurrentPersistenceIds();
+            private GetCurrentPersistenceIds() { }
+        }
+
         private struct RequestChunk
         {
             public readonly bool IsReadOnly;
@@ -253,11 +260,64 @@ namespace Akka.Persistence.Sqlite.Journal
             else if (message is SubscribeAllPersistenceIds) AddAllSubscriber((SubscribeAllPersistenceIds)message); 
             else if (message is SubscribeTag) AddTagSubscriber((SubscribeTag)message);
             else if (message is Terminated) RemoveSubscriber(((Terminated) message).ActorRef);
+            else if (message is GetCurrentPersistenceIds) InitializePersistenceIds();
+            else if (message is CurrentPersistenceIds) SendCurrentPersistenceIds((CurrentPersistenceIds)message);
             else return false;
             return true;
         }
 
+        private void SendCurrentPersistenceIds(CurrentPersistenceIds message)
+        {
+            foreach (var persistenceId in message.AllPersistenceIds)
+            {
+                _allPersistenceIds.Add(persistenceId);
+            }
+
+            foreach (var subscriber in _allIdsSubscribers)
+            {
+                subscriber.Tell(message);
+            }
+        }
+
         #region subscriptions
+        
+        private void InitializePersistenceIds()
+        {
+            var self = Self;
+            GetAllPersistenceIdsAsync(_cancellationTokenSource.Token)
+                .ContinueWith(task =>
+                {
+                    if (task.IsCanceled || task.IsFaulted)
+                    {
+                        var cause = (Exception) task.Exception ?? new OperationCanceledException("Cancellation occurred while trying to retrieve current persistence ids");
+                        Log.Error(cause, "Couldn't retrieve current persistence ids");
+                    }
+                    else
+                    {
+                        self.Tell(new CurrentPersistenceIds(task.Result));
+                    }
+                });
+        }
+
+        private async Task<IEnumerable<string>>  GetAllPersistenceIdsAsync(CancellationToken token)
+        {
+            var result = new List<string>(256);
+            using (var connection = CreateConnection())
+            {
+                await connection.OpenAsync(token);
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = AllPersistenceIdsSql;
+
+                    var reader = await command.ExecuteReaderAsync(token);
+                    while (await reader.ReadAsync(token))
+                    {
+                        result.Add(reader.GetString(0));
+                    }
+                }
+            }
+            return result;
+        }
 
         private void RemoveSubscriber(IActorRef subscriberRef)
         {
@@ -275,6 +335,11 @@ namespace Akka.Persistence.Sqlite.Journal
 
         private void AddAllSubscriber(SubscribeAllPersistenceIds message)
         {
+            if (!HasAllIdsSubscribers)
+            {
+                Self.Tell(GetCurrentPersistenceIds.Instance);
+            }
+
             var subscriber = Sender;
             _allIdsSubscribers.Add(subscriber);
             Context.Watch(subscriber);
@@ -353,13 +418,15 @@ namespace Akka.Persistence.Sqlite.Journal
                 await connection.OpenAsync(_cancellationTokenSource.Token);
 
                 using (var transaction = connection.BeginTransaction())
-                using (var command = new SQLiteCommand(connection) { Transaction = transaction })
+                using (var command = connection.CreateCommand())
                 {
+                    command.Transaction = transaction;
                     try
                     {
                         for (int i = 0; i < chunk.Requests.Length; i++)
                         {
                             var req = chunk.Requests[i];
+
                             if (req is WriteMessages)
                                 await HandleWriteMessages((WriteMessages)req, command, _cancellationTokenSource.Token);
                             else if (req is ReplayMessages)
@@ -372,7 +439,7 @@ namespace Akka.Persistence.Sqlite.Journal
                                 await HandleReplayTaggedMessages((ReplayTaggedMessages)req, command, _cancellationTokenSource.Token);
                             else Unhandled(req);
                         }
-
+                        
                         transaction.Commit();
 
                         if (CanPublish)
@@ -384,10 +451,10 @@ namespace Akka.Persistence.Sqlite.Journal
                             }
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception cause)
                     {
                         transaction.Rollback();
-                        ExceptionDispatchInfo.Capture(e).Throw();
+                        return new BatchComplete(cause);
                     }
                 }
             }
@@ -399,6 +466,9 @@ namespace Akka.Persistence.Sqlite.Journal
         {
             var toSequenceNr = req.ToSequenceNr;
             var persistenceId = req.PersistenceId;
+
+            NotifyNewPersistenceIdAdded(persistenceId);
+
             try
             {
                 var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command, token);
@@ -434,9 +504,13 @@ namespace Akka.Persistence.Sqlite.Journal
         private async Task HandleReadHighestSequenceNr(ReadHighestSequenceNr req, SQLiteCommand command, CancellationToken token)
         {
             var replyTo = req.PersistentActor;
+            var persistenceId = req.PersistenceId;
+
+            NotifyNewPersistenceIdAdded(persistenceId);
+
             try
             {
-                var highestSequenceNr = await ReadHighestSequenceNr(req.PersistenceId, command, token);
+                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command, token);
 
                 var response = new ReadHighestSequenceNrSuccess(highestSequenceNr);
                 replyTo.Tell(response, ActorRefs.NoSender);
@@ -461,6 +535,7 @@ namespace Akka.Persistence.Sqlite.Journal
         private async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, SQLiteCommand command, CancellationToken token)
         {
             var replyTo = req.ReplyTo;
+            
             try
             {
                 var maxSequenceNr = 0L;
@@ -502,15 +577,19 @@ namespace Akka.Persistence.Sqlite.Journal
         private async Task HandleReplayMessages(ReplayMessages req, SQLiteCommand command, CancellationToken token)
         {
             var persistentRef = req.PersistentActor;
+            var persistenceId = req.PersistenceId;
+
+            NotifyNewPersistenceIdAdded(persistenceId);
+
             try
             {
-                var highestSequenceNr = await ReadHighestSequenceNr(req.PersistenceId, command, token);
+                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command, token);
                 var toSequenceNr = Math.Min(req.ToSequenceNr, highestSequenceNr);
 
                 command.CommandText = ByPersistenceIdSql;
                 command.Parameters.Clear();
 
-                AddParameter(command, "@PersistenceId", DbType.String, req.PersistenceId);
+                AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
                 AddParameter(command, "@FromSequenceNr", DbType.Int64, req.FromSequenceNr);
                 AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
@@ -545,6 +624,9 @@ namespace Akka.Persistence.Sqlite.Journal
         {
             IJournalResponse summary;
             var responses = new List<IJournalResponse>();
+            var tags = new HashSet<string>();
+            var persistenceIds = new HashSet<string>();
+            var actorInstanceId = req.ActorInstanceId;
 
             try
             {
@@ -559,8 +641,10 @@ namespace Akka.Persistence.Sqlite.Journal
                     if (write != null)
                     {
                         var writes = (IImmutableList<IPersistentRepresentation>)write.Payload;
-                        foreach (var e in writes)
+                        foreach (var unadapted in writes)
                         {
+                            var e = AdaptToJournal(unadapted);
+
                             try
                             {
                                 command.Parameters.Clear();
@@ -576,6 +660,7 @@ namespace Akka.Persistence.Sqlite.Journal
                                         tagBuilder.Append(';');
                                         foreach (var tag in tagged.Tags)
                                         {
+                                            tags.Add(tag);
                                             tagBuilder.Append(tag).Append(';');
                                         }
                                     }
@@ -599,15 +684,18 @@ namespace Akka.Persistence.Sqlite.Journal
 
                                 await command.ExecuteNonQueryAsync(token);
 
-                                var response = new WriteMessageSuccess(e, req.ActorInstanceId);
+                                var response = new WriteMessageSuccess(persistent, actorInstanceId);
                                 responses.Add(response);
+                                persistenceIds.Add(persistent.PersistenceId);
+
+                                NotifyNewPersistenceIdAdded(persistent.PersistenceId);
                             }
                             catch (Exception cause)
                             {
                                 //TODO: this scope wraps atomic write. Atomic writes have all-or-nothing commits.
                                 // so we should revert transaction here. But we need to check how this affect performance.
 
-                                var response = new WriteMessageRejected(e, cause, req.ActorInstanceId);
+                                var response = new WriteMessageRejected(e, cause, actorInstanceId);
                                 responses.Add(response);
                             }
                         }
@@ -615,7 +703,24 @@ namespace Akka.Persistence.Sqlite.Journal
                     else
                     {
                         //TODO: other cases?
-                        var response = new LoopMessageSuccess(envelope.Payload, req.ActorInstanceId);
+                        var response = new LoopMessageSuccess(envelope.Payload, actorInstanceId);
+                        responses.Add(response);
+                    }
+                }
+
+                if (HasTagSubscribers && tags.Count != 0)
+                {
+                    foreach (var tag in tags)
+                    {
+                        NotifyTagChanged(tag);
+                    }
+                }
+
+                if (HasPersistenceIdSubscribers)
+                {
+                    foreach (var persistenceId in persistenceIds)
+                    {
+                        NotifyPersistenceIdChanged(persistenceId);
                     }
                 }
 
@@ -689,6 +794,7 @@ namespace Akka.Persistence.Sqlite.Journal
             {
                 Log.Error(msg.Cause, "An error occurred during event batch processing");    
             }
+            else Log.Debug("Completed batch with success");
 
             TryProcess();
         }

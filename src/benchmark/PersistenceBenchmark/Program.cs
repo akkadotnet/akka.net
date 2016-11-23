@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Pattern;
 
 namespace PersistenceBenchmark
 {
@@ -24,12 +25,12 @@ namespace PersistenceBenchmark
                 persistence.journal {
                     plugin = ""akka.persistence.journal.inmem""
                     sqlite {
-                        class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
+                        class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         table-name = event_journal
                         metadata-table-name = journal_metadata
                         auto-initialize = on
-                        connection-string = ""FullUri=file:memdb-journal.db?mode=memory&cache=shared;""
+                        connection-string = ""FullUri=file:memdb-journal.db?mode=memory&cache=shared;Version=3;""
                     }
                 }
             }");
@@ -66,7 +67,7 @@ namespace PersistenceBenchmark
                 var finished = new Task[ActorCount];
                 for (int i = 0; i < ActorCount; i++)
                 {
-                    finished[i] = actors[i].Ask<Done>(Finish.Instance);
+                    finished[i] = actors[i].Ask<Finished>(Finish.Instance);
                 }
 
                 Task.WaitAll(finished);
@@ -74,6 +75,12 @@ namespace PersistenceBenchmark
                 var elapsed = stopwatch.ElapsedMilliseconds;
 
                 Console.WriteLine($"{ActorCount} actors stored {MessagesPerActor} events each in {elapsed/1000.0} sec. Average: {ActorCount*MessagesPerActor*1000.0/elapsed} events/sec");
+
+                foreach (Task<Finished> task in finished)
+                {
+                    if (!task.IsCompleted || task.Result.State != MessagesPerActor)
+                        throw new IllegalStateException("Actor's state was invalid");
+                }
             }
 
             Console.ReadLine();
