@@ -188,6 +188,7 @@ namespace Akka.Cluster
     }
     public class Member : System.IComparable<Akka.Cluster.Member>
     {
+        public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> AddressOrdering;
         public Akka.Actor.Address Address { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
         public Akka.Cluster.MemberStatus Status { get; }
@@ -218,12 +219,13 @@ namespace Akka.Cluster
         public Akka.Actor.Props DowningActorProps { get; }
         public System.TimeSpan DownRemovalMargin { get; }
     }
-    public class UniqueAddress : System.IComparable<Akka.Cluster.UniqueAddress>
+    public class UniqueAddress : System.IComparable<Akka.Cluster.UniqueAddress>, System.IEquatable<Akka.Cluster.UniqueAddress>
     {
         public UniqueAddress(Akka.Actor.Address address, int uid) { }
         public Akka.Actor.Address Address { get; }
         public int Uid { get; }
         public int CompareTo(Akka.Cluster.UniqueAddress that) { }
+        public bool Equals(Akka.Cluster.UniqueAddress other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
