@@ -132,8 +132,13 @@ namespace Akka.MultiNodeTestRunner
                             continue;
                         }
 
-                        if (!string.IsNullOrWhiteSpace(specName) && !test.Value[0].MethodName.Contains(specName))
+                        // Filtering - check to see if we're supposed to skip this spec or not
+                        if (!string.IsNullOrWhiteSpace(specName) && !test.Value.First().MethodName.Contains(specName))
+                        {
+                            PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
                             continue;
+                        }
+                            
 
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
