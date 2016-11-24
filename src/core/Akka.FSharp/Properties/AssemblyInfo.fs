@@ -1,11 +1,4 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AssemblyInfo.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
-namespace System
+﻿namespace System
 open System
 open System.Reflection
 open System.Runtime.InteropServices
@@ -23,4 +16,3 @@ do ()
 
 module internal AssemblyVersionInformation =
     let [<Literal>] Version = "1.1.2.0"
-

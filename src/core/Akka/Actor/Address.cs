@@ -110,13 +110,7 @@ namespace Akka.Actor
             return string.Equals(Host, other.Host) && Port == other.Port && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((Address)obj);
-        }
+        public override bool Equals(object obj) => obj is Address && Equals((Address) obj);
 
         public override int GetHashCode()
         {
