@@ -380,8 +380,7 @@ namespace Akka.Persistence.Sqlite.Journal
 
         private void NotifyNewPersistenceIdAdded(string persistenceId)
         {
-            _allPersistenceIds.Add(persistenceId);
-            if (HasAllIdsSubscribers)
+            if (_allPersistenceIds.Add(persistenceId) && HasAllIdsSubscribers)
             {
                 var added = new PersistenceIdAdded(persistenceId);
                 foreach (var subscriber in _allIdsSubscribers)
