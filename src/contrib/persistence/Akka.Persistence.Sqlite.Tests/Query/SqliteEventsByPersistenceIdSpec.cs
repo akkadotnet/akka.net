@@ -20,7 +20,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
             akka.persistence.journal.sqlite {{
-                class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
+                class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
                 plugin-dispatcher = ""akka.actor.default-dispatcher""
                 table-name = event_journal
                 metadata-table-name = journal_metadata

@@ -251,6 +251,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.Tests", "contrib\cluster\Akka.DistributedData.Tests\Akka.DistributedData.Tests.csproj", "{0DBF3D66-6E5E-4A89-AA3D-674B92FE81B7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.Tests.MultiNode", "contrib\cluster\Akka.DistributedData.Tests.MultiNode\Akka.DistributedData.Tests.MultiNode.csproj", "{53A657B3-D3CD-461E-9759-664331218060}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Tests.Performance", "core\Akka.Persistence.Tests.Performance\Akka.Persistence.Tests.Performance.csproj", "{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -949,6 +950,14 @@ Global
 		{53A657B3-D3CD-461E-9759-664331218060}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{53A657B3-D3CD-461E-9759-664331218060}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{53A657B3-D3CD-461E-9759-664331218060}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1063,5 +1072,6 @@ Global
 		{59CFFC88-8A73-445D-B191-281E40BE9421} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 		{0DBF3D66-6E5E-4A89-AA3D-674B92FE81B7} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 		{53A657B3-D3CD-461E-9759-664331218060} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
+		{5E7D8489-07EF-4FA1-B880-16A2E32BDE59} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 	EndGlobalSection
 EndGlobal
