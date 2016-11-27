@@ -168,7 +168,8 @@ namespace Akka.Persistence.Sqlite.Journal
                 SELECT {allEventColumnNames}
                 FROM {configuration.FullJournalTableName} e
                 WHERE e.{configuration.PersistenceIdColumnName} = @PersistenceId
-                AND e.{configuration.SequenceNrColumnName} BETWEEN @FromSequenceNr AND @ToSequenceNr;";
+                AND e.{configuration.SequenceNrColumnName} BETWEEN @FromSequenceNr AND @ToSequenceNr
+                ORDER BY e.{configuration.SequenceNrColumnName} ASC;";
 
             ByTagSql =
                 $@"

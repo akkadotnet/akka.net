@@ -5,11 +5,11 @@ using NBench;
 
 namespace Akka.Persistence.Tests.Performance
 {
-    public abstract class JournalWriteSpec
+    public abstract class RawJournalWriteSpec
     {
         #region internals 
 
-        private const int TenSeconds = 10000;
+        private const int Timeout = 10000;
         private const int EventCount = 100000;
 
         class CompletionActor : ReceiveActor
@@ -31,7 +31,7 @@ namespace Akka.Persistence.Tests.Performance
 
         #region init
 
-        private ActorSystem _system;
+        protected ActorSystem System;
         private IActorRef _journalRef;
         private IActorRef _pref;
         private WriteMessages[] _messages;
@@ -40,12 +40,12 @@ namespace Akka.Persistence.Tests.Performance
         [PerfSetup]
         public void Setup()
         {
-            _system = ActorSystem.Create("perf-system", Configuration);
-            _journalRef = Persistence.Instance.Apply(_system).JournalFor(null);
+            System = ActorSystem.Create("RawJournalWriteSpec", Configuration);
+            _journalRef = Persistence.Instance.Apply(System).JournalFor(null);
             _messages = new WriteMessages[EventCount];
 
             var completion = new TaskCompletionSource<int>();
-            _pref = _system.ActorOf(Props.Create(() => new CompletionActor(EventCount, completion)));
+            _pref = System.ActorOf(Props.Create(() => new CompletionActor(EventCount, completion)));
 
             for (int i = 1; i <= EventCount; i++)
             {
@@ -59,7 +59,7 @@ namespace Akka.Persistence.Tests.Performance
         [PerfCleanup]
         public void Cleanup()
         {
-            _system.Dispose();
+            System.Dispose();
         }
 
         #endregion
@@ -68,7 +68,7 @@ namespace Akka.Persistence.Tests.Performance
 
         [PerfBenchmark]
         [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = TenSeconds)]
+        [ElapsedTimeAssertion(MaxTimeMilliseconds = Timeout)]
         public void WriteMessagesThroughtput()
         {
             var i = 0;

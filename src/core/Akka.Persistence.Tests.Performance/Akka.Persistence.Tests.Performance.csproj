@@ -48,8 +48,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="JournalWriteSpec.cs" />
+    <Compile Include="ManyActorsRecoverySpec.cs" />
+    <Compile Include="ManyActorsWriteSpec.cs" />
+    <Compile Include="PerfTestActor.cs" />
+    <Compile Include="RawJournalWriteSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SingleActorWriteSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj">
