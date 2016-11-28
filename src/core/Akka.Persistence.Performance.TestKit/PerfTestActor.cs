@@ -1,6 +1,6 @@
 ﻿using Akka.Actor;
 
-namespace Akka.Persistence.Tests.Performance
+namespace Akka.Persistence.Performance.TestKit
 {
     #region messages
 

@@ -3,13 +3,13 @@ using Akka.Actor;
 using Akka.Configuration;
 using NBench;
 
-namespace Akka.Persistence.Tests.Performance
+namespace Akka.Persistence.Performance.TestKit
 {
     public abstract class RawJournalWriteSpec
     {
         #region internals 
 
-        private const int Timeout = 10000;
+        private const int Timeout = 30000;
         private const int EventCount = 100000;
 
         class CompletionActor : ReceiveActor
@@ -32,16 +32,16 @@ namespace Akka.Persistence.Tests.Performance
         #region init
 
         protected ActorSystem System;
-        private IActorRef _journalRef;
+        protected IActorRef JournalRef;
         private IActorRef _pref;
         private WriteMessages[] _messages;
         private Task _finished;
 
         [PerfSetup]
-        public void Setup()
+        public virtual void Setup()
         {
             System = ActorSystem.Create("RawJournalWriteSpec", Configuration);
-            _journalRef = Persistence.Instance.Apply(System).JournalFor(null);
+            JournalRef = Persistence.Instance.Apply(System).JournalFor(null);
             _messages = new WriteMessages[EventCount];
 
             var completion = new TaskCompletionSource<int>();
@@ -50,14 +50,14 @@ namespace Akka.Persistence.Tests.Performance
             for (int i = 1; i <= EventCount; i++)
             {
                 var e = new IPersistentEnvelope[] {new AtomicWrite(new Persistent("e-"+i, i, "p-1", sender: _pref)),};
-                _messages[i] = new WriteMessages(e, _pref, 1);
+                _messages[i-1] = new WriteMessages(e, _pref, 1);
             }
 
             _finished = completion.Task;
         }
 
         [PerfCleanup]
-        public void Cleanup()
+        public virtual void Cleanup()
         {
             System.Dispose();
         }
@@ -71,11 +71,10 @@ namespace Akka.Persistence.Tests.Performance
         [ElapsedTimeAssertion(MaxTimeMilliseconds = Timeout)]
         public void WriteMessagesThroughtput()
         {
-            var i = 0;
-            for (; i < EventCount; i++)
+            for (var i = 0; i < EventCount; i++)
             {
                 var msg = _messages[i];
-                _journalRef.Tell(msg, _pref);
+                JournalRef.Tell(msg, _pref);
             }
 
             _finished.Wait();

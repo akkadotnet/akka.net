@@ -4,11 +4,11 @@ using Akka.Actor;
 using Akka.Configuration;
 using NBench;
 
-namespace Akka.Persistence.Tests.Performance
+namespace Akka.Persistence.Performance.TestKit
 {
     public abstract class ManyActorsWriteSpec
     {
-        public const int Timeout = 10000;
+        public const int Timeout = 30000;
         public const int ActorCount = 1000;
         public const int EventsPerActor = 100;
 
@@ -20,7 +20,7 @@ namespace Akka.Persistence.Tests.Performance
         private IActorRef[] _testRefs;
 
         [PerfSetup]
-        public void Setup()
+        public virtual void Setup()
         {
             System = ActorSystem.Create("ManyActorsWriteSpec", Configuration);
 
@@ -38,7 +38,7 @@ namespace Akka.Persistence.Tests.Performance
         }
 
         [PerfCleanup]
-        public void Cleanup()
+        public virtual void Cleanup()
         {
             System.Dispose();
         }

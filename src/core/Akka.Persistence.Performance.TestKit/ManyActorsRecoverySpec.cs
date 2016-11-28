@@ -4,15 +4,15 @@ using Akka.Actor;
 using Akka.Configuration;
 using NBench;
 
-namespace Akka.Persistence.Tests.Performance
+namespace Akka.Persistence.Performance.TestKit
 {
     public abstract class ManyActorsRecoverySpec
     {
         public const int ActorsCount = 1000;
         public const int EventsPerActor = 100;
-        public const int Timeout = 10000;
+        public const int Timeout = 30000;
 
-        public abstract Config Configuration { get; }
+        protected abstract Config Configuration { get; }
         protected ActorSystem System;
 
         #region init
@@ -35,7 +35,7 @@ namespace Akka.Persistence.Tests.Performance
         private IActorRef _journalRef;
 
         [PerfSetup]
-        public void Setp()
+        public virtual void Setup()
         {
             System = ActorSystem.Create("ManyActorsRecoverySpec", Configuration);
             _journalRef = Persistence.Instance.Apply(System).JournalFor(null);
@@ -57,7 +57,7 @@ namespace Akka.Persistence.Tests.Performance
         }
 
         [PerfCleanup]
-        public void Cleanup()
+        public virtual void Cleanup()
         {
             System.Dispose();
         }

@@ -7,8 +7,8 @@
     <ProjectGuid>{5E7D8489-07EF-4FA1-B880-16A2E32BDE59}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.Persistence.Tests.Performance</RootNamespace>
-    <AssemblyName>Akka.Persistence.Tests.Performance</AssemblyName>
+    <RootNamespace>Akka.Persistence.Performance.TestKit</RootNamespace>
+    <AssemblyName>Akka.Persistence.Performance.TestKit</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

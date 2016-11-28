@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using NBench;
 
-namespace Akka.Persistence.Tests.Performance
+namespace Akka.Persistence.Performance.TestKit
 {
     public abstract class SingleActorWriteSpec
     {
-        public const int Timeout = 10000;
+        public const int Timeout = 30000;
         public const int EventsPerActor = 1000;
 
         protected abstract Config Configuration { get; }
@@ -19,7 +18,7 @@ namespace Akka.Persistence.Tests.Performance
         private IActorRef _testRef;
 
         [PerfSetup]
-        public void Setup()
+        public virtual void Setup()
         {
             System = ActorSystem.Create("SingleActorWriteSpec", Configuration);
             _testRef = System.ActorOf(PerfTestActor.Props("p-1"), "p-1");
@@ -27,7 +26,7 @@ namespace Akka.Persistence.Tests.Performance
         }
 
         [PerfCleanup]
-        public void Cleanup()
+        public virtual void Cleanup()
         {
             System.Dispose();
         }
