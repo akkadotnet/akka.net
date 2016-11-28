@@ -23,7 +23,7 @@ namespace PersistenceBenchmark
             akka {
                 suppress-json-serializer-warning = true
                 persistence.journal {
-                    plugin = ""akka.persistence.journal.inmem""
+                    plugin = ""akka.persistence.journal.sqlite""
                     sqlite {
                         class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""

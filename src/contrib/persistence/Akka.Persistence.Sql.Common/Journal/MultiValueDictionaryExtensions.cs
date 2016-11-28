@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 
-namespace Akka.Persistence.Sqlite.Journal
+namespace Akka.Persistence.Sql.Common.Journal
 {
     internal static class MultiValueDictionaryExtensions
     {

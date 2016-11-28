@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
-using System.Data.SQLite;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -13,11 +13,10 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
-using Akka.Persistence.Sql.Common.Journal;
 using Akka.Serialization;
 using Akka.Util;
 
-namespace Akka.Persistence.Sqlite.Journal
+namespace Akka.Persistence.Sql.Common.Journal
 {
     public sealed class CircuitBreakerSettings
     {
@@ -71,11 +70,14 @@ namespace Akka.Persistence.Sqlite.Journal
 
         private sealed class BatchComplete
         {
+            public readonly TimeSpan TimeSpent;
+            public readonly int OperationCount;
             public readonly Exception Cause;
 
-            public static readonly BatchComplete Successful = new BatchComplete(null);
-            public BatchComplete(Exception cause)
+            public BatchComplete(TimeSpan timeSpent, int operationCount, Exception cause = null)
             {
+                TimeSpent = timeSpent;
+                OperationCount = operationCount;
                 Cause = cause;
             }
         }
@@ -117,8 +119,8 @@ namespace Akka.Persistence.Sqlite.Journal
         protected virtual string UpdateSequenceNrSql { get; }
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
-        protected virtual string CreateJournalSql { get; }
-        protected virtual string CreateMetadataSql { get; }
+        protected abstract string CreateJournalSql { get; }
+        protected abstract string CreateMetadataSql { get; }
         protected TSetup Setup { get; }
         protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
         protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
@@ -225,26 +227,6 @@ namespace Akka.Persistence.Sqlite.Journal
                 SELECT {allEventColumnNames}
                 FROM {conventions.FullJournalTableName} e
                 WHERE ";
-
-            CreateJournalSql = $@"
-                CREATE TABLE IF NOT EXISTS {conventions.FullJournalTableName} (
-                    {conventions.OrderingColumnName} INTEGER PRIMARY KEY NOT NULL,
-                    {conventions.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
-                    {conventions.SequenceNrColumnName} INTEGER(8) NOT NULL,
-                    {conventions.IsDeletedColumnName} INTEGER(1) NOT NULL,
-                    {conventions.ManifestColumnName} VARCHAR(255) NULL,
-                    {conventions.TimestampColumnName} INTEGER NOT NULL,
-                    {conventions.PayloadColumnName} BLOB NOT NULL,
-                    {conventions.TagsColumnName} VARCHAR(2000) NULL,
-                    UNIQUE ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
-                );";
-
-            CreateMetadataSql = $@"
-                CREATE TABLE IF NOT EXISTS {conventions.FullMetaTableName} (
-                    {conventions.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
-                    {conventions.SequenceNrColumnName} INTEGER(8) NOT NULL,
-                    PRIMARY KEY ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
-                );";
         }
 
         protected override void PreStart()
@@ -429,55 +411,68 @@ namespace Akka.Persistence.Sqlite.Journal
                 _remainingOperations--;
 
                 var chunk = DequeueChunk();
-                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk))
-                    .PipeTo(Self, failure: cause => new BatchComplete(cause ?? new OperationCanceledException($"Timeout occured while trying to execute {chunk.Requests.Length} operations.")));
+                var eventStream = Context.System.EventStream;
+                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, eventStream))
+                    .PipeTo(Self);
             }
         }
 
-        private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk)
+        private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk, EventStream eventStream)
         {
+            Exception cause = null;
+            var stopwatch = new Stopwatch();
+            var token = _cancellationTokenSource.Token;
             using (var connection = CreateConnection())
             {
-                await connection.OpenAsync(_cancellationTokenSource.Token);
+                await connection.OpenAsync(token);
                 
+                using (var tx = connection.BeginTransaction())
                 using (var command = connection.CreateCommand())
                 {
+                    command.Transaction = tx;
                     try
                     {
+                        stopwatch.Start();
                         for (int i = 0; i < chunk.Requests.Length; i++)
                         {
                             var req = chunk.Requests[i];
 
                             if (req is WriteMessages)
-                                await HandleWriteMessages((WriteMessages)req, command, _cancellationTokenSource.Token);
+                                await HandleWriteMessages((WriteMessages)req, command, token);
                             else if (req is ReplayMessages)
-                                await HandleReplayMessages((ReplayMessages)req, command, _cancellationTokenSource.Token);
+                                await HandleReplayMessages((ReplayMessages)req, command, token);
                             else if (req is ReadHighestSequenceNr)
-                                await HandleReadHighestSequenceNr((ReadHighestSequenceNr)req, command, _cancellationTokenSource.Token);
+                                await HandleReadHighestSequenceNr((ReadHighestSequenceNr)req, command, token);
                             else if (req is DeleteMessagesTo)
-                                await HandleDeleteMessagesTo((DeleteMessagesTo)req, command, _cancellationTokenSource.Token);
+                                await HandleDeleteMessagesTo((DeleteMessagesTo)req, command, token);
                             else if (req is ReplayTaggedMessages)
-                                await HandleReplayTaggedMessages((ReplayTaggedMessages)req, command, _cancellationTokenSource.Token);
+                                await HandleReplayTaggedMessages((ReplayTaggedMessages)req, command, token);
                             else Unhandled(req);
                         }
 
+                        tx.Commit();
+
                         if (CanPublish)
                         {
-                            var eventStream = Context.System.EventStream;
                             for (int i = 0; i < chunk.Requests.Length; i++)
                             {
                                 eventStream.Publish(chunk.Requests[i]);
                             }
                         }
                     }
-                    catch (Exception cause)
+                    catch (Exception e)
                     {
-                        return new BatchComplete(cause);
+                        cause = e;
+                        tx.Rollback();
+                    }
+                    finally
+                    {
+                        stopwatch.Stop();
                     }
                 }
             }
 
-            return BatchComplete.Successful;
+            return new BatchComplete(stopwatch.Elapsed, chunk.Requests.Length, cause);
         }
 
         private async Task HandleDeleteMessagesTo(DeleteMessagesTo req, DbCommand command, CancellationToken token)
@@ -543,6 +538,8 @@ namespace Akka.Persistence.Sqlite.Journal
         private async Task<long> ReadHighestSequenceNr(string persistenceId, DbCommand command, CancellationToken token)
         {
             command.CommandText = HighestSequenceNrSql;
+
+            command.Parameters.Clear();
             AddParameter(command, "PersistenceId", DbType.String, persistenceId);
 
             var result = await command.ExecuteScalarAsync(token);
@@ -648,8 +645,6 @@ namespace Akka.Persistence.Sqlite.Journal
 
             try
             {
-                var resequenceCounter = 0;
-
                 command.CommandText = InsertEventSql;
                 var tagBuilder = new StringBuilder(16); // magic number
 
@@ -667,8 +662,7 @@ namespace Akka.Persistence.Sqlite.Journal
                             {
                                 command.Parameters.Clear();
                                 tagBuilder.Clear();
-
-                                resequenceCounter++;
+                                
                                 var persistent = e;
                                 if (persistent.Payload is Tagged)
                                 {
@@ -827,7 +821,7 @@ namespace Akka.Persistence.Sqlite.Journal
             {
                 Log.Error(msg.Cause, "An error occurred during event batch processing");
             }
-            else Log.Debug("Completed batch with success");
+            else Log.Debug("Completed batch of {0} operations in {1} milliseconds", msg.OperationCount, msg.TimeSpent.TotalMilliseconds);
 
             TryProcess();
         }
