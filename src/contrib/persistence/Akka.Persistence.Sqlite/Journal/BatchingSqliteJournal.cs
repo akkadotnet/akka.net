@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Configuration;
 using System.Data.Common;
 using System.Data.SQLite;
@@ -56,9 +58,7 @@ namespace Akka.Persistence.Sqlite.Journal
     public class BatchingSqliteJournal : BatchingSqlJournal<BatchingSqliteJournalSetup>
     {
         private DbConnection _anchor;
-
-        protected override string CreateJournalSql { get; }
-        protected override string CreateMetadataSql { get; }
+        
 
         public BatchingSqliteJournal(Config config) : this(BatchingSqliteJournalSetup.Create(config))
         {
@@ -67,7 +67,9 @@ namespace Akka.Persistence.Sqlite.Journal
         public BatchingSqliteJournal(BatchingSqliteJournalSetup setup) : base(setup)
         {
             var conventions = Setup.NamingConventions;
-            CreateJournalSql = $@"
+            Initializers = ImmutableDictionary.CreateRange(new[]
+            {
+                new KeyValuePair<string, string>("CreateJournalSql", $@"
                 CREATE TABLE IF NOT EXISTS {conventions.FullJournalTableName} (
                     {conventions.OrderingColumnName} INTEGER PRIMARY KEY NOT NULL,
                     {conventions.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
@@ -78,15 +80,17 @@ namespace Akka.Persistence.Sqlite.Journal
                     {conventions.PayloadColumnName} BLOB NOT NULL,
                     {conventions.TagsColumnName} VARCHAR(2000) NULL,
                     UNIQUE ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
-                );";
-
-            CreateMetadataSql = $@"
+                );"),
+                new KeyValuePair<string, string>("CreateMetadataSql", $@"
                 CREATE TABLE IF NOT EXISTS {conventions.FullMetaTableName} (
                     {conventions.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
                     {conventions.SequenceNrColumnName} INTEGER(8) NOT NULL,
                     PRIMARY KEY ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
-                );";
+                );"),
+            });
         }
+
+        protected override ImmutableDictionary<string, string> Initializers { get; }
 
         protected override void PreStart()
         {

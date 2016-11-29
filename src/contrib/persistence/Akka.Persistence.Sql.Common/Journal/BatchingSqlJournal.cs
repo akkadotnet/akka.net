@@ -70,12 +70,14 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private sealed class BatchComplete
         {
-            public readonly TimeSpan TimeSpent;
+            public readonly int ChunkId;
             public readonly int OperationCount;
+            public readonly TimeSpan TimeSpent;
             public readonly Exception Cause;
 
-            public BatchComplete(TimeSpan timeSpent, int operationCount, Exception cause = null)
+            public BatchComplete(int chunkId, int operationCount, TimeSpan timeSpent, Exception cause = null)
             {
+                ChunkId = chunkId;
                 TimeSpent = timeSpent;
                 OperationCount = operationCount;
                 Cause = cause;
@@ -91,12 +93,12 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private struct RequestChunk
         {
-            public readonly bool IsReadOnly;
+            public readonly int ChunkId;
             public readonly IJournalRequest[] Requests;
 
-            public RequestChunk(bool isReadOnly, IJournalRequest[] requests)
+            public RequestChunk(int chunkId, IJournalRequest[] requests)
             {
-                IsReadOnly = isReadOnly;
+                ChunkId = chunkId;
                 Requests = requests;
             }
         }
@@ -119,8 +121,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string UpdateSequenceNrSql { get; }
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
-        protected abstract string CreateJournalSql { get; }
-        protected abstract string CreateMetadataSql { get; }
+        protected abstract ImmutableDictionary<string, string> Initializers { get; }
         protected TSetup Setup { get; }
         protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
         protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
@@ -135,10 +136,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly HashSet<string> _allPersistenceIds;
 
         private readonly Queue<IJournalRequest> _buffer;
-        private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly Func<Type, Serializer> _getSerializer;
-        private int _remainingOperations;
         private readonly CircuitBreaker _circuitBreaker;
+        private int _remainingOperations;
 
         protected BatchingSqlJournal(TSetup setup)
         {
@@ -152,7 +152,6 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             _remainingOperations = Setup.MaxConcurrentOperations;
             _buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
-            _cancellationTokenSource = new CancellationTokenSource(Setup.ConnectionTimeout);
             _getSerializer = Context.System.Serialization.FindSerializerFor;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
@@ -238,10 +237,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                 {
                     connection.Open();
 
-                    command.CommandText = CreateJournalSql;
-                    command.ExecuteNonQuery();
-                    command.CommandText = CreateMetadataSql;
-                    command.ExecuteNonQuery();
+                    foreach (var entry in Initializers)
+                    {
+                        Log.Debug("Executing initialization script: {0}", entry.Key);
+                        command.CommandText = entry.Value;
+                        command.ExecuteNonQuery();
+                    }
                 }
             }
 
@@ -250,7 +251,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         protected override void PostStop()
         {
-            _cancellationTokenSource.Cancel(false);
+            //_cancellationTokenSource.Cancel(false);
+            //_cancellationTokenSource.Dispose();
             base.PostStop();
         }
 
@@ -290,7 +292,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private void InitializePersistenceIds()
         {
             var self = Self;
-            GetAllPersistenceIdsAsync(_cancellationTokenSource.Token)
+            GetAllPersistenceIdsAsync()
                 .ContinueWith(task =>
                 {
                     if (task.IsCanceled || task.IsFaulted)
@@ -305,18 +307,18 @@ namespace Akka.Persistence.Sql.Common.Journal
                 });
         }
 
-        private async Task<IEnumerable<string>> GetAllPersistenceIdsAsync(CancellationToken token)
+        private async Task<IEnumerable<string>> GetAllPersistenceIdsAsync()
         {
             var result = new List<string>(256);
             using (var connection = CreateConnection())
             {
-                await connection.OpenAsync(token);
+                await connection.OpenAsync();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = AllPersistenceIdsSql;
 
-                    var reader = await command.ExecuteReaderAsync(token);
-                    while (await reader.ReadAsync(token))
+                    var reader = await command.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
                     {
                         result.Add(reader.GetString(0));
                     }
@@ -410,10 +412,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 _remainingOperations--;
 
-                var chunk = DequeueChunk();
+                var chunk = DequeueChunk(_remainingOperations);
                 var eventStream = Context.System.EventStream;
-                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, eventStream))
-                    .PipeTo(Self);
+                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, eventStream)).PipeTo(Self);
             }
         }
 
@@ -421,14 +422,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             Exception cause = null;
             var stopwatch = new Stopwatch();
-            var token = _cancellationTokenSource.Token;
             using (var connection = CreateConnection())
             {
-                await connection.OpenAsync(token);
+                await connection.OpenAsync();
                 
                 using (var tx = connection.BeginTransaction())
                 using (var command = connection.CreateCommand())
                 {
+                    command.CommandTimeout = (int) Setup.ConnectionTimeout.TotalMilliseconds;
                     command.Transaction = tx;
                     try
                     {
@@ -438,15 +439,15 @@ namespace Akka.Persistence.Sql.Common.Journal
                             var req = chunk.Requests[i];
 
                             if (req is WriteMessages)
-                                await HandleWriteMessages((WriteMessages)req, command, token);
+                                await HandleWriteMessages((WriteMessages)req, command);
                             else if (req is ReplayMessages)
-                                await HandleReplayMessages((ReplayMessages)req, command, token);
+                                await HandleReplayMessages((ReplayMessages)req, command);
                             else if (req is ReadHighestSequenceNr)
-                                await HandleReadHighestSequenceNr((ReadHighestSequenceNr)req, command, token);
+                                await HandleReadHighestSequenceNr((ReadHighestSequenceNr)req, command);
                             else if (req is DeleteMessagesTo)
-                                await HandleDeleteMessagesTo((DeleteMessagesTo)req, command, token);
+                                await HandleDeleteMessagesTo((DeleteMessagesTo)req, command);
                             else if (req is ReplayTaggedMessages)
-                                await HandleReplayTaggedMessages((ReplayTaggedMessages)req, command, token);
+                                await HandleReplayTaggedMessages((ReplayTaggedMessages)req, command);
                             else Unhandled(req);
                         }
 
@@ -472,10 +473,10 @@ namespace Akka.Persistence.Sql.Common.Journal
                 }
             }
 
-            return new BatchComplete(stopwatch.Elapsed, chunk.Requests.Length, cause);
+            return new BatchComplete(chunk.ChunkId, chunk.Requests.Length, stopwatch.Elapsed, cause);
         }
 
-        private async Task HandleDeleteMessagesTo(DeleteMessagesTo req, DbCommand command, CancellationToken token)
+        private async Task HandleDeleteMessagesTo(DeleteMessagesTo req, DbCommand command)
         {
             var toSequenceNr = req.ToSequenceNr;
             var persistenceId = req.PersistenceId;
@@ -484,14 +485,14 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command, token);
+                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command);
 
                 command.CommandText = DeleteBatchSql;
                 command.Parameters.Clear();
                 AddParameter(command, "PersistenceId", DbType.String, persistenceId);
                 AddParameter(command, "ToSequenceNr", DbType.Int64, toSequenceNr);
 
-                await command.ExecuteNonQueryAsync(token);
+                await command.ExecuteNonQueryAsync();
 
                 if (highestSequenceNr <= toSequenceNr)
                 {
@@ -501,7 +502,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
                     AddParameter(command, "@SequenceNr", DbType.Int64, highestSequenceNr);
 
-                    await command.ExecuteNonQueryAsync(token);
+                    await command.ExecuteNonQueryAsync();
                 }
 
                 var response = new DeleteMessagesSuccess(toSequenceNr);
@@ -514,7 +515,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleReadHighestSequenceNr(ReadHighestSequenceNr req, DbCommand command, CancellationToken token)
+        private async Task HandleReadHighestSequenceNr(ReadHighestSequenceNr req, DbCommand command)
         {
             var replyTo = req.PersistentActor;
             var persistenceId = req.PersistenceId;
@@ -523,7 +524,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command, token);
+                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command);
 
                 var response = new ReadHighestSequenceNrSuccess(highestSequenceNr);
                 replyTo.Tell(response, ActorRefs.NoSender);
@@ -535,19 +536,19 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task<long> ReadHighestSequenceNr(string persistenceId, DbCommand command, CancellationToken token)
+        private async Task<long> ReadHighestSequenceNr(string persistenceId, DbCommand command)
         {
             command.CommandText = HighestSequenceNrSql;
 
             command.Parameters.Clear();
             AddParameter(command, "PersistenceId", DbType.String, persistenceId);
 
-            var result = await command.ExecuteScalarAsync(token);
+            var result = await command.ExecuteScalarAsync();
             var highestSequenceNr = result is long ? Convert.ToInt64(result) : 0L;
             return highestSequenceNr;
         }
 
-        private async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, DbCommand command, CancellationToken token)
+        private async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, DbCommand command)
         {
             var replyTo = req.ReplyTo;
 
@@ -566,9 +567,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
                 AddParameter(command, "@Take", DbType.Int64, take);
 
-                using (var reader = await command.ExecuteReaderAsync(token))
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    while (await reader.ReadAsync(token))
+                    while (await reader.ReadAsync())
                     {
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
@@ -589,7 +590,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleReplayMessages(ReplayMessages req, DbCommand command, CancellationToken token)
+        private async Task HandleReplayMessages(ReplayMessages req, DbCommand command)
         {
             var persistentRef = req.PersistentActor;
             var persistenceId = req.PersistenceId;
@@ -598,7 +599,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command, token);
+                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command);
                 var toSequenceNr = Math.Min(req.ToSequenceNr, highestSequenceNr);
 
                 command.CommandText = ByPersistenceIdSql;
@@ -608,10 +609,10 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@FromSequenceNr", DbType.Int64, req.FromSequenceNr);
                 AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
-                using (var reader = await command.ExecuteReaderAsync(token))
+                using (var reader = await command.ExecuteReaderAsync())
                 {
                     var i = 0L;
-                    while ((i++) < req.Max && await reader.ReadAsync(token))
+                    while ((i++) < req.Max && await reader.ReadAsync())
                     {
                         var persistent = ReadEvent(reader);
 
@@ -635,7 +636,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleWriteMessages(WriteMessages req, DbCommand command, CancellationToken token)
+        private async Task HandleWriteMessages(WriteMessages req, DbCommand command)
         {
             IJournalResponse summary;
             var responses = new List<IJournalResponse>();
@@ -646,6 +647,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             try
             {
                 command.CommandText = InsertEventSql;
+                
                 var tagBuilder = new StringBuilder(16); // magic number
 
                 foreach (var envelope in req.Messages)
@@ -690,7 +692,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 AddParameter(command, "@Payload", DbType.Binary, binary);
                                 AddParameter(command, "@Tag", DbType.String, tagBuilder.ToString());
 
-                                await command.ExecuteNonQueryAsync(token);
+                                await command.ExecuteNonQueryAsync();
 
                                 var response = new WriteMessageSuccess(persistent, actorInstanceId);
                                 responses.Add(response);
@@ -799,19 +801,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             command.Parameters.Add(param);
         }
 
-        private RequestChunk DequeueChunk()
+        private RequestChunk DequeueChunk(int chunkId)
         {
             var operationsCount = Math.Min(_buffer.Count, Setup.MaxBatchSize);
-            var isReadOnly = false;
             var array = new IJournalRequest[operationsCount];
             for (int i = 0; i < operationsCount; i++)
             {
                 var req = _buffer.Dequeue();
-                if (req is ReplayMessages || req is ReadHighestSequenceNr) isReadOnly = true;
                 array[i] = req;
             }
 
-            return new RequestChunk(isReadOnly, array);
+            return new RequestChunk(chunkId, array);
         }
 
         private void CompleteBatch(BatchComplete msg)
@@ -819,9 +819,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             _remainingOperations++;
             if (msg.Cause != null)
             {
-                Log.Error(msg.Cause, "An error occurred during event batch processing");
+                Log.Error(msg.Cause, "An error occurred during event batch processing (chunkId: {0})", msg.ChunkId);
             }
-            else Log.Debug("Completed batch of {0} operations in {1} milliseconds", msg.OperationCount, msg.TimeSpent.TotalMilliseconds);
+            else Log.Debug("Completed batch (chunkId: {0}) of {1} operations in {2} milliseconds", msg.ChunkId, msg.OperationCount, msg.TimeSpent.TotalMilliseconds);
 
             TryProcess();
         }
