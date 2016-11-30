@@ -55,7 +55,7 @@ namespace Akka.Persistence.Sqlite.Journal
         }
     }
 
-    public class BatchingSqliteJournal : BatchingSqlJournal<BatchingSqliteJournalSetup>
+    public class BatchingSqliteJournal : BatchingSqlJournal<SQLiteConnection, SQLiteCommand>
     {
         private DbConnection _anchor;
         
@@ -94,7 +94,7 @@ namespace Akka.Persistence.Sqlite.Journal
 
         protected override void PreStart()
         {
-            _anchor = CreateConnection();
+            _anchor = CreateConnection(Setup.ConnectionString);
             _anchor.Open();
             base.PreStart();
         }
@@ -105,6 +105,6 @@ namespace Akka.Persistence.Sqlite.Journal
             _anchor.Dispose();
         }
 
-        protected override DbConnection CreateConnection() => new SQLiteConnection(Setup.ConnectionString);
+        protected override SQLiteConnection CreateConnection(string connectionString) => new SQLiteConnection(connectionString);
     }
 }

@@ -64,7 +64,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
-    public abstract class BatchingSqlJournal<TSetup> : WriteJournalBase where TSetup : BatchingSqlJournalSetup
+    public abstract class BatchingSqlJournal<TConnection, TCommand> : WriteJournalBase 
+        where TConnection : DbConnection
+        where TCommand : DbCommand
     {
         #region internal classes
 
@@ -122,7 +124,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
         protected abstract ImmutableDictionary<string, string> Initializers { get; }
-        protected TSetup Setup { get; }
+        protected BatchingSqlJournalSetup Setup { get; }
         protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
         protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
         protected bool HasAllIdsSubscribers => _allIdsSubscribers.Count != 0;
@@ -140,7 +142,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
 
-        protected BatchingSqlJournal(TSetup setup)
+        protected BatchingSqlJournal(BatchingSqlJournalSetup setup)
         {
             Setup = setup;
             CanPublish = Persistence.Instance.Apply(Context.System).Settings.Internal.PublishPluginCommands;
@@ -232,7 +234,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             if (Setup.AutoInitialize)
             {
-                using (var connection = CreateConnection())
+                using (var connection = CreateConnection(Setup.ConnectionString))
                 using (var command = connection.CreateCommand())
                 {
                     connection.Open();
@@ -248,14 +250,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             base.PreStart();
         }
-
-        protected override void PostStop()
-        {
-            //_cancellationTokenSource.Cancel(false);
-            //_cancellationTokenSource.Dispose();
-            base.PostStop();
-        }
-
+        
         protected sealed override bool Receive(object message)
         {
             if (message is WriteMessages) BatchRequest((IJournalRequest)message);
@@ -310,7 +305,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private async Task<IEnumerable<string>> GetAllPersistenceIdsAsync()
         {
             var result = new List<string>(256);
-            using (var connection = CreateConnection())
+            using (var connection = CreateConnection(Setup.ConnectionString))
             {
                 await connection.OpenAsync();
                 using (var command = connection.CreateCommand())
@@ -422,12 +417,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             Exception cause = null;
             var stopwatch = new Stopwatch();
-            using (var connection = CreateConnection())
+            using (var connection = CreateConnection(Setup.ConnectionString))
             {
                 await connection.OpenAsync();
                 
                 using (var tx = connection.BeginTransaction())
-                using (var command = connection.CreateCommand())
+                using (var command = (TCommand)connection.CreateCommand())
                 {
                     command.CommandTimeout = (int) Setup.ConnectionTimeout.TotalMilliseconds;
                     command.Transaction = tx;
@@ -476,7 +471,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             return new BatchComplete(chunk.ChunkId, chunk.Requests.Length, stopwatch.Elapsed, cause);
         }
 
-        private async Task HandleDeleteMessagesTo(DeleteMessagesTo req, DbCommand command)
+        private async Task HandleDeleteMessagesTo(DeleteMessagesTo req, TCommand command)
         {
             var toSequenceNr = req.ToSequenceNr;
             var persistenceId = req.PersistenceId;
@@ -515,7 +510,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleReadHighestSequenceNr(ReadHighestSequenceNr req, DbCommand command)
+        private async Task HandleReadHighestSequenceNr(ReadHighestSequenceNr req, TCommand command)
         {
             var replyTo = req.PersistentActor;
             var persistenceId = req.PersistenceId;
@@ -536,7 +531,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task<long> ReadHighestSequenceNr(string persistenceId, DbCommand command)
+        private async Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command)
         {
             command.CommandText = HighestSequenceNrSql;
 
@@ -548,7 +543,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             return highestSequenceNr;
         }
 
-        private async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, DbCommand command)
+        private async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, TCommand command)
         {
             var replyTo = req.ReplyTo;
 
@@ -590,7 +585,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleReplayMessages(ReplayMessages req, DbCommand command)
+        private async Task HandleReplayMessages(ReplayMessages req, TCommand command)
         {
             var persistentRef = req.PersistentActor;
             var persistenceId = req.PersistenceId;
@@ -636,7 +631,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleWriteMessages(WriteMessages req, DbCommand command)
+        private async Task HandleWriteMessages(WriteMessages req, TCommand command)
         {
             IJournalResponse summary;
             var responses = new List<IJournalResponse>();
@@ -680,17 +675,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                                     }
                                     persistent = persistent.WithPayload(tagged.Payload);
                                 }
-
-                                string manifest;
-                                var binary = WriteEvent(persistent, out manifest);
-
-                                AddParameter(command, "@PersistenceId", DbType.String, persistent.PersistenceId);
-                                AddParameter(command, "@SequenceNr", DbType.Int64, persistent.SequenceNr);
-                                AddParameter(command, "@Timestamp", DbType.Int64, 0L);
-                                AddParameter(command, "@IsDeleted", DbType.Boolean, false);
-                                AddParameter(command, "@Manifest", DbType.String, manifest);
-                                AddParameter(command, "@Payload", DbType.Binary, binary);
-                                AddParameter(command, "@Tag", DbType.String, tagBuilder.ToString());
+                                
+                                WriteEvent(command, persistent, tagBuilder.ToString());
 
                                 await command.ExecuteNonQueryAsync();
 
@@ -749,23 +735,30 @@ namespace Akka.Persistence.Sql.Common.Journal
                 aref.Tell(response);
             }
         }
-
+        
         /// <summary>
-        /// Returns a representation of a <see cref="IPersistentRepresentation.Payload"/> that 
-        /// can be stored inside a database (usually it's a byte array for binary columns).
+        /// Perform write of persistent event with specified <paramref name="tags"/> 
+        /// into database using given <paramref name="command"/>.
         /// </summary>
-        /// <param name="persistent">Persistent wrapper around user-defined event.</param>
-        /// <param name="manifest">Manifest used to recognize, which serializer to use. Usually a fully qualified type name with assembly.</param>
-        /// <returns>Data type that can be stored inside one of the database columns using ADO.NET.</returns>
-        protected virtual object WriteEvent(IPersistentRepresentation persistent, out string manifest)
+        /// <param name="command">Database command object used to store data.</param>
+        /// <param name="persistent">Persistent event representation.</param>
+        /// <param name="tags">Optional tags extracted from peristent event payload.</param>
+        protected virtual void WriteEvent(TCommand command, IPersistentRepresentation persistent, string tags = "")
         {
             var payloadType = persistent.Payload.GetType();
-            manifest = string.IsNullOrEmpty(persistent.Manifest)
+            var manifest = string.IsNullOrEmpty(persistent.Manifest)
                 ? payloadType.TypeQualifiedName()
                 : persistent.Manifest;
             var serializer = _getSerializer(payloadType);
             var binary = serializer.ToBinary(persistent.Payload);
-            return binary;
+
+            AddParameter(command, "@PersistenceId", DbType.String, persistent.PersistenceId);
+            AddParameter(command, "@SequenceNr", DbType.Int64, persistent.SequenceNr);
+            AddParameter(command, "@Timestamp", DbType.Int64, 0L);
+            AddParameter(command, "@IsDeleted", DbType.Boolean, false);
+            AddParameter(command, "@Manifest", DbType.String, manifest);
+            AddParameter(command, "@Payload", DbType.Binary, binary);
+            AddParameter(command, "@Tag", DbType.String, tags);
         }
 
         /// <summary>
@@ -789,10 +782,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             return persistent;
         }
 
-        protected abstract DbConnection CreateConnection();
+        protected abstract TConnection CreateConnection(string connectionString);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AddParameter(DbCommand command, string paramName, DbType dbType, object value)
+        protected void AddParameter(TCommand command, string paramName, DbType dbType, object value)
         {
             var param = command.CreateParameter();
             param.Value = value;
