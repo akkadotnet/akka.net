@@ -908,7 +908,7 @@ namespace Akka.Streams.Dsl
                 private readonly HubSourceLogic _stage;
                 private readonly long _id;
                 private int _untilNextAdvanceSignal;
-                private bool _initialized;
+                private bool _offsetInitialized;
                 private Action<IHubEvent> _hubCallback;
 
                 // We need to track our last offset that we published to the Hub. The reason is, that for efficiency reasons,
@@ -936,12 +936,21 @@ namespace Akka.Streams.Dsl
                         if (result.IsSuccess)
                         {
                             _hubCallback = result.Value;
+                            if(IsAvailable(_stage.Out) && _offsetInitialized)
+                                OnPull();
                             _hubCallback(RegistrationPending.Instance);
                         }
                         else
                             FailStage(result.Exception);
                     };
 
+                    /*
+                     * Note that there is a potential race here. First we add ourselves to the pending registrations, then
+                     * we send RegistrationPending. However, another downstream might have triggered our registration by its
+                     * own RegistrationPending message, since we are in the list already.
+                     * This means we might receive an onCommand(Initialize(offset)) *before* onHubReady fires so it is important
+                     * to only serve elements after both offsetInitialized = true and hubCallback is not null.
+                     */
                     while (true)
                     {
                         var state = _stage._hubLogic.State.Value;
@@ -976,7 +985,7 @@ namespace Akka.Streams.Dsl
 
                 public override void OnPull()
                 {
-                    if (_initialized)
+                    if (_offsetInitialized && _hubCallback != null)
                     {
                         var element = _stage._hubLogic.Poll(_offset);
 
@@ -1024,15 +1033,12 @@ namespace Akka.Streams.Dsl
                     }
                     else
                     {
-                        var intialize = e as Initialize;
-                        if (intialize != null)
-                        {
-                            _initialized = true;
-                            _previousPublishedOffset = intialize.Offset;
-                            _offset = intialize.Offset;
-                            if(IsAvailable(_stage.Out))
-                                OnPull();
-                        }
+                        var intialize = (Initialize)e;
+                        _offsetInitialized = true;
+                        _previousPublishedOffset = intialize.Offset;
+                        _offset = intialize.Offset;
+                        if (IsAvailable(_stage.Out) && _hubCallback != null)
+                            OnPull();
                     }
                 }
             }
