@@ -181,7 +181,7 @@ namespace Akka.DistributedData.Serialization
             if (obj is Write) return writeCache.GetOrAdd((Write) obj);
             if (obj is Read) return readCache.GetOrAdd((Read)obj);
             if (obj is WriteAck) return writeAckBytes;
-
+            
             return Serialize(obj);
         }
 
