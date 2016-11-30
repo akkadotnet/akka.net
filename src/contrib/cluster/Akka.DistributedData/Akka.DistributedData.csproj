@@ -53,6 +53,10 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="Wire, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Wire.0.8.1\lib\net45\Wire.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Local\ClusterReplicatedDataExtensions.cs" />
@@ -88,6 +92,8 @@
     <Compile Include="Replicator.Messages.cs" />
     <Compile Include="ReplicatorSettings.cs" />
     <Compile Include="Local\LocalGCounter.cs" />
+    <Compile Include="Serialization\ReplicatedDataSerializer.cs" />
+    <Compile Include="Serialization\ReplicatorMessageSerializer.cs" />
     <Compile Include="VersionVector.cs" />
     <Compile Include="WriteAggregator.cs" />
   </ItemGroup>
