@@ -180,7 +180,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                 SELECT {allEventColumnNames}
                 FROM {Configuration.FullJournalTableName} e
                 WHERE e.{Configuration.PersistenceIdColumnName} = @PersistenceId
-                AND e.{Configuration.SequenceNrColumnName} BETWEEN @FromSequenceNr AND @ToSequenceNr;";
+                AND e.{Configuration.SequenceNrColumnName} BETWEEN @FromSequenceNr AND @ToSequenceNr
+				ORDER BY {Configuration.SequenceNrColumnName} ASC;";
 
             ByTagSql =
                 $@"
