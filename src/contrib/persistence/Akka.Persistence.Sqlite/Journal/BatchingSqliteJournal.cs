@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BatchingSqliteJournal.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Configuration;
@@ -30,9 +37,11 @@ namespace Akka.Persistence.Sqlite.Journal
                 connectionString: connectionString,
                 maxConcurrentOperations: config.GetInt("max-concurrent-operations", 64),
                 maxBatchSize: config.GetInt("max-batch-size", 100),
+                maxBufferSize: config.GetInt("max-buffer-size", 500000),
                 autoInitialize: config.GetBoolean("auto-initialize", false),
                 connectionTimeout: config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(30)),
                 circuitBreakerSettings: CircuitBreakerSettings.Create(config.GetConfig("circuit-breaker")),
+                replayFilterSettings: ReplayFilterSettings.Create(config.GetConfig("replay-filter")), 
                 namingConventions: new QueryConfiguration(
                     schemaName: null,
                     journalEventsTableName: config.GetString("table-name"),
@@ -48,9 +57,9 @@ namespace Akka.Persistence.Sqlite.Journal
                     timeout: config.GetTimeSpan("connection-timeout")));
         }
 
-        public BatchingSqliteJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, bool autoInitialize, 
-            TimeSpan connectionTimeout, CircuitBreakerSettings circuitBreakerSettings, QueryConfiguration namingConventions) 
-            : base(connectionString, maxConcurrentOperations, maxBatchSize, autoInitialize, connectionTimeout, circuitBreakerSettings, namingConventions)
+        public BatchingSqliteJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, 
+            TimeSpan connectionTimeout, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions) 
+            : base(connectionString, maxConcurrentOperations, maxBatchSize, maxBufferSize, autoInitialize, connectionTimeout, circuitBreakerSettings, replayFilterSettings, namingConventions)
         {
         }
     }

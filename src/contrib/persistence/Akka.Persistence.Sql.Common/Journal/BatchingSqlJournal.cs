@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BatchingSqlJournal.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
@@ -6,7 +13,6 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -18,8 +24,80 @@ using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
+    /// <summary>
+    /// Settings used for managing filter rules during event replay.
+    /// </summary>
+    public sealed class ReplayFilterSettings
+    {
+        /// <summary>
+        /// Creates a new instance of the <see cref="ReplayFilterSettings"/> from provided HOCON <paramref name="config"/>.
+        /// </summary>
+        public static ReplayFilterSettings Create(Config config)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config), "No HOCON config was provided for replay filter settings");
+
+            ReplayFilterMode mode;
+            var replayModeString = config.GetString("mode", "off");
+            switch (replayModeString)
+            {
+                case "off": mode = ReplayFilterMode.Disabled; break;
+                case "repair-by-discard-old": mode = ReplayFilterMode.RepairByDiscardOld; break;
+                case "fail": mode = ReplayFilterMode.Fail; break;
+                case "warn": mode = ReplayFilterMode.Warn; break;
+                default: throw new ArgumentException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]", nameof(config));
+            }
+
+            return new ReplayFilterSettings(
+                mode: mode,
+                windowSize: config.GetInt("window-size", 100),
+                maxOldWriters: config.GetInt("max-old-writers", 10),
+                isDebug: config.GetBoolean("debug", false));
+        }
+
+        /// <summary>
+        /// What the filter should do when detecting invalid events.
+        /// </summary>
+        public readonly ReplayFilterMode Mode;
+        
+        /// <summary>
+        /// It uses a look ahead buffer for analyzing the events.
+        /// This defines the size (in number of events) of the buffer.
+        /// </summary>
+        public readonly int WindowSize;
+
+        /// <summary>
+        /// How many old writerUuid to remember.
+        /// </summary>
+        public readonly int MaxOldWriters;
+
+        /// <summary>
+        /// Should the debug logging be enabled for each replayed event?
+        /// </summary>
+        public readonly bool IsDebug;
+
+        /// <summary>
+        /// Is replay filter feature enabled?
+        /// </summary>
+        public bool IsEnabled => Mode != ReplayFilterMode.Disabled;
+
+        public ReplayFilterSettings(ReplayFilterMode mode, int windowSize, int maxOldWriters, bool isDebug)
+        {
+            Mode = mode;
+            WindowSize = windowSize;
+            MaxOldWriters = maxOldWriters;
+            IsDebug = isDebug;
+        }
+    }
+
+    /// <summary>
+    /// Settings used by <see cref="CircuitBreaker"/> used internally by
+    /// the batching journal when executing event batches.
+    /// </summary>
     public sealed class CircuitBreakerSettings
     {
+        /// <summary>
+        /// Creates a new instance of the <see cref="CircuitBreakerSettings"/> from provided HOCON <paramref name="config"/>.
+        /// </summary>
         public static CircuitBreakerSettings Create(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
@@ -30,8 +108,22 @@ namespace Akka.Persistence.Sql.Common.Journal
                 resetTimeout: config.GetTimeSpan("reset-timeout", TimeSpan.FromSeconds(60)));
         }
 
+        /// <summary>
+        /// Max number of failures that can happen before circuit will open.
+        /// </summary>
         public int MaxFailures { get; }
+        
+        /// <summary>
+        /// Max time available for operation to execute before 
+        /// <see cref="CircuitBreaker"/> will consider it a failure.
+        /// </summary>
         public TimeSpan CallTimeout { get; }
+
+        /// <summary>
+        /// Timeot that has to pass before <see cref="CircuitBreaker"/>
+        /// will move into half-closed state, trying to eventually close 
+        /// after sampling an operation.
+        /// </summary>
         public TimeSpan ResetTimeout { get; }
 
         public CircuitBreakerSettings(int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
@@ -42,28 +134,99 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
+    /// <summary>
+    /// All settings that can be used by implementations of 
+    /// <see cref="BatchingSqlJournal{TConnection,TCommand}"/>.
+    /// </summary>
     public abstract class BatchingSqlJournalSetup
     {
+        /// <summary>
+        /// Connection string to a SQL database.
+        /// </summary>
         public string ConnectionString { get; }
+
+        /// <summary>
+        /// Maximum number of batch operations allowed to be executed at the same time.
+        /// Each batch operation must acquire a <see cref="DbConnection"/>, so this setting
+        /// can be effectivelly used to limit the usage of ADO.NET connection pool by current journal.
+        /// </summary>
         public int MaxConcurrentOperations { get; }
+
+        /// <summary>
+        /// Maximum size of single batch of operations to be executed over a single <see cref="DbConnection"/>.
+        /// </summary>
         public int MaxBatchSize { get; }
+
+        /// <summary>
+        /// Maximum size of requests stored in journal buffer. Once buffer will be surpassed, it will start
+        /// to apply <see cref="BatchingSqlJournal{TConnection,TCommand}.OnBufferOverflow"/> method to incoming requests.
+        /// </summary>
+        public int MaxBufferSize { get; }
+
+        /// <summary>
+        /// If true, once created, journal will run all SQL scripts stored under 
+        /// <see cref="BatchingSqlJournal{TConnection,TCommand}.Initializers"/> collection
+        /// prior to starting executing any requests. In most implementation this is used 
+        /// to initialize necessary tables.
+        /// </summary>
         public bool AutoInitialize { get; }
+
+        /// <summary>
+        /// Maximum time given for executed <see cref="DbCommand"/> to complete.
+        /// </summary>
         public TimeSpan ConnectionTimeout { get; }
+
+        /// <summary>
+        /// Settings specific to <see cref="CircuitBreaker"/>, which is used internally 
+        /// for executing request batches.
+        /// </summary>
         public CircuitBreakerSettings CircuitBreakerSettings { get; }
+
+        /// <summary>
+        /// Settings specific to replay filter rules used when replaying events from database
+        /// back to the persistent actors.
+        /// </summary>
+        public ReplayFilterSettings ReplayFilterSettings { get; }
+
+        /// <summary>
+        /// Database specific naming conventions (table and column names) used to construct valid SQL statements.
+        /// </summary>
         public QueryConfiguration NamingConventions { get; }
 
-        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, bool autoInitialize, TimeSpan connectionTimeout, CircuitBreakerSettings circuitBreakerSettings, QueryConfiguration namingConventions)
+        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions)
         {
             ConnectionString = connectionString;
             MaxConcurrentOperations = maxConcurrentOperations;
             MaxBatchSize = maxBatchSize;
+            MaxBufferSize = maxBufferSize;
             AutoInitialize = autoInitialize;
             ConnectionTimeout = connectionTimeout;
             CircuitBreakerSettings = circuitBreakerSettings;
+            ReplayFilterSettings = replayFilterSettings;
             NamingConventions = namingConventions;
         }
     }
 
+    /// <summary>
+    /// An abstract journal used by <see cref="PersistentActor"/>s to read/write events to a database.
+    /// 
+    /// This implementation uses horizontal batching to recycle usage of the <see cref="DbConnection"/> 
+    /// and to optimize writes made to a database. Batching journal is not going to acquire a new DB
+    /// connection on every request. Instead it will batch incoming requests and execute them only when
+    /// a previous operation batch has been completed. This means that requests comming from many 
+    /// actors at the same time will be executed in one batch.
+    /// 
+    /// Maximum number of batches executed at the same time is defined by 
+    /// <see cref="BatchingSqlJournalSetup.MaxConcurrentOperations"/> setting, while max allowed batch
+    /// size is defined by <see cref="BatchingSqlJournalSetup.MaxBatchSize"/> setting.
+    /// 
+    /// Batching journal also defines <see cref="BatchingSqlJournalSetup.MaxBufferSize"/>, which defines
+    /// a maximum number of all requests stored at once in memory. Once that value is surpassed, journal
+    /// will start to apply <see cref="OnBufferOverflow"/> logic on each incoming requests, until a
+    /// buffer gets freed again. This may be used for overflow strategies, request denials or backpressure.
+    /// </summary>
+    /// <typeparam name="TConnection">A concrete implementation of <see cref="DbConnection"/> for targeted database provider.</typeparam>
+    /// <typeparam name="TCommand">A concrete implementation of <see cref="DbCommand"/> for targeted database provider.</typeparam>
     public abstract class BatchingSqlJournal<TConnection, TCommand> : WriteJournalBase 
         where TConnection : DbConnection
         where TCommand : DbCommand
@@ -107,37 +270,132 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         #endregion
 
+        /// <summary>
+        /// Default index of <see cref="IPersistentRepresentation.PersistenceId"/> 
+        /// column get from <see cref="ByPersistenceIdSql"/> query.
+        /// </summary>
         protected const int PersistenceIdIndex = 0;
+
+        /// <summary>
+        /// Default index of <see cref="IPersistentRepresentation.SequenceNr"/> 
+        /// column get from <see cref="ByPersistenceIdSql"/> query.
+        /// </summary>
         protected const int SequenceNrIndex = 1;
-        protected const int TimestampIndex = 2;
+
+        //protected const int TimestampIndex = 2;
+
+        /// <summary>
+        /// Default index of <see cref="IPersistentRepresentation.IsDeleted"/> 
+        /// column get from <see cref="ByPersistenceIdSql"/> query.
+        /// </summary>
         protected const int IsDeletedIndex = 3;
+
+        /// <summary>
+        /// Default index of <see cref="IPersistentRepresentation.Manifest"/> 
+        /// column get from <see cref="ByPersistenceIdSql"/> query.
+        /// </summary>
         protected const int ManifestIndex = 4;
+
+        /// <summary>
+        /// Default index of <see cref="IPersistentRepresentation.Payload"/> 
+        /// column get from <see cref="ByPersistenceIdSql"/> query.
+        /// </summary>
         protected const int PayloadIndex = 5;
+
+        /// <summary>
+        /// Default index of tags column get from <see cref="ByTagSql"/> query.
+        /// </summary>
         protected const int OrderingIndex = 6;
 
+        /// <summary>
+        /// SQL query executed as result of <see cref="DeleteMessagesTo"/> request to journal.
+        /// </summary>
         protected virtual string DeleteBatchSql { get; }
+
+        /// <summary>
+        /// SQL query executed as result of <see cref="ReadHighestSequenceNr"/> request to journal.
+        /// Also used under some conditions, when storing metadata upon <see cref="DeleteMessagesTo"/> request.
+        /// </summary>
         protected virtual string HighestSequenceNrSql { get; }
+
+        /// <summary>
+        /// SQL statement executed as result of <see cref="WriteMessages"/> request to journal.
+        /// </summary>
         protected virtual string InsertEventSql { get; }
-        protected virtual string QueryEventsSql { get; }
+        
+        /// <summary>
+        /// SQL query executed as result of <see cref="GetCurrentPersistenceIds"/> request to journal.
+        /// It's a part of persitence query protocol.
+        /// </summary>
         protected virtual string AllPersistenceIdsSql { get; }
+
+        /// <summary>
+        /// SQL statement executed as result of writing metadata, which is 
+        /// a possible effect of <see cref="DeleteMessagesTo"/> request.
+        /// </summary>
         protected virtual string UpdateSequenceNrSql { get; }
+
+        /// <summary>
+        /// SQL query executed as result of <see cref="ReplayMessages"/> request to journal.
+        /// It's also part of persistence query protocol.
+        /// </summary>
         protected virtual string ByPersistenceIdSql { get; }
+
+        /// <summary>
+        /// SQL query executed as result of <see cref="ReplayTaggedMessages"/> request to journal.
+        /// It's a part of persistence query protocol.
+        /// </summary>
         protected virtual string ByTagSql { get; }
+
+        /// <summary>
+        /// A named collection of SQL statements to be executed once journal actor gets initialized
+        /// and the <see cref="BatchingSqlJournalSetup.AutoInitialize"/> flag is set.
+        /// </summary>
         protected abstract ImmutableDictionary<string, string> Initializers { get; }
+
+        /// <summary>
+        /// All configurable settings defined for a current batching journal.
+        /// </summary>
         protected BatchingSqlJournalSetup Setup { get; }
+
+        /// <summary>
+        /// Flag determining if current journal has any subscribers for <see cref="EventAppended"/> events.
+        /// </summary>
         protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
+
+        /// <summary>
+        /// Flag determining if current journal has any subscribers for <see cref="TaggedEventAppended"/> events.
+        /// </summary>
         protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
+
+        /// <summary>
+        /// Flag determining if current journal has any subscribers for <see cref="GetCurrentPersistenceIds"/> and 
+        /// <see cref="PersistenceIdAdded"/> messages.
+        /// </summary>
         protected bool HasAllIdsSubscribers => _allIdsSubscribers.Count != 0;
-        protected int BufferSize => _buffer.Count;
+        
+        /// <summary>
+        /// Flag determining if incoming journal requests should be published in current actor system event stream.
+        /// Usefull mostly for tests.
+        /// </summary>
         protected readonly bool CanPublish;
+
+        /// <summary>
+        /// Logging adapter for current journal actor .
+        /// </summary>
         protected readonly ILoggingAdapter Log;
+
+        /// <summary>
+        /// Buffer for requests that are waiting to be served when next DB connection will be released.
+        /// This object access is NOT thread safe.
+        /// </summary>
+        protected readonly Queue<IJournalRequest> Buffer;
 
         private readonly Dictionary<string, HashSet<IActorRef>> _persistenceIdSubscribers;
         private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
         private readonly HashSet<IActorRef> _allIdsSubscribers;
         private readonly HashSet<string> _allPersistenceIds;
 
-        private readonly Queue<IJournalRequest> _buffer;
         private readonly Func<Type, Serializer> _getSerializer;
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
@@ -151,9 +409,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             _tagSubscribers = new Dictionary<string, HashSet<IActorRef>>();
             _allIdsSubscribers = new HashSet<IActorRef>();
             _allPersistenceIds = new HashSet<string>();
-
+            
             _remainingOperations = Setup.MaxConcurrentOperations;
-            _buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
+            Buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
             _getSerializer = Context.System.Serialization.FindSerializerFor;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
@@ -223,11 +481,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     @Payload,
                     @Tag
                 )";
-
-            QueryEventsSql = $@"
-                SELECT {allEventColumnNames}
-                FROM {conventions.FullJournalTableName} e
-                WHERE ";
         }
 
         protected override void PreStart()
@@ -395,25 +648,72 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         #endregion
 
+        /// <summary>
+        /// Tries to add incoming <paramref name="message"/> to <see cref="Buffer"/>.
+        /// Also checks if any DB connection has been released and next batch can be processed.
+        /// </summary>
         protected void BatchRequest(IJournalRequest message)
         {
-            _buffer.Enqueue(message);
+            if (Buffer.Count > Setup.MaxBufferSize)
+                OnBufferOverflow(message);
+            else
+                Buffer.Enqueue(message);
+
             TryProcess();
+        }
+
+        /// <summary>
+        /// Method called, once given <paramref name="request"/> couldn't be added to <see cref="Buffer"/>
+        /// due to buffer overflow. Overflow is controlled by max buffer size and can be set using 
+        /// <see cref="BatchingSqlJournalSetup.MaxBufferSize"/> setting.
+        /// </summary>
+        protected virtual void OnBufferOverflow(IJournalMessage request)
+        {
+            Log.Warning("Batching journal buffer limit has been reached. Denying a request [{0}].", request);
+
+            if (request is WriteMessages)
+            {
+                var r = (WriteMessages)request;
+                r.PersistentActor.Tell(new WriteMessagesFailed(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+            }
+            else if (request is ReplayMessages)
+            {
+                var r = (ReplayMessages)request;
+                r.PersistentActor.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+
+            }
+            else if (request is ReadHighestSequenceNr)
+            {
+                var r = (ReadHighestSequenceNr)request;
+                r.PersistentActor.Tell(new ReadHighestSequenceNrFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+
+            }
+            else if (request is DeleteMessagesTo)
+            {
+                var r = (DeleteMessagesTo)request;
+                r.PersistentActor.Tell(new DeleteMessagesFailure(JournalBufferOverflowException.Instance, r.ToSequenceNr), ActorRefs.NoSender);
+
+            }
+            else if (request is ReplayTaggedMessages)
+            {
+                var r = (ReplayTaggedMessages) request;
+                r.ReplyTo.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+            }
         }
 
         private void TryProcess()
         {
-            if (_remainingOperations > 0 && _buffer.Count > 0)
+            if (_remainingOperations > 0 && Buffer.Count > 0)
             {
                 _remainingOperations--;
 
                 var chunk = DequeueChunk(_remainingOperations);
-                var eventStream = Context.System.EventStream;
-                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, eventStream)).PipeTo(Self);
+                var context = Context;
+                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, context)).PipeTo(Self);
             }
         }
 
-        private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk, EventStream eventStream)
+        private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk, IActorContext context)
         {
             Exception cause = null;
             var stopwatch = new Stopwatch();
@@ -436,7 +736,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                             if (req is WriteMessages)
                                 await HandleWriteMessages((WriteMessages)req, command);
                             else if (req is ReplayMessages)
-                                await HandleReplayMessages((ReplayMessages)req, command);
+                                await HandleReplayMessages((ReplayMessages)req, command, context);
                             else if (req is ReadHighestSequenceNr)
                                 await HandleReadHighestSequenceNr((ReadHighestSequenceNr)req, command);
                             else if (req is DeleteMessagesTo)
@@ -452,7 +752,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                         {
                             for (int i = 0; i < chunk.Requests.Length; i++)
                             {
-                                eventStream.Publish(chunk.Requests[i]);
+                                context.System.EventStream.Publish(chunk.Requests[i]);
                             }
                         }
                     }
@@ -585,9 +885,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleReplayMessages(ReplayMessages req, TCommand command)
+        private async Task HandleReplayMessages(ReplayMessages req, TCommand command, IActorContext context)
         {
-            var persistentRef = req.PersistentActor;
+            var replaySettings = Setup.ReplayFilterSettings;
+            var replyTo = replaySettings.IsEnabled
+                ? context.ActorOf(ReplayFilter.Props(
+                    persistentActor: req.PersistentActor, 
+                    mode: replaySettings.Mode, 
+                    windowSize: replaySettings.WindowSize,
+                    maxOldWriters: replaySettings.MaxOldWriters, 
+                    debugEnabled: replaySettings.IsDebug))
+                : req.PersistentActor;
             var persistenceId = req.PersistenceId;
 
             NotifyNewPersistenceIdAdded(persistenceId);
@@ -615,19 +923,19 @@ namespace Akka.Persistence.Sql.Common.Journal
                         {
                             foreach (var adaptedRepresentation in AdaptFromJournal(persistent))
                             {
-                                persistentRef.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
+                                replyTo.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
                             }
                         }
                     }
                 }
 
                 var response = new RecoverySuccess(highestSequenceNr);
-                persistentRef.Tell(response, ActorRefs.NoSender);
+                replyTo.Tell(response, ActorRefs.NoSender);
             }
             catch (Exception cause)
             {
                 var response = new ReplayMessagesFailure(cause);
-                persistentRef.Tell(response, ActorRefs.NoSender);
+                replyTo.Tell(response, ActorRefs.NoSender);
             }
         }
 
@@ -782,8 +1090,18 @@ namespace Akka.Persistence.Sql.Common.Journal
             return persistent;
         }
 
+        /// <summary>
+        /// Creates a new database connection from a given <paramref name="connectionString"/>.
+        /// </summary>
         protected abstract TConnection CreateConnection(string connectionString);
 
+        /// <summary>
+        /// Helper method used to add a parameter to existing database <paramref name="command"/>.
+        /// </summary>
+        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="paramName">Query or procedure parameter name.</param>
+        /// <param name="dbType">Database type of a query or procedure parameter.</param>
+        /// <param name="value">Value of a query or procedure parameter.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void AddParameter(TCommand command, string paramName, DbType dbType, object value)
         {
@@ -796,11 +1114,11 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private RequestChunk DequeueChunk(int chunkId)
         {
-            var operationsCount = Math.Min(_buffer.Count, Setup.MaxBatchSize);
+            var operationsCount = Math.Min(Buffer.Count, Setup.MaxBatchSize);
             var array = new IJournalRequest[operationsCount];
             for (int i = 0; i < operationsCount; i++)
             {
-                var req = _buffer.Dequeue();
+                var req = Buffer.Dequeue();
                 array[i] = req;
             }
 
@@ -817,6 +1135,19 @@ namespace Akka.Persistence.Sql.Common.Journal
             else Log.Debug("Completed batch (chunkId: {0}) of {1} operations in {2} milliseconds", msg.ChunkId, msg.OperationCount, msg.TimeSpent.TotalMilliseconds);
 
             TryProcess();
+        }
+    }
+
+    public class JournalBufferOverflowException : AkkaException
+    {
+        public static readonly JournalBufferOverflowException Instance = new JournalBufferOverflowException();
+
+        public JournalBufferOverflowException() : base(
+            "Batching journal buffer has been overflown. This may happen as effect burst or persistent actors "
+            + "requests incoming faster than the underlying database is able to fullfil them. You may modify "
+            + "`max-buffer-size`, `max-batch-size` and `max-concurrent-operations` HOCON settings in order to "
+            + " change it.")
+        {
         }
     }
 }
