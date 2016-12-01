@@ -730,7 +730,6 @@ namespace Akka.Remote
                         _endpoints.MarkAsQuarantined(gotuid.RemoteAddress, gotuid.Uid,
                             Deadline.Now + _settings.QuarantineDuration);
                         _eventPublisher.NotifyListeners(new QuarantinedEvent(gotuid.RemoteAddress, gotuid.Uid));
-                        Context.Stop(pass.Endpoint);
                     }
                     else
                     {
