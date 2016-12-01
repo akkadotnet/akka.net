@@ -22,16 +22,20 @@ namespace Akka.Streams.Tests.Implementation.Fusing
     public class GraphInterpreterPortsSpec : GraphInterpreterSpecKit
     {
         // ReSharper disable InconsistentNaming
-        private readonly PortTestSetup.DownstreamPortProbe<int> inlet;
-        private readonly PortTestSetup.UpstreamPortProbe<int> outlet;
-        private readonly Func<ISet<TestSetup.ITestEvent>> lastEvents;
-        private readonly Action stepAll;
-        private readonly Action step;
-        private readonly Action clearEvents;
+        private PortTestSetup.DownstreamPortProbe<int> inlet;
+        private PortTestSetup.UpstreamPortProbe<int> outlet;
+        private Func<ISet<TestSetup.ITestEvent>> lastEvents;
+        private Action stepAll;
+        private Action step;
+        private Action clearEvents;
 
         public GraphInterpreterPortsSpec(ITestOutputHelper output = null) : base(output)
         {
-            var setup = new PortTestSetup(Sys);
+        }
+
+        private void Setup(bool chasing)
+        {
+            var setup = new PortTestSetup(Sys, chasing);
             inlet = setup.In;
             outlet = setup.Out;
             lastEvents = setup.LastEvents;
@@ -42,9 +46,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         // TODO FIXME test failure scenarios
 
-        [Fact]
-        public void Port_states_should_properly_transition_on_push_and_pull()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_properly_transition_on_push_and_pull(bool chasing)
         {
+            Setup(chasing);
+
             lastEvents().Should().BeEmpty();
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(false);
@@ -113,9 +121,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             // Cycle completed
         }
 
-        [Fact]
-        public void Port_states_should_drop_ungrabbed_element_on_pull()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_drop_ungrabbed_element_on_pull(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             step();
             clearEvents();
@@ -129,9 +141,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_complete_while_downstream_is_active()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_complete_while_downstream_is_active(bool chasing)
         {
+            Setup(chasing);
+
             lastEvents().Should().BeEmpty();
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(false);
@@ -188,9 +204,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_complete_while_upstream_is_active()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_complete_while_upstream_is_active(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
 
@@ -250,9 +270,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_complete_while_pull_is_in_flight()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_complete_while_pull_is_in_flight(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
 
             lastEvents().Should().BeEmpty();
@@ -311,9 +335,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_complete_while_push_is_in_flight()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_complete_while_push_is_in_flight(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -375,9 +403,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_complete_while_push_is_in_flight_and_keep_ungrabbed_element()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_complete_while_push_is_in_flight_and_keep_ungrabbed_element(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -398,9 +430,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Grab().Should().Be(0);
         }
 
-        [Fact]
-        public void Port_states_should_propagate_complete_while_push_is_in_flight_and_pulled_after_the_push()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_complete_while_push_is_in_flight_and_pulled_after_the_push(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -426,9 +462,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_pull_while_completing()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_pull_while_completing(bool chasing)
         {
+            Setup(chasing);
+
             outlet.Complete();
             inlet.Pull();
             // While the pull event is not enqueue at this point, we should still report the state correctly
@@ -447,9 +487,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_cancel_while_downstream_is_active()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_cancel_while_downstream_is_active(bool chasing)
         {
+            Setup(chasing);
+
             lastEvents().Should().BeEmpty();
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(false);
@@ -507,9 +551,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_cancel_while_upstream_is_active()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_cancel_while_upstream_is_active(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
 
@@ -570,9 +618,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_cancel_while_pull_is_in_flight()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_cancel_while_pull_is_in_flight(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
 
             lastEvents().Should().BeEmpty();
@@ -632,9 +684,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_cancel_while_push_is_in_flight()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_cancel_while_push_is_in_flight(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -697,9 +753,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_push_while_cancelling()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_push_while_cancelling(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -722,9 +782,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_clear_ungrabbed_element_even_when_cancelled()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_clear_ungrabbed_element_even_when_cancelled(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -756,9 +820,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_any_completion_if_they_are_concurrent_cancel_first()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_any_completion_if_they_are_concurrent_cancel_first(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Cancel();
             outlet.Complete();
 
@@ -775,9 +843,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_any_completion_if_they_are_concurrent_complete_first()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_any_completion_if_they_are_concurrent_complete_first(bool chasing)
         {
+            Setup(chasing);
+
             outlet.Complete();
             inlet.Cancel();
 
@@ -794,9 +866,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_completion_from_a_push_complete_if_cancelled_while_in_flight()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_completion_from_a_push_complete_if_cancelled_while_in_flight(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -818,9 +894,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_completion_from_a_push_complete_if_cancelled_after_OnPush()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_completion_from_a_push_complete_if_cancelled_after_OnPush(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -853,9 +933,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_not_allow_to_grab_element_before_it_arrives()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_not_allow_to_grab_element_before_it_arrives(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             outlet.Push(0);
@@ -863,9 +947,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_not_allow_to_grab_element_if_already_cancelled()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_not_allow_to_grab_element_if_already_cancelled(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
 
@@ -877,9 +965,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_failure_while_downstream_is_active()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_failure_while_downstream_is_active(bool chasing)
         {
+            Setup(chasing);
+
             lastEvents().Should().BeEmpty();
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(false);
@@ -936,9 +1028,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_failure_while_upstream_is_active()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_failure_while_upstream_is_active(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
 
@@ -998,9 +1094,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_failure_while_pull_is_in_flight()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_failure_while_pull_is_in_flight(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
 
             lastEvents().Should().BeEmpty();
@@ -1059,9 +1159,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_failure_while_push_is_in_flight()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_failure_while_push_is_in_flight(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -1123,9 +1227,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_propagate_failure_while_push_is_in_flight_and_keep_ungrabbed_element()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_propagate_failure_while_push_is_in_flight_and_keep_ungrabbed_element(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -1146,9 +1254,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Grab().Should().Be(0);
         }
 
-        [Fact]
-        public void Port_states_should_ignore_pull_while_failing()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_pull_while_failing(bool chasing)
         {
+            Setup(chasing);
+
             outlet.Fail(new TestException("test"));
             inlet.Pull();
             inlet.HasBeenPulled().Should().Be(true);
@@ -1166,9 +1278,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_any_failure_completion_if_they_are_concurrent_cancel_first()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_any_failure_completion_if_they_are_concurrent_cancel_first(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Cancel();
             outlet.Fail(new TestException("test"));
 
@@ -1185,9 +1301,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_any_failure_completion_if_they_are_concurrent_complete_first()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_any_failure_completion_if_they_are_concurrent_complete_first(bool chasing)
         {
+            Setup(chasing);
+
             outlet.Fail(new TestException("test"));
             inlet.Cancel();
 
@@ -1204,9 +1324,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_any_failure_from_a_push_then_fail_if_cancelled_while_in_flight()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_any_failure_from_a_push_then_fail_if_cancelled_while_in_flight(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
@@ -1228,9 +1352,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
         }
 
-        [Fact]
-        public void Port_states_should_ignore_any_failure_from_a_push_then_fail_if_cancelled_after_OnPush()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Port_states_should_ignore_any_failure_from_a_push_then_fail_if_cancelled_after_OnPush(bool chasing)
         {
+            Setup(chasing);
+
             inlet.Pull();
             stepAll();
             clearEvents();
