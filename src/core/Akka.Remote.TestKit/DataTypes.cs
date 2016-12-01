@@ -434,7 +434,7 @@ namespace Akka.Remote.TestKit
             {
                 int hashCode = (_node != null ? _node.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (_target != null ? _target.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (_direction != null ? _direction.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ _direction.GetHashCode();
                 hashCode = (hashCode * 397) ^ _rateMBit.GetHashCode();
                 return hashCode;
             }
@@ -496,7 +496,7 @@ namespace Akka.Remote.TestKit
             unchecked
             {
                 var hashCode = (_target != null ? _target.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (_direction != null ? _direction.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ _direction.GetHashCode();
                 hashCode = (hashCode * 397) ^ _rateMBit.GetHashCode();
                 return hashCode;
             }
