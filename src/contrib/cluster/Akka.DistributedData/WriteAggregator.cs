@@ -177,7 +177,7 @@ namespace Akka.DistributedData
         public override bool Equals(object obj)
         {
             var other = obj as WriteAll;
-            return obj != null && Timeout == other.Timeout;
+            return other != null && Timeout == other.Timeout;
         }
     }
 }
