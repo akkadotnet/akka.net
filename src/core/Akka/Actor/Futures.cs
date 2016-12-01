@@ -40,16 +40,7 @@ namespace Akka.Actor
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            ResolveReplyTo();
             return Ask(self, message, provider, timeout).CastTask<object, T>();
-        }
-
-        internal static IActorRef ResolveReplyTo()
-        {
-            if (ActorCell.Current != null)
-                return ActorCell.Current.Self;
-
-            return null;
         }
 
         internal static IActorRefProvider ResolveProvider(ICanTell self)
