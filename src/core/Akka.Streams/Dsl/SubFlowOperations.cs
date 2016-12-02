@@ -477,6 +477,31 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Similar to <see cref="Aggregate{TIn,TOut1,TOut2,TMat}"/> but with an asynchronous function.
+        /// Applies the given function towards its current and next value,
+        /// yielding the next current value.
+        /// 
+        /// If the function <paramref name="fold"/> returns a failure and the supervision decision is
+        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// the stream will continue.
+        /// <para>
+        /// Emits when upstream completes
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes when upstream completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// 
+        /// <seealso cref="Aggregate{TIn,TOut1,TOut2,TMat}"/>
+        /// </summary>
+        public static SubFlow<TOut, TMat, TClosed> AggregateAsync<TIn, TOut, TMat, TClosed>(this SubFlow<TIn, TMat, TClosed> flow, TOut zero,
+            Func<TOut, TIn, Task<TOut>> fold)
+        {
+            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.AggregateAsync(flow, zero, fold);
+        }
+
+        /// <summary>
         /// Similar to <see cref="Aggregate{TOut1,TOut2,TMat,TClosed}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
@@ -1378,5 +1403,30 @@ namespace Akka.Streams.Dsl
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Prepend(flow, that);
         }
+
+        /// <summary>
+        /// Provides a secondary source that will be consumed if this stream completes without any
+        /// elements passing by. As soon as the first element comes through this stream, the alternative
+        /// will be cancelled.
+        ///
+        /// Note that this Flow will be materialized together with the <see cref="Source{TOut,TMat}"/> and just kept
+        /// from producing elements by asserting back-pressure until its time comes or it gets
+        /// cancelled.
+        ///
+        /// On errors the stage is failed regardless of source of the error.
+        ///
+        /// '''Emits when''' element is available from first stream or first stream closed without emitting any elements and an element
+        ///                  is available from the second stream
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' the primary stream completes after emitting at least one element, when the primary stream completes
+        ///                      without emitting and the secondary stream already has completed or when the secondary stream completes
+        ///
+        /// '''Cancels when''' downstream cancels and additionally the alternative is cancelled as soon as an element passes
+        ///                    by from this stream.
+        /// </summary>
+        public static SubFlow<T, TMat, TClosed> OrElse<T, TMat, TClosed>(this SubFlow<T, TMat, TClosed> flow, IGraph<SourceShape<T>, TMat> secondary)
+            => (SubFlow<T, TMat, TClosed>)InternalFlowOperations.OrElse(flow, secondary);
     }
 }

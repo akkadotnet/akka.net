@@ -92,7 +92,7 @@ namespace Akka.Streams.Implementation.IO
             void WakeUp(IAdapterToStageMessage msg);
         }
 
-        private sealed class Logic : GraphStageLogic, IStageWithCallback
+        private sealed class Logic : InGraphStageLogic, IStageWithCallback
         {
             private readonly InputStreamSinkStage _stage;
             private readonly Action<IAdapterToStageMessage> _callback;
@@ -108,12 +108,10 @@ namespace Akka.Streams.Implementation.IO
                         CompleteStage();
                 });
 
-                SetHandler(stage._in, onPush: OnPush, 
-                    onUpstreamFinish: OnUpstreamFinish,
-                    onUpstreamFailure: OnUpstreamFailure);
+                SetHandler(stage._in, this);
             }
 
-            private void OnPush()
+            public override void OnPush()
             {
                 //1 is buffer for Finished or Failed callback
                 if (_stage._dataQueue.Count + 1 == _stage._dataQueue.BoundedCapacity)
@@ -124,13 +122,13 @@ namespace Akka.Streams.Implementation.IO
                     SendPullIfAllowed();
             }
 
-            private void OnUpstreamFinish()
+            public override void OnUpstreamFinish()
             {
                 _stage._dataQueue.Add(Finished.Instance);
                 CompleteStage();
             }
 
-            private void OnUpstreamFailure(Exception ex)
+            public override void OnUpstreamFailure(Exception ex)
             {
                 _stage._dataQueue.Add(new Failed(ex));
                 FailStage(ex);

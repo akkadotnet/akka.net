@@ -59,31 +59,29 @@ namespace Akka.Actor
                 if (System.Settings.DebugLifecycle)
                     Publish(new Debug(_self.Path.ToString(), failedActor.GetType(), "Restarting"));
 
-                if (failedActor != null)
+                var optionalMessage = CurrentMessage;
+
+                try
                 {
-                    var optionalMessage = CurrentMessage;
+                    // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
+                    
+                    failedActor.AroundPreRestart(cause, optionalMessage);
 
-                    try
+                    // run actor pre-incarnation plugin pipeline
+                    var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
+                    pipeline.BeforeActorIncarnated(failedActor, this);
+                }
+                catch (Exception e)
+                {
+                    HandleNonFatalOrInterruptedException(() =>
                     {
-                        // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
-                        failedActor.AroundPreRestart(cause, optionalMessage);
-
-                        // run actor pre-incarnation plugin pipeline
-                        var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
-                        pipeline.BeforeActorIncarnated(failedActor, this);
-                    }
-                    catch (Exception e)
-                    {
-                        HandleNonFatalOrInterruptedException(() =>
-                        {
-                            var ex = new PreRestartException(_self, e, cause, optionalMessage);
-                            Publish(new Error(ex, _self.Path.ToString(), failedActor.GetType(), e.Message));
-                        });
-                    }
-                    finally
-                    {
-                        ClearActor(_actor);
-                    }
+                        var ex = new PreRestartException(_self, e, cause, optionalMessage);
+                        Publish(new Error(ex, _self.Path.ToString(), failedActor.GetType(), e.Message));
+                    });
+                }
+                finally
+                {
+                    ClearActor(_actor);
                 }
 
                 global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during restart, status=" + Mailbox.CurrentStatus());

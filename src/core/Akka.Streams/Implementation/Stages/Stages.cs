@@ -39,6 +39,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes SkipWhile = Attributes.CreateName("skipWhile");
         public static readonly Attributes Scan = Attributes.CreateName("scan");
         public static readonly Attributes Aggregate = Attributes.CreateName("aggregate");
+        public static readonly Attributes AggregateAsync = Attributes.CreateName("aggregateAsync");
         public static readonly Attributes Buffer = Attributes.CreateName("buffer");
         public static readonly Attributes Batch = Attributes.CreateName("batch");
         public static readonly Attributes BatchWeighted = Attributes.CreateName("batchWeighted");
@@ -70,6 +71,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Zip = Attributes.CreateName("zip");
         public static readonly Attributes Unzip = Attributes.CreateName("unzip");
         public static readonly Attributes Concat = Attributes.CreateName("concat");
+        public static readonly Attributes OrElse = Attributes.CreateName("orElse");
         public static readonly Attributes Repeat = Attributes.CreateName("repeat");
         public static readonly Attributes Unfold = Attributes.CreateName("unfold");
         public static readonly Attributes UnfoldAsync = Attributes.CreateName("unfoldAsync");
@@ -170,43 +172,43 @@ namespace Akka.Streams.Implementation.Stages
     {
         #region internal classes
         
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
-            private readonly Inlet<TIn> _inlet;
+            private readonly FirstOrDefault<TIn> _stage;
             private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
 
             public Task<TIn> Task => _promise.Task;
 
             public Logic(FirstOrDefault<TIn> stage) : base(stage.Shape)
             {
-                _inlet = stage._in;
+                _stage = stage;
 
-                Action onPush = () =>
-                {
-                    _promise.TrySetResult(Grab(_inlet));
-                    CompleteStage();
-                };
-
-                Action onUpstreamFinish = () =>
-                {
-                    if (stage._throwOnDefault)
-                        _promise.TrySetException(new NoSuchElementException("First of empty stream"));
-                    else
-                        _promise.TrySetResult(default(TIn));
-
-                    CompleteStage();
-                };
-
-                Action<Exception> onUpstreamFailure = e =>
-                {
-                    _promise.TrySetException(e);
-                    FailStage(e);
-                };
-
-                SetHandler(stage._in, onPush, onUpstreamFinish, onUpstreamFailure);
+                SetHandler(stage._in, this);
             }
 
-            public override void PreStart() => Pull(_inlet);
+            public override void OnPush()
+            {
+                _promise.TrySetResult(Grab(_stage._in));
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_stage._throwOnDefault)
+                    _promise.TrySetException(new NoSuchElementException("First of empty stream"));
+                else
+                    _promise.TrySetResult(default(TIn));
+
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                _promise.TrySetException(e);
+                FailStage(e);
+            }
+
+            public override void PreStart() => Pull(_stage._in);
         }
 
         #endregion
@@ -234,9 +236,9 @@ namespace Akka.Streams.Implementation.Stages
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
-            private readonly Inlet<TIn> _inlet;
+            private readonly LastOrDefault<TIn> _stage;
             private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
             private TIn _prev;
             private bool _foundAtLeastOne;
@@ -245,35 +247,36 @@ namespace Akka.Streams.Implementation.Stages
 
             public Logic(LastOrDefault<TIn> stage) : base(stage.Shape)
             {
-                _inlet = stage._in;
+                _stage = stage;
 
-                Action onPush = () =>
-                {
-                    _prev = Grab(_inlet);
-                    _foundAtLeastOne = true;
-                    Pull(_inlet);
-                };
-
-                Action onUpstreamFinish = () =>
-                {
-                    if (stage._throwOnDefault && !_foundAtLeastOne)
-                        _promise.TrySetException(new NoSuchElementException("Last of empty stream"));
-                    else
-                        _promise.TrySetResult(_prev);
-
-                    CompleteStage();
-                };
-
-                Action<Exception> onUpstreamFailure = e =>
-                {
-                    _promise.TrySetException(e);
-                    FailStage(e);
-                };
-
-                SetHandler(stage._in, onPush, onUpstreamFinish, onUpstreamFailure);
+                SetHandler(stage._in, this);
             }
 
-            public override void PreStart() => Pull(_inlet);
+            public override void OnPush()
+            {
+                _prev = Grab(_stage._in);
+                _foundAtLeastOne = true;
+                Pull(_stage._in);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_stage._throwOnDefault && !_foundAtLeastOne)
+                    _promise.TrySetException(new NoSuchElementException("Last of empty stream"));
+                else
+                    _promise.TrySetResult(_prev);
+
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                _promise.TrySetException(e);
+                FailStage(e);
+            }
+
+
+            public override void PreStart() => Pull(_stage._in);
         }
 
         #endregion

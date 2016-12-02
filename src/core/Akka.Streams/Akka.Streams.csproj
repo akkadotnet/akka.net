@@ -83,6 +83,7 @@
     <Compile Include="Dsl\Framing.cs" />
     <Compile Include="Dsl\Graph.cs" />
     <Compile Include="Dsl\GraphDsl.cs" />
+    <Compile Include="Dsl\Hub.cs" />
     <Compile Include="Dsl\Internal\GraphImpl.cs" />
     <Compile Include="Dsl\JsonFraming.cs" />
     <Compile Include="Dsl\One2OneBidiFlow.cs" />

@@ -135,7 +135,7 @@ namespace Akka.Actor.Internal
 
                 if (_settings.LogConfigOnStart)
                 {
-                    _log.Warning(Settings.ToString());
+                    _log.Info(Settings.ToString());
                 }
             }
             catch (Exception)
