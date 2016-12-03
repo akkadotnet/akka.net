@@ -66,15 +66,20 @@ namespace Akka.Actor
 
             timeout = timeout ?? provider.Settings.AskTimeout;
 
+            //create a new tempcontainer path
+            ActorPath path = provider.TempPath();
+
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 timeoutCancellation = new CancellationTokenSource();
-                timeoutCancellation.Token.Register(() => result.TrySetCanceled());
+                timeoutCancellation.Token.Register(() =>
+                {
+                    result.TrySetCanceled();
+                    provider.UnregisterTempActor(path);
+                });
                 timeoutCancellation.CancelAfter(timeout.Value);
             }
 
-            //create a new tempcontainer path
-            ActorPath path = provider.TempPath();
             //callback to unregister from tempcontainer
             Action unregister =
                 () =>
