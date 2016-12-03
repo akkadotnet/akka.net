@@ -75,17 +75,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestActorRefTests\WorkerActor.cs" />
     <Compile Include="TestActorRefTests\WrappedTerminated.cs" />
+    <Compile Include="TestEventListenerTests\AllTestForEventFilterBase.cs" />
+    <Compile Include="TestEventListenerTests\AllTestForEventFilterBase_Instances.cs" />
+    <Compile Include="TestEventListenerTests\ConfigTests.cs" />
+    <Compile Include="TestEventListenerTests\CustomEventFilterTests.cs" />
+    <Compile Include="TestEventListenerTests\DeadLettersEventFilterTests.cs" />
+    <Compile Include="TestEventListenerTests\EventFilterTestBase.cs" />
+    <Compile Include="TestKitBaseTests\AwaitAssertTests.cs" />
+    <Compile Include="TestKitBaseTests\RemainingTests.cs" />
     <Compile Include="TestKitBaseTests\WithinTests.cs" />
+    <Compile Include="TestKit_Config_Tests.cs" />
     <Compile Include="TestSchedulerTests.cs" />
-    <Compile Include="Xunit2\TestEventListenerTests\AllTestForEventFilterBase.cs" />
-    <Compile Include="Xunit2\TestEventListenerTests\AllTestForEventFilterBase_Instances.cs" />
-    <Compile Include="Xunit2\TestEventListenerTests\ConfigTests.cs" />
-    <Compile Include="Xunit2\TestEventListenerTests\CustomEventFilterTests.cs" />
-    <Compile Include="Xunit2\TestEventListenerTests\DeadLettersEventFilterTests.cs" />
-    <Compile Include="Xunit2\TestEventListenerTests\EventFilterTestBase.cs" />
-    <Compile Include="Xunit2\TestKitBaseTests\AwaitAssertTests.cs" />
-    <Compile Include="Xunit2\TestKitBaseTests\RemainingTests.cs" />
-    <Compile Include="Xunit2\TestKit_Config_Tests.cs" />
     <Compile Include="TestEventListenerTests\ExceptionEventFilterTests.cs" />
     <Compile Include="TestEventListenerTests\ForwardAllEventsTestEventListener.cs" />
     <Compile Include="TestKitBaseTests\DilatedTests.cs" />
@@ -96,10 +96,6 @@
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
-      <Project>{11f4d4b8-7e07-4457-abf2-609b3e7b2649}</Project>
-      <Name>Akka.TestKit.Xunit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
       <Project>{E636D23C-3432-4AA9-9A5D-5F29D33D3399}</Project>
