@@ -283,7 +283,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             }
         }
 
-        [MultiNodeFact]
+        [MultiNodeFact(Skip = "Disable due to known issues with this spec which are currently under investigation")]
         public void ClusterClientSpecs()
         {
             ClusterClient_must_startup_cluster();
