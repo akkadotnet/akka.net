@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Configuration;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
@@ -29,31 +30,6 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public sealed class ReplayFilterSettings
     {
-        /// <summary>
-        /// Creates a new instance of the <see cref="ReplayFilterSettings"/> from provided HOCON <paramref name="config"/>.
-        /// </summary>
-        public static ReplayFilterSettings Create(Config config)
-        {
-            if (config == null) throw new ArgumentNullException(nameof(config), "No HOCON config was provided for replay filter settings");
-
-            ReplayFilterMode mode;
-            var replayModeString = config.GetString("mode", "off");
-            switch (replayModeString)
-            {
-                case "off": mode = ReplayFilterMode.Disabled; break;
-                case "repair-by-discard-old": mode = ReplayFilterMode.RepairByDiscardOld; break;
-                case "fail": mode = ReplayFilterMode.Fail; break;
-                case "warn": mode = ReplayFilterMode.Warn; break;
-                default: throw new ArgumentException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]", nameof(config));
-            }
-
-            return new ReplayFilterSettings(
-                mode: mode,
-                windowSize: config.GetInt("window-size", 100),
-                maxOldWriters: config.GetInt("max-old-writers", 10),
-                isDebug: config.GetBoolean("debug", false));
-        }
-
         /// <summary>
         /// What the filter should do when detecting invalid events.
         /// </summary>
@@ -80,6 +56,30 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public bool IsEnabled => Mode != ReplayFilterMode.Disabled;
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="ReplayFilterSettings"/> from provided HOCON <paramref name="config"/>.
+        /// </summary>
+        public ReplayFilterSettings(Config config)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config), "No HOCON config was provided for replay filter settings");
+
+            ReplayFilterMode mode;
+            var replayModeString = config.GetString("mode", "off");
+            switch (replayModeString)
+            {
+                case "off": mode = ReplayFilterMode.Disabled; break;
+                case "repair-by-discard-old": mode = ReplayFilterMode.RepairByDiscardOld; break;
+                case "fail": mode = ReplayFilterMode.Fail; break;
+                case "warn": mode = ReplayFilterMode.Warn; break;
+                default: throw new ArgumentException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]", nameof(config));
+            }
+            
+            Mode = mode;
+            WindowSize = config.GetInt("window-size", 100);
+            MaxOldWriters = config.GetInt("max-old-writers", 10);
+            IsDebug = config.GetBoolean("debug", false);
+        }
+
         public ReplayFilterSettings(ReplayFilterMode mode, int windowSize, int maxOldWriters, bool isDebug)
         {
             Mode = mode;
@@ -95,19 +95,6 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public sealed class CircuitBreakerSettings
     {
-        /// <summary>
-        /// Creates a new instance of the <see cref="CircuitBreakerSettings"/> from provided HOCON <paramref name="config"/>.
-        /// </summary>
-        public static CircuitBreakerSettings Create(Config config)
-        {
-            if (config == null) throw new ArgumentNullException(nameof(config));
-
-            return new CircuitBreakerSettings(
-                maxFailures: config.GetInt("max-failures", 5),
-                callTimeout: config.GetTimeSpan("call-timeout", TimeSpan.FromSeconds(20)),
-                resetTimeout: config.GetTimeSpan("reset-timeout", TimeSpan.FromSeconds(60)));
-        }
-
         /// <summary>
         /// Max number of failures that can happen before circuit will open.
         /// </summary>
@@ -125,6 +112,18 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// after sampling an operation.
         /// </summary>
         public TimeSpan ResetTimeout { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="CircuitBreakerSettings"/> from provided HOCON <paramref name="config"/>.
+        /// </summary>
+        public CircuitBreakerSettings(Config config)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            MaxFailures = config.GetInt("max-failures", 5);
+            CallTimeout = config.GetTimeSpan("call-timeout", TimeSpan.FromSeconds(20));
+            ResetTimeout = config.GetTimeSpan("reset-timeout", TimeSpan.FromSeconds(60));
+        }
 
         public CircuitBreakerSettings(int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
         {
@@ -192,6 +191,32 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Database specific naming conventions (table and column names) used to construct valid SQL statements.
         /// </summary>
         public QueryConfiguration NamingConventions { get; }
+
+        protected BatchingSqlJournalSetup(Config config, QueryConfiguration namingConventions)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config), "Sql journal settings cannot be initialized, because required HOCON section couldn't been found");
+
+            var connectionString = config.GetString("connection-string");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                connectionString = ConfigurationManager
+                    .ConnectionStrings[config.GetString("connection-string-name", "DefaultConnection")]
+                    .ConnectionString;
+            }
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentException("No connection string for Sql Event Journal was specified");
+            
+            ConnectionString = connectionString;
+            MaxConcurrentOperations = config.GetInt("max-concurrent-operations", 64);
+            MaxBatchSize = config.GetInt("max-batch-size", 100);
+            MaxBufferSize = config.GetInt("max-buffer-size", 500000);
+            AutoInitialize = config.GetBoolean("auto-initialize", false);
+            ConnectionTimeout = config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(30));
+            CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
+            ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
+            NamingConventions = namingConventions;
+        }
 
         protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions)
         {
@@ -1143,7 +1168,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public static readonly JournalBufferOverflowException Instance = new JournalBufferOverflowException();
 
         public JournalBufferOverflowException() : base(
-            "Batching journal buffer has been overflown. This may happen as effect burst or persistent actors "
+            "Batching journal buffer has been overflowed. This may happen as an effect of burst of persistent actors "
             + "requests incoming faster than the underlying database is able to fullfil them. You may modify "
             + "`max-buffer-size`, `max-batch-size` and `max-concurrent-operations` HOCON settings in order to "
             + " change it.")

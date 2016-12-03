@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Configuration;
 using System.Data.Common;
 using System.Data.SQLite;
 using Akka.Configuration;
@@ -18,31 +17,7 @@ namespace Akka.Persistence.Sqlite.Journal
 {
     public sealed class BatchingSqliteJournalSetup : BatchingSqlJournalSetup
     {
-        public static BatchingSqliteJournalSetup Create(Config config)
-        {
-            if (config == null) throw new ArgumentNullException(nameof(config), "Sql journal settings cannot be initialized, because required HOCON section couldn't been found");
-
-            var connectionString = config.GetString("connection-string");
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                connectionString = ConfigurationManager
-                    .ConnectionStrings[config.GetString("connection-string-name", "DefaultConnection")]
-                    .ConnectionString;
-            }
-
-            if (string.IsNullOrWhiteSpace(connectionString))
-                throw new ArgumentException("No connection string for Sql Event Journal was specified");
-
-            return new BatchingSqliteJournalSetup(
-                connectionString: connectionString,
-                maxConcurrentOperations: config.GetInt("max-concurrent-operations", 64),
-                maxBatchSize: config.GetInt("max-batch-size", 100),
-                maxBufferSize: config.GetInt("max-buffer-size", 500000),
-                autoInitialize: config.GetBoolean("auto-initialize", false),
-                connectionTimeout: config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(30)),
-                circuitBreakerSettings: CircuitBreakerSettings.Create(config.GetConfig("circuit-breaker")),
-                replayFilterSettings: ReplayFilterSettings.Create(config.GetConfig("replay-filter")), 
-                namingConventions: new QueryConfiguration(
+        public BatchingSqliteJournalSetup(Config config) : base(config, new QueryConfiguration(
                     schemaName: null,
                     journalEventsTableName: config.GetString("table-name"),
                     metaTableName: config.GetString("metadata-table-name"),
@@ -54,7 +29,8 @@ namespace Akka.Persistence.Sqlite.Journal
                     isDeletedColumnName: "is_deleted",
                     tagsColumnName: "tags",
                     orderingColumnName: "ordering",
-                    timeout: config.GetTimeSpan("connection-timeout")));
+                    timeout: config.GetTimeSpan("connection-timeout")))
+        {
         }
 
         public BatchingSqliteJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, 
@@ -68,8 +44,7 @@ namespace Akka.Persistence.Sqlite.Journal
     {
         private DbConnection _anchor;
         
-
-        public BatchingSqliteJournal(Config config) : this(BatchingSqliteJournalSetup.Create(config))
+        public BatchingSqliteJournal(Config config) : this(new BatchingSqliteJournalSetup(config))
         {
         }
 
