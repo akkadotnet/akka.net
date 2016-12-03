@@ -131,6 +131,46 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void A_cluster_must_complete_LeaveAsync_task_upon_being_removed()
+        {
+            _cluster.Join(_selfAddress);
+            LeaderActions(); // Joining -> Up
+
+            _cluster.Subscribe(TestActor, new[] { typeof(ClusterEvent.MemberRemoved) });
+
+            // first, is in response to the subscription
+            ExpectMsg<ClusterEvent.CurrentClusterState>();
+
+            var leaveTask = _cluster.LeaveAsync();
+
+            // current node should be marked as leaving, but not removed yet
+            AwaitCondition(() => _cluster.State.Members
+                .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving, 
+                TimeSpan.FromSeconds(10), 
+                message: "Failed to observe node as Leaving.");
+
+            // can't run this inside Within block
+            ExpectNoMsg();
+
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                leaveTask.IsCompleted.Should().BeFalse();
+
+                LeaderActions(); // Leaving --> Exiting
+                AwaitCondition(() => _cluster.State.Members
+                   .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting, 
+                   TimeSpan.FromSeconds(10), message: "Failed to observe node as Exiting.");
+
+                LeaderActions(); // Exiting --> Removed
+                ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
+                leaveTask.IsCompleted.Should().BeTrue();
+            });
+
+            // A second call for LeaveAsync should complete immediately
+            _cluster.LeaveAsync().IsCompleted.Should().BeTrue();
+        }
+
+        [Fact]
         public void A_cluster_must_be_allowed_to_join_and_leave_with_local_address()
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""

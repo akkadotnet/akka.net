@@ -1,4 +1,4 @@
-﻿// --- auto generated: 21.04.2016 07:48:44 --- //
+﻿// --- auto generated: 17.10.2016 21:24:59 --- //
 //-----------------------------------------------------------------------
 // <copyright file="UnzipWith.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
@@ -100,62 +100,68 @@ namespace Akka.Streams.Dsl
 	
 	public class UnzipWith<TIn, T0, T1> : GraphStage<FanOutShape<TIn, T0, T1>>
 	{
-		private sealed class UnzipWithStageLogic : GraphStageLogic 
+		private sealed class UnzipWithStageLogic : InGraphStageLogic 
 		{
+			private readonly UnzipWith<TIn, T0, T1> _stage;
+			private int _pendingCount = 2;
+			private int _downstreamRunning = 2;
+			private bool _pending0 = true;
+			private bool _pending1 = true;
+	
 			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, T0, T1> stage) : base(shape)
 			{
-				var pendingCount = 2;
-				var downstreamRunning = 2;
-				var pending0 = true;
-				var pending1 = true;
-				
-				SetHandler(stage.In, onPush: () => {
-					var elements = stage._unzipper(Grab(stage.In));
-					
-					if (!IsClosed(stage.Out0)) 
-					{
-						Push(stage.Out0, elements.Item1);
-						pending0 = true;
-					}
-					if (!IsClosed(stage.Out1)) 
-					{
-						Push(stage.Out1, elements.Item2);
-						pending1 = true;
-					}
-					
-					pendingCount = downstreamRunning;
-				});				
+				_stage = stage;
+
+				SetHandler(stage.In, this);				
 				
 				SetHandler(stage.Out0, onPull: () => {
-					pendingCount--;
-					pending0 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending0 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending0) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending0) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out1, onPull: () => {
-					pendingCount--;
-					pending1 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending1 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending1) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending1) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
+			}
+
+			public override void  OnPush()
+			{
+				var elements = _stage._unzipper(Grab(_stage.In));
+					
+				if (!IsClosed(_stage.Out0)) 
+				{
+					Push(_stage.Out0, elements.Item1);
+					_pending0 = true;
+				}
+				if (!IsClosed(_stage.Out1)) 
+				{
+					Push(_stage.Out1, elements.Item2);
+					_pending1 = true;
+				}
+				
+				_pendingCount = _downstreamRunning;
 			}
 		}		
 
@@ -188,83 +194,89 @@ namespace Akka.Streams.Dsl
 	
 	public class UnzipWith<TIn, T0, T1, T2> : GraphStage<FanOutShape<TIn, T0, T1, T2>>
 	{
-		private sealed class UnzipWithStageLogic : GraphStageLogic 
+		private sealed class UnzipWithStageLogic : InGraphStageLogic 
 		{
+			private readonly UnzipWith<TIn, T0, T1, T2> _stage;
+			private int _pendingCount = 3;
+			private int _downstreamRunning = 3;
+			private bool _pending0 = true;
+			private bool _pending1 = true;
+			private bool _pending2 = true;
+	
 			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, T0, T1, T2> stage) : base(shape)
 			{
-				var pendingCount = 3;
-				var downstreamRunning = 3;
-				var pending0 = true;
-				var pending1 = true;
-				var pending2 = true;
-				
-				SetHandler(stage.In, onPush: () => {
-					var elements = stage._unzipper(Grab(stage.In));
-					
-					if (!IsClosed(stage.Out0)) 
-					{
-						Push(stage.Out0, elements.Item1);
-						pending0 = true;
-					}
-					if (!IsClosed(stage.Out1)) 
-					{
-						Push(stage.Out1, elements.Item2);
-						pending1 = true;
-					}
-					if (!IsClosed(stage.Out2)) 
-					{
-						Push(stage.Out2, elements.Item3);
-						pending2 = true;
-					}
-					
-					pendingCount = downstreamRunning;
-				});				
+				_stage = stage;
+
+				SetHandler(stage.In, this);				
 				
 				SetHandler(stage.Out0, onPull: () => {
-					pendingCount--;
-					pending0 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending0 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending0) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending0) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out1, onPull: () => {
-					pendingCount--;
-					pending1 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending1 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending1) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending1) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out2, onPull: () => {
-					pendingCount--;
-					pending2 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending2 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending2) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending2) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
+			}
+
+			public override void  OnPush()
+			{
+				var elements = _stage._unzipper(Grab(_stage.In));
+					
+				if (!IsClosed(_stage.Out0)) 
+				{
+					Push(_stage.Out0, elements.Item1);
+					_pending0 = true;
+				}
+				if (!IsClosed(_stage.Out1)) 
+				{
+					Push(_stage.Out1, elements.Item2);
+					_pending1 = true;
+				}
+				if (!IsClosed(_stage.Out2)) 
+				{
+					Push(_stage.Out2, elements.Item3);
+					_pending2 = true;
+				}
+				
+				_pendingCount = _downstreamRunning;
 			}
 		}		
 
@@ -299,104 +311,110 @@ namespace Akka.Streams.Dsl
 	
 	public class UnzipWith<TIn, T0, T1, T2, T3> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3>>
 	{
-		private sealed class UnzipWithStageLogic : GraphStageLogic 
+		private sealed class UnzipWithStageLogic : InGraphStageLogic 
 		{
+			private readonly UnzipWith<TIn, T0, T1, T2, T3> _stage;
+			private int _pendingCount = 4;
+			private int _downstreamRunning = 4;
+			private bool _pending0 = true;
+			private bool _pending1 = true;
+			private bool _pending2 = true;
+			private bool _pending3 = true;
+	
 			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, T0, T1, T2, T3> stage) : base(shape)
 			{
-				var pendingCount = 4;
-				var downstreamRunning = 4;
-				var pending0 = true;
-				var pending1 = true;
-				var pending2 = true;
-				var pending3 = true;
-				
-				SetHandler(stage.In, onPush: () => {
-					var elements = stage._unzipper(Grab(stage.In));
-					
-					if (!IsClosed(stage.Out0)) 
-					{
-						Push(stage.Out0, elements.Item1);
-						pending0 = true;
-					}
-					if (!IsClosed(stage.Out1)) 
-					{
-						Push(stage.Out1, elements.Item2);
-						pending1 = true;
-					}
-					if (!IsClosed(stage.Out2)) 
-					{
-						Push(stage.Out2, elements.Item3);
-						pending2 = true;
-					}
-					if (!IsClosed(stage.Out3)) 
-					{
-						Push(stage.Out3, elements.Item4);
-						pending3 = true;
-					}
-					
-					pendingCount = downstreamRunning;
-				});				
+				_stage = stage;
+
+				SetHandler(stage.In, this);				
 				
 				SetHandler(stage.Out0, onPull: () => {
-					pendingCount--;
-					pending0 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending0 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending0) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending0) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out1, onPull: () => {
-					pendingCount--;
-					pending1 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending1 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending1) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending1) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out2, onPull: () => {
-					pendingCount--;
-					pending2 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending2 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending2) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending2) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out3, onPull: () => {
-					pendingCount--;
-					pending3 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending3 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending3) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending3) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
+			}
+
+			public override void  OnPush()
+			{
+				var elements = _stage._unzipper(Grab(_stage.In));
+					
+				if (!IsClosed(_stage.Out0)) 
+				{
+					Push(_stage.Out0, elements.Item1);
+					_pending0 = true;
+				}
+				if (!IsClosed(_stage.Out1)) 
+				{
+					Push(_stage.Out1, elements.Item2);
+					_pending1 = true;
+				}
+				if (!IsClosed(_stage.Out2)) 
+				{
+					Push(_stage.Out2, elements.Item3);
+					_pending2 = true;
+				}
+				if (!IsClosed(_stage.Out3)) 
+				{
+					Push(_stage.Out3, elements.Item4);
+					_pending3 = true;
+				}
+				
+				_pendingCount = _downstreamRunning;
 			}
 		}		
 
@@ -433,125 +451,131 @@ namespace Akka.Streams.Dsl
 	
 	public class UnzipWith<TIn, T0, T1, T2, T3, T4> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4>>
 	{
-		private sealed class UnzipWithStageLogic : GraphStageLogic 
+		private sealed class UnzipWithStageLogic : InGraphStageLogic 
 		{
+			private readonly UnzipWith<TIn, T0, T1, T2, T3, T4> _stage;
+			private int _pendingCount = 5;
+			private int _downstreamRunning = 5;
+			private bool _pending0 = true;
+			private bool _pending1 = true;
+			private bool _pending2 = true;
+			private bool _pending3 = true;
+			private bool _pending4 = true;
+	
 			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, T0, T1, T2, T3, T4> stage) : base(shape)
 			{
-				var pendingCount = 5;
-				var downstreamRunning = 5;
-				var pending0 = true;
-				var pending1 = true;
-				var pending2 = true;
-				var pending3 = true;
-				var pending4 = true;
-				
-				SetHandler(stage.In, onPush: () => {
-					var elements = stage._unzipper(Grab(stage.In));
-					
-					if (!IsClosed(stage.Out0)) 
-					{
-						Push(stage.Out0, elements.Item1);
-						pending0 = true;
-					}
-					if (!IsClosed(stage.Out1)) 
-					{
-						Push(stage.Out1, elements.Item2);
-						pending1 = true;
-					}
-					if (!IsClosed(stage.Out2)) 
-					{
-						Push(stage.Out2, elements.Item3);
-						pending2 = true;
-					}
-					if (!IsClosed(stage.Out3)) 
-					{
-						Push(stage.Out3, elements.Item4);
-						pending3 = true;
-					}
-					if (!IsClosed(stage.Out4)) 
-					{
-						Push(stage.Out4, elements.Item5);
-						pending4 = true;
-					}
-					
-					pendingCount = downstreamRunning;
-				});				
+				_stage = stage;
+
+				SetHandler(stage.In, this);				
 				
 				SetHandler(stage.Out0, onPull: () => {
-					pendingCount--;
-					pending0 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending0 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending0) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending0) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out1, onPull: () => {
-					pendingCount--;
-					pending1 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending1 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending1) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending1) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out2, onPull: () => {
-					pendingCount--;
-					pending2 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending2 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending2) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending2) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out3, onPull: () => {
-					pendingCount--;
-					pending3 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending3 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending3) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending3) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out4, onPull: () => {
-					pendingCount--;
-					pending4 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending4 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending4) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending4) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
+			}
+
+			public override void  OnPush()
+			{
+				var elements = _stage._unzipper(Grab(_stage.In));
+					
+				if (!IsClosed(_stage.Out0)) 
+				{
+					Push(_stage.Out0, elements.Item1);
+					_pending0 = true;
+				}
+				if (!IsClosed(_stage.Out1)) 
+				{
+					Push(_stage.Out1, elements.Item2);
+					_pending1 = true;
+				}
+				if (!IsClosed(_stage.Out2)) 
+				{
+					Push(_stage.Out2, elements.Item3);
+					_pending2 = true;
+				}
+				if (!IsClosed(_stage.Out3)) 
+				{
+					Push(_stage.Out3, elements.Item4);
+					_pending3 = true;
+				}
+				if (!IsClosed(_stage.Out4)) 
+				{
+					Push(_stage.Out4, elements.Item5);
+					_pending4 = true;
+				}
+				
+				_pendingCount = _downstreamRunning;
 			}
 		}		
 
@@ -590,146 +614,152 @@ namespace Akka.Streams.Dsl
 	
 	public class UnzipWith<TIn, T0, T1, T2, T3, T4, T5> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4, T5>>
 	{
-		private sealed class UnzipWithStageLogic : GraphStageLogic 
+		private sealed class UnzipWithStageLogic : InGraphStageLogic 
 		{
+			private readonly UnzipWith<TIn, T0, T1, T2, T3, T4, T5> _stage;
+			private int _pendingCount = 6;
+			private int _downstreamRunning = 6;
+			private bool _pending0 = true;
+			private bool _pending1 = true;
+			private bool _pending2 = true;
+			private bool _pending3 = true;
+			private bool _pending4 = true;
+			private bool _pending5 = true;
+	
 			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, T0, T1, T2, T3, T4, T5> stage) : base(shape)
 			{
-				var pendingCount = 6;
-				var downstreamRunning = 6;
-				var pending0 = true;
-				var pending1 = true;
-				var pending2 = true;
-				var pending3 = true;
-				var pending4 = true;
-				var pending5 = true;
-				
-				SetHandler(stage.In, onPush: () => {
-					var elements = stage._unzipper(Grab(stage.In));
-					
-					if (!IsClosed(stage.Out0)) 
-					{
-						Push(stage.Out0, elements.Item1);
-						pending0 = true;
-					}
-					if (!IsClosed(stage.Out1)) 
-					{
-						Push(stage.Out1, elements.Item2);
-						pending1 = true;
-					}
-					if (!IsClosed(stage.Out2)) 
-					{
-						Push(stage.Out2, elements.Item3);
-						pending2 = true;
-					}
-					if (!IsClosed(stage.Out3)) 
-					{
-						Push(stage.Out3, elements.Item4);
-						pending3 = true;
-					}
-					if (!IsClosed(stage.Out4)) 
-					{
-						Push(stage.Out4, elements.Item5);
-						pending4 = true;
-					}
-					if (!IsClosed(stage.Out5)) 
-					{
-						Push(stage.Out5, elements.Item6);
-						pending5 = true;
-					}
-					
-					pendingCount = downstreamRunning;
-				});				
+				_stage = stage;
+
+				SetHandler(stage.In, this);				
 				
 				SetHandler(stage.Out0, onPull: () => {
-					pendingCount--;
-					pending0 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending0 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending0) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending0) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out1, onPull: () => {
-					pendingCount--;
-					pending1 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending1 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending1) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending1) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out2, onPull: () => {
-					pendingCount--;
-					pending2 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending2 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending2) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending2) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out3, onPull: () => {
-					pendingCount--;
-					pending3 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending3 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending3) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending3) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out4, onPull: () => {
-					pendingCount--;
-					pending4 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending4 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending4) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending4) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out5, onPull: () => {
-					pendingCount--;
-					pending5 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending5 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending5) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending5) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
+			}
+
+			public override void  OnPush()
+			{
+				var elements = _stage._unzipper(Grab(_stage.In));
+					
+				if (!IsClosed(_stage.Out0)) 
+				{
+					Push(_stage.Out0, elements.Item1);
+					_pending0 = true;
+				}
+				if (!IsClosed(_stage.Out1)) 
+				{
+					Push(_stage.Out1, elements.Item2);
+					_pending1 = true;
+				}
+				if (!IsClosed(_stage.Out2)) 
+				{
+					Push(_stage.Out2, elements.Item3);
+					_pending2 = true;
+				}
+				if (!IsClosed(_stage.Out3)) 
+				{
+					Push(_stage.Out3, elements.Item4);
+					_pending3 = true;
+				}
+				if (!IsClosed(_stage.Out4)) 
+				{
+					Push(_stage.Out4, elements.Item5);
+					_pending4 = true;
+				}
+				if (!IsClosed(_stage.Out5)) 
+				{
+					Push(_stage.Out5, elements.Item6);
+					_pending5 = true;
+				}
+				
+				_pendingCount = _downstreamRunning;
 			}
 		}		
 
@@ -770,167 +800,173 @@ namespace Akka.Streams.Dsl
 	
 	public class UnzipWith<TIn, T0, T1, T2, T3, T4, T5, T6> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4, T5, T6>>
 	{
-		private sealed class UnzipWithStageLogic : GraphStageLogic 
+		private sealed class UnzipWithStageLogic : InGraphStageLogic 
 		{
+			private readonly UnzipWith<TIn, T0, T1, T2, T3, T4, T5, T6> _stage;
+			private int _pendingCount = 7;
+			private int _downstreamRunning = 7;
+			private bool _pending0 = true;
+			private bool _pending1 = true;
+			private bool _pending2 = true;
+			private bool _pending3 = true;
+			private bool _pending4 = true;
+			private bool _pending5 = true;
+			private bool _pending6 = true;
+	
 			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, T0, T1, T2, T3, T4, T5, T6> stage) : base(shape)
 			{
-				var pendingCount = 7;
-				var downstreamRunning = 7;
-				var pending0 = true;
-				var pending1 = true;
-				var pending2 = true;
-				var pending3 = true;
-				var pending4 = true;
-				var pending5 = true;
-				var pending6 = true;
-				
-				SetHandler(stage.In, onPush: () => {
-					var elements = stage._unzipper(Grab(stage.In));
-					
-					if (!IsClosed(stage.Out0)) 
-					{
-						Push(stage.Out0, elements.Item1);
-						pending0 = true;
-					}
-					if (!IsClosed(stage.Out1)) 
-					{
-						Push(stage.Out1, elements.Item2);
-						pending1 = true;
-					}
-					if (!IsClosed(stage.Out2)) 
-					{
-						Push(stage.Out2, elements.Item3);
-						pending2 = true;
-					}
-					if (!IsClosed(stage.Out3)) 
-					{
-						Push(stage.Out3, elements.Item4);
-						pending3 = true;
-					}
-					if (!IsClosed(stage.Out4)) 
-					{
-						Push(stage.Out4, elements.Item5);
-						pending4 = true;
-					}
-					if (!IsClosed(stage.Out5)) 
-					{
-						Push(stage.Out5, elements.Item6);
-						pending5 = true;
-					}
-					if (!IsClosed(stage.Out6)) 
-					{
-						Push(stage.Out6, elements.Item7);
-						pending6 = true;
-					}
-					
-					pendingCount = downstreamRunning;
-				});				
+				_stage = stage;
+
+				SetHandler(stage.In, this);				
 				
 				SetHandler(stage.Out0, onPull: () => {
-					pendingCount--;
-					pending0 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending0 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending0) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending0) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out1, onPull: () => {
-					pendingCount--;
-					pending1 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending1 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending1) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending1) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out2, onPull: () => {
-					pendingCount--;
-					pending2 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending2 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending2) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending2) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out3, onPull: () => {
-					pendingCount--;
-					pending3 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending3 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending3) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending3) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out4, onPull: () => {
-					pendingCount--;
-					pending4 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending4 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending4) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending4) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out5, onPull: () => {
-					pendingCount--;
-					pending5 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending5 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending5) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending5) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
 				SetHandler(stage.Out6, onPull: () => {
-					pendingCount--;
-					pending6 = false;
-					if (pendingCount == 0) Pull(stage.In);
+					_pendingCount--;
+					_pending6 = false;
+					if (_pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
-					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage();
+					_downstreamRunning--;
+					if (_downstreamRunning == 0) CompleteStage();
 					else 
 					{
-						if (pending6) pendingCount--;
-						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+						if (_pending6) _pendingCount--;
+						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				
+			}
+
+			public override void  OnPush()
+			{
+				var elements = _stage._unzipper(Grab(_stage.In));
+					
+				if (!IsClosed(_stage.Out0)) 
+				{
+					Push(_stage.Out0, elements.Item1);
+					_pending0 = true;
+				}
+				if (!IsClosed(_stage.Out1)) 
+				{
+					Push(_stage.Out1, elements.Item2);
+					_pending1 = true;
+				}
+				if (!IsClosed(_stage.Out2)) 
+				{
+					Push(_stage.Out2, elements.Item3);
+					_pending2 = true;
+				}
+				if (!IsClosed(_stage.Out3)) 
+				{
+					Push(_stage.Out3, elements.Item4);
+					_pending3 = true;
+				}
+				if (!IsClosed(_stage.Out4)) 
+				{
+					Push(_stage.Out4, elements.Item5);
+					_pending4 = true;
+				}
+				if (!IsClosed(_stage.Out5)) 
+				{
+					Push(_stage.Out5, elements.Item6);
+					_pending5 = true;
+				}
+				if (!IsClosed(_stage.Out6)) 
+				{
+					Push(_stage.Out6, elements.Item7);
+					_pending6 = true;
+				}
+				
+				_pendingCount = _downstreamRunning;
 			}
 		}		
 

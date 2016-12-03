@@ -97,7 +97,8 @@ namespace Akka.Streams.Dsl
                     if (_pullSuppressed)
                     {
                         _pullSuppressed = false;
-                        Pull(_inInlet);
+                        if(!IsClosed(_inInlet))
+                            Pull(_inInlet);
                     }
                 }, onUpstreamFinish: () =>
                 {
