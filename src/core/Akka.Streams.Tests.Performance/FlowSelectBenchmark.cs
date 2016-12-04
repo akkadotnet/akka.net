@@ -45,6 +45,8 @@ akka {
 }
 ");
 
+        private const TestMode CurrentTestMode = TestMode.Measurement;
+
         private ActorSystem _actorSystem;
         private ActorMaterializer _materializer8;
         private ActorMaterializer _materializer32;
@@ -73,7 +75,7 @@ akka {
 
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description ="Test the performance of a Select flow with InputBufferSize of 8, 1 Select and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 300)]
@@ -81,7 +83,7 @@ akka {
             => Execute(_materializer8, 1, false);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 32, 1 Select and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 300)]
@@ -89,7 +91,7 @@ akka {
             => Execute(_materializer32, 1, false);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 128, 1 Select and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 300)]
@@ -98,7 +100,7 @@ akka {
 
         
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 8, 1 Select and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
@@ -106,7 +108,7 @@ akka {
             => Execute(_materializer8, 1, true);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 32, 1 Select and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
@@ -114,7 +116,7 @@ akka {
             => Execute(_materializer32, 1, true);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 128, 1 Select and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
@@ -126,7 +128,7 @@ akka {
 
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 8, 5 Selects and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 700)]
@@ -134,7 +136,7 @@ akka {
             => Execute(_materializer8, 5, false);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 32, 5 Selects and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 700)]
@@ -142,7 +144,7 @@ akka {
             => Execute(_materializer32, 5, false);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 128, 5 Selects and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 700)]
@@ -151,7 +153,7 @@ akka {
 
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 8, 5 Selects and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
@@ -159,7 +161,7 @@ akka {
             => Execute(_materializer8, 5, true);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 32, 5 Selects and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
@@ -167,7 +169,7 @@ akka {
             => Execute(_materializer32, 5, true);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 128, 5 Selects and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
@@ -179,7 +181,7 @@ akka {
 
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 8, 10 Selects and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 1200)]
@@ -187,7 +189,7 @@ akka {
             => Execute(_materializer8, 10, false);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 32, 10 Selects and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 1200)]
@@ -195,7 +197,7 @@ akka {
             => Execute(_materializer32, 10, false);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 128, 10 Selects and without GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 1200)]
@@ -204,7 +206,7 @@ akka {
 
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 8, 10 Selects and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
@@ -212,7 +214,7 @@ akka {
             => Execute(_materializer8, 10, true);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 32, 10 Selects and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
@@ -220,7 +222,7 @@ akka {
             => Execute(_materializer32, 10, true);
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Description = "Test the performance of a Select flow with InputBufferSize of 128, 10 Selects and with GraphStages.Identity")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]

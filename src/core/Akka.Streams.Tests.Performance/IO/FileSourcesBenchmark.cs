@@ -20,6 +20,8 @@ namespace Akka.Streams.Tests.Performance.IO
 {
     public class FileSourcesBenchmark
     {
+        private const TestMode CurrentTestMode = TestMode.Measurement;
+
         private const int BufferSize = 2048;
         private ActorSystem _actorSystem;
         private ActorMaterializer _materializer;
@@ -68,7 +70,7 @@ namespace Akka.Streams.Tests.Performance.IO
 
 
         [PerfBenchmark(Description = "Test the performance of a FileSource using a file channel",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 1)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2500)]
         public void FileChannel()
@@ -78,7 +80,7 @@ namespace Akka.Streams.Tests.Performance.IO
 
 
         [PerfBenchmark(Description = "Test the performance of a FileSource using a file channel without read ahead",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 1)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
         public void FileChannel_without_read_ahead()
@@ -89,7 +91,7 @@ namespace Akka.Streams.Tests.Performance.IO
 
 
         [PerfBenchmark(Description = "Test the performance of a FileSource using a file stream",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 1)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
         public void FileStream()
@@ -99,7 +101,7 @@ namespace Akka.Streams.Tests.Performance.IO
 
 
         [PerfBenchmark(Description = "Test the performance of a FileSource using File.ReadLines enumerator",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 1)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 8000)]
         public void Naive_IO_lines_enumerator()

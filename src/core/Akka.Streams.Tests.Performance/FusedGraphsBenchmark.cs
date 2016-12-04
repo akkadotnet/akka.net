@@ -10,6 +10,7 @@ namespace Akka.Streams.Tests.Performance
 {
     public class FusedGraphsBenchmark
     {
+        private const TestMode CurrentTestMode = TestMode.Measurement;
         private const int ElementCount = 100 * 1000;
 
         private sealed class MutableElement
@@ -265,61 +266,61 @@ namespace Akka.Streams.Tests.Performance
 
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 50)]
         public void SingleIdentity() => _singleIdentity.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 100)]
         public void ChainOfIdentities() => _chainOfIdentities.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 50)]
         public void SingleSelect() => _singleSelect.Run(_materializer).Ready();
 
         
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 110)]
         public void ChainOfSelects() => _chainOfSelects.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 60)]
         public void SingleBuffer() => _singleBuffer.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 350)]
         public void ChainOfBuffers() => _chainOfBuffers.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 3500)]
         public void RepeatTakeSelectAndAggregate() => _repeatTakeSelectAndAggregate.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 100)]
         public void BroadcastZip() => _broadcastZip.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 50)]
         public void BalanceMerge() => _balanceMerge.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 100)]
         public void BroadcastZipBalanceMerge() => _broadcastZipBalanceMerge.Run(_materializer).Ready();

@@ -18,6 +18,8 @@ namespace Akka.Streams.Tests.Performance
     // JVM : FlatMapMergeBenchmark
     public class MergeManyBenchmark
     {
+        private const TestMode CurrentTestMode = TestMode.Measurement;
+
         private ActorSystem _actorSystem;
         private ActorMaterializerSettings _materializerSettings;
         private ActorMaterializer _materializer;
@@ -60,21 +62,21 @@ namespace Akka.Streams.Tests.Performance
 
 
         [PerfBenchmark(Description = "Test the performance of a single source without using MergeMany",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
         public void Take_100k_elements() => _takeGraph.Run(_materializer).Wait();
 
 
         [PerfBenchmark(Description = "Test the performance of a single source using MergeMany",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 500)]
         public void Select_many_from_1_Source_100k_elements() => _singleGraph.Run(_materializer).Wait();
 
 
         [PerfBenchmark(Description = "Test the performance from 10 sources using MergeMany",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 600)]
         public void Select_many_from_10_Sources_10k_elements_each() => _tenGraph.Run(_materializer).Wait();

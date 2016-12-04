@@ -6,6 +6,7 @@ namespace Akka.Streams.Tests.Performance
 {
     public class JsonFramingBenchmark
     {
+        private const TestMode CurrentTestMode = TestMode.Measurement;
         private const string BracketThroughputCounterName = "Bracket";
 
         private const string Input = @"{""fname"":""Frank"",""name"":""Smith"",""age"":42,""id"":1337,""boardMember"":false},
@@ -28,7 +29,7 @@ namespace Akka.Streams.Tests.Performance
 
         [PerfBenchmark(Description = "Testing throughput for an Offer and a single Poll call",
             RunMode = RunMode.Throughput,
-            NumberOfIterations = 13, TestMode = TestMode.Test, RunTimeMilliseconds = 1000)]
+            NumberOfIterations = 13, TestMode = CurrentTestMode, RunTimeMilliseconds = 1000)]
         [CounterThroughputAssertion(BracketThroughputCounterName, MustBe.GreaterThan, 150000)]
         public void Counting_1()
         {
@@ -40,7 +41,7 @@ namespace Akka.Streams.Tests.Performance
 
         [PerfBenchmark(Description = "Testing throughput for an Offer and 6 Poll calls",
             RunMode = RunMode.Throughput,
-            NumberOfIterations = 13, TestMode = TestMode.Test, RunTimeMilliseconds = 1000)]
+            NumberOfIterations = 13, TestMode = CurrentTestMode, RunTimeMilliseconds = 1000)]
         [CounterThroughputAssertion(BracketThroughputCounterName, MustBe.GreaterThan, 20000)]
         public void Counting_offer_5()
         {
