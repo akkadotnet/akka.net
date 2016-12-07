@@ -250,7 +250,7 @@ namespace Akka.Persistence
         }
 
         [Serializable]
-        public sealed class RedeliveryTick
+        public sealed class RedeliveryTick: INotInfluenceReceiveTimeout
         {
             public static readonly RedeliveryTick Instance = new RedeliveryTick();
 
