@@ -141,11 +141,11 @@ namespace Akka.Persistence.Sql.Common.Journal
                     var batch = new WriteJournalBatch(eventToTags);
                     await QueryExecutor.InsertBatchAsync(connection, _pendingRequestsCancellation.Token, batch);
                 }
-            });
+            }).ToArray();
 
             var result = await Task<IImmutableList<Exception>>
                 .Factory
-                .ContinueWhenAll(writeTasks.ToArray(),
+                .ContinueWhenAll(writeTasks,
                     tasks => tasks.Select(t => t.IsFaulted ? TryUnwrapException(t.Exception) : null).ToImmutableList());
 
             if (HasPersistenceIdSubscribers)

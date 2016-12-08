@@ -46,8 +46,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="InternalExtensions.cs" />
+    <Compile Include="Journal\BatchingSqlJournal.cs" />
     <Compile Include="Journal\ITimestampProvider.cs" />
     <Compile Include="Journal\Messages.cs" />
+    <Compile Include="Journal\MultiValueDictionaryExtensions.cs" />
     <Compile Include="Journal\QueryApi.cs" />
     <Compile Include="Journal\QueryExecutor.cs" />
     <Compile Include="Journal\SqlJournal.cs" />
