@@ -678,7 +678,7 @@ namespace Akka.Persistence
     }
 
     [Serializable]
-    public sealed class ReadHighestSequenceNr : IEquatable<ReadHighestSequenceNr>
+    public sealed class ReadHighestSequenceNr : IJournalRequest, IEquatable<ReadHighestSequenceNr>
     {
         public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, IActorRef persistentActor)
         {
