@@ -344,12 +344,19 @@ Target "NBench" <| fun _ ->
 
     let runNBench assembly =
         let spec = getBuildParam "spec"
+        let teamcityStr = (getBuildParam "teamcity")
+        let enableTeamCity = 
+            match teamcityStr with
+            | null -> false
+            | "" -> false
+            | _ -> bool.Parse teamcityStr
 
         let args = new StringBuilder()
                 |> append assembly
                 |> append (sprintf "output-directory=\"%s\"" perfOutput)
                 |> append (sprintf "concurrent=\"%b\"" true)
                 |> append (sprintf "trace=\"%b\"" true)
+                |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
                 |> toText
 
         let result = ExecProcess(fun info -> 
