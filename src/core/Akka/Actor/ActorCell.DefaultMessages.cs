@@ -168,7 +168,7 @@ namespace Akka.Actor
         {
             var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
 
-            if (System.Settings.AddLoggingReceive && !(_actor is ILogReceive))
+            if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
             {
                 //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
                 var msg = "received " + (wasHandled ? "handled" : "unhandled") + " message " + message + " from " + Self.Path + " to " + Sender.Path;
