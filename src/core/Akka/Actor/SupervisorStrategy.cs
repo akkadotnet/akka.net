@@ -235,7 +235,8 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     only to the child that failed.
+        ///     only to the child that failed, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     it to all children when one failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
         ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
@@ -251,8 +252,8 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
-        ///     it only to the child actor that failed.
+        ///     only to the child that failed, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     it to all children when one failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
         ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
@@ -268,8 +269,8 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
-        ///     it only to the child actor that failed.
+        ///     only to the child that failed, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     it to all children when one failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
         ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
@@ -286,8 +287,8 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
-        ///     it only to the child actor that failed.
+        ///     only to the child that failed, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     it to all children when one failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
         ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
@@ -463,7 +464,7 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
         ///     it only to the child actor that failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
@@ -480,7 +481,7 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
         ///     it only to the child actor that failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
@@ -498,7 +499,7 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
         ///     it only to the child actor that failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
