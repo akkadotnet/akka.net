@@ -83,25 +83,19 @@ namespace Akka.Actor
             var result = new TaskCompletionSource<object>();
 
             CancellationTokenSource timeoutCancellation = null;
-
             timeout = timeout ?? provider.Settings.AskTimeout;
+            List<CancellationTokenRegistration> ctrList = new List<CancellationTokenRegistration>(2);
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 timeoutCancellation = new CancellationTokenSource();
-                timeoutCancellation.Token.Register(() => result.TrySetCanceled());
+                ctrList.Add(timeoutCancellation.Token.Register(() => result.TrySetCanceled()));
                 timeoutCancellation.CancelAfter(timeout.Value);
-                result.Task.ContinueWith(_ => timeoutCancellation.Dispose(),
-                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
 
             if (cancellationToken.CanBeCanceled)
-            {
-                var ctr = cancellationToken.Register(() => result.TrySetCanceled());
-                result.Task.ContinueWith(_ => ctr.Dispose(), 
-                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-            }                
-        
+                ctrList.Add(cancellationToken.Register(() => result.TrySetCanceled()));
+            
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
             //callback to unregister from tempcontainer
@@ -110,7 +104,15 @@ namespace Akka.Actor
                 {
                     // cancelling timeout (if any) in order to prevent memory leaks
                     // (a reference to 'result' variable in CancellationToken's callback)
-                    timeoutCancellation?.Cancel();
+                    if (timeoutCancellation != null)
+                    {
+                        timeoutCancellation.Cancel();
+                        timeoutCancellation.Dispose();
+                    }
+                    for (int i = 0; i < ctrList.Count; i++)
+                    {
+                        ctrList[i].Dispose();
+                    }
                     provider.UnregisterTempActor(path);
                 };
 

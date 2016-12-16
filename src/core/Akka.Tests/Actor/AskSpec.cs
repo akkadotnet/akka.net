@@ -87,7 +87,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CanCancelWhenAskingActor()
+        public void Can_cancel_when_asking_actor()
         {            
             var actor = Sys.ActorOf<SomeActor>();
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
