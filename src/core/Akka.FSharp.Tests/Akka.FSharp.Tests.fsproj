@@ -87,9 +87,10 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
-      <Name>Akka.TestKit.Xunit</Name>
-      <Project>{11F4D4B8-7E07-4457-ABF2-609B3E7B2649}</Project>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
+      <Name>Akka.TestKit.Xunit2</Name>
+      <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
+      <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj">
       <Name>Akka.FSharp</Name>
