@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Akka.Configuration;
+using Akka.Configuration.Hocon;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -31,9 +32,14 @@ namespace Akka.Actor
             var config = settings.Config.GetConfig("akka.actor.deployment");
             Default = config.GetConfig("default");
 
-            var rootObj = config.Root.GetObject();
-            if (rootObj == null) return;
-            var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
+            var rootObjs = new List<HoconObject>()
+            {
+                config.Root.GetObject(),
+                config.Fallback.Root.GetObject()
+            }.Where(x => x != null).ToList();
+
+            if (rootObjs.Any() == false) return;
+            var unwrapped = rootObjs.SelectMany(x => x.Unwrapped.Where(d => !d.Key.Equals("default"))).ToArray();
             foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key.BetweenDoubleQuotes()))))
             {
                 SetDeploy(d);
