@@ -546,6 +546,55 @@ foo {
             config.GetInt("foo.bar.borkbork").ShouldBe(-1);
         }
 
+        [Fact(DisplayName = @"Scalar value should not be overriden by an object in fallback and vice versa")]
+        public void Scalar_value_should_not_be_overriden_by_an_object_in_fallback_and_vice_versa() {
+            var hocon1 = @"
+a {
+    b = 1
+}
+";
+            var hocon2 = @"
+a {
+    b {
+        c = 2
+    }
+}
+";
+
+            var config1 = ConfigurationFactory.ParseString(hocon1);
+            var config2 = ConfigurationFactory.ParseString(hocon2);
+
+            var config12 = config1.WithFallback(config2);
+            var config21 = config2.WithFallback(config1);
+
+            Assert.Equal(1, config12.GetInt("a.b"));
+            Assert.Equal(2, config21.GetInt("a.b.c"));
+        }
+
+        [Fact(DisplayName = "Config constructed from merging with fallback should not share state with origin")]
+        public void Config_constructed_from_merging_with_fallback_should_not_share_state_with_origin()
+        {
+            var hocon1 = @"
+a {
+    b = 1
+}
+";
+            var hocon2 = @"
+a {
+    c = 2
+}
+";
+
+            var config1 = ConfigurationFactory.ParseString(hocon1);
+            var config2 = ConfigurationFactory.ParseString(hocon2);
+
+            var config12 = config1.WithFallback(config2);
+
+            Assert.Equal(2, config12.GetInt("a.c"));
+            Assert.Equal(0, config1.GetInt("a.c"));
+            Assert.Equal(0, config2.GetInt("a.b"));
+        }
+
         [Fact]
         public void Can_parse_quoted_keys()
         {
