@@ -27,20 +27,40 @@ namespace Akka.Actor
         //when asking from outside of an actor, we need to pass a system, so the FutureActor can register itself there and be resolvable for local and remote calls
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout = null)
         {
-            return self.Ask<object>(message, timeout);
+            return self.Ask<object>(message, timeout, CancellationToken.None);
+        }
+
+        public static Task<object> Ask(this ICanTell self, object message, CancellationToken cancellationToken)
+        {
+            return self.Ask<object>(message, null, cancellationToken);
+        }
+
+        public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
+        {
+            return self.Ask<object>(message, timeout, cancellationToken);
+        }
+
+        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
+        {
+            return self.Ask<T>(message, timeout, CancellationToken.None);
+        }
+
+        public static Task<T> Ask<T>(this ICanTell self, object message, CancellationToken cancellationToken)
+        {
+            return self.Ask<T>(message, null, cancellationToken);
         }
 
         /// <summary></summary>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
-        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
+        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return Ask(self, message, provider, timeout).CastTask<object, T>();
+            return Ask(self, message, provider, timeout, cancellationToken).CastTask<object, T>();
         }
 
         internal static IActorRefProvider ResolveProvider(ICanTell self)
@@ -58,21 +78,24 @@ namespace Akka.Actor
         }
 
         private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
-            TimeSpan? timeout)
+            TimeSpan? timeout, CancellationToken cancellationToken)
         {
             var result = new TaskCompletionSource<object>();
 
             CancellationTokenSource timeoutCancellation = null;
-
             timeout = timeout ?? provider.Settings.AskTimeout;
+            List<CancellationTokenRegistration> ctrList = new List<CancellationTokenRegistration>(2);
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 timeoutCancellation = new CancellationTokenSource();
-                timeoutCancellation.Token.Register(() => result.TrySetCanceled());
+                ctrList.Add(timeoutCancellation.Token.Register(() => result.TrySetCanceled()));
                 timeoutCancellation.CancelAfter(timeout.Value);
             }
 
+            if (cancellationToken.CanBeCanceled)
+                ctrList.Add(cancellationToken.Register(() => result.TrySetCanceled()));
+            
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
             //callback to unregister from tempcontainer
@@ -81,7 +104,15 @@ namespace Akka.Actor
                 {
                     // cancelling timeout (if any) in order to prevent memory leaks
                     // (a reference to 'result' variable in CancellationToken's callback)
-                    timeoutCancellation?.Cancel();
+                    if (timeoutCancellation != null)
+                    {
+                        timeoutCancellation.Cancel();
+                        timeoutCancellation.Dispose();
+                    }
+                    for (int i = 0; i < ctrList.Count; i++)
+                    {
+                        ctrList[i].Dispose();
+                    }
                     provider.UnregisterTempActor(path);
                 };
 
