@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Akka.Tests
 {
-    
+
     public class ActorSystemTests
     {
         public class TestActor : UntypedActor
@@ -35,7 +35,7 @@ namespace Akka.Tests
             //assert
             var children = system.Provider.Guardian.Children;
             Assert.True(children.Any(c => c == child));
-        }        
+        }
 
         [Fact]
         public void ActorOf_gives_child_unique_name_if_not_specified()
