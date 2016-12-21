@@ -66,6 +66,7 @@ namespace Akka.Actor
             _result = result;
             _unregister = unregister;
             _path = path;
+            _result.Task.ContinueWith(_ => _unregister());
         }
 
         public override ActorPath Path
@@ -96,7 +97,6 @@ namespace Akka.Actor
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
                     _result.TrySetResult(message);
-                    _unregister();
                 }
             }
         }
