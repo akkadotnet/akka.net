@@ -94,6 +94,33 @@ namespace Akka.Tests.Actor
             Assert.Throws<AggregateException>(() => { actor.Ask<string>("timeout", Timeout.InfiniteTimeSpan, cts.Token).Wait(); });
             Assert.True(cts.IsCancellationRequested);
         }
+        [Fact]
+        public void Cancelled_ask_with_null_timeout_should_remove_temp_actor()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            Assert.Throws<AggregateException>(() => { actor.Ask<string>("cancel", cts.Token).Wait(); });
+            Assert.True(cts.IsCancellationRequested);
+            Are_Temp_Actors_Removed(actor);
+        }
+        [Fact]
+        public void Cancelled_ask_with_timeout_should_remove_temp_actor()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            Assert.Throws<AggregateException>(() => { actor.Ask<string>("cancel", TimeSpan.FromSeconds(30), cts.Token).Wait(); });
+            Assert.True(cts.IsCancellationRequested);
+            Are_Temp_Actors_Removed(actor);
+        }
+        private void Are_Temp_Actors_Removed(IActorRef actor)
+        {
+            var actorCell = actor as ActorRefWithCell;
+            Assert.True(actorCell != null, "Test method only valid with ActorRefWithCell actors.");
+            var container = actorCell.Provider.TempContainer as VirtualPathContainer;
+            int childCounter = 0;
+            container.ForEachChild(x => childCounter++);
+            Assert.True(childCounter == 0, "Temp actors not all removed.");
+        }
 
         /// <summary>
         /// Tests to ensure that if we wait on the result of an Ask inside an actor's receive loop
