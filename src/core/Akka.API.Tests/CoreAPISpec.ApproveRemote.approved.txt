@@ -1125,7 +1125,7 @@ namespace Akka.Remote
         public Akka.Actor.IInternalActorRef TempContainer { get; }
         public System.Threading.Tasks.Task TerminationTask { get; }
         public Akka.Remote.RemoteTransport Transport { get; }
-        public Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async) { }
+        public virtual Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async) { }
         protected virtual Akka.Actor.IActorRef CreateRemoteDeploymentWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
         protected virtual Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
         protected Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> CreateRemoteWatcherFailureDetector(Akka.Actor.ActorSystem system) { }

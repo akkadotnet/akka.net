@@ -247,6 +247,11 @@ namespace Akka.TestKit
         {
             _internalRef.SendSystemMessage(message);
         }
+
+        public void SetToStringStrategy(Func<IInternalActorRef, string> toStringStrategy)
+        {
+            _internalRef.SetToStringStrategy(toStringStrategy);
+        }
     }
 }
 

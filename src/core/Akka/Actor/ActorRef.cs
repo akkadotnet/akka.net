@@ -245,7 +245,12 @@ namespace Akka.Actor
         }
     }
 
-    public interface IInternalActorRef : IActorRef, IActorRefScope
+    public interface IToStringInjected
+    {
+        void SetToStringStrategy(Func<IInternalActorRef, string> toStringStrategy);
+    }
+
+    public interface IInternalActorRef : IActorRef, IActorRefScope, IToStringInjected
     {
         IInternalActorRef Parent { get; }
         IActorRefProvider Provider { get; }
@@ -276,6 +281,7 @@ namespace Akka.Actor
 
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
+        private Func<IInternalActorRef, string> _toStringStrategy = null;
         public abstract IInternalActorRef Parent { get; }
         public abstract IActorRefProvider Provider { get; }
 
@@ -304,6 +310,15 @@ namespace Akka.Actor
         }
 
         public abstract void SendSystemMessage(ISystemMessage message);
+        public void SetToStringStrategy(Func<IInternalActorRef, string> toStringStrategy)
+        {
+            _toStringStrategy = toStringStrategy;
+        }
+
+        public override string ToString()
+        {
+            return _toStringStrategy != null ? _toStringStrategy(this) : base.ToString();
+        }
     }
 
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
