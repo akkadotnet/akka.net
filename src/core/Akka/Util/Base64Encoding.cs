@@ -9,10 +9,21 @@ using System.Text;
 
 namespace Akka.Util
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Base64Encoding
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public static string Base64Encode(this long value)
         {
             var sb = new StringBuilder();
@@ -26,6 +37,11 @@ namespace Akka.Util
             return sb.ToString();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="s">TBD</param>
+        /// <returns>TBD</returns>
         public static string Base64Encode(this string s)
         {
             var bytes = System.Text.Encoding.UTF8.GetBytes(s);

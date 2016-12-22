@@ -17,6 +17,11 @@ namespace Akka.Actor
     {
         private IActorState _state = new DefaultActorState();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef Watch(IActorRef subject)
         {
             var a = (IInternalActorRef)subject;
@@ -32,6 +37,11 @@ namespace Akka.Actor
             return a;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef Unwatch(IActorRef subject)
         {
             var a = (IInternalActorRef)subject;
@@ -47,6 +57,10 @@ namespace Akka.Actor
             return a;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="t">TBD</param>
         protected void ReceivedTerminated(Terminated t)
         {
             if (!_state.ContainsTerminated(t.ActorRef))
@@ -60,6 +74,9 @@ namespace Akka.Actor
         /// When this actor is watching the subject of <see cref="Terminated"/> message
         /// it will be propagated to user's receive.
         /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="existenceConfirmed">TBD</param>
+        /// <param name="addressTerminated">TBD</param>
         protected void WatchedActorTerminated(IActorRef actor, bool existenceConfirmed, bool addressTerminated)
         {
             if (WatchingContains(actor))
@@ -80,6 +97,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subject">TBD</param>
         public void TerminatedQueuedFor(IActorRef subject)
         {
             _state = _state.AddTerminated(subject);
@@ -90,6 +111,9 @@ namespace Akka.Actor
             return _state.ContainsWatching(subject);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected void TellWatchersWeDied()
         {
             var watchedBy = _state
@@ -131,6 +155,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
         protected void UnwatchWatchedActors(ActorBase actor)
         {
             var watching = _state
@@ -155,6 +183,11 @@ namespace Akka.Actor
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watchee">TBD</param>
+        /// <param name="watcher">TBD</param>
         protected void AddWatcher(IActorRef watchee, IActorRef watcher)
         {
             var watcheeSelf = watchee.Equals(Self);
@@ -179,6 +212,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watchee">TBD</param>
+        /// <param name="watcher">TBD</param>
         protected void RemWatcher(IActorRef watchee, IActorRef watcher)
         {
             var watcheeSelf = watchee.Equals(Self);
@@ -203,6 +241,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
         protected void AddressTerminated(Address address)
         {
             // cleanup watchedBy since we know they are dead
@@ -234,6 +276,8 @@ namespace Akka.Actor
         /// Ends subscription to AddressTerminated if subscribing and the
         /// block removes the last non-local ref from watching and watchedBy.
         /// </summary>
+        /// <param name="block">TBD</param>
+        /// <param name="change">TBD</param>
         private void MaintainAddressTerminatedSubscription(Action block, IActorRef change = null)
         {
             if (IsNonLocal(change))

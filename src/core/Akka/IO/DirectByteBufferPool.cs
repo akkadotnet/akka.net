@@ -7,9 +7,20 @@
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IBufferPool
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         ByteBuffer Acquire();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buf">TBD</param>
         void Release(ByteBuffer buf);
     }
 
@@ -30,6 +41,11 @@ namespace Akka.IO
         private readonly object poolLock = new object();
         private int _buffersInPool;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="defaultBufferSize">TBD</param>
+        /// <param name="maxPoolEntries">TBD</param>
         public DirectByteBufferPool(int defaultBufferSize, int maxPoolEntries)
         {
             _defaultBufferSize = defaultBufferSize;
@@ -38,11 +54,19 @@ namespace Akka.IO
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public ByteBuffer Acquire()
         {
             return TakeBufferFromPool();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buf">TBD</param>
         public void Release(ByteBuffer buf)
         {
             OfferBufferToPool(buf);

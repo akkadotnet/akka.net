@@ -40,7 +40,7 @@ namespace Akka.Dispatch.MessageQueues
         /// Tries to pull an envelope of the message queue 
         /// </summary>
         /// <param name="envelope"> The envelope that was dequeued </param>
-        /// <returns> </returns>
+        /// <returns>TBD</returns>
         bool TryDequeue(out Envelope envelope);
 
         /// <summary>

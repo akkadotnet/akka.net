@@ -15,30 +15,56 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     partial class TcpListener
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class RegisterIncoming : SelectionHandler.IHasFailureMessage, INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="channel">TBD</param>
             public RegisterIncoming(SocketChannel channel)
             {
                 Channel = channel;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public SocketChannel Channel { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object FailureMessage
             {
                 get { return new FailedRegisterIncoming(Channel); }
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class FailedRegisterIncoming
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="channel">TBD</param>
             public FailedRegisterIncoming(SocketChannel channel)
             {
                 Channel = channel;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public SocketChannel Channel { get; private set; }
         }
     }
@@ -54,6 +80,14 @@ namespace Akka.IO
 
         private int acceptLimit;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="selectorRouter">TBD</param>
+        /// <param name="tcp">TBD</param>
+        /// <param name="channelRegistry">TBD</param>
+        /// <param name="bindCommander">TBD</param>
+        /// <param name="bind">TBD</param>
         public TcpListener(IActorRef selectorRouter, TcpExt tcp, IChannelRegistry channelRegistry, IActorRef bindCommander,
             Tcp.Bind bind)
         {
@@ -93,11 +127,19 @@ namespace Akka.IO
             })();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return SelectionHandler.ConnectionSupervisorStrategy;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var registration = message as ChannelRegistration;
@@ -181,6 +223,9 @@ namespace Akka.IO
             return _tcp.Settings.BatchAcceptLimit; 
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             if (_channel.IsOpen())

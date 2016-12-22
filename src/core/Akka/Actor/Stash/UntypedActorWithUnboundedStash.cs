@@ -51,6 +51,7 @@ namespace Akka.Actor
         /// <summary>
         /// Unstashes all messages selected by the predicate function
         /// </summary>
+        /// <param name="predicate">TBD</param>
         public void UnstashAll(Func<Envelope, bool> predicate)
         {
             CurrentStash.UnstashAll(predicate);
@@ -62,6 +63,8 @@ namespace Akka.Actor
         /// Overridden callback. Prepends all messages in the stash to the mailbox,
         /// clears the stash, stops all children, and invokes the PostStop callback.
         /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="message">TBD</param>
         protected override void PreRestart(Exception reason, object message)
         {
             try

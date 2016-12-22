@@ -15,13 +15,37 @@ namespace Akka.Tools.MatchHandler
     //    bool Handle(T value);
     //}
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public interface IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
+        /// <returns>TBD</returns>
         void Initialize(Delegate handler, IReadOnlyList<object> arguments);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         bool Handle(T message);
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 1);
@@ -29,10 +53,25 @@ namespace Akka.Tools.MatchHandler
         }
 
         private Func<object, bool> _handler;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 1);
@@ -42,10 +81,26 @@ namespace Akka.Tools.MatchHandler
 
         private Func<object, T1, bool> _handler;
         private T1 _1;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 2);
@@ -56,10 +111,27 @@ namespace Akka.Tools.MatchHandler
         private Func<object, T1, T2, bool> _handler;
         private T1 _1;
         private T2 _2;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 3);
@@ -72,10 +144,28 @@ namespace Akka.Tools.MatchHandler
         private T1 _1;
         private T2 _2;
         private T3 _3;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 4);
@@ -90,10 +180,29 @@ namespace Akka.Tools.MatchHandler
         private T2 _2;
         private T3 _3;
         private T4 _4;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 5);
@@ -110,10 +219,30 @@ namespace Akka.Tools.MatchHandler
         private T3 _3;
         private T4 _4;
         private T5 _5;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 6);
@@ -132,10 +261,31 @@ namespace Akka.Tools.MatchHandler
         private T4 _4;
         private T5 _5;
         private T6 _6;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 7);
@@ -156,10 +306,32 @@ namespace Akka.Tools.MatchHandler
         private T5 _5;
         private T6 _6;
         private T7 _7;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
+    /// <typeparam name="T8">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 8);
@@ -182,10 +354,33 @@ namespace Akka.Tools.MatchHandler
         private T6 _6;
         private T7 _7;
         private T8 _8;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7, _8); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
+    /// <typeparam name="T8">TBD</typeparam>
+    /// <typeparam name="T9">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 9);
@@ -210,10 +405,34 @@ namespace Akka.Tools.MatchHandler
         private T7 _7;
         private T8 _8;
         private T9 _9;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7, _8, _9); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
+    /// <typeparam name="T8">TBD</typeparam>
+    /// <typeparam name="T9">TBD</typeparam>
+    /// <typeparam name="T10">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 10);
@@ -240,10 +459,35 @@ namespace Akka.Tools.MatchHandler
         private T8 _8;
         private T9 _9;
         private T10 _10;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
+    /// <typeparam name="T8">TBD</typeparam>
+    /// <typeparam name="T9">TBD</typeparam>
+    /// <typeparam name="T10">TBD</typeparam>
+    /// <typeparam name="T11">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 11);
@@ -272,10 +516,36 @@ namespace Akka.Tools.MatchHandler
         private T9 _9;
         private T10 _10;
         private T11 _11;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
+    /// <typeparam name="T8">TBD</typeparam>
+    /// <typeparam name="T9">TBD</typeparam>
+    /// <typeparam name="T10">TBD</typeparam>
+    /// <typeparam name="T11">TBD</typeparam>
+    /// <typeparam name="T12">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 12);
@@ -306,10 +576,37 @@ namespace Akka.Tools.MatchHandler
         private T10 _10;
         private T11 _11;
         private T12 _12;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
+    /// <typeparam name="T8">TBD</typeparam>
+    /// <typeparam name="T9">TBD</typeparam>
+    /// <typeparam name="T10">TBD</typeparam>
+    /// <typeparam name="T11">TBD</typeparam>
+    /// <typeparam name="T12">TBD</typeparam>
+    /// <typeparam name="T13">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 13);
@@ -342,10 +639,38 @@ namespace Akka.Tools.MatchHandler
         private T11 _11;
         private T12 _12;
         private T13 _13;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
+    /// <typeparam name="T8">TBD</typeparam>
+    /// <typeparam name="T9">TBD</typeparam>
+    /// <typeparam name="T10">TBD</typeparam>
+    /// <typeparam name="T11">TBD</typeparam>
+    /// <typeparam name="T12">TBD</typeparam>
+    /// <typeparam name="T13">TBD</typeparam>
+    /// <typeparam name="T14">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 14);
@@ -380,10 +705,39 @@ namespace Akka.Tools.MatchHandler
         private T12 _12;
         private T13 _13;
         private T14 _14;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14); }
     }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="T7">TBD</typeparam>
+    /// <typeparam name="T8">TBD</typeparam>
+    /// <typeparam name="T9">TBD</typeparam>
+    /// <typeparam name="T10">TBD</typeparam>
+    /// <typeparam name="T11">TBD</typeparam>
+    /// <typeparam name="T12">TBD</typeparam>
+    /// <typeparam name="T13">TBD</typeparam>
+    /// <typeparam name="T14">TBD</typeparam>
+    /// <typeparam name="T15">TBD</typeparam>
     public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : IPartialHandlerArgumentsCapture<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
             //CheckParameters(handler, arguments, 15);
@@ -420,6 +774,11 @@ namespace Akka.Tools.MatchHandler
         private T13 _13;
         private T14 _14;
         private T15 _15;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public bool Handle(T message) { return _handler(message, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15); }
     }
 

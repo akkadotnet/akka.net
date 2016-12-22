@@ -27,33 +27,63 @@ namespace Akka.Pattern
         [Serializable]
         public sealed class GetCurrentChild
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly GetCurrentChild Instance = new GetCurrentChild();
             private GetCurrentChild() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class CurrentChild
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Ref;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="ref">TBD</param>
             public CurrentChild(IActorRef @ref)
             {
                 Ref = @ref;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class StartChild : IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly StartChild Instance = new StartChild();
             private StartChild() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class ResetRestartCount : IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Current;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="current">TBD</param>
+            /// <returns>TBD</returns>
             public ResetRestartCount(int current)
             {
                 Current = current;
@@ -74,6 +104,11 @@ namespace Akka.Pattern
         /// <summary>
         /// Initializes a new instance of the <see cref="BackoffSupervisor"/> class.
         /// </summary>
+        /// <param name="childProps">TBD</param>
+        /// <param name="childName">TBD</param>
+        /// <param name="minBackoff">TBD</param>
+        /// <param name="maxBackoff">TBD</param>
+        /// <param name="randomFactor">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="minBackoff"/> is negative or greater than <paramref name="maxBackoff"/>.
         /// </exception>
@@ -93,12 +128,19 @@ namespace Akka.Pattern
             _randomFactor = randomFactor;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             StartChildActor();
             base.PreStart();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is Terminated)

@@ -112,9 +112,11 @@ namespace Akka.Actor
         /// 
         /// Under the hood it talks to the actor to verify its existence and acquire its <see cref="IActorRef"/>
         /// </summary>
+        /// <param name="timeout">TBD</param>
         /// <exception cref="ActorNotFoundException">
         /// This exception is thrown if no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
         /// </exception>
+        /// <returns>TBD</returns>
         public Task<IActorRef> ResolveOne(TimeSpan timeout) => InnerResolveOne(timeout);
 
         private async Task<IActorRef> InnerResolveOne(TimeSpan timeout)
@@ -138,6 +140,9 @@ namespace Akka.Actor
         /// Convenience method used by remoting when receiving <see cref="ActorSelectionMessage" /> from a remote
         /// actor.
         /// </summary>
+        /// <param name="anchor">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="sel">TBD</param>
         internal static void DeliverSelection(IInternalActorRef anchor, IActorRef sender, ActorSelectionMessage sel)
         {
             if (sel.Elements.IsNullOrEmpty())
@@ -218,28 +223,46 @@ namespace Akka.Actor
                 rec(anchor);
             }
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((ActorSelection) obj);
+            return Equals((ActorSelection)obj);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         protected bool Equals(ActorSelection other)
         {
             return Equals(Anchor, other.Anchor) && Equals(PathString, other.PathString);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((Anchor?.GetHashCode() ?? 0)*397) ^ (PathString?.GetHashCode() ?? 0);
+                return ((Anchor?.GetHashCode() ?? 0) * 397) ^ (PathString?.GetHashCode() ?? 0);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -261,7 +284,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="elements">The elements.</param>
-        /// <param name="wildCardFanOut"></param>
+        /// <param name="wildCardFanOut">TBD</param>
         public ActorSelectionMessage(object message, SelectionPathElement[] elements, bool wildCardFanOut = false)
         {
             Message = message;
@@ -281,8 +304,15 @@ namespace Akka.Actor
         /// <value>The elements.</value>
         public SelectionPathElement[] Elements { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool WildCardFanOut { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("ActorSelectionMessage - Message: {0} - WildCartFanOut: {1} - Elements: {2}",

@@ -49,6 +49,9 @@ namespace Akka.Util
         /// </summary>
         public const uint StartMagicB = HiddenMagicB;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         static MurmurHash()
         {
             //compute range of values for StoredMagicA
@@ -75,6 +78,8 @@ namespace Akka.Util
         /// <summary>
         /// Begin a new hash with a seed value.
         /// </summary>
+        /// <param name="seed">TBD</param>
+        /// <returns>TBD</returns>
         public static uint StartHash(uint seed)
         {
             return seed ^ VisibleMagic;
@@ -83,6 +88,8 @@ namespace Akka.Util
         /// <summary>
         /// Given a magic integer from the first stream, compute the next
         /// </summary>
+        /// <param name="magicA">TBD</param>
+        /// <returns>TBD</returns>
         public static uint NextMagicA(uint magicA)
         {
             return magicA * 5 + HiddenMixerA;
@@ -91,6 +98,8 @@ namespace Akka.Util
         /// <summary>
         /// Given a magic integer from the second stream, compute the next
         /// </summary>
+        /// <param name="magicB">TBD</param>
+        /// <returns>TBD</returns>
         public static uint NextMagicB(uint magicB)
         {
             return magicB * 5 + HiddenMixerB;
@@ -112,6 +121,8 @@ namespace Akka.Util
         /// <summary>
         /// Once all hashes have been incorporated, this performs a final mixing.
         /// </summary>
+        /// <param name="hash">TBD</param>
+        /// <returns>TBD</returns>
         public static uint FinalizeHash(uint hash)
         {
             var h = (hash ^ (hash >> 16));
@@ -151,6 +162,8 @@ namespace Akka.Util
         /// <summary>
         /// Compute a high-quality hash of a byte array
         /// </summary>
+        /// <param name="b">TBD</param>
+        /// <returns>TBD</returns>
         public static int ByteHash(byte[] b)
         {
             return ArrayHash(b);
@@ -159,6 +172,8 @@ namespace Akka.Util
         /// <summary>
         /// Compute a high-quality hash of an array
         /// </summary>
+        /// <param name="a">TBD</param>
+        /// <returns>TBD</returns>
         public static int ArrayHash<T>(T[] a)
         {
             unchecked
@@ -181,6 +196,8 @@ namespace Akka.Util
         /// <summary>
         /// Compute high-quality hash of a string
         /// </summary>
+        /// <param name="s">TBD</param>
+        /// <returns>TBD</returns>
         public static int StringHash(string s)
         {
             unchecked
@@ -208,6 +225,9 @@ namespace Akka.Util
         /// where the order of appearance of elements does not matter.
         /// This is useful for hashing sets, for example.
         /// </summary>
+        /// <param name="xs">TBD</param>
+        /// <param name="seed">TBD</param>
+        /// <returns>TBD</returns>
         public static int SymmetricHash<T>(IEnumerable<T> xs, uint seed)
         {
             unchecked
@@ -240,9 +260,11 @@ namespace Akka.Util
         /// <summary>
         /// Converts a <see cref="BitArray"/> into an array of <see cref="byte"/>
         /// </summary>
+        /// <param name="arr">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if there aren't enough bits in the given <paramref name="arr"/> to make a byte.
         /// </exception>
+        /// <returns>TBD</returns>
         public static byte[] ToBytes(this BitArray arr)
         {
             if (arr.Length != 8)

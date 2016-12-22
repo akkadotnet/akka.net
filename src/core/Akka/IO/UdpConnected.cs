@@ -25,8 +25,16 @@ namespace Akka.IO
     /// </summary>
     public class UdpConnected : ExtensionIdProvider<UdpConnectedExt>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly UdpConnected Instance = new UdpConnected();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override UdpConnectedExt CreateExtension(ExtendedActorSystem system)
         {
             return new UdpConnectedExt(system);
@@ -42,11 +50,17 @@ namespace Akka.IO
         /// </summary>
         public abstract class Command : Message, SelectionHandler.IHasFailureMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             protected Command()
             {
                 FailureMessage = new CommandFailed(this);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object FailureMessage { get; private set; }
         }
 
@@ -64,11 +78,18 @@ namespace Akka.IO
             /// </summary>
             public static readonly NoAck Instance = new NoAck(null);
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="token">TBD</param>
             public NoAck(object token)
             {
                 Token = token;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Token { get; private set; }
         }
 
@@ -82,6 +103,12 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="payload">TBD</param>
+            /// <param name="ack">TBD</param>
+            /// <exception cref="ArgumentNullException">TBD</exception>
             public Send(ByteString payload, object ack)
             {
                 if(ack == null)
@@ -91,14 +118,28 @@ namespace Akka.IO
                 Ack = ack;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ByteString Payload { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Ack { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool WantsAck
             {
                 get { return !(Ack is NoAck); }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="data">TBD</param>
+            /// <returns>TBD</returns>
             public static Send Create(ByteString data)
             {
                 return new Send(data, NoAck.Instance);
@@ -113,6 +154,13 @@ namespace Akka.IO
         /// </summary>
         public sealed class Connect : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="handler">TBD</param>
+            /// <param name="remoteAddress">TBD</param>
+            /// <param name="localAddress">TBD</param>
+            /// <param name="options">TBD</param>
             public Connect(IActorRef handler, 
                            EndPoint remoteAddress,
                            EndPoint localAddress = null, 
@@ -124,9 +172,21 @@ namespace Akka.IO
                 Options = options ?? Enumerable.Empty<Inet.SocketOption>();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Handler { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public EndPoint RemoteAddress { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public EndPoint LocalAddress { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IEnumerable<Inet.SocketOption> Options { get; private set; }
         }
 
@@ -137,6 +197,9 @@ namespace Akka.IO
         /// </summary>
         public class Disconnect : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Disconnect Instance = new Disconnect();
 
             private Disconnect()
@@ -153,6 +216,9 @@ namespace Akka.IO
         /// </summary>
         public class SuspendReading : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly SuspendReading Instance = new SuspendReading();
 
             private SuspendReading()
@@ -165,6 +231,9 @@ namespace Akka.IO
         /// </summary>
         public class ResumeReading : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ResumeReading Instance = new ResumeReading();
 
             private ResumeReading()
@@ -182,11 +251,18 @@ namespace Akka.IO
         /// </summary>
         public sealed class Received : Event
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="data">TBD</param>
             public Received(ByteString data)
             {
                 Data = data;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ByteString Data { get; private set; }
         }
 
@@ -196,11 +272,18 @@ namespace Akka.IO
         /// </summary>
         public sealed class CommandFailed : Event
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cmd">TBD</param>
             public CommandFailed(Command cmd)
             {
                 Cmd = cmd;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Command Cmd { get; private set; }
         }
 
@@ -211,6 +294,9 @@ namespace Akka.IO
         /// </summary>
         public class Connected : Event
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Connected Instance = new Connected();
 
             private Connected()
@@ -223,6 +309,9 @@ namespace Akka.IO
         /// </summary>
         public class Disconnected : Event
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Disconnected Instance = new Disconnected();
 
             private Disconnected()
@@ -231,10 +320,17 @@ namespace Akka.IO
 
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class UdpConnectedExt : IOExtension
     {
         private readonly IActorRef _manager;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public UdpConnectedExt(ExtendedActorSystem system)
         {
             Settings = new Udp.UdpSettings(system.Settings.Config.GetConfig("akka.io.udp-connected"));
@@ -244,12 +340,21 @@ namespace Akka.IO
                 name: "IO-UDP-CONN");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRef Manager
         {
             get { return _manager; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal IBufferPool BufferPool { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal Udp.UdpSettings Settings { get; private set; }
     }
 }

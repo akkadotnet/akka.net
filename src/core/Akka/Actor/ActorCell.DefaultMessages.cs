@@ -39,6 +39,9 @@ namespace Akka.Actor
 
         private int _currentEnvelopeId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int CurrentEnvelopeId
         {
             get { return _currentEnvelopeId; }
@@ -121,10 +124,13 @@ namespace Akka.Actor
   }
          */
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
         /// <exception cref="ActorKilledException">
         /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
-        /// </exception>>
+        /// </exception>
         protected virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
@@ -147,7 +153,7 @@ namespace Akka.Actor
         /// <summary>
         /// This is only intended to be called from TestKit's TestActorRef
         /// </summary>
-        /// <param name="envelope"></param>
+        /// <param name="envelope">TBD</param>
         public void ReceiveMessageForTest(Envelope envelope)
         {
             var message = envelope.Message;
@@ -164,6 +170,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         internal void ReceiveMessage(object message)
         {
             var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
@@ -320,6 +330,11 @@ namespace Akka.Actor
             CurrentMessage = null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="mailbox">TBD</param>
+        /// <returns>TBD</returns>
         internal Mailbox SwapMailbox(Mailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to {1}", Self, mailbox);
@@ -471,7 +486,11 @@ namespace Akka.Actor
             SendSystemMessage(new Dispatch.SysMsg.Suspend());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <remarks>➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅</remarks>
+        /// <param name="systemMessage">TBD</param>
         public void SendSystemMessage(ISystemMessage systemMessage)
         {
             try

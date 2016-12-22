@@ -91,6 +91,11 @@ namespace Akka.Routing
             return new Router(new BroadcastRoutingLogic());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return NrOfInstances;
@@ -277,6 +282,10 @@ namespace Akka.Routing
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routees">TBD</param>
         [Obsolete("Use new BroadcastGroup(actorRefs.Select(c => c.Path.ToString())) instead")]
         public BroadcastGroup(IEnumerable<IActorRef> routees)
             : this(routees.Select(c => c.Path.ToString()))
@@ -292,6 +301,11 @@ namespace Akka.Routing
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;

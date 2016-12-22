@@ -19,6 +19,9 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class FSMBase : ActorBase
     {
         #region States
@@ -30,14 +33,25 @@ namespace Akka.Actor
         /// <typeparam name="TS">The type of the state being used in this finite state machine.</typeparam>
         public class CurrentState<TS>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="fsmRef">TBD</param>
+            /// <param name="state">TBD</param>
             public CurrentState(IActorRef fsmRef, TS state)
             {
                 State = state;
                 FsmRef = fsmRef;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef FsmRef { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TS State { get; private set; }
         }
 
@@ -48,6 +62,12 @@ namespace Akka.Actor
         /// <typeparam name="TS">The type of state used</typeparam>
         public class Transition<TS>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="fsmRef">TBD</param>
+            /// <param name="from">TBD</param>
+            /// <param name="to">TBD</param>
             public Transition(IActorRef fsmRef, TS @from, TS to)
             {
                 To = to;
@@ -55,12 +75,25 @@ namespace Akka.Actor
                 FsmRef = fsmRef;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef FsmRef { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TS From { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TS To { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return String.Format("Transition({0}, {1})", From, To);
@@ -74,11 +107,18 @@ namespace Akka.Actor
         /// </summary>
         public class SubscribeTransitionCallBack
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="actorRef">TBD</param>
             public SubscribeTransitionCallBack(IActorRef actorRef)
             {
                 ActorRef = actorRef;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef ActorRef { get; private set; }
         }
 
@@ -88,11 +128,18 @@ namespace Akka.Actor
         /// </summary>
         public class UnsubscribeTransitionCallBack
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="actorRef">TBD</param>
             public UnsubscribeTransitionCallBack(IActorRef actorRef)
             {
                 ActorRef = actorRef;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef ActorRef { get; private set; }
         }
 
@@ -119,11 +166,18 @@ namespace Akka.Actor
         /// </summary>
         public class Failure : Reason
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cause">TBD</param>
             public Failure(object cause)
             {
                 Cause = cause;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Cause { get; private set; }
         }
 
@@ -136,20 +190,43 @@ namespace Akka.Actor
          * INTERNAL API - used for ensuring that state changes occur on-time
          */
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class TimeoutMarker
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="generation">TBD</param>
             public TimeoutMarker(long generation)
             {
                 Generation = generation;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long Generation { get; private set; }
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         [DebuggerDisplay("Timer {Name,nq}, message: {Message")]
         internal class Timer : INoSerializationVerificationNeeded
         {
             private readonly ILoggingAdapter _debugLog;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="name">TBD</param>
+            /// <param name="message">TBD</param>
+            /// <param name="repeat">TBD</param>
+            /// <param name="generation">TBD</param>
+            /// <param name="context">TBD</param>
+            /// <param name="debugLog">TBD</param>
             public Timer(string name, object message, bool repeat, int generation, IActorContext context, ILoggingAdapter debugLog)
             {
                 _debugLog = debugLog;
@@ -166,16 +243,36 @@ namespace Akka.Actor
             private readonly IScheduler _scheduler;
             private readonly ICancelable _ref;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Name { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Message { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool Repeat { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int Generation { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorContext Context { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="actor">TBD</param>
+            /// <param name="timeout">TBD</param>
             public void Schedule(IActorRef actor, TimeSpan timeout)
             {
                 var name = Name;
@@ -195,6 +292,9 @@ namespace Akka.Actor
                 else _scheduler.Advanced.ScheduleOnce(timeout, send, _ref);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void Cancel()
             {
                 if (!_ref.IsCancellationRequested)
@@ -211,6 +311,12 @@ namespace Akka.Actor
         /// <typeparam name="TD">The data of the state</typeparam>
         public class LogEntry<TS, TD>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="stateName">TBD</param>
+            /// <param name="stateData">TBD</param>
+            /// <param name="fsmEvent">TBD</param>
             public LogEntry(TS stateName, TD stateData, object fsmEvent)
             {
                 FsmEvent = fsmEvent;
@@ -218,10 +324,19 @@ namespace Akka.Actor
                 StateName = stateName;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TS StateName { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TD StateData { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object FsmEvent { get; private set; }
         }
 
@@ -234,6 +349,14 @@ namespace Akka.Actor
         /// <typeparam name="TD">The data of the state</typeparam>
         public class State<TS, TD> : IEquatable<State<TS, TD>>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="stateName">TBD</param>
+            /// <param name="stateData">TBD</param>
+            /// <param name="timeout">TBD</param>
+            /// <param name="stopReason">TBD</param>
+            /// <param name="replies">TBD</param>
             public State(TS stateName, TD stateData, TimeSpan? timeout = null, Reason stopReason = null, List<object> replies = null)
             {
                 Replies = replies ?? new List<object>();
@@ -243,16 +366,38 @@ namespace Akka.Actor
                 StateName = stateName;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TS StateName { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TD StateData { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TimeSpan? Timeout { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Reason StopReason { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public List<object> Replies { get; protected set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="timeout">TBD</param>
+            /// <param name="stopReason">TBD</param>
+            /// <param name="replies">TBD</param>
+            /// <returns>TBD</returns>
             public State<TS, TD> Copy(TimeSpan? timeout, Reason stopReason = null, List<object> replies = null)
             {
                 return new State<TS, TD>(StateName, StateData, timeout, stopReason ?? StopReason, replies ?? Replies);
@@ -263,6 +408,8 @@ namespace Akka.Actor
             /// next state. This timeout overrides any default timeout set for the next state.
             /// <remarks>Use <see cref="TimeSpan.MaxValue"/> to cancel a timeout.</remarks>
             /// </summary>
+            /// <param name="timeout">TBD</param>
+            /// <returns>TBD</returns>
             public State<TS, TD> ForMax(TimeSpan timeout)
             {
                 if (timeout <= TimeSpan.MaxValue) return Copy(timeout);
@@ -272,8 +419,8 @@ namespace Akka.Actor
             /// <summary>
             /// Send reply to sender of the current message, if available.
             /// </summary>
-            /// <param name="replyValue"></param>
-            /// <returns></returns>
+            /// <param name="replyValue">TBD</param>
+            /// <returns>TBD</returns>
             public State<TS, TD> Replying(object replyValue)
             {
                 if (Replies == null) Replies = new List<object>();
@@ -286,6 +433,8 @@ namespace Akka.Actor
             /// Modify state transition descriptor with new state data. The data will be set
             /// when transitioning to the new state.
             /// </summary>
+            /// <param name="nextStateData">TBD</param>
+            /// <returns>TBD</returns>
             public State<TS, TD> Using(TD nextStateData)
             {
                 return new State<TS, TD>(StateName, nextStateData, Timeout, StopReason, Replies);
@@ -294,16 +443,27 @@ namespace Akka.Actor
             /// <summary>
             /// INTERNAL API
             /// </summary>
+            /// <param name="reason">TBD</param>
+            /// <returns>TBD</returns>
             internal State<TS, TD> WithStopReason(Reason reason)
             {
                 return Copy(Timeout, reason);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return StateName + ", " + StateData;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             public bool Equals(State<TS, TD> other)
             {
                 if(ReferenceEquals(null, other)) return false;
@@ -311,6 +471,11 @@ namespace Akka.Actor
                 return EqualityComparer<TS>.Default.Equals(StateName, other.StateName) && EqualityComparer<TD>.Default.Equals(StateData, other.StateData) && Timeout.Equals(other.Timeout) && Equals(StopReason, other.StopReason) && Equals(Replies, other.Replies);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 if(ReferenceEquals(null, obj)) return false;
@@ -319,6 +484,10 @@ namespace Akka.Actor
                 return Equals((State<TS, TD>)obj);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -340,16 +509,31 @@ namespace Akka.Actor
         /// <typeparam name="TD">The state data for this event</typeparam>
         public class Event<TD> : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="fsmEvent">TBD</param>
+            /// <param name="stateData">TBD</param>
             public Event(object fsmEvent, TD stateData)
             {
                 StateData = stateData;
                 FsmEvent = fsmEvent;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object FsmEvent { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TD StateData { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return "Event: <" + FsmEvent + ">, StateData: <" + StateData + ">";
@@ -359,8 +543,16 @@ namespace Akka.Actor
         /// <summary>
         /// Class representing the state of the <see cref="FSM{TS,TD}"/> within the OnTermination block.
         /// </summary>
+        /// <typeparam name="TS">TBD</typeparam>
+        /// <typeparam name="TD">TBD</typeparam>
         public class StopEvent<TS, TD> : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="reason">TBD</param>
+            /// <param name="terminatedState">TBD</param>
+            /// <param name="stateData">TBD</param>
             public StopEvent(Reason reason, TS terminatedState, TD stateData)
             {
                 StateData = stateData;
@@ -368,10 +560,19 @@ namespace Akka.Actor
                 Reason = reason;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Reason Reason { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TS TerminatedState { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TD StateData { get; private set; }
         }
 
@@ -386,14 +587,28 @@ namespace Akka.Actor
     public abstract class FSM<TState, TData> : FSMBase, IListeners, IInternalSupportsTestFSMRef<TState,TData>
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected FSM()
         {
             if(this is ILoggingFSM)
                 DebugEvent = Context.System.Settings.FsmDebugEvent;
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="fsmEvent">TBD</param>
+        /// <returns>TBD</returns>
         public delegate State<TState, TData> StateFunction(Event<TData> fsmEvent);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialState">TBD</param>
+        /// <param name="nextState">TBD</param>
         public delegate void TransitionHandler(TState initialState, TState nextState);
 
         #region Finite State Machine Domain Specific Language (FSM DSL if you like acronyms)
@@ -460,6 +675,7 @@ namespace Akka.Actor
         /// <summary>
         /// Produce change descriptor to stop this FSM actor with <see cref="FSMBase.Reason"/> <see cref="FSMBase.Normal"/>
         /// </summary>
+        /// <returns>TBD</returns>
         public State<TState, TData> Stop()
         {
             return Stop(new Normal());
@@ -468,25 +684,48 @@ namespace Akka.Actor
         /// <summary>
         /// Produce change descriptor to stop this FSM actor with the specified <see cref="FSMBase.Reason"/>.
         /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <returns>TBD</returns>
         public State<TState, TData> Stop(Reason reason)
         {
             return Stop(reason, _currentState.StateData);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="stateData">TBD</param>
+        /// <returns>TBD</returns>
         public State<TState, TData> Stop(Reason reason, TData stateData)
         {
             return Stay().Using(stateData).WithStopReason(reason);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class TransformHelper
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="func">TBD</param>
             public TransformHelper(StateFunction func)
             {
                 Func = func;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public StateFunction Func { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="andThen">TBD</param>
+            /// <returns>TBD</returns>
             public StateFunction Using(Func<State<TState, TData>, State<TState, TData>> andThen)
             {
                 StateFunction continuedDelegate = @event => andThen.Invoke(Func.Invoke(@event));
@@ -541,6 +780,8 @@ namespace Akka.Actor
         /// unless the timer does not exist, has previously been cancelled, or
         /// if it was a single-shot timer whose message was already received.
         /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsTimerActive(string name)
         {
             return _timers.ContainsKey(name);
@@ -550,6 +791,8 @@ namespace Akka.Actor
         /// Set the state timeout explicitly. This method can be safely used from
         /// within a state handler.
         /// </summary>
+        /// <param name="state">TBD</param>
+        /// <param name="timeout">TBD</param>
         public void SetStateTimeout(TState state, TimeSpan? timeout)
         {
             if(!_stateTimeouts.ContainsKey(state))
@@ -571,6 +814,7 @@ namespace Akka.Actor
         /// Set handler which is called upon each state transition, i.e. not when
         /// staying in the same state. 
         /// </summary>
+        /// <param name="transitionHandler">TBD</param>
         public void OnTransition(TransitionHandler transitionHandler)
         {
             _transitionEvent.Add(transitionHandler);
@@ -580,6 +824,7 @@ namespace Akka.Actor
         /// Set the handler which is called upon termination of this FSM actor. Calling this
         /// method again will overwrite the previous contents.
         /// </summary>
+        /// <param name="terminationHandler">TBD</param>
         public void OnTermination(Action<StopEvent<TState, TData>> terminationHandler)
         {
             _terminateEvent = terminationHandler;
@@ -589,7 +834,7 @@ namespace Akka.Actor
         /// Set handler which is called upon reception of unhandled FSM messages. Calling
         /// this method again will overwrite the previous contents.
         /// </summary>
-        /// <param name="stateFunction"></param>
+        /// <param name="stateFunction">TBD</param>
         public void WhenUnhandled(StateFunction stateFunction)
         {
             HandleEvent = OrElse(stateFunction, HandleEventDefault);
@@ -649,6 +894,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="func">TBD</param>
+        /// <returns>TBD</returns>
         public TransformHelper Transform(StateFunction func) { return new TransformHelper(func); }
 
         #endregion
@@ -656,6 +906,9 @@ namespace Akka.Actor
         #region Internal implementation details
 
         private readonly ListenerSupport _listener = new ListenerSupport();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ListenerSupport Listeners { get { return _listener; } }
 
         /// <summary>
@@ -767,7 +1020,8 @@ namespace Akka.Actor
         /// <summary>
         /// Main actor receive method
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var match = PatternMatch.Match(message)
@@ -970,7 +1224,7 @@ namespace Akka.Actor
         /// By default, <see cref="Failure"/> is logged at error level and other
         /// reason types are not logged. It is possible to override this behavior.
         /// </summary>
-        /// <param name="reason"></param>
+        /// <param name="reason">TBD</param>
         protected virtual void LogTermination(Reason reason)
         {
             PatternMatch.Match(reason)

@@ -18,31 +18,57 @@ namespace Akka.Dispatch.MessageQueues
     {
         private readonly ListPriorityQueue _prioQueue;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialCapacity">TBD</param>
         public UnboundedPriorityMessageQueue(int initialCapacity)
         {
             _prioQueue = new ListPriorityQueue(initialCapacity);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="priorityGenerator">TBD</param>
+        /// <param name="initialCapacity">TBD</param>
         public UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity) : this(initialCapacity)
         {
             _prioQueue.SetPriorityCalculator(priorityGenerator);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="priorityGenerator">TBD</param>
+        /// <returns>TBD</returns>
         internal void SetPriorityGenerator(Func<object, int> priorityGenerator)
         {
             _prioQueue.SetPriorityCalculator(priorityGenerator);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override int LockedCount
         {
             get { return _prioQueue.Count(); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
         protected override void LockedEnqueue(Envelope envelope)
         {
             _prioQueue.Enqueue(envelope);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool LockedTryDequeue(out Envelope envelope)
         {
             if (_prioQueue.Count() > 0)

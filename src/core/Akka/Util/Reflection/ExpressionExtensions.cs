@@ -11,8 +11,16 @@ using System.Linq.Expressions;
 
 namespace Akka.Util.Reflection
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ExpressionExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="newExpression">TBD</param>
+        /// <returns>TBD</returns>
         public static IEnumerable<object> GetArguments(this NewExpression newExpression)
         {
             var arguments = new List<object>();

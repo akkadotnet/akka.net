@@ -31,8 +31,8 @@ namespace Akka.Routing
         /// message to the pool, i.e. the ActorRef.!() method, hence it may be called
         /// concurrently.
         /// </summary>
-        /// <param name="messageCounter"></param>
-        /// <returns></returns>
+        /// <param name="messageCounter">TBD</param>
+        /// <returns>TBD</returns>
         public abstract bool IsTimeForResize(long messageCounter);
 
         /// <summary>
@@ -44,10 +44,15 @@ namespace Akka.Routing
         ///
         /// This method is invoked only in the context of the Router actor.
         /// </summary>
-        /// <param name="currentRoutees"></param>
-        /// <returns></returns>
+        /// <param name="currentRoutees">TBD</param>
+        /// <returns>TBD</returns>
         public abstract int Resize(IEnumerable<Routee> currentRoutees);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="parentConfig">TBD</param>
+        /// <returns>TBD</returns>
         public static Resizer FromConfig(Config parentConfig)
         {
             var defaultResizerConfig = parentConfig.GetConfig("resizer");
@@ -71,6 +76,13 @@ namespace Akka.Routing
         /// <summary>
         /// Initializes a new instance of the <see cref="DefaultResizer"/> class.
         /// </summary>
+        /// <param name="lower">TBD</param>
+        /// <param name="upper">TBD</param>
+        /// <param name="pressureThreshold">TBD</param>
+        /// <param name="rampupRate">TBD</param>
+        /// <param name="backoffThreshold">TBD</param>
+        /// <param name="backoffRate">TBD</param>
+        /// <param name="messagesPerResize">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception can be thrown for a number of reasons. These include:
         /// <ul>
@@ -116,6 +128,11 @@ namespace Akka.Routing
             MessagesPerResize = messagesPerResize;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="resizerConfig">TBD</param>
+        /// <returns>TBD</returns>
         public new static DefaultResizer FromConfig(Config resizerConfig)
         {
             return resizerConfig.GetBoolean("resizer.enabled") ? DefaultResizer.Apply(resizerConfig.GetConfig("resizer")) : null;
@@ -124,7 +141,8 @@ namespace Akka.Routing
         /// <summary>
         /// Creates a new DefaultResizer from the given configuration
         /// </summary>
-        /// <param name="resizerConfig"></param>
+        /// <param name="resizerConfig">TBD</param>
+        /// <returns>TBD</returns>
         internal static DefaultResizer Apply(Config resizerConfig)
         {
             return new DefaultResizer(
@@ -138,11 +156,21 @@ namespace Akka.Routing
                 );
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageCounter">TBD</param>
+        /// <returns>TBD</returns>
         public override bool IsTimeForResize(long messageCounter)
         {
             return messageCounter % MessagesPerResize == 0;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="currentRoutees">TBD</param>
+        /// <returns>TBD</returns>
         public override int Resize(IEnumerable<Routee> currentRoutees)
         {
             return Capacity(currentRoutees);
@@ -184,8 +212,8 @@ namespace Akka.Routing
         ///           default UnboundedMailbox is O(N) operation.</li>
         /// </ul>
         /// </summary>
-        /// <param name="currentRoutees"></param>
-        /// <returns></returns>
+        /// <param name="currentRoutees">TBD</param>
+        /// <returns>TBD</returns>
         public int Pressure(IEnumerable<Routee> currentRoutees)
         {
             return currentRoutees.Count(
@@ -327,6 +355,11 @@ namespace Akka.Routing
             return MessagesPerResize == other.MessagesPerResize && BackoffRate.Equals(other.BackoffRate) && RampupRate.Equals(other.RampupRate) && BackoffThreshold.Equals(other.BackoffThreshold) && UpperBound == other.UpperBound && PressureThreshold == other.PressureThreshold && LowerBound == other.LowerBound;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -335,6 +368,10 @@ namespace Akka.Routing
             return Equals((DefaultResizer)obj);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked

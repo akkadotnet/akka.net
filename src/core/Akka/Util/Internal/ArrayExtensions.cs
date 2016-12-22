@@ -61,6 +61,9 @@ namespace Akka.Util.Internal
         /// Folds a collection into a Dictionary where the original value (of type T) acts as the key
         /// and the index of the item in the array acts as the value.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="collection">TBD</param>
+        /// <returns>TBD</returns>
         public static Dictionary<T, int> ZipWithIndex<T>(this IEnumerable<T> collection)
         {
             var i = 0;
@@ -76,7 +79,7 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Grabs a subset of an IEnumerable based on a starting index and position
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">TBD</typeparam>
         /// <param name="items">The array of items to slice</param>
         /// <param name="startIndex">The starting position to begin the slice</param>
         /// <param name="count">The number of items to take</param>
@@ -94,6 +97,10 @@ namespace Akka.Util.Internal
         /// If <paramref name="startingItem"/> is found at the end of the array, From will return the entire original array.
         /// </note>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="items">TBD</param>
+        /// <param name="startingItem">TBD</param>
+        /// <returns>TBD</returns>
         internal static IEnumerable<T> From<T>(this IEnumerable<T> items, T startingItem)
         {
             var itemsAsList = items.ToList();
@@ -111,6 +118,10 @@ namespace Akka.Util.Internal
         /// If <paramref name="startingItem"/> is the first item in the array, an empty array will be returned.
         /// </note>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="items">TBD</param>
+        /// <param name="startingItem">TBD</param>
+        /// <returns>TBD</returns>
         internal static IEnumerable<T> Until<T>(this IEnumerable<T> items, T startingItem)
         {
             var enumerator = items.GetEnumerator();
@@ -123,6 +134,12 @@ namespace Akka.Util.Internal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="items">TBD</param>
+        /// <returns>TBD</returns>
         internal static IEnumerable<T> Tail<T>(this IEnumerable<T> items)
         {
             return items.Skip(1);

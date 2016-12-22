@@ -417,7 +417,7 @@ namespace Akka.Configuration
         /// Converts the current configuration to a string 
         /// </summary>
         /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public string ToString(bool includeFallback)
         {
             if (includeFallback == false)

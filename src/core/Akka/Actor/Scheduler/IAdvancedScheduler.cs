@@ -7,6 +7,9 @@
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IAdvancedScheduler : IActionScheduler
     {
     }

@@ -22,6 +22,9 @@ namespace Akka.Actor
     /// </summary>
     public abstract class SupervisorStrategy : ISurrogated
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract IDecider Decider { get; }
 
         /// <summary>
@@ -32,10 +35,20 @@ namespace Akka.Actor
         /// <returns>Directive.</returns>
         protected abstract Directive Handle(IActorRef child, Exception x);
 
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorCell">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <param name="failedChildStats">TBD</param>
+        /// <param name="allChildren">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete]
-        // for compatibility, since 1.1.2
         public bool HandleFailure(ActorCell actorCell, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
+            // for compatibility, since 1.1.2
+
             return HandleFailure(actorCell, failedChildStats.Child, cause, failedChildStats, allChildren);
         }
 
@@ -54,7 +67,7 @@ namespace Akka.Actor
         /// <param name="child">The child actor.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="stats">The stats for the failed child.</param>
-        /// <param name="children"></param>
+        /// <param name="children">TBD</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public bool HandleFailure(ActorCell actorCell, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
@@ -108,6 +121,15 @@ namespace Akka.Actor
             c.AsInstanceOf<IInternalActorRef>().Restart(cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="restart">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <param name="failedChildStats">TBD</param>
+        /// <param name="allChildren">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete]
         // for compatibility, since 1.1.2
         protected abstract void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren);
@@ -169,6 +191,9 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected bool LoggingEnabled { get; set; }
 
         private void Publish(IActorContext context, LogEvent logEvent)
@@ -202,9 +227,16 @@ namespace Akka.Actor
         /// It does not need to do anything special. Exceptions thrown from this method
         /// do NOT make the actor fail if this happens during termination.
         /// </summary>
+        /// <param name="actorContext">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <param name="children">TBD</param>
         public abstract void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children);
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ISurrogate ToSurrogate(ActorSystem system);
     }
 
@@ -218,16 +250,25 @@ namespace Akka.Actor
         private readonly int _withinTimeRangeMilliseconds;
         private readonly IDecider _decider;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MaxNumberOfRetries
         {
             get { return _maxNumberOfRetries; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int WithinTimeRangeMilliseconds
         {
             get { return _withinTimeRangeMilliseconds; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IDecider Decider
         {
             get { return _decider; }
@@ -308,6 +349,7 @@ namespace Akka.Actor
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
+        /// <param name="localOnlyDecider">TBD</param>
         public OneForOneStrategy(Func<Exception, Directive> localOnlyDecider) : this(-1, -1, localOnlyDecider, true)
         {
             //Intentionally left blank
@@ -316,6 +358,7 @@ namespace Akka.Actor
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
+        /// <param name="decider">TBD</param>
         public OneForOneStrategy(IDecider decider)
             : this(-1, -1, decider, true)
         {
@@ -341,13 +384,31 @@ namespace Akka.Actor
             return Decider.Decide(x);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="restart">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <param name="failedChildStats">TBD</param>
+        /// <param name="allChildren">TBD</param>
         [Obsolete]
-        // for compatibility, since 1.1.2
         protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
+            // for compatibility, since 1.1.2
+
             ProcessFailure(context, restart, failedChildStats.Child, cause, failedChildStats, allChildren);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="restart">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <param name="children">TBD</param>
         protected override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
             if (restart && stats.RequestRestartPermission(MaxNumberOfRetries, WithinTimeRangeMilliseconds))
@@ -356,27 +417,57 @@ namespace Akka.Actor
                 context.Stop(child);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorContext">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <param name="children">TBD</param>
         public override void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children)
         {
             //Intentionally left blank
         }
 
-        #region Surrogate
+        #region Surrogate		
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class OneForOneStrategySurrogate : ISurrogate
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int MaxNumberOfRetries { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int WithinTimeRangeMilliseconds { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IDecider Decider { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool LoggingEnabled { get; set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new OneForOneStrategy(MaxNumberOfRetries, WithinTimeRangeMilliseconds, Decider, LoggingEnabled);
             }
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         /// <exception cref="NotSupportedException">This exception is thrown if the <see cref="Decider"/> is of type <see cref="LocalOnlyDecider"/>.</exception>
+        /// <returns>TBD</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             if (Decider is LocalOnlyDecider)
@@ -392,6 +483,11 @@ namespace Akka.Actor
         #endregion
 
         #region Equals
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(OneForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -402,11 +498,20 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as OneForOneStrategy);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -430,16 +535,25 @@ namespace Akka.Actor
         private readonly int _withinTimeRangeMilliseconds;
         private readonly int _maxNumberOfRetries;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MaxNumberOfRetries
         {
             get { return _maxNumberOfRetries; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int WithinTimeRangeMilliseconds
         {
             get { return _withinTimeRangeMilliseconds; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IDecider Decider
         {
             get { return _decider; }
@@ -520,6 +634,7 @@ namespace Akka.Actor
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
+        /// <param name="localOnlyDecider">TBD</param>
         public AllForOneStrategy(Func<Exception, Directive> localOnlyDecider)
             : this(-1, -1, localOnlyDecider, true)
         {
@@ -529,6 +644,7 @@ namespace Akka.Actor
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
+        /// <param name="decider">TBD</param>
         public AllForOneStrategy(IDecider decider)
             : this(-1, -1, decider, true)
         {
@@ -538,7 +654,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Serialization-friendly constructor
-        /// </summary>]
+        /// </summary>
         protected AllForOneStrategy() : this(DefaultDecider)
         {
             //Intentionally left blank
@@ -555,13 +671,31 @@ namespace Akka.Actor
             return Decider.Decide(x);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="restart">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <param name="failedChildStats">TBD</param>
+        /// <param name="allChildren">TBD</param>
         [Obsolete]
-        // for compatibility, since 1.1.2
         protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
+            // for compatibility, since 1.1.2
+
             ProcessFailure(context, restart, failedChildStats.Child, cause, failedChildStats, allChildren);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="restart">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <param name="children">TBD</param>
         protected override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
             if (children.Count > 0)
@@ -583,25 +717,56 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorContext">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <param name="children">TBD</param>
         public override void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children)
         {
             //Intentionally left blank
         }
 
-        #region Surrogate
+        #region Surrogate		
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class AllForOneStrategySurrogate : ISurrogate
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int MaxNumberOfRetries { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int WithinTimeRangeMilliseconds { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IDecider Decider { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool LoggingEnabled { get; set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new AllForOneStrategy(MaxNumberOfRetries, WithinTimeRangeMilliseconds, Decider, LoggingEnabled);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return new AllForOneStrategySurrogate
@@ -615,6 +780,11 @@ namespace Akka.Actor
         #endregion
 
         #region Equals
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(AllForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -625,11 +795,20 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as AllForOneStrategy);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -710,73 +889,149 @@ namespace Akka.Actor
         Stop,
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class DirectiveExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TException">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <returns>TBD</returns>
         public static KeyValuePair<Type, Directive> When<TException>(this Directive self) where TException : Exception
         {
             return new KeyValuePair<Type, Directive>(typeof(TException), self);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IDecider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <returns>TBD</returns>
         Directive Decide(Exception cause);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Decider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="defaultDirective">TBD</param>
+        /// <param name="pairs">TBD</param>
+        /// <returns>TBD</returns>
         public static DeployableDecider From(Directive defaultDirective, params KeyValuePair<Type, Directive>[] pairs)
         {
             return new DeployableDecider(defaultDirective, pairs);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="defaultDirective">TBD</param>
+        /// <param name="pairs">TBD</param>
+        /// <returns>TBD</returns>
         public static DeployableDecider From(Directive defaultDirective, IEnumerable<KeyValuePair<Type, Directive>> pairs)
         {
             return new DeployableDecider(defaultDirective, pairs);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="localOnlyDecider">TBD</param>
+        /// <returns>TBD</returns>
         public static LocalOnlyDecider From(Func<Exception, Directive> localOnlyDecider)
         {
             return new LocalOnlyDecider(localOnlyDecider);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class LocalOnlyDecider : IDecider
     {
         private readonly Func<Exception, Directive> _decider;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="decider">TBD</param>
         public LocalOnlyDecider(Func<Exception, Directive> decider)
         {
             _decider = decider;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <returns>TBD</returns>
         public Directive Decide(Exception cause)
         {
             return _decider(cause);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class DeployableDecider : IDecider, IEquatable<DeployableDecider>
     {
-        //Json .net can not decide which of the other ctors are the correct one to use
-        //so we fall back to default ctor and property injection for deserializer
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected DeployableDecider()
         {
+            //Json .net can not decide which of the other ctors are the correct one to use
+            //so we fall back to default ctor and property injection for deserializer
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="defaultDirective">TBD</param>
+        /// <param name="pairs">TBD</param>
         public DeployableDecider(Directive defaultDirective, IEnumerable<KeyValuePair<Type, Directive>> pairs) : this(defaultDirective, pairs.ToArray())
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="defaultDirective">TBD</param>
+        /// <param name="pairs">TBD</param>
         public DeployableDecider(Directive defaultDirective, params KeyValuePair<Type, Directive>[] pairs)
         {
             DefaultDirective = defaultDirective;
             Pairs = pairs;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Directive DefaultDirective { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public KeyValuePair<Type, Directive>[] Pairs { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <returns>TBD</returns>
         public Directive Decide(Exception cause)
         {
             if (Pairs != null)
@@ -794,6 +1049,11 @@ namespace Akka.Actor
             return DefaultDirective;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(DeployableDecider other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -803,11 +1063,20 @@ namespace Akka.Actor
                    Pairs.SequenceEqual(other.Pairs);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeployableDecider);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -819,14 +1088,25 @@ namespace Akka.Actor
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class SupervisorStrategyConfigurator
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public abstract SupervisorStrategy Create();
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeName">TBD</param>
         /// <exception cref="ConfigurationException">
         /// This exception is thrown if the given <paramref name="typeName"/> is undefined or references an unknown type.
         /// </exception>
+        /// <returns>TBD</returns>
         public static SupervisorStrategyConfigurator CreateConfigurator(string typeName)
         {
             switch (typeName)
@@ -851,16 +1131,30 @@ namespace Akka.Actor
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class DefaultSupervisorStrategy : SupervisorStrategyConfigurator
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override SupervisorStrategy Create()
         {
             return SupervisorStrategy.DefaultStrategy;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class StoppingSupervisorStrategy : SupervisorStrategyConfigurator
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override SupervisorStrategy Create()
         {
             return SupervisorStrategy.StoppingStrategy;
