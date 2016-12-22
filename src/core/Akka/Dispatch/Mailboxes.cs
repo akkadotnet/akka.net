@@ -30,7 +30,13 @@ namespace Akka.Dispatch
         private readonly ActorSystem _system;
 
         private readonly DeadLetterMailbox _deadLetterMailbox;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly string DefaultMailboxId = "akka.actor.default-mailbox";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly string NoMailboxRequirement = "";
         private readonly Dictionary<Type, string> _mailboxBindings;
         private readonly Config _defaultMailboxConfig;
@@ -64,6 +70,9 @@ namespace Akka.Dispatch
             _defaultMailboxConfig = Settings.Config.GetConfig(DefaultMailboxId);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public DeadLetterMailbox DeadLetterMailbox { get { return _deadLetterMailbox; } }
 
         /// <summary>
@@ -179,6 +188,11 @@ namespace Akka.Dispatch
         }
 
         private static readonly Type RequiresMessageQueueGenericType = typeof (IRequiresMessageQueue<>);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorType">TBD</param>
+        /// <returns>TBD</returns>
         public Type GetRequiredType(Type actorType)
         {
             return actorType.GetInterfaces()
@@ -208,10 +222,15 @@ namespace Akka.Dispatch
             return mailboxRequirement == null || mailboxRequirement.Equals(NoMailboxRequirement) ? typeof (IMessageQueue) : Type.GetType(mailboxRequirement, true);
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="dispatcherConfig">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the 'mailbox-requirement' in the given <paramref name="dispatcherConfig"/> isn't met.
         /// </exception>
+        /// <returns>TBD</returns>
         public MailboxType GetMailboxType(Props props, Config dispatcherConfig)
         {
             if (dispatcherConfig == null)

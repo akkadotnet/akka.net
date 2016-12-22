@@ -12,6 +12,9 @@ using Akka.Event;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class InboxActor : ActorBase
     {
         private readonly InboxQueue<object> _messages = new InboxQueue<object>();
@@ -27,11 +30,19 @@ namespace Akka.Actor
         private int _size;
         private ILoggingAdapter _log = Context.GetLogger();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="size">TBD</param>
         public InboxActor(int size)
         {
             _size = size;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="q">TBD</param>
         public void EnqueueQuery(IQuery q)
         {
             var query = q.WithClient(Sender);
@@ -39,6 +50,10 @@ namespace Akka.Actor
             _clientsByTimeout.Add(query);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="msg">TBD</param>
         public void EnqueueMessage(object msg)
         {
             if (_messages.Count < _size)
@@ -55,6 +70,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="query">TBD</param>
+        /// <returns>TBD</returns>
         public bool ClientPredicate(IQuery query)
         {
             if (query is Get)
@@ -71,6 +91,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="msg">TBD</param>
+        /// <returns>TBD</returns>
         public bool MessagePredicate(object msg)
         {
             if (!_currentSelect.HasValue)
@@ -81,6 +106,11 @@ namespace Akka.Actor
             return _currentSelect.Value.Predicate(msg);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             message.Match()

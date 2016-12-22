@@ -25,6 +25,7 @@ namespace Akka.Util
         /// <summary>
         /// Sets the initial value of this <see cref="AtomicBoolean"/> to <paramref name="initialValue"/>.
         /// </summary>
+        /// <param name="initialValue">TBD</param>
         public AtomicBoolean(bool initialValue = false)
         {
             _value = initialValue ? _trueValue : _falseValue;
@@ -50,6 +51,8 @@ namespace Akka.Util
         /// If <see cref="Value"/> equals <paramref name="expected"/>, then set the Value to
         /// <paramref name="newValue"/>.
         /// </summary>
+        /// <param name="expected">TBD</param>
+        /// <param name="newValue">TBD</param>
         /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
         public bool CompareAndSet(bool expected, bool newValue)
         {
@@ -73,6 +76,8 @@ namespace Akka.Util
         /// <summary>
         /// Implicit conversion operator = automatically casts the <see cref="AtomicBoolean"/> to a <see cref="bool"/>
         /// </summary>
+        /// <param name="boolean">TBD</param>
+        /// <returns>TBD</returns>
         public static implicit operator bool(AtomicBoolean boolean)
         {
             return boolean.Value;
@@ -81,8 +86,8 @@ namespace Akka.Util
         /// <summary>
         /// Implicit conversion operator = allows us to cast any bool directly into a <see cref="AtomicBoolean"/> instance.
         /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public static implicit operator AtomicBoolean(bool value)
         {
             return new AtomicBoolean(value);

@@ -36,9 +36,11 @@ namespace Akka.Actor
         void Suspend();
 
         /// <summary>Recursively resume this actor and all its children. Is only allowed to throw fatal exceptions.</summary>
+        /// <param name="causedByFailure">TBD</param>
         void Resume(Exception causedByFailure);
 
         /// <summary>Restart this actor (will recursively restart or stop all children). Is only allowed to throw Fatal Throwables.</summary>
+        /// <param name="cause">TBD</param>
         void Restart(Exception cause);
 
 
@@ -68,21 +70,44 @@ namespace Akka.Actor
         /// </summary>
         int NumberOfMessages { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsTerminated { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <param name="message">TBD</param>
         void SendMessage(IActorRef sender, object message);
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         [Obsolete("Used ChildrenRefs instead")]
         IEnumerable<IInternalActorRef> GetChildren();    //TODO: Should be replaced by childrenRefs: ChildrenContainer
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         IChildrenContainer ChildrenContainer { get; }
 
         /// <summary>
         /// Method for looking up a single child beneath this actor.
-        /// It is racy if called from the outside.</summary>
+        /// It is racy if called from the outside.
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         IInternalActorRef GetSingleChild(string name);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         IInternalActorRef GetChildByName(string name);
 
         /// <summary>
@@ -90,6 +115,9 @@ namespace Akka.Actor
         /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that 
         /// has been initialized/created.
         /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         bool TryGetChildStatsByName(string name, out IChildStats child); //This is called getChildByName in Akka JVM
 
         /// <summary>

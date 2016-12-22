@@ -29,6 +29,9 @@ namespace Akka.Actor
     /// </summary>
     public interface IActorRefScope
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsLocal { get; }
     }
 
@@ -48,15 +51,27 @@ namespace Akka.Actor
     /// </summary>
     public interface IRepointableRef : IActorRefScope
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsStarted { get; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class FutureActorRef : MinimalActorRef
     {
         private readonly TaskCompletionSource<object> _result;
         private readonly Action _unregister;
         private readonly ActorPath _path;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="result">TBD</param>
+        /// <param name="unregister">TBD</param>
+        /// <param name="path">TBD</param>
         public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path)
         {
             if (ActorCell.Current != null)
@@ -68,11 +83,18 @@ namespace Akka.Actor
             _path = path;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path
         {
             get { return _path; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="System.NotImplementedException">TBD</exception>
         public override IActorRefProvider Provider
         {
             get { throw new NotImplementedException(); }
@@ -84,6 +106,11 @@ namespace Akka.Actor
         private int status = INITIATED;
         private readonly IActorRef _actorAwaitingResultSender;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
 
@@ -101,6 +128,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
             base.SendSystemMessage(message);
@@ -108,22 +139,43 @@ namespace Akka.Actor
     }
 
 
-
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class ActorRefSender
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static IActorRef GetSelfOrNoSender()
         {
             var actorCell = ActorCell.Current;
             return actorCell != null ? actorCell.Self : ActorRefs.NoSender;
         }
     }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IActorRef : ICanTell, IEquatable<IActorRef>, IComparable<IActorRef>, ISurrogated, IComparable
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         ActorPath Path { get; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ActorRefImplicitSenderExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
         public static void Tell(this IActorRef receiver, object message)
         {
             var sender = ActorCell.GetCurrentSelfOrNoSender();
@@ -143,8 +195,15 @@ namespace Akka.Actor
         }
 
     }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ActorRefs
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Nobody Nobody = Nobody.Instance;
         /// <summary>
         /// Use this value as an argument to <see cref="ICanTell.Tell"/> if there is not actor to
@@ -153,25 +212,51 @@ namespace Akka.Actor
         public static readonly IActorRef NoSender = null;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ActorRefBase : IActorRef
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class Surrogate : ISurrogate
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="path">TBD</param>
             public Surrogate(string path)
             {
                 Path = path;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Path { get; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return ((ActorSystemImpl)system).Provider.ResolveActorRef(Path);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract ActorPath Path { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         public void Tell(object message, IActorRef sender)
         {
             if (sender == null)
@@ -182,14 +267,28 @@ namespace Akka.Actor
             TellInternal(message, sender);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         protected abstract void TellInternal(object message, IActorRef sender);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             if(Path.Uid == ActorCell.UndefinedUid) return $"[{Path}]";
             return $"[{Path}#{Path.Uid}]";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             var other = obj as IActorRef;
@@ -197,6 +296,10 @@ namespace Akka.Actor
             return Equals(other);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -225,12 +328,22 @@ namespace Akka.Actor
             return CompareTo((IActorRef) obj);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(IActorRef other)
         {
             return Path.Uid == other.Path.Uid 
                 && Path.Equals(other.Path);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(IActorRef other)
         {
             var pathComparisonResult = Path.CompareTo(other.Path);
@@ -239,17 +352,34 @@ namespace Akka.Actor
             return Path.Uid == other.Path.Uid ? 0 : 1;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public virtual ISurrogate ToSurrogate(ActorSystem system)
         {
             return new Surrogate(Serialization.Serialization.SerializedActorPath(this));
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IInternalActorRef : IActorRef, IActorRefScope
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         IInternalActorRef Parent { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         IActorRefProvider Provider { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated>")]
         bool IsTerminated { get; }
 
@@ -263,20 +393,55 @@ namespace Akka.Actor
         /// <returns>The <see cref="IActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
         IActorRef GetChild(IEnumerable<string> name);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="causedByFailure">TBD</param>
         void Resume(Exception causedByFailure = null);
+        /// <summary>
+        /// TBD
+        /// </summary>
         void Start();
+        /// <summary>
+        /// TBD
+        /// </summary>
         void Stop();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         void Restart(Exception cause);
+        /// <summary>
+        /// TBD
+        /// </summary>
         void Suspend();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         [Obsolete("Use SendSystemMessage(message)")]
         void SendSystemMessage(ISystemMessage message, IActorRef sender);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         void SendSystemMessage(ISystemMessage message);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract IInternalActorRef Parent { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract IActorRefProvider Provider { get; }
 
         /// <summary>
@@ -287,32 +452,75 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">The path elements.</param>
         /// <returns>The <see cref="IActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
-        public abstract IActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.
+        public abstract IActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.		
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="causedByFailure">TBD</param>
         public abstract void Resume(Exception causedByFailure = null);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract void Start();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract void Stop();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         public abstract void Restart(Exception cause);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract void Suspend();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract bool IsTerminated { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract bool IsLocal { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         [Obsolete("Use SendSystemMessage(message) instead")]
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             SendSystemMessage(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public abstract void SendSystemMessage(ISystemMessage message);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IInternalActorRef Parent
         {
             get { return ActorRefs.Nobody; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
             if (name.All(string.IsNullOrEmpty))
@@ -320,40 +528,72 @@ namespace Akka.Actor
             return ActorRefs.Nobody;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="causedByFailure">TBD</param>
         public override void Resume(Exception causedByFailure = null)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Start()
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Stop()
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         public override void Restart(Exception cause)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Suspend()
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
            
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsLocal
         {
             get { return true; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated>")]
         public override bool IsTerminated { get { return false; } }
     }
@@ -361,19 +601,34 @@ namespace Akka.Actor
     /// <summary> This is an internal look-up failure token, not useful for anything else.</summary>
     public sealed class Nobody : MinimalActorRef
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class NobodySurrogate : ISurrogate
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return Nobody.Instance;
             }
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Nobody Instance = new Nobody();
         private static readonly NobodySurrogate SurrogateInstance = new NobodySurrogate();
         private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
 
         private Nobody() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path { get { return _path; } }
 
         /// <summary>N/A</summary>
@@ -385,22 +640,44 @@ namespace Akka.Actor
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return SurrogateInstance;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ActorRefWithCell : InternalActorRefBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract ICell Underlying { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract IEnumerable<IActorRef> Children { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IInternalActorRef GetSingleChild(string name);
 
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class VirtualPathContainer : MinimalActorRef
     {
         private readonly IInternalActorRef _parent;
@@ -410,6 +687,13 @@ namespace Akka.Actor
 
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="provider">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <param name="parent">TBD</param>
+        /// <param name="log">TBD</param>
         public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
         {
             _parent = parent;
@@ -418,32 +702,54 @@ namespace Akka.Actor
             _path = path;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRefProvider Provider
         {
             get { return _provider; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IInternalActorRef Parent
         {
             get { return _parent; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path
         {
             get { return _path; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ILoggingAdapter Log
         {
             get { return _log; }
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         protected bool TryGetChild(string name, out IInternalActorRef child)
         {
             return _children.TryGetValue(name, out child);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="actor">TBD</param>
         public void AddChild(string name, IInternalActorRef actor)
         {
             _children.AddOrUpdate(name, actor, (k, v) =>
@@ -453,6 +759,10 @@ namespace Akka.Actor
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
         public void RemoveChild(string name)
         {
             IInternalActorRef tmp;
@@ -462,6 +772,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="child">TBD</param>
         public void RemoveChild(string name,IActorRef child)
         {
             IInternalActorRef tmp;
@@ -487,6 +802,11 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
   }
 */
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
             //Using enumerator to avoid multiple enumerations of name.
@@ -505,6 +825,9 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             return ActorRefs.Nobody;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool HasChildren
         {
             get
@@ -513,6 +836,10 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         public void ForEachChild(Action<IInternalActorRef> action)
         {
             foreach (IInternalActorRef child in _children.Values)

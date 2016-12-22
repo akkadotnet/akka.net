@@ -91,6 +91,11 @@ namespace Akka.Routing
             return new Router(new RoundRobinRoutingLogic());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return NrOfInstances;
@@ -288,6 +293,11 @@ namespace Akka.Routing
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;

@@ -14,6 +14,9 @@ namespace Akka.Dispatch
     /// </summary>
     public interface IRunnable
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         void Run();
     }
 
@@ -24,11 +27,18 @@ namespace Akka.Dispatch
     {
         private readonly Action _action;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         public ActionRunnable(Action action)
         {
             _action = action;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Run()
         {
             _action();
@@ -43,12 +53,20 @@ namespace Akka.Dispatch
         private readonly Action<object> _actionWithState;
         private readonly object _state;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actionWithState">TBD</param>
+        /// <param name="state">TBD</param>
         public ActionWithStateRunnable(Action<object> actionWithState, object state)
         {
             _actionWithState = actionWithState;
             _state = state;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Run()
         {
             _actionWithState(_state);

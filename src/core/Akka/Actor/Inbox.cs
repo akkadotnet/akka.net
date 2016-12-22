@@ -14,15 +14,37 @@ using Akka.Actor.Internal;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal interface IQuery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         TimeSpan Deadline { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         IActorRef Client { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="client">TBD</param>
+        /// <returns>TBD</returns>
         IQuery WithClient(IActorRef client);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal struct Get : IQuery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="deadline">TBD</param>
+        /// <param name="client">TBD</param>
         public Get(TimeSpan deadline, IActorRef client = null)
             : this()
         {
@@ -30,16 +52,36 @@ namespace Akka.Actor
             Client = client;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan Deadline { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Client { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="client">TBD</param>
+        /// <returns>TBD</returns>
         public IQuery WithClient(IActorRef client)
         {
             return new Get(Deadline, client);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal struct Select : IQuery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="deadline">TBD</param>
+        /// <param name="predicate">TBD</param>
+        /// <param name="client">TBD</param>
         public Select(TimeSpan deadline, Predicate<object> predicate, IActorRef client = null)
             : this()
         {
@@ -48,47 +90,91 @@ namespace Akka.Actor
             Client = client;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan Deadline { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Predicate<object> Predicate { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Client { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="client">TBD</param>
+        /// <returns>TBD</returns>
         public IQuery WithClient(IActorRef client)
         {
             return new Select(Deadline, Predicate, client);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal struct StartWatch
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="target">TBD</param>
         public StartWatch(IActorRef target)
             : this()
         {
             Target = target;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Target { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal struct StopWatch
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="target">TBD</param>
         public StopWatch(IActorRef target) 
             : this()
         {
             Target = target;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Target { get; private set; }
     }
 
     internal struct Kick { }
 
-    // LinkedList wrapper instead of Queue? While it's used for queueing, however I expect a lot of churn around 
-    // adding-removing elements. Additionally we have to get a functionality of dequeueing element meeting
-    // a specific predicate (even if it's in middle of queue), and current queue implementation won't provide that in easy way.
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     [Serializable]
     internal class InboxQueue<T> : ICollection<T>
     {
+        // LinkedList wrapper instead of Queue? While it's used for queueing, however I expect a lot of churn around 
+        // adding-removing elements. Additionally we have to get a functionality of dequeueing element meeting
+        // a specific predicate (even if it's in middle of queue), and current queue implementation won't provide that in easy way.
+
+
         private readonly LinkedList<T> _inner = new LinkedList<T>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IEnumerator<T> GetEnumerator()
         {
             return _inner.GetEnumerator();
@@ -99,31 +185,58 @@ namespace Akka.Actor
             return GetEnumerator();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
         public void Add(T item)
         {
             _inner.AddLast(item);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Clear()
         {
             _inner.Clear();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
+        /// <returns>TBD</returns>
         public bool Contains(T item)
         {
             return _inner.Contains(item);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="array">TBD</param>
+        /// <param name="arrayIndex">TBD</param>
         public void CopyTo(T[] array, int arrayIndex)
         {
             _inner.CopyTo(array, arrayIndex);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
+        /// <returns>TBD</returns>
         public bool Remove(T item)
         {
             return _inner.Remove(item);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public int RemoveAll(Predicate<T> predicate)
         {
             var i = 0;
@@ -139,11 +252,19 @@ namespace Akka.Actor
             return i;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
         public void Enqueue(T item)
         {
             _inner.AddLast(item);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public T Dequeue()
         {
             var item = _inner.First.Value;
@@ -151,6 +272,11 @@ namespace Akka.Actor
             return item;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public T DequeueFirstOrDefault(Predicate<T> predicate)
         {
             var node = _inner.First;
@@ -169,20 +295,38 @@ namespace Akka.Actor
             return default(T);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Count { get { return _inner.Count; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsReadOnly { get { return false; } }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class DeadlineComparer : IComparer<IQuery>
     {
         private static readonly DeadlineComparer _instance = new DeadlineComparer();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static DeadlineComparer Instance { get { return _instance; } }
 
         private DeadlineComparer()
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="x">TBD</param>
+        /// <param name="y">TBD</param>
+        /// <returns>TBD</returns>
         public int Compare(IQuery x, IQuery y)
         {
             return x.Deadline.CompareTo(y.Deadline);
@@ -205,6 +349,7 @@ namespace Akka.Actor
         /// Receive a next message from current <see cref="IInboxable"/> with default timeout. This call will return immediately,
         /// if the internal actor previously received a message, or will block until it'll receive a message.
         /// </summary>
+        /// <returns>TBD</returns>
         object Receive();
 
         /// <summary>
@@ -212,20 +357,36 @@ namespace Akka.Actor
         /// if the internal actor previously received a message, or will block for time specified by 
         /// <paramref name="timeout"/> until it'll receive a message.
         /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         object Receive(TimeSpan timeout);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         Task<object> ReceiveAsync();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         Task<object> ReceiveAsync(TimeSpan timeout);
 
         /// <summary>
         /// Receive a next message satisfying specified <paramref name="predicate"/> under default timeout.
         /// </summary>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         object ReceiveWhere(Predicate<object> predicate);
 
         /// <summary>
         /// Receive a next message satisfying specified <paramref name="predicate"/> under provided <paramref name="timeout"/>.
         /// </summary>
+        /// <param name="predicate">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         object ReceiveWhere(Predicate<object> predicate, TimeSpan timeout);
 
         /// <summary>
@@ -233,9 +394,14 @@ namespace Akka.Actor
         /// which is sent to a given target actor. It means, that all <paramref name="target"/>'s
         /// replies will be sent to current inbox instead.
         /// </summary>
+        /// <param name="target">TBD</param>
+        /// <param name="message">TBD</param>
         void Send(IActorRef target, object message);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class Inbox : IInboxable, IDisposable
     {
         private static int inboxNr = 0;
@@ -243,6 +409,11 @@ namespace Akka.Actor
         private readonly ActorSystem _system;
         private readonly TimeSpan _defaultTimeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static Inbox Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka").GetConfig("actor").GetConfig("inbox");
@@ -263,24 +434,39 @@ namespace Akka.Actor
             Receiver = receiver;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Receiver { get; private set; }
         
         /// <summary>
         /// Make the inbox’s actor watch the <paramref name="subject"/> actor such that 
         /// reception of the <see cref="Terminated"/> message can then be awaited.
         /// </summary>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef Watch(IActorRef subject)
         {
             Receiver.Tell(new StartWatch(subject));
             return subject;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef Unwatch(IActorRef subject)
         {
             Receiver.Tell(new StopWatch(subject));
             return subject;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="msg">TBD</param>
         public void Send(IActorRef actorRef, object msg)
         {
             actorRef.Tell(msg, Receiver);
@@ -293,6 +479,7 @@ namespace Akka.Actor
         /// <remarks>
         /// Don't use this method within actors, since it block current thread until a message is received.
         /// </remarks>
+        /// <returns>TBD</returns>
         public object Receive()
         {
             return Receive(_defaultTimeout);
@@ -306,48 +493,76 @@ namespace Akka.Actor
         /// <remarks>
         /// Don't use this method within actors, since it block current thread until a message is received.
         /// </remarks>
+        /// <param name="timeout">TBD</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown if the inbox received a <see cref="Status.Failure"/> response message or
         /// it didn't receive a response message by the given <paramref name="timeout"/> .
-        /// </exception>>
+        /// </exception>
+        /// <returns>TBD</returns>
         public object Receive(TimeSpan timeout)
         {
             var task = ReceiveAsync(timeout);
             return AwaitResult(task, timeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public object ReceiveWhere(Predicate<object> predicate)
         {
             return ReceiveWhere(predicate, _defaultTimeout);
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
+        /// <param name="timeout">TBD</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown if the inbox received a <see cref="Status.Failure"/> response message or
         /// it didn't receive a response message by the given <paramref name="timeout"/> .
-        /// </exception>>
+        /// </exception>
+        /// <returns>TBD</returns>
         public object ReceiveWhere(Predicate<object> predicate, TimeSpan timeout)
         {
             var task = Receiver.Ask(new Select(_system.Scheduler.MonotonicClock + timeout, predicate), Timeout.InfiniteTimeSpan);
             return AwaitResult(task, timeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public Task<object> ReceiveAsync()
         {
             return ReceiveAsync(_defaultTimeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public Task<object> ReceiveAsync(TimeSpan timeout)
         {
             return Receiver.Ask(new Get(_system.Scheduler.MonotonicClock + timeout), Timeout.InfiniteTimeSpan);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="disposing">TBD</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)

@@ -9,6 +9,9 @@ using System;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class SchedulerExtensions
     {
         /// <summary>Schedules to send a message once after a specified period of time.</summary>

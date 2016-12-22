@@ -16,21 +16,33 @@ using Akka.Util;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Obsolete("Replaced with HashedWheelTimerScheduler")]
     public class DedicatedThreadScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
         private readonly ConcurrentQueue<ScheduledWork> _workQueue = new ConcurrentQueue<ScheduledWork>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override DateTimeOffset TimeNow
         {
             get { return DateTimeOffset.Now; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override TimeSpan MonotonicClock
         {
             get { return Util.MonotonicClock.Elapsed; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override TimeSpan HighResMonotonicClock
         {
             get { return Util.MonotonicClock.ElapsedHighRes; }
@@ -38,9 +50,18 @@ namespace Akka.Actor
 
         private TimeSpan _shutdownTimeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sys">TBD</param>
         [Obsolete("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter log) instead.")]
         public DedicatedThreadScheduler(ActorSystem sys) : this(sys.Settings.Config, sys.Log) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="log">TBD</param>
         public DedicatedThreadScheduler(Config config, ILoggingAdapter log) : base(config, log)
         {
             var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
@@ -92,6 +113,14 @@ namespace Akka.Actor
             thread.Start();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message,
             IActorRef sender, ICancelable cancelable)
         {
@@ -102,6 +131,15 @@ namespace Akka.Actor
             }, cancellationToken);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval,
             ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
@@ -109,12 +147,25 @@ namespace Akka.Actor
             InternalScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(message, sender), cancellationToken);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
             var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
             InternalScheduleOnce(delay, action, cancellationToken);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action,
             ICancelable cancelable)
         {
@@ -199,6 +250,9 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Dispose()
         {
             if (!Stop().Wait(_shutdownTimeout))
@@ -221,8 +275,17 @@ namespace Akka.Actor
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ScheduledWork
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tickExpires">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="token">TBD</param>
         public ScheduledWork(long tickExpires, Action action,CancellationToken token)
         {
             TickExpires = tickExpires;
@@ -230,8 +293,17 @@ namespace Akka.Actor
             Token = token;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public CancellationToken Token { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long TickExpires { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Action Action { get; set; }
     }
 }

@@ -14,7 +14,9 @@ using Akka.Tools.MatchHandler;
 
 namespace Akka.Actor
 {
-
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ReceiveActor : UntypedActor, IInitializableActor
     {
         private bool _shouldUnhandle = true;
@@ -22,6 +24,9 @@ namespace Akka.Actor
         private PartialAction<object> _partialReceive = _ => false;
         private bool _hasBeenInitialized;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ReceiveActor()
         {
             PrepareConfigureMessageHandlers();
@@ -57,9 +62,14 @@ namespace Akka.Actor
             _matchHandlerBuilders.Push(new MatchBuilder(CachedMatchCompiler<object>.Instance));
         }
 
-        //Seal the method so that implementors cannot use it. They should only use Receive and Become
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected sealed override void OnReceive(object message)
         {
+            //Seal the method so that implementors cannot use it. They should only use Receive and Become
+
             ExecutePartialMessageHandler(message, _partialReceive);
         }
 
@@ -93,6 +103,11 @@ namespace Akka.Actor
             base.BecomeStacked(m => ExecutePartialMessageHandler(m, newHandler));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="configure">TBD</param>
+        /// <param name="discardOld">TBD</param>
         [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         protected void Become(Action configure, bool discardOld = true)
         {
@@ -110,6 +125,11 @@ namespace Akka.Actor
             return newHandler;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="handler">TBD</param>
         [Obsolete("Use ReceiveAsync instead. This method will be removed in future versions")]
         protected void Receive<T>(Func<T, Task> handler)
         {

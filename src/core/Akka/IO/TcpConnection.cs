@@ -22,6 +22,9 @@ namespace Akka.IO
     *
     *  INTERNAL API
     */
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal abstract class TcpConnection : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly TcpExt _tcp;
@@ -29,21 +32,36 @@ namespace Akka.IO
         private readonly bool _pullMode;
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected TcpExt Tcp
         {
             get { return _tcp; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log
         {
             get { return _log; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal SocketChannel Channel
         {
             get { return _channel; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tcp">TBD</param>
+        /// <param name="channel">TBD</param>
+        /// <param name="pullMode">TBD</param>
         protected TcpConnection(TcpExt tcp, SocketChannel channel, bool pullMode)
         {
             _tcp = tcp;
@@ -329,6 +347,12 @@ namespace Akka.IO
         // AUXILIARIES and IMPLEMENTATION
 
         /** used in subclasses to start the common machinery above once a channel is connected */
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="registration">TBD</param>
+        /// <param name="commander">TBD</param>
+        /// <param name="options">TBD</param>
         protected void CompleteConnect(ChannelRegistration registration, IActorRef commander,
                                        IEnumerable<Inet.SocketOption> options)
         {
@@ -542,12 +566,19 @@ namespace Akka.IO
             Channel.Close();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="closeInfo">TBD</param>
         protected void StopWith(CloseInformation closeInfo)
         {
             _closedMessage = closeInfo;
             Context.Stop(Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             if (Channel.IsOpen())
@@ -563,6 +594,11 @@ namespace Akka.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
         protected override void PostRestart(Exception reason)
         {
             throw new IllegalStateException("Restarting not supported for connection actors.");
@@ -721,11 +757,25 @@ namespace Akka.IO
         * Used to transport information to the postStop method to notify
         * interested party about a connection close.
         */
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected class CloseInformation
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ISet<IActorRef> NotificationsTo { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Tcp.Event ClosedEvent { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="notificationsTo">TBD</param>
+            /// <param name="closedEvent">TBD</param>
             public CloseInformation(ISet<IActorRef> notificationsTo, Tcp.Event closedEvent)
             {
                 NotificationsTo = notificationsTo;

@@ -27,6 +27,13 @@ namespace Akka.Actor
 
         private bool IsWalking => !_terminationPromise.Task.IsCompleted;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="root">TBD</param>
+        /// <param name="provider">TBD</param>
+        /// <param name="terminationPromise">TBD</param>
+        /// <param name="log">TBD</param>
         public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, ILoggingAdapter log)
         {
             _log = log;
@@ -35,7 +42,11 @@ namespace Akka.Actor
             _path = root / "_Root-guardian-supervisor";   //In akka this is root / "bubble-walker" 
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
@@ -46,6 +57,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="systemMessage">TBD</param>
         public override void SendSystemMessage(ISystemMessage systemMessage)
         {
             var failed = systemMessage as Failed;
@@ -73,7 +88,13 @@ namespace Akka.Actor
             _log.Error("{0} received unexpected system message [{1}]", _path, systemMessage);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Exception CauseOfTermination { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Stop()
         {
             var causeOfTermination = CauseOfTermination;
@@ -81,11 +102,17 @@ namespace Akka.Actor
             _terminationPromise.SetResult(status);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path
         {
             get { return _path; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRefProvider Provider
         {
             get { return _provider; }

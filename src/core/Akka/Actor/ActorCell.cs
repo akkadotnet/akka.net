@@ -18,10 +18,16 @@ using Assert = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public partial class ActorCell : IUntypedActorContext, ICell 
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private IInternalActorRef _self;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const int UndefinedUid = 0;
         private Props _props;
         private static readonly Props terminatedProps = new TerminatedProps();
@@ -40,6 +46,10 @@ namespace Akka.Actor
         // special system message stash, used when we aren't able to handle other system messages just yet
         private LatestFirstSystemMessageList _sysMsgStash = SystemMessageList.LNil;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="msg">TBD</param>
         protected void Stash(SystemMessage msg)
         {
             Assert.Assert(msg.Unlinked);
@@ -53,7 +63,14 @@ namespace Akka.Actor
             return unstashed;
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="self">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="dispatcher">TBD</param>
+        /// <param name="parent">TBD</param>
         public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
         {
             _self = self;
@@ -64,30 +81,84 @@ namespace Akka.Actor
             
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object CurrentMessage { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Mailbox Mailbox => Volatile.Read(ref _mailboxDoNotCallMeDirectly);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public MessageDispatcher Dispatcher { get; private set; }
-        public bool IsLocal { get{return true;} }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public bool IsLocal { get { return true; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ActorBase Actor { get { return _actor; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsTerminated => Mailbox.IsClosed();
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal static ActorCell Current
         {
             get { return InternalCurrentActorCellKeeper.Current; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorSystem System { get { return _systemImpl; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorSystemImpl SystemImpl { get { return _systemImpl; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Props Props { get { return _props; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Self { get { return _self; } }
         IActorRef IActorContext.Parent { get { return Parent; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IInternalActorRef Parent { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Sender { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool HasMessages { get { return Mailbox.HasMessages; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal static Props TerminatedProps { get { return terminatedProps; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorTaskScheduler TaskScheduler
         {
             get
@@ -107,8 +178,8 @@ namespace Akka.Actor
         /// reasonably different from the previous UID of a possible actor with the same path,
         /// which can be achieved by using <see cref="ThreadLocalRandom"/>
         /// </summary>
-        /// <param name="sendSupervise"></param>
-        /// <param name="mailboxType"></param>
+        /// <param name="sendSupervise">TBD</param>
+        /// <param name="mailboxType">TBD</param>
         public void Init(bool sendSupervise, MailboxType mailboxType)
         {
             /*
@@ -154,6 +225,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use TryGetChildStatsByName", true)]
         public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
@@ -167,11 +243,21 @@ namespace Akka.Actor
             return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public ActorSelection ActorSelection(string path)
         {
             return ActorRefFactoryShared.ActorSelection(path, _systemImpl, Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public ActorSelection ActorSelection(ActorPath path)
         {
             return ActorRefFactoryShared.ActorSelection(path, _systemImpl);
@@ -183,16 +269,28 @@ namespace Akka.Actor
             return GetChildren();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IEnumerable<IInternalActorRef> GetChildren()
         {
             return ChildrenContainer.Children;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
         public void Become(Receive receive)
         {
             _state = _state.Become(receive);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
         public void BecomeStacked(Receive receive)
         {
             _state = _state.BecomeStacked(receive);
@@ -214,6 +312,9 @@ namespace Akka.Actor
             UnbecomeStacked();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void UnbecomeStacked()
         {
             _state = _state.UnbecomeStacked();
@@ -265,6 +366,10 @@ namespace Akka.Actor
             return instance;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected virtual ActorBase CreateNewActorInstance()
         {
             var actor = _props.NewActor();
@@ -272,15 +377,19 @@ namespace Akka.Actor
             // Apply default of custom behaviors to actor.
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
             pipeline.AfterActorIncarnated(actor, this);
-            
+
             var initializableActor = actor as IInitializableActor;
-            if(initializableActor != null)
+            if (initializableActor != null)
             {
                 initializableActor.Init();
             }
             return actor;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         public void UseThreadContext(Action action)
         {
             var tmp = InternalCurrentActorCellKeeper.Current;
@@ -296,6 +405,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public virtual void SendMessage(Envelope message)
         {
             if (Mailbox == null)
@@ -339,17 +452,29 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <param name="message">TBD</param>
         public virtual void SendMessage(IActorRef sender, object message)
         {
             SendMessage(new Envelope(message, sender, System));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected void ClearActorCell()
         {
             UnstashAll();
             _props = terminatedProps;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
         protected void ClearActor(ActorBase actor)
         {
             if (actor != null)
@@ -365,7 +490,7 @@ namespace Akka.Actor
                     {
                         if (_systemImpl.Log != null)
                         {
-                            _systemImpl.Log.Error(e, "An error occurred while disposing {0} actor. Reason: {1}", 
+                            _systemImpl.Log.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
                                 actor.GetType(), e.Message);
                         }
                     }
@@ -386,11 +511,18 @@ namespace Akka.Actor
             _props.Release(a);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected void PrepareForNewActor()
         {
             _state = _state.ClearBehaviorStack();
             _actorHasBeenCleared = false;
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
         protected void SetActorFields(ActorBase actor)
         {
             if (actor != null)
@@ -398,20 +530,33 @@ namespace Akka.Actor
                 actor.Unclear();
             }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public static NameAndUid SplitNameAndUid(string name)
         {
             var i = name.IndexOf('#');
-            return i < 0 
+            return i < 0
                 ? new NameAndUid(name, UndefinedUid)
                 : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static IActorRef GetCurrentSelfOrNoSender()
         {
             var current = Current;
             return current != null ? current.Self : ActorRefs.NoSender;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static IActorRef GetCurrentSenderOrNoSender()
         {
             var current = Current;

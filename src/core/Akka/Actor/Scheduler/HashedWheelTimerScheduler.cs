@@ -37,6 +37,12 @@ namespace Akka.Actor
         private readonly TimeSpan _shutdownTimeout;
         private readonly long _tickDuration; // a timespan expressed as ticks
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="scheduler">TBD</param>
+        /// <param name="log">TBD</param>
+        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
         public HashedWheelTimerScheduler(Config scheduler, ILoggingAdapter log) : base(scheduler, log)
         {
             var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel");
@@ -265,13 +271,30 @@ namespace Akka.Actor
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override DateTimeOffset TimeNow => DateTimeOffset.Now;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override TimeSpan MonotonicClock => Util.MonotonicClock.Elapsed;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override TimeSpan HighResMonotonicClock => Util.MonotonicClock.ElapsedHighRes;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender,
-            ICancelable cancelable)
+                    ICancelable cancelable)
         {
             InternalSchedule(delay, TimeSpan.Zero, new ScheduledTell(receiver, message, sender), cancelable);
         }
@@ -289,17 +312,39 @@ namespace Akka.Actor
             _registrations.Enqueue(reg);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message,
-            IActorRef sender, ICancelable cancelable)
+                    IActorRef sender, ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, new ScheduledTell(receiver, message, sender), cancelable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
             InternalSchedule(delay, TimeSpan.Zero, new ActionRunnable(action), cancelable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, new ActionRunnable(action), cancelable);
@@ -324,6 +369,9 @@ namespace Akka.Actor
             return Completed;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Dispose()
         {
             var stopped = Stop();

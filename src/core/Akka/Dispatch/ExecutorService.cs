@@ -15,6 +15,10 @@ namespace Akka.Dispatch
     /// </summary>
     public abstract class ExecutorService
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
         protected ExecutorService(string id)
         {
             Id = id;
@@ -45,6 +49,11 @@ namespace Akka.Dispatch
     /// </summary>
     public abstract class ExecutorServiceFactory
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ExecutorService Produce(string id);
     }
 
@@ -53,6 +62,11 @@ namespace Akka.Dispatch
     /// </summary>
     public class RejectedExecutionException : AkkaException
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="inner">TBD</param>
         public RejectedExecutionException(string message = null, Exception inner = null) : base(message, inner) { }
     }
 }
