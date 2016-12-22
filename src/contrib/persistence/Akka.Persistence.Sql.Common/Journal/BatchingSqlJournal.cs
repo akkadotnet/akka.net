@@ -176,6 +176,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public TimeSpan ConnectionTimeout { get; }
 
         /// <summary>
+        /// Isolation level of transactions used during query execution.
+        /// </summary>
+        public IsolationLevel IsolationLevel { get; }
+
+        /// <summary>
         /// Settings specific to <see cref="CircuitBreaker"/>, which is used internally 
         /// for executing request batches.
         /// </summary>
@@ -206,6 +211,19 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentException("No connection string for Sql Event Journal was specified");
+
+            IsolationLevel level;
+            switch (config.GetString("isolation-level", "unspecified"))
+            {
+                case "chaos": level = IsolationLevel.Chaos; break;
+                case "read-committed": level = IsolationLevel.ReadCommitted; break;
+                case "read-uncommitted": level = IsolationLevel.ReadUncommitted; break;
+                case "repeatable-read": level = IsolationLevel.RepeatableRead; break;
+                case "serializable": level = IsolationLevel.Serializable; break;
+                case "snapshot": level = IsolationLevel.Snapshot; break;
+                case "unspecified": level = IsolationLevel.Unspecified; break;
+                default: throw new ArgumentException("Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified");
+            }
             
             ConnectionString = connectionString;
             MaxConcurrentOperations = config.GetInt("max-concurrent-operations", 64);
@@ -213,12 +231,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             MaxBufferSize = config.GetInt("max-buffer-size", 500000);
             AutoInitialize = config.GetBoolean("auto-initialize", false);
             ConnectionTimeout = config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(30));
+            IsolationLevel = level;
             CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
         }
 
-        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions)
+        protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions)
         {
             ConnectionString = connectionString;
             MaxConcurrentOperations = maxConcurrentOperations;
@@ -226,6 +245,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             MaxBufferSize = maxBufferSize;
             AutoInitialize = autoInitialize;
             ConnectionTimeout = connectionTimeout;
+            IsolationLevel = isolationLevel;
             CircuitBreakerSettings = circuitBreakerSettings;
             ReplayFilterSettings = replayFilterSettings;
             NamingConventions = namingConventions;
@@ -746,7 +766,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 await connection.OpenAsync();
                 
-                using (var tx = connection.BeginTransaction())
+                using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
                 {
                     command.CommandTimeout = (int) Setup.ConnectionTimeout.TotalMilliseconds;
@@ -966,7 +986,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private async Task HandleWriteMessages(WriteMessages req, TCommand command)
         {
-            IJournalResponse summary;
+            IJournalResponse summary = null;
             var responses = new List<IJournalResponse>();
             var tags = new HashSet<string>();
             var persistenceIds = new HashSet<string>();
@@ -992,11 +1012,11 @@ namespace Akka.Persistence.Sql.Common.Journal
                             {
                                 command.Parameters.Clear();
                                 tagBuilder.Clear();
-                                
+
                                 var persistent = e;
                                 if (persistent.Payload is Tagged)
                                 {
-                                    var tagged = (Tagged)persistent.Payload;
+                                    var tagged = (Tagged) persistent.Payload;
                                     if (tagged.Tags.Count != 0)
                                     {
                                         tagBuilder.Append(';');
@@ -1008,7 +1028,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                     }
                                     persistent = persistent.WithPayload(tagged.Payload);
                                 }
-                                
+
                                 WriteEvent(command, persistent, tagBuilder.ToString());
 
                                 await command.ExecuteNonQueryAsync();
@@ -1018,6 +1038,13 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 persistenceIds.Add(persistent.PersistenceId);
 
                                 NotifyNewPersistenceIdAdded(persistent.PersistenceId);
+                            }
+                            catch (DbException cause)
+                            {
+                                // database-related exceptions should result in failure
+                                summary = new WriteMessagesFailed(cause);
+                                var response = new WriteMessageFailure(e, cause, actorInstanceId);
+                                responses.Add(response);
                             }
                             catch (Exception cause)
                             {
@@ -1053,7 +1080,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     }
                 }
 
-                summary = WriteMessagesSuccessful.Instance;
+                summary = summary ?? WriteMessagesSuccessful.Instance;
             }
             catch (Exception cause)
             {
