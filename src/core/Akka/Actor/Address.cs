@@ -35,6 +35,13 @@ namespace Akka.Actor
         private readonly string _system;
         private readonly string _protocol;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="protocol">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <param name="host">TBD</param>
+        /// <param name="port">TBD</param>
         public Address(string protocol, string system, string host = null, int? port = null)
         {
             _protocol = protocol;
@@ -44,21 +51,33 @@ namespace Akka.Actor
             _toString = CreateLazyToString();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Host
         {
             get { return _host; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int? Port
         {
             get { return _port; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string System
         {
             get { return _system; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Protocol
         {
             get { return _protocol; }
@@ -98,11 +117,20 @@ namespace Akka.Actor
             }, true);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return _toString.Value;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(Address other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -110,8 +138,17 @@ namespace Akka.Actor
             return string.Equals(Host, other.Host) && Port == other.Port && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
-        public override bool Equals(object obj) => obj is Address && Equals((Address) obj);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
+        public override bool Equals(object obj) => obj is Address && Equals((Address)obj);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -124,41 +161,81 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public object Clone()
         {
             return new Address(Protocol, System, Host, Port);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="protocol">TBD</param>
+        /// <returns>TBD</returns>
         public Address WithProtocol(string protocol)
         {
             return new Address(protocol, System, Host, Port);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public Address WithSystem(string system)
         {
             return new Address(Protocol, system, Host, Port);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="host">TBD</param>
+        /// <returns>TBD</returns>
         public Address WithHost(string host = null)
         {
             return new Address(Protocol, System, host, Port);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="port">TBD</param>
+        /// <returns>TBD</returns>
         public Address WithPort(int? port = null)
         {
             return new Address(Protocol, System, Host, port);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="left">TBD</param>
+        /// <param name="right">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator ==(Address left, Address right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="left">TBD</param>
+        /// <param name="right">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator !=(Address left, Address right)
         {
             return !Equals(left, right);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public string HostPort()
         {
             return ToString().Substring(Protocol.Length + 3);
@@ -194,18 +271,43 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class AddressSurrogate : ISurrogate
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Protocol { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string System { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Host { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int? Port { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return new Address(Protocol,System,Host,Port);
+                return new Address(Protocol, System, Host, Port);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public ISurrogate ToSurrogate(ActorSystem system)
         {
             return new AddressSurrogate()
@@ -229,6 +331,12 @@ namespace Akka.Actor
     /// </summary>
     public static class RelativeActorPath
     {
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="addr">TBD</param>
+        /// <returns>TBD</returns>
         public static IEnumerable<string> Unapply(string addr)
         {
             try

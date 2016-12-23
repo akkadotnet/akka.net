@@ -15,7 +15,7 @@ namespace Akka.Util
     /// 
     /// This allows for continuous read-only iteration over a set.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="T">TBD</typeparam>
     internal sealed class ContinuousEnumerator<T> : IEnumerator<T>
     {
         /// <summary>
@@ -23,16 +23,27 @@ namespace Akka.Util
         /// </summary>
         private readonly IEnumerator<T> _internalEnumerator;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="internalEnumerator">TBD</param>
         public ContinuousEnumerator(IEnumerator<T> internalEnumerator)
         {
             _internalEnumerator = internalEnumerator;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Dispose()
         {
             _internalEnumerator.Dispose();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool MoveNext()
         {
             if (!_internalEnumerator.MoveNext())
@@ -43,11 +54,17 @@ namespace Akka.Util
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Reset()
         {
             _internalEnumerator.Reset();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public T Current { get { return _internalEnumerator.Current; } }
 
         object IEnumerator.Current
@@ -67,6 +84,8 @@ namespace Akka.Util
         /// 
         /// Internally, it just wraps <paramref name="collection"/>'s internal iterator with circular iteration behavior.
         /// </summary>
+        /// <param name="collection">TBD</param>
+        /// <returns>TBD</returns>
         public static ContinuousEnumerator<T> GetContinuousEnumerator<T>(this IEnumerable<T> collection)
         {
             return new ContinuousEnumerator<T>(collection.GetEnumerator());

@@ -107,11 +107,21 @@ namespace Akka.Event
             return base.Unsubscribe(subscriber);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public void StartUnsubscriber(ActorSystemImpl system)
         {
             EventStreamUnsubscribersProvider.Instance.Start(system, this, _debug);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="unsubscriber">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public bool InitUnsubscriber(IActorRef unsubscriber, ActorSystem system)
         {
             if (system == null)

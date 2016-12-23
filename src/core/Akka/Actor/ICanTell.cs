@@ -7,8 +7,16 @@
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface ICanTell
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         void Tell(object message, IActorRef sender);
     }
 }

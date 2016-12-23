@@ -22,6 +22,7 @@ namespace Akka.Actor
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return true;
@@ -33,6 +34,11 @@ namespace Akka.Actor
     /// </summary>
     public class GuardianActor : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if(message is Terminated)
@@ -44,6 +50,9 @@ namespace Akka.Actor
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             // guardian MUST NOT lose its children during restart
@@ -60,6 +69,10 @@ namespace Akka.Actor
         private readonly IActorRef _userGuardian;
         private readonly HashSet<IActorRef> _terminationHooks;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="userGuardian">TBD</param>
         public SystemGuardianActor(IActorRef userGuardian)
         {
             _userGuardian = userGuardian;
@@ -69,7 +82,8 @@ namespace Akka.Actor
         /// <summary>
         /// Processor for messages that are sent to the root system guardian
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var terminated = message as Terminated;
@@ -152,6 +166,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="message">TBD</param>
         protected override void PreRestart(Exception reason, object message)
         {
             //Guardian MUST NOT lose its children during restart
@@ -166,12 +185,23 @@ namespace Akka.Actor
     {
         private readonly EventStream _eventStream;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="provider">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <param name="eventStream">TBD</param>
         public DeadLetterActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
             : base(provider, path, eventStream)
         {
             _eventStream = eventStream;
         }
-        /// <summary></summary>
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
@@ -191,6 +221,12 @@ namespace Akka.Actor
             if (!SpecialHandle(message, sender)) { _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? Provider.DeadLetters : sender, this)); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool SpecialHandle(object message, IActorRef sender)
         {
             var w = message as Watch;

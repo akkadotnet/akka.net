@@ -7,9 +7,20 @@
 
 namespace Akka.Util.Internal.Collections
 {
+	/// <summary>
+	/// TBD
+	/// </summary>
+	/// <typeparam name="TKey">TBD</typeparam>
+	/// <typeparam name="TValue">TBD</typeparam>
 	public interface IBinaryTreeNode<out TKey, out TValue>:IKeyValuePair<TKey,TValue>
 	{
+		/// <summary>
+		/// TBD
+		/// </summary>
 		IBinaryTreeNode<TKey, TValue> Left { get; }
+		/// <summary>
+		/// TBD
+		/// </summary>
 		IBinaryTreeNode<TKey, TValue> Right { get; }
 	}
 }

@@ -12,6 +12,10 @@ using System.Linq.Expressions;
 
 namespace Akka.Tools.MatchHandler
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public class MatchExpressionBuilder<T> : IMatchExpressionBuilder
     {
         //See the end of file a description of what this class does
@@ -21,11 +25,15 @@ namespace Akka.Tools.MatchHandler
         // ReSharper disable once StaticFieldInGenericType
         private static readonly ParameterExpression _extraArgsArrayParameter = Expression.Parameter(typeof(object[]), "extraArgsArray");
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeHandlers">TBD</param>
         /// <exception cref="ArgumentOutOfRangeException">
         /// This exception is thrown if the an unknown <see cref="PredicateAndHandler.HandlerKind"/> is contained
         /// in a <see cref="TypeHandler.Handlers"/> in the given <paramref name="typeHandlers"/>.
         /// </exception>
+        /// <returns>TBD</returns>
         public MatchExpressionBuilderResult BuildLambdaExpression(IReadOnlyList<TypeHandler> typeHandlers)
         {
             var arguments = typeHandlers.SelectMany(h => h.GetArguments()).ToList();
@@ -199,6 +207,11 @@ namespace Akka.Tools.MatchHandler
             return Tuple.Create(parameters, argumentValues);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="arguments">TBD</param>
+        /// <returns>TBD</returns>
         public object[] CreateArgumentValuesArray(IReadOnlyList<Argument> arguments)
         {
             //Warning: This is a stripped down version, using the same algorithm as DecorateHandlerAndPredicateExpressions.

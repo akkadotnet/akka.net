@@ -22,6 +22,9 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterReadView : IDisposable
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ClusterEvent.CurrentClusterState State { get { return _state; } }
 
         /// <summary>
@@ -29,9 +32,15 @@ namespace Akka.Cluster
         /// </summary>
         internal volatile ClusterEvent.CurrentClusterState _state;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal Reachability Reachability { get { return _reachability; } }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal volatile Reachability _reachability;
 
         /// <summary>
@@ -46,6 +55,9 @@ namespace Akka.Cluster
 
         readonly Address _selfAddress;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address SelfAddress
         {
             get { return _selfAddress; }
@@ -55,6 +67,10 @@ namespace Akka.Cluster
 
         private readonly Cluster _cluster;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cluster">TBD</param>
         public ClusterReadView(Cluster cluster)
         {
             _cluster = cluster;
@@ -158,6 +174,9 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Member Self
         {
             get
@@ -253,12 +272,19 @@ namespace Akka.Cluster
         /// </summary>
         internal ImmutableHashSet<Address> SeenBy { get { return State.SeenBy; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="disposing">TBD</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)

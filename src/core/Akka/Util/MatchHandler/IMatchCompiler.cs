@@ -11,9 +11,30 @@ using System.Reflection.Emit;
 
 namespace Akka.Tools.MatchHandler
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public interface IMatchCompiler<in T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handlers">TBD</param>
+        /// <param name="capturedArguments">TBD</param>
+        /// <param name="signature">TBD</param>
+        /// <returns>TBD</returns>
         PartialAction<T> Compile(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handlers">TBD</param>
+        /// <param name="capturedArguments">TBD</param>
+        /// <param name="signature">TBD</param>
+        /// <param name="typeBuilder">TBD</param>
+        /// <param name="methodName">TBD</param>
+        /// <param name="methodAttributes">TBD</param>
+        /// <returns>TBD</returns>
         void CompileToMethod(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature, TypeBuilder typeBuilder, string methodName, MethodAttributes methodAttributes = MethodAttributes.Public | MethodAttributes.Static);
     }
 }

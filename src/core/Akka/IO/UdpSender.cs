@@ -16,6 +16,9 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     class UdpSender : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly UdpExt _udp;
@@ -26,6 +29,13 @@ namespace Akka.IO
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="udp">TBD</param>
+        /// <param name="channelRegistry">TBD</param>
+        /// <param name="commander">TBD</param>
+        /// <param name="options">TBD</param>
         public UdpSender(UdpExt udp, IChannelRegistry channelRegistry, IActorRef commander, IEnumerable<Inet.SocketOption> options)
         {
             _udp = udp;
@@ -45,15 +55,26 @@ namespace Akka.IO
             channelRegistry.Register(_channel, SocketAsyncOperation.None, Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override UdpExt Udp
         {
             get { return _udp; }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override DatagramChannel Channel
         {
             get { return _channel; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var registration = message as ChannelRegistration;
@@ -69,6 +90,9 @@ namespace Akka.IO
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             if (Channel.IsOpen())

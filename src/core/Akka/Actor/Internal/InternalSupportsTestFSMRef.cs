@@ -12,12 +12,15 @@ namespace Akka.Actor.Internal
     /// This is used to let TestFSMRef in TestKit access to internal methods.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
+    /// <typeparam name="TState">TBD</typeparam>
+    /// <typeparam name="TData">TBD</typeparam>
     public interface IInternalSupportsTestFSMRef<TState, TData>
     {
         /// <summary>
         /// INTERNAL API. Used for testing.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="upcomingState">TBD</param>
         void ApplyState(FSMBase.State<TState, TData> upcomingState);
 
         /// <summary>

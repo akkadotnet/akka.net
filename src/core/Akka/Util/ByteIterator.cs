@@ -13,14 +13,26 @@ using Akka.IO;
 
 namespace Akka.Util
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ByteIterator
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class ByteArrayIterator : ByteIterator
         {
             private byte[] _array;
             private int _until;
             private int _from;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="array">TBD</param>
+            /// <param name="from">TBD</param>
+            /// <param name="until">TBD</param>
             public ByteArrayIterator(byte[] array, int @from, int until)
             {
                 _array = array;
@@ -28,35 +40,54 @@ namespace Akka.Util
                 _until = until;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override int Len
             {
                 get { return _until - _from; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override bool HasNext
             {
                 get { return _from < _until; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override byte Head
             {
                 get { return _array[_from]; }
             }
 
-            /// <summary></summary>
-            /// <exception cref="IndexOutOfRangeException"></exception>
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <exception cref="IndexOutOfRangeException">TBD</exception>
+            /// <returns>TBD</returns>
             public override byte Next()
             {
                 if (!HasNext) throw new IndexOutOfRangeException();
                 return _array[_from++];
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             protected override void Clear()
             {
                 _array = new byte[0];
                 _from = _until = 0;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public int Length()
             {
                 var l = Len;
@@ -64,11 +95,20 @@ namespace Akka.Util
                 return l;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public new ByteArrayIterator Clone()
             {
                 return new ByteArrayIterator(_array, _from, _until);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="n">TBD</param>
+            /// <returns>TBD</returns>
             public override ByteIterator Take(int n)
             {
                 if (n < Len)
@@ -76,6 +116,11 @@ namespace Akka.Util
                 return this;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="n">TBD</param>
+            /// <returns>TBD</returns>
             public override ByteIterator Drop(int n)
             {
                 if (n > 0)
@@ -83,6 +128,11 @@ namespace Akka.Util
                 return this;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="p">TBD</param>
+            /// <returns>TBD</returns>
             public new ByteArrayIterator TakeWhile(Func<byte, bool> p)
             {
                 var prev = _from;
@@ -92,6 +142,11 @@ namespace Akka.Util
                 return this;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="p">TBD</param>
+            /// <returns>TBD</returns>
             public new ByteArrayIterator DropWhile(Func<byte, bool> p)
             {
                 var stop = false;
@@ -105,6 +160,13 @@ namespace Akka.Util
                 return this;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="xs">TBD</param>
+            /// <param name="start">TBD</param>
+            /// <param name="len">TBD</param>
+            /// <returns>TBD</returns>
             public void CopToArray(byte[] xs, int start, int len)
             {
                 var n = Math.Max(0, Math.Min(Math.Min(xs.Length - start, Len), len));
@@ -112,6 +174,10 @@ namespace Akka.Util
                 Drop(n);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override ByteString ToByteString()
             {
                 var result = _from == 0 && _until == _array.Length
@@ -121,15 +187,25 @@ namespace Akka.Util
                 return result;
             }
 
-            /// <summary></summary>
-            /// <exception cref="IndexOutOfRangeException"></exception>
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="xs">TBD</param>
+            /// <param name="offset">TBD</param>
+            /// <param name="n">TBD</param>
+            /// <exception cref="IndexOutOfRangeException">TBD</exception>
+            /// <returns>TBD</returns>
             public override ByteIterator GetBytes(byte[] xs, int offset, int n)
             {
                 if (n > Len) throw new IndexOutOfRangeException();
                 Array.Copy(_array, _from, xs, offset, n);
                 return Drop(n);
             }
-            
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override byte[] ToArray()
             {
                 var array = new byte[Len];
@@ -137,6 +213,11 @@ namespace Akka.Util
                 return array;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="buffer">TBD</param>
+            /// <returns>TBD</returns>
             public override int CopyToBuffer(ByteBuffer buffer)
             {
                 var copyLength = Math.Min(buffer.Remaining, Len);
@@ -149,17 +230,28 @@ namespace Akka.Util
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class MultiByteIterator : ByteIterator
         {
             private ILinearSeq<ByteArrayIterator> _iterators;
             private static readonly ILinearSeq<ByteArrayIterator> ClearedList = new ArrayLinearSeq<ByteArrayIterator>(new ByteArrayIterator[0]);
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="iterators">TBD</param>
             public MultiByteIterator(params ByteArrayIterator[] iterators)
             {
                 _iterators = new ArrayLinearSeq<ByteArrayIterator>(iterators);
                 Normalize();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="iterators">TBD</param>
             public MultiByteIterator(ILinearSeq<ByteArrayIterator> iterators)
             {
                 _iterators = iterators;
@@ -193,11 +285,17 @@ namespace Akka.Util
                 _iterators = _iterators.Tail();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             protected override void Clear()
             {
                 _iterators = new ArrayLinearSeq<ByteArrayIterator>(new ByteArrayIterator[0]);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override bool HasNext
             {
                 get
@@ -207,11 +305,17 @@ namespace Akka.Util
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override byte Head
             {
                 get { return Current.Head; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override byte Next()
             {
                 var result = Current.Next();
@@ -219,12 +323,20 @@ namespace Akka.Util
                 return result;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override int Len
             {
                 get { return _iterators.Aggregate(0, (a, x) => a + x.Len); }
             }
 
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="n">TBD</param>
+            /// <returns>TBD</returns>
             public override ByteIterator Take(int n)
             {
                 var rest = n;
@@ -243,6 +355,11 @@ namespace Akka.Util
                 return Normalize();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="n">TBD</param>
+            /// <returns>TBD</returns>
             public override ByteIterator Drop(int n)
             {
                 if (n > 0 && Len > 0)
@@ -256,6 +373,11 @@ namespace Akka.Util
                 return this;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="p">TBD</param>
+            /// <returns>TBD</returns>
             public override ByteIterator TakeWhile(Func<byte, bool> p)
             {
                 var stop = false;
@@ -272,6 +394,11 @@ namespace Akka.Util
                 return Normalize();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="p">TBD</param>
+            /// <returns>TBD</returns>
             public override ByteIterator DropWhile(Func<byte, bool> p)
             {
                 if (Len > 0)
@@ -284,6 +411,10 @@ namespace Akka.Util
                 return this;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override ByteString ToByteString()
             {
                 if (_iterators.Tail().IsEmpty) return _iterators.Head.ToByteString();
@@ -292,6 +423,17 @@ namespace Akka.Util
                 return result;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="T">TBD</typeparam>
+            /// <param name="xs">TBD</param>
+            /// <param name="offset">TBD</param>
+            /// <param name="n">TBD</param>
+            /// <param name="elemSize">TBD</param>
+            /// <param name="getSingle">TBD</param>
+            /// <param name="getMulti">TBD</param>
+            /// <returns>TBD</returns>
             protected MultiByteIterator GetToArray<T>(T[] xs, int offset, int n, int elemSize, Func<T> getSingle, Action<T[], int, int> getMulti)
             {
                 if(n <= 0) return this;
@@ -314,17 +456,33 @@ namespace Akka.Util
                 return GetToArray(xs, offset + nDone, n - nDone, elemSize, getSingle, getMulti);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="xs">TBD</param>
+            /// <param name="offset">TBD</param>
+            /// <param name="n">TBD</param>
+            /// <returns>TBD</returns>
             public override ByteIterator GetBytes(byte[] xs, int offset, int n)
             {
                 return GetToArray(xs, offset, n, 1, GetByte, (a, b, c) => Current.GetBytes(a, b, c));
             }
 
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override byte[] ToArray()
             {
                 return GetBytes(Len);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="buffer">TBD</param>
+            /// <returns>TBD</returns>
             public override int CopyToBuffer(ByteBuffer buffer)
             {
                 var n = _iterators.Aggregate(0, (a, x) => a + x.CopyToBuffer(buffer));
@@ -333,30 +491,66 @@ namespace Akka.Util
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract int Len { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract bool HasNext { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract byte Head { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public abstract byte Next();
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected abstract void Clear();
 
         /// <summary>
         /// N/A
         /// </summary>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>N/A</returns>
         public virtual ByteIterator Clone()
         {
             throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public Tuple<ByteIterator, ByteIterator> Duplicate()
         {
             return Tuple.Create(this, Clone());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ByteIterator Take(int n);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ByteIterator Drop(int n);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="from">TBD</param>
+        /// <param name="until">TBD</param>
+        /// <returns>TBD</returns>
         public virtual ByteIterator Slice(int @from, int until)
         {
             return @from > 0
@@ -368,7 +562,7 @@ namespace Akka.Util
         /// N/A
         /// </summary>
         /// <param name="p">N/A</param>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>N/A</returns>
         public virtual ByteIterator TakeWhile(Func<byte, bool> p)
         {
@@ -379,13 +573,18 @@ namespace Akka.Util
         /// N/A
         /// </summary>
         /// <param name="p">N/A</param>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>N/A</returns>
         public virtual ByteIterator DropWhile(Func<byte, bool> p)
         {
             throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="p">TBD</param>
+        /// <returns>TBD</returns>
         public virtual Tuple<ByteIterator, ByteIterator> Span(Func<byte, bool> p)
         {
             var that = Clone();
@@ -394,6 +593,11 @@ namespace Akka.Util
             return Tuple.Create(this, that);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="p">TBD</param>
+        /// <returns>TBD</returns>
         public virtual int IndexWhere(Func<byte, bool> p)
         {
             var index = 0;
@@ -404,18 +608,38 @@ namespace Akka.Util
             return found ? index : -1;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="elem">TBD</param>
+        /// <returns>TBD</returns>
         public virtual int IndexOf(byte elem)
         {
             return IndexWhere(x => x == elem);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public abstract ByteString ToByteString();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="f">TBD</param>
         public virtual void ForEach(Action<byte> f)
         {
             while (HasNext) f(Next());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="z">TBD</param>
+        /// <param name="op">TBD</param>
+        /// <returns>TBD</returns>
         public virtual T FoldLeft<T>(T z, Func<T, Byte, T> op)
         {
             var acc = z;
@@ -423,15 +647,26 @@ namespace Akka.Util
             return acc;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public abstract byte[] ToArray();
 
-        /// <summary>Get a single Byte from this iterator. Identical to next().</summary>
+        /// <summary>
+        /// Get a single Byte from this iterator. Identical to next().
+        /// </summary>
+        /// <returns>TBD</returns>
         public virtual byte GetByte()
         {
             return Next();
         }
 
-        /// <summary>Get a single Short from this iterator.</summary>
+        /// <summary>
+        /// Get a single Short from this iterator.
+        /// </summary>
+        /// <param name="byteOrder">TBD</param>
+        /// <returns>TBD</returns>
         public short GetShort(ByteOrder byteOrder = ByteOrder.BigEndian)
         {
             return byteOrder == ByteOrder.BigEndian
@@ -439,7 +674,11 @@ namespace Akka.Util
                 : (short) (((Next() & 0xff) << 0) | ((Next() & 0xff) << 8));
         }
 
-        /// <summary>Get a single Int from this iterator.</summary>
+        /// <summary>
+        /// Get a single Int from this iterator.
+        /// </summary>
+        /// <param name="byteOrder">TBD</param>
+        /// <returns>TBD</returns>
         public int GetInt(ByteOrder byteOrder = ByteOrder.BigEndian)
         {
             return byteOrder == ByteOrder.BigEndian
@@ -453,7 +692,11 @@ namespace Akka.Util
                           | ((Next() & 0xff) << 24));
         }
 
-        /// <summary>Get a single Long from this iterator.</summary>
+        /// <summary>
+        /// Get a single Long from this iterator.
+        /// </summary>
+        /// <param name="byteOrder">TBD</param>
+        /// <returns>TBD</returns>
         public long GetLong(ByteOrder byteOrder = ByteOrder.BigEndian)
         {
             return byteOrder == ByteOrder.BigEndian
@@ -475,8 +718,20 @@ namespace Akka.Util
                                 | ((Next() & 0xff) << 56));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="xs">TBD</param>
+        /// <param name="offset">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ByteIterator GetBytes(byte[] xs, int offset, int n);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
         public byte[] GetBytes(int n)
         {
             var bytes = new byte[n];
@@ -484,24 +739,51 @@ namespace Akka.Util
             return bytes;
         }
 
-      public abstract int CopyToBuffer(ByteBuffer buffer);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buffer">TBD</param>
+        /// <returns>TBD</returns>
+        public abstract int CopyToBuffer(ByteBuffer buffer);
     }
 
 
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public interface ILinearSeq<out T> : IEnumerable<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsEmpty { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         T Head { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         ILinearSeq<T> Tail();
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public class ArrayLinearSeq<T> : ILinearSeq<T>
     {
         private readonly T[] _array;
         private readonly int _offset;
         private readonly int _length;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="array">TBD</param>
         public ArrayLinearSeq(T[] array) : this(array, 0, array.Length)
         {
         }
@@ -513,21 +795,35 @@ namespace Akka.Util
             _length = length;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsEmpty
         {
             get { return _length == 0; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public T Head
         {
             get { return _array[_offset]; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public ILinearSeq<T> Tail()
         {
             return new ArrayLinearSeq<T>(_array, _offset + 1, _length - 1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IEnumerator<T> GetEnumerator()
         {
             return new Enumerator(this);
@@ -538,6 +834,11 @@ namespace Akka.Util
             return GetEnumerator();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="that">TBD</param>
+        /// <returns>TBD</returns>
         public static implicit operator ArrayLinearSeq<T>(T[] that)
         {
             return new ArrayLinearSeq<T>(that);

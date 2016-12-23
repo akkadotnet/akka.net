@@ -46,9 +46,20 @@ namespace Akka.Cluster
     /// </summary>
     class Gossip
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ImmutableSortedSet<Member> EmptyMembers = ImmutableSortedSet.Create<Member>();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Gossip Empty = new Gossip(EmptyMembers);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="members">TBD</param>
+        /// <returns>TBD</returns>
         public static Gossip Create(ImmutableSortedSet<Member> members)
         {
             if (members.IsEmpty) return Empty;
@@ -61,9 +72,15 @@ namespace Akka.Cluster
         static readonly ImmutableHashSet<MemberStatus> ConvergenceMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ImmutableHashSet<MemberStatus> ConvergenceSkipUnreachableWithMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ImmutableHashSet<MemberStatus> RemoveUnreachableWithMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
 
@@ -71,14 +88,38 @@ namespace Akka.Cluster
         readonly GossipOverview _overview;
         readonly VectorClock _version;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableSortedSet<Member> Members { get { return _members; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public GossipOverview Overview { get { return _overview; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public VectorClock Version { get { return _version; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="members">TBD</param>
         public Gossip(ImmutableSortedSet<Member> members) : this(members, new GossipOverview(), VectorClock.Create() ) {}
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="members">TBD</param>
+        /// <param name="overview">TBD</param>
         public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview) : this(members, overview, VectorClock.Create()) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="members">TBD</param>
+        /// <param name="overview">TBD</param>
+        /// <param name="version">TBD</param>
         public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview, VectorClock version)
         {
             _members = members;
@@ -97,6 +138,13 @@ namespace Akka.Cluster
             if (Cluster.IsAssertInvariantsEnabled) AssertInvariants();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="members">TBD</param>
+        /// <param name="overview">TBD</param>
+        /// <param name="version">TBD</param>
+        /// <returns>TBD</returns>
         public Gossip Copy(ImmutableSortedSet<Member> members = null, GossipOverview overview = null,
             VectorClock version = null)
         {
@@ -127,6 +175,8 @@ namespace Akka.Cluster
         /// <summary>
         /// Increments the version for this 'Node'.
         /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public Gossip Increment(VectorClock.Node node)
         {
             return Copy(version: _version.Increment(node));
@@ -135,8 +185,8 @@ namespace Akka.Cluster
         /// <summary>
         /// Adds a member to the member node ring.
         /// </summary>
-        /// <param name="member"></param>
-        /// <returns></returns>
+        /// <param name="member">TBD</param>
+        /// <returns>TBD</returns>
         public Gossip AddMember(Member member)
         {
             if (_members.Contains(member)) return this;
@@ -146,6 +196,8 @@ namespace Akka.Cluster
         /// <summary>
         /// Marks the gossip as seen by this node (address) by updating the address entry in the 'gossip.overview.seen'
         /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public Gossip Seen(UniqueAddress node)
         {
             if (SeenByNode(node)) return this;
@@ -155,6 +207,8 @@ namespace Akka.Cluster
         /// <summary>
         /// Marks the gossip as seen by only this node (address) by replacing the 'gossip.overview.seen'
         /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public Gossip OnlySeen(UniqueAddress node)
         {
             return Copy(overview: _overview.Copy(seen: ImmutableHashSet.Create(node)));
@@ -171,16 +225,28 @@ namespace Akka.Cluster
         /// <summary>
         /// Has this Gossip been seen by this node.
         /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public bool SeenByNode(UniqueAddress node)
         {
             return _overview.Seen.Contains(node);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="that">TBD</param>
+        /// <returns>TBD</returns>
         public Gossip MergeSeen(Gossip that)
         {
             return Copy(overview: _overview.Copy(seen: _overview.Seen.Union(that._overview.Seen)));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="that">TBD</param>
+        /// <returns>TBD</returns>
         public Gossip Merge(Gossip that)
         {
             //TODO: Member ordering import?
@@ -207,6 +273,11 @@ namespace Akka.Cluster
         // When that is done we check that all members with a convergence
         // status is in the seen table and has the latest vector clock
         // version
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         public bool Convergence(UniqueAddress selfUniqueAddress)
         {
             var unreachable = ReachabilityExcludingDownedObservers.Value.AllUnreachableOrTerminated
@@ -217,18 +288,38 @@ namespace Akka.Cluster
                 && !_members.Any(m => ConvergenceMemberStatus.Contains(m.Status) && !SeenByNode(m.UniqueAddress));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Lazy<Reachability> ReachabilityExcludingDownedObservers { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsLeader(UniqueAddress node, UniqueAddress selfUniqueAddress)
         {
             return Leader(selfUniqueAddress) == node && node != null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         public UniqueAddress Leader(UniqueAddress selfUniqueAddress)
         {
            return LeaderOf(_members, selfUniqueAddress);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         public UniqueAddress RoleLeader(string role, UniqueAddress selfUniqueAddress)
         {
             var roleMembers = _members
@@ -254,28 +345,47 @@ namespace Akka.Cluster
             return member.UniqueAddress;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<string> AllRoles
         {
             get { return _members.SelectMany(m => m.Roles).ToImmutableHashSet(); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsSingletonCluster
         {
             get { return _members.Count == 1; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public Member GetMember(UniqueAddress node)
         {
             return _membersMap.Value.GetOrElse(node, 
                 Member.Removed(node)); // placeholder for removed member
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public bool HasMember(UniqueAddress node)
         {
             return _membersMap.Value.ContainsKey(node);
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Member YoungestMember
         {
             get
@@ -286,6 +396,11 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="removedNode">TBD</param>
+        /// <returns>TBD</returns>
         public Gossip Prune(VectorClock.Node removedNode)
         {
             var newVersion = Version.Prune(removedNode);
@@ -295,7 +410,11 @@ namespace Akka.Cluster
                 return new Gossip(Members, Overview, newVersion);
         }
 
-    public override string ToString()
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString()
         {
             return String.Format("Gossip(members = [{0}], overview = {1}, version = {2}",
                 _members.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b), _overview, _version);
@@ -310,22 +429,46 @@ namespace Akka.Cluster
         readonly ImmutableHashSet<UniqueAddress> _seen;
         readonly Reachability _reachability;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public GossipOverview() : this(ImmutableHashSet.Create<UniqueAddress>(), Reachability.Empty) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reachability">TBD</param>
         public GossipOverview(Reachability reachability) : this(ImmutableHashSet.Create<UniqueAddress>(), reachability) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="seen">TBD</param>
+        /// <param name="reachability">TBD</param>
         public GossipOverview(ImmutableHashSet<UniqueAddress> seen, Reachability reachability)
         {
             _seen = seen;
             _reachability = reachability;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="seen">TBD</param>
+        /// <param name="reachability">TBD</param>
+        /// <returns>TBD</returns>
         public GossipOverview Copy(ImmutableHashSet<UniqueAddress> seen = null, Reachability reachability = null)
         {
             return new GossipOverview(seen ?? _seen, reachability ?? _reachability);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<UniqueAddress> Seen { get { return _seen; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Reachability Reachability { get { return _reachability; } }
     }
 
@@ -344,6 +487,14 @@ namespace Akka.Cluster
         readonly UniqueAddress _from;
         readonly UniqueAddress _to;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="from">TBD</param>
+        /// <param name="to">TBD</param>
+        /// <param name="gossip">TBD</param>
+        /// <param name="deadline">TBD</param>
+        /// <returns>TBD</returns>
         public GossipEnvelope(UniqueAddress from, UniqueAddress to, Gossip gossip, Deadline deadline = null)
         {
             _from = from;
@@ -352,9 +503,21 @@ namespace Akka.Cluster
             Deadline = deadline;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UniqueAddress From { get { return _from; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UniqueAddress To { get { return _to; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Gossip Gossip { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Deadline Deadline { get; set; }
     }
 
@@ -369,20 +532,41 @@ namespace Akka.Cluster
         readonly UniqueAddress _from;
         readonly VectorClock _version;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UniqueAddress From { get { return _from; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public VectorClock Version { get { return _version; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="from">TBD</param>
+        /// <param name="version">TBD</param>
         public GossipStatus(UniqueAddress from, VectorClock version)
         {
             _from = from;
             _version = version;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         protected bool Equals(GossipStatus other)
         {
             return _from.Equals(other._from) && _version.IsSameAs(other._version);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -391,6 +575,10 @@ namespace Akka.Cluster
             return Equals((GossipStatus) obj);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked

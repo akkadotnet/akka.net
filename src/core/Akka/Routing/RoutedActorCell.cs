@@ -21,6 +21,15 @@ namespace Akka.Routing
     /// </summary>
     internal class RoutedActorCell : ActorCell
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RoutedActorCell"/> class.
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="self">TBD</param>
+        /// <param name="routerProps">TBD</param>
+        /// <param name="dispatcher">TBD</param>
+        /// <param name="routeeProps">TBD</param>
+        /// <param name="supervisor">TBD</param>
         public RoutedActorCell(
             ActorSystemImpl system,
             IInternalActorRef self,
@@ -35,17 +44,34 @@ namespace Akka.Routing
             Router = null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Router Router { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Props RouteeProps { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public RouterConfig RouterConfig { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routee">TBD</param>
         internal void AddRoutee(Routee routee)
         {
             AddRoutees(new[] { routee });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routees">TBD</param>
         internal void AddRoutees(IList<Routee> routees)
         {
             foreach (var routee in routees)
@@ -56,6 +82,11 @@ namespace Akka.Routing
             Router = r.WithRoutees(r.Routees.Concat(routees).ToArray());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routee">TBD</param>
+        /// <param name="stopChild">TBD</param>
         internal void RemoveRoutee(Routee routee, bool stopChild)
         {
             RemoveRoutees(new[] { routee }, stopChild);
@@ -65,8 +96,8 @@ namespace Akka.Routing
         /// Remove routees from <see cref="Router"/>. Messages in flight may still
         /// be routed to the old <see cref="Router"/> instance containing the old routees.
         /// </summary>
-        /// <param name="affectedRoutees"></param>
-        /// <param name="stopChild"></param>
+        /// <param name="affectedRoutees">TBD</param>
+        /// <param name="stopChild">TBD</param>
         internal void RemoveRoutees(IList<Routee> affectedRoutees, bool stopChild)
         {
             var r = Router;
@@ -99,7 +130,7 @@ namespace Akka.Routing
         /// <summary>
         /// Used to stop child routees - typically used in resizable <see cref="Pool"/> routers
         /// </summary>
-        /// <param name="routee"></param>
+        /// <param name="routee">TBD</param>
         private void StopIfChild(Routee routee)
         {
             var actorRefRoutee = routee as ActorRefRoutee;
@@ -118,6 +149,9 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Start()
         {
             // create the initial routees before scheduling the Router actor
@@ -162,6 +196,10 @@ namespace Akka.Routing
         /// </summary>
         protected virtual void PreSuperStart() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
         public override void SendMessage(Envelope envelope)
         {
             if (RouterConfig.IsManagementMessage(envelope.Message))
@@ -170,6 +208,9 @@ namespace Akka.Routing
                 Router.Route(envelope.Message, envelope.Sender);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override ActorBase CreateNewActorInstance()
         {
             RouterActor instance = RouterConfig.CreateRouterActor();

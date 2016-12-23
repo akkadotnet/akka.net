@@ -37,6 +37,10 @@ namespace Akka.Event
             Args = args;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return _formatter.Format(Format, Args);

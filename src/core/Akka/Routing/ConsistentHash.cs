@@ -24,6 +24,7 @@ namespace Akka.Routing
     /// Note that toString of the ring nodes are used for the node
     /// hash, i.e. make sure it is different for different nodes.
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public class ConsistentHash<T>
     {
         private readonly SortedDictionary<int, T> _nodes;
@@ -32,6 +33,8 @@ namespace Akka.Routing
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHash{T}"/> class.
         /// </summary>
+        /// <param name="nodes">TBD</param>
+        /// <param name="virtualNodesFactor">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="virtualNodesFactor"/> is less than one.
         /// </exception>
@@ -75,6 +78,7 @@ namespace Akka.Routing
         /// Note that <see cref="ConsistentHash{T}"/> is immutable and
         /// this operation returns a new instance.
         /// </summary>
+        /// <param name="node">TBD</param>
         public ConsistentHash<T> Add(T node)
         {
             return this + node;
@@ -86,6 +90,7 @@ namespace Akka.Routing
         /// Note that <see cref="ConsistentHash{T}"/> is immutable and
         /// this operation returns a new instance.
         /// </summary>
+        /// <param name="node">TBD</param>
         public ConsistentHash<T> Remove(T node)
         {
             return this - node;
@@ -95,8 +100,8 @@ namespace Akka.Routing
         /// Converts the result of <see cref="Array.BinarySearch{T}(T[], T)"/> into an index in the 
         /// <see cref="RingTuple"/> array.
         /// </summary>
-        /// <param name="i"></param>
-        /// <returns></returns>
+        /// <param name="i">TBD</param>
+        /// <returns>TBD</returns>
         private int Idx(int i)
         {
             if (i >= 0) return i; //exact match
@@ -112,9 +117,11 @@ namespace Akka.Routing
         /// Get the node responsible for the data key.
         /// Can only be used if nodes exist in the node ring.
         /// </summary>
+        /// <param name="key">TBD</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the node ring is empty.
         /// </exception>
+        /// <returns>TBD</returns>
         public T NodeFor(byte[] key)
         {
             if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
@@ -126,9 +133,11 @@ namespace Akka.Routing
         /// Get the node responsible for the data key.
         /// Can only be used if nodes exist in the node ring.
         /// </summary>
+        /// <param name="key">TBD</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the node ring is empty.
         /// </exception>
+        /// <returns>TBD</returns>
         public T NodeFor(string key)
         {
             if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
@@ -143,14 +152,25 @@ namespace Akka.Routing
         {
             get { return !_nodes.Any(); }
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class ConsistentHashingGroupSurrogate : ISurrogate
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new ConsistentHashingGroup(Paths);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string[] Paths { get; set; }
         }
 
@@ -163,7 +183,10 @@ namespace Akka.Routing
         /// 
         /// Note that <see cref="ConsistentHash{T}"/> is immutable and
         /// this operation returns a new instance.
-        /// </summary>s
+        /// </summary>
+        /// <param name="hash">TBD</param>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public static ConsistentHash<T> operator +(ConsistentHash<T> hash, T node)
         {
             var nodeHash = ConsistentHash.HashFor(node.ToString());
@@ -177,6 +200,9 @@ namespace Akka.Routing
         /// Note that <see cref="ConsistentHash{T}"/> is immutable and
         /// this operation returns a new instance.
         /// </summary>
+        /// <param name="hash">TBD</param>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public static ConsistentHash<T> operator -(ConsistentHash<T> hash, T node)
         {
             var nodeHash = ConsistentHash.HashFor(node.ToString());
@@ -195,6 +221,10 @@ namespace Akka.Routing
         /// <summary>
         /// Factory method to create a <see cref="ConsistentHash{T}"/> instance.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="nodes">TBD</param>
+        /// <param name="virtualNodesFactor">TBD</param>
+        /// <returns>TBD</returns>
         public static ConsistentHash<T> Create<T>(IEnumerable<T> nodes, int virtualNodesFactor)
         {
             var sortedDict = new SortedDictionary<int, T>();
@@ -212,6 +242,12 @@ namespace Akka.Routing
 
         #region Hashing methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nodeHash">TBD</param>
+        /// <param name="vnode">TBD</param>
+        /// <returns>TBD</returns>
         internal static int ConcatenateNodeHash(int nodeHash, int vnode)
         {
             unchecked
@@ -221,18 +257,41 @@ namespace Akka.Routing
                 return (int)MurmurHash.FinalizeHash(h);
             }
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class ConsistentHashingPoolSurrogate : ISurrogate
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int NrOfInstances { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool UsePoolDispatcher { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Resizer Resizer { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public SupervisorStrategy SupervisorStrategy { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string RouterDispatcher { get; set; }
         }
 
@@ -275,11 +334,21 @@ namespace Akka.Routing
             return obj;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bytes">TBD</param>
+        /// <returns>TBD</returns>
         internal static int HashFor(byte[] bytes)
         {
             return MurmurHash.ByteHash(bytes);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="hashKey">TBD</param>
+        /// <returns>TBD</returns>
         internal static int HashFor(string hashKey)
         {
             return MurmurHash.StringHash(hashKey);

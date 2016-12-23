@@ -53,6 +53,10 @@ namespace Akka.Dispatch
         /// <summary>
         /// Default constructor...
         /// </summary>
+        /// <param name="eventStream">TBD</param>
+        /// <param name="scheduler">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="mailboxes">TBD</param>
         public DefaultDispatcherPrerequisites(EventStream eventStream, IScheduler scheduler, Settings settings, Mailboxes mailboxes)
         {
             Mailboxes = mailboxes;
@@ -61,9 +65,21 @@ namespace Akka.Dispatch
             EventStream = eventStream;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public EventStream EventStream { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IScheduler Scheduler { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Settings Settings { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Mailboxes Mailboxes { get; private set; }
     }
 
@@ -101,11 +117,21 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class DefaultTaskSchedulerExecutorConfigurator : ExecutorServiceConfigurator
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public override ExecutorService Produce(string id)
         {
             return new TaskSchedulerExecutor(id, TaskScheduler.Default);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="prerequisites">TBD</param>
         public DefaultTaskSchedulerExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) 
             : base(config, prerequisites)
         {
@@ -132,6 +158,8 @@ namespace Akka.Dispatch
         /// <summary>
         /// Initializes a new instance of the <see cref="ForkJoinExecutorServiceFactory"/> class.
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="prerequisites">TBD</param>
         /// <exception cref="ConfigurationException">
         /// This exception is thrown if either 'dedicated-thread-pool' OR 'fork-join-executor' is not defined in <paramref name="config"/>.
         /// </exception>
@@ -141,6 +169,11 @@ namespace Akka.Dispatch
             _threadPoolConfiguration = ConfigureSettings(config);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public override ExecutorService Produce(string id)
         {
             return new ForkJoinExecutor(id, _threadPoolConfiguration);
@@ -180,6 +213,11 @@ namespace Akka.Dispatch
     {
         private static readonly bool IsFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public override ExecutorService Produce(string id)
         {
             if (IsFullTrusted)
@@ -187,6 +225,11 @@ namespace Akka.Dispatch
             return new PartialTrustThreadPoolExecutorService(id);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="prerequisites">TBD</param>
         public ThreadPoolExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
         }
@@ -200,6 +243,8 @@ namespace Akka.Dispatch
         /// <summary>
         /// Takes a <see cref="Config"/> object, usually passed in via <see cref="Settings.Config"/>
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="prerequisites">TBD</param>
         protected MessageDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
@@ -223,7 +268,7 @@ namespace Akka.Dispatch
         /// or returns a reference to an existing instance is an implementation detail of the
         /// underlying implementation.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public abstract MessageDispatcher Dispatcher();
 
         /// <summary>
@@ -274,6 +319,9 @@ namespace Akka.Dispatch
 
         /* dispatcher debugging helpers */
         private const bool DebugDispatcher = false; // IMPORTANT: make this a compile-time constant so compiler will elide debug code in production
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal static readonly Lazy<Index<MessageDispatcher, IInternalActorRef>> Actors = new Lazy<Index<MessageDispatcher, IInternalActorRef>>(() => new Index<MessageDispatcher, IInternalActorRef>(), LazyThreadSafetyMode.PublicationOnly);
 
         /// <summary>
@@ -316,6 +364,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Initializes a new instance of the <see cref="MessageDispatcher" /> class.
         /// </summary>
+        /// <param name="configurator">TBD</param>
         protected MessageDispatcher(MessageDispatcherConfigurator configurator)
         {
             Configurator = configurator;
@@ -410,7 +459,7 @@ namespace Akka.Dispatch
                 }
                 finally
                 {
-                    if(_dispatcher.AddInhabitants(-1L) == 0)
+                    if (_dispatcher.AddInhabitants(-1L) == 0)
                         _dispatcher.IfSensibleToDoSoThenScheduleShutdown();
                     _dispatcher = null;
                     _runnable = null;
@@ -550,8 +599,10 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// Dispatches a user-defined message from a mailbox to an <see cref="ActorCell"/>        
+        /// Dispatches a user-defined message from a mailbox to an <see cref="ActorCell"/>
         /// </summary>
+        /// <param name="cell">TBD</param>
+        /// <param name="envelope">TBD</param>
         public virtual void Dispatch(ActorCell cell, Envelope envelope)
         {
             var mbox = cell.Mailbox;
@@ -560,8 +611,10 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// Dispatches a <see cref="SystemMessage"/> from a mailbox to an <see cref="ActorCell"/>        
+        /// Dispatches a <see cref="SystemMessage"/> from a mailbox to an <see cref="ActorCell"/>
         /// </summary>
+        /// <param name="cell">TBD</param>
+        /// <param name="message">TBD</param>
         public virtual void SystemDispatch(ActorCell cell, SystemMessage message)
         {
             var mbox = cell.Mailbox;

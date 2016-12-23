@@ -7,10 +7,21 @@
 
 namespace Akka.Util.Internal.Collections
 {
-	public interface IKeyValuePair<out TKey, out TValue>
-	{
-		TKey Key { get; }
-		TValue Value { get; }
-	}
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TKey">TBD</typeparam>
+    /// <typeparam name="TValue">TBD</typeparam>
+    public interface IKeyValuePair<out TKey, out TValue>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        TKey Key { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        TValue Value { get; }
+    }
 }
 

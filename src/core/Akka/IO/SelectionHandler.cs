@@ -22,8 +22,15 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class SelectionHandlerSettings
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
         protected SelectionHandlerSettings(Config config)
         {
             //TODO: requiring
@@ -39,43 +46,99 @@ namespace Akka.IO
             TraceLogging = config.GetBoolean("trace-logging");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MaxChannels { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int SelectorAssociationRetries { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string SelectorDispatcher { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string WorkerDispatcher { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool TraceLogging { get; private set; }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MaxChannelsPerSelector { get; protected set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal interface IChannelRegistry
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="channel">TBD</param>
+        /// <param name="initialOps">TBD</param>
+        /// <param name="channelActor">TBD</param>
         void Register(SocketChannel channel, SocketAsyncOperation? initialOps, IActorRef channelActor);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ChannelRegistration
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="enableInterest">TBD</param>
+        /// <param name="disableInterest">TBD</param>
         public ChannelRegistration(Action<SocketAsyncOperation> enableInterest, Action<SocketAsyncOperation> disableInterest)
         {
             EnableInterest = enableInterest;
             DisableInterest = disableInterest;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Action<SocketAsyncOperation> EnableInterest { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Action<SocketAsyncOperation> DisableInterest { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class SelectionHandler : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         // OBJECT 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public interface IHasFailureMessage
         {
             object FailureMessage { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class WorkerForCommand : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="apiCommand">TBD</param>
+            /// <param name="commander">TBD</param>
+            /// <param name="childProps">TBD</param>
             public WorkerForCommand(IHasFailureMessage apiCommand, IActorRef commander, Func<IChannelRegistry, Props> childProps)
             {
                 ApiCommand = apiCommand;
@@ -83,56 +146,114 @@ namespace Akka.IO
                 ChildProps = childProps;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IHasFailureMessage ApiCommand { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Commander { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Func<IChannelRegistry, Props> ChildProps { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class Retry : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="command">TBD</param>
+            /// <param name="retriesLeft">TBD</param>
             public Retry(WorkerForCommand command, int retriesLeft)
             {
                 Command = command;
                 RetriesLeft = retriesLeft;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public WorkerForCommand Command { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int RetriesLeft { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class ChannelConnectable
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ChannelConnectable Instance = new ChannelConnectable();
 
             private ChannelConnectable()
             { }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class ChannelAcceptable
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ChannelAcceptable Instance = new ChannelAcceptable();
 
             private ChannelAcceptable()
             { }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class ChannelReadable : IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ChannelReadable Instance = new ChannelReadable();
 
             private ChannelReadable()
             { }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class ChannelWritable : IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ChannelWritable Instance = new ChannelWritable();
 
             private ChannelWritable()
             { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract class SelectorBasedManager : ActorBase
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             protected readonly IActorRef SelectorPool;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="selectorSettings">TBD</param>
+            /// <param name="nrOfSelectors">TBD</param>
             protected SelectorBasedManager(SelectionHandlerSettings selectorSettings, int nrOfSelectors)
             {
                 SelectorPool = Context.ActorOf(
@@ -140,11 +261,20 @@ namespace Akka.IO
                     name: "selectors");
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             protected override SupervisorStrategy SupervisorStrategy()
             {
                 return ConnectionSupervisorStrategy;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="pf">TBD</param>
+            /// <returns>TBD</returns>
             protected Receive WorkerForCommandHandler(Func<IHasFailureMessage, Func<IChannelRegistry, Props>> pf)
             {
                 return message =>
@@ -183,6 +313,10 @@ namespace Akka.IO
                 else base.LogFailure(context, child, cause, directive);
             }
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly SupervisorStrategy ConnectionSupervisorStrategy = new ConnectionSupervisorStrategyImp();
 
         private class ChannelRegistryImpl : IChannelRegistry
@@ -307,12 +441,21 @@ namespace Akka.IO
         private int _sequenceNumber;
         private int _childCount;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
         public SelectionHandler(SelectionHandlerSettings settings)
         {
             _settings = settings;
             _registry = new ChannelRegistryImpl(Context.GetLogger());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var cmd = message as WorkerForCommand;
@@ -336,6 +479,9 @@ namespace Akka.IO
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             _registry.Shutdown();
@@ -363,6 +509,10 @@ namespace Akka.IO
                 catch(Exception _) { }
             }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return new SelectionHandlerSupervisorStrategy();
@@ -399,10 +549,16 @@ namespace Akka.IO
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     class SingleThreadExecutionContext
     {
         private readonly BlockingCollection<Action> _queue = new BlockingCollection<Action>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public SingleThreadExecutionContext()
         {
             Task.Factory.StartNew(() =>
@@ -412,6 +568,10 @@ namespace Akka.IO
             }, TaskCreationOptions.LongRunning);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         public void Execute(Action action)
         {
             try
@@ -425,6 +585,9 @@ namespace Akka.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Stop()
         {
             _queue.CompleteAdding();

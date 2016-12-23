@@ -25,35 +25,81 @@ namespace Akka.Actor
     public static class Futures
     {
         //when asking from outside of an actor, we need to pass a system, so the FutureActor can register itself there and be resolvable for local and remote calls
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="self">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout = null)
         {
             return self.Ask<object>(message, timeout, CancellationToken.None);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="self">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         public static Task<object> Ask(this ICanTell self, object message, CancellationToken cancellationToken)
         {
             return self.Ask<object>(message, null, cancellationToken);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="self">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             return self.Ask<object>(message, timeout, cancellationToken);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
         {
             return self.Ask<T>(message, timeout, CancellationToken.None);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, CancellationToken cancellationToken)
         {
             return self.Ask<T>(message, null, cancellationToken);
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
+        /// <returns>TBD</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             IActorRefProvider provider = ResolveProvider(self);
@@ -63,6 +109,11 @@ namespace Akka.Actor
             return Ask(self, message, provider, timeout, cancellationToken).CastTask<object, T>();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="self">TBD</param>
+        /// <returns>TBD</returns>
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
             if (ActorCell.Current != null)
@@ -145,6 +196,9 @@ namespace Akka.Actor
         private readonly IActorRefProvider _provider;
         private readonly TaskCompletionSource<object> _promise;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Task<object> Result => _promise.Task;
 
         /// <summary>
@@ -169,35 +223,62 @@ namespace Akka.Actor
            */
         private AtomicReference<object> _stateDoNotCallMeDirectly = new AtomicReference<object>(null);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Registering
         {
             private Registering() { }
             // ReSharper disable once InconsistentNaming
             private static readonly Registering _instance = new Registering();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static Registering Instance { get { return _instance; } }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Stopped
         {
             private Stopped() { }
             // ReSharper disable once InconsistentNaming
             private static readonly Stopped _instance = new Stopped();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static Stopped Instance { get { return _instance; } }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class StoppedWithPath : IEquatable<StoppedWithPath>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="path">TBD</param>
             public StoppedWithPath(ActorPath path)
             {
                 Path = path;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ActorPath Path { get; private set; }
 
             #region Equality
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             public bool Equals(StoppedWithPath other)
             {
                 if (ReferenceEquals(null, other)) return false;
@@ -205,6 +286,11 @@ namespace Akka.Actor
                 return Equals(Path, other.Path);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -212,6 +298,10 @@ namespace Akka.Actor
                 return obj is StoppedWithPath && Equals((StoppedWithPath)obj);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 return (Path != null ? Path.GetHashCode() : 0);
@@ -229,6 +319,15 @@ namespace Akka.Actor
         // use a static delegate to avoid allocations
         private static readonly Action<object> CancelAction = o => ((TaskCompletionSource<object>)o).TrySetCanceled();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="provider">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="targetName">TBD</param>
+        /// <param name="messageClassName">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         public static PromiseActorRef Apply(IActorRefProvider provider, TimeSpan timeout, object targetName,
             string messageClassName, IActorRef sender = null)
         {
@@ -314,12 +413,18 @@ namespace Akka.Actor
             return _stateDoNotCallMeDirectly.CompareAndSet(oldState, newState);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IInternalActorRef Parent
         {
             get { return Provider.TempContainer; }
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path
         {
             get { return GetPath(); }
@@ -368,7 +473,11 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         /// <exception cref="InvalidMessageException">
         /// This exception is thrown if the given <paramref name="message"/> is undefined.
         /// </exception>
@@ -389,6 +498,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
             if (message is Terminate) Stop();
@@ -423,6 +536,9 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Stop()
         {
             while (true)
@@ -482,4 +598,3 @@ namespace Akka.Actor
         }
     }
 }
-

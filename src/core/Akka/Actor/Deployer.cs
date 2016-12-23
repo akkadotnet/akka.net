@@ -21,10 +21,17 @@ namespace Akka.Actor
     /// </summary>
     public class Deployer
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly Config Default;
         private readonly Settings _settings;
         private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
         public Deployer(Settings settings)
         {
             _settings = settings;
@@ -40,6 +47,11 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public Deploy Lookup(ActorPath path)
         {
             if (path.Elements.Head() != "user" || path.Elements.Count() < 2)
@@ -49,17 +61,30 @@ namespace Akka.Actor
             return Lookup(elements);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public Deploy Lookup(IEnumerable<string> path)
         {
             return Lookup(path.GetEnumerator());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public Deploy Lookup(IEnumerator<string> path)
         {
             return _deployments.Value.Find(path).Data;
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="deploy">TBD</param>
         /// <exception cref="IllegalActorNameException">
         /// This exception is thrown if the actor name in the deployment path is empty or contains invalid ASCII.
         /// Valid ASCII includes letters and anything from <see cref="ActorPath.ValidSymbols"/>. Note that paths
@@ -91,6 +116,12 @@ namespace Akka.Actor
             add(elements, deploy);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="key">TBD</param>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public virtual Deploy ParseConfig(string key, Config config)
         {
             var deployment = config.WithFallback(Default);

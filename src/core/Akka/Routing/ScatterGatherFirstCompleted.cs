@@ -197,6 +197,11 @@ namespace Akka.Routing
             return new Router(new ScatterGatherFirstCompletedRoutingLogic(Within));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return NrOfInstances;
@@ -406,6 +411,12 @@ namespace Akka.Routing
 
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routees">TBD</param>
+        /// <param name="within">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within) instead")]
         public ScatterGatherFirstCompletedGroup(IEnumerable<IActorRef> routees, TimeSpan within)
             : this(routees.Select(c => c.Path.ToString()), within, Dispatchers.DefaultDispatcherId)
@@ -438,6 +449,11 @@ namespace Akka.Routing
             return new Router(new ScatterGatherFirstCompletedRoutingLogic(Within));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;

@@ -17,12 +17,18 @@ namespace Akka.Routing
     /// </summary>
     internal class ResizablePoolActor : RouterPoolActor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="supervisorStrategy">TBD</param>
         public ResizablePoolActor(SupervisorStrategy supervisorStrategy) : base(supervisorStrategy)
         {
         }
 
-        /// <summary></summary>
-        /// <exception cref="ActorInitializationException"></exception>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ActorInitializationException">TBD</exception>
         protected ResizablePoolCell ResizerCell
         {
             get
@@ -35,6 +41,11 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override void OnReceive(object message)
         {
             if (message is Resize && ResizerCell != null)
@@ -47,6 +58,9 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void StopIfAllRouteesRemoved()
         {
             //we don't care if routees are removed

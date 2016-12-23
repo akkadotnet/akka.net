@@ -122,31 +122,45 @@ namespace Akka.Actor
         /// <summary>
         /// Returns an extension registered to this ActorSystem
         /// </summary>
+        /// <param name="extensionId">TBD</param>
+        /// <returns>TBD</returns>
         public abstract object GetExtension(IExtensionId extensionId);
 
         /// <summary>
         /// Returns an extension registered to this ActorSystem
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public abstract T GetExtension<T>() where T : class, IExtension;
 
         /// <summary>
         /// Determines whether this instance has the specified extension.
         /// </summary>
+        /// <param name="t">TBD</param>
+        /// <returns>TBD</returns>
         public abstract bool HasExtension(Type t);
 
         /// <summary>
         /// Determines whether this instance has the specified extension.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public abstract bool HasExtension<T>() where T : class, IExtension;
 
         /// <summary>
         /// Tries to the get the extension of specified type.
         /// </summary>
+        /// <param name="extensionType">TBD</param>
+        /// <param name="extension">TBD</param>
+        /// <returns>TBD</returns>
         public abstract bool TryGetExtension(Type extensionType, out object extension);
 
         /// <summary>
         /// Tries to the get the extension of specified type.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="extension">TBD</param>
+        /// <returns>TBD</returns>
         public abstract bool TryGetExtension<T>(out T extension) where T : class, IExtension;
 
         /// <summary>
@@ -178,6 +192,7 @@ namespace Akka.Actor
         /// using the `dispatcher` of this actor system as it will have been shut down before the
         /// task completes.
         /// </summary>
+        /// <returns>TBD</returns>
         public abstract Task Terminate();
 
         /// <summary>
@@ -228,6 +243,10 @@ namespace Akka.Actor
         /// </summary>
         public abstract Task WhenTerminated { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
         public abstract void Stop(IActorRef actor);
         private bool _isDisposed; //Automatically initialized to false;
 
@@ -279,12 +298,32 @@ namespace Akka.Actor
             }
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="extension">TBD</param>
+        /// <returns>TBD</returns>
         public abstract object RegisterExtension(IExtensionId extension);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IActorRef ActorOf(Props props, string name = null);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ActorSelection ActorSelection(ActorPath actorPath);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ActorSelection ActorSelection(string actorPath);
 
         /// <summary>

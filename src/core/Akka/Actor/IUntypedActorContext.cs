@@ -14,6 +14,11 @@ namespace Akka.Actor
     /// </summary>
     public interface IUntypedActorContext : IActorContext
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="discardOld">TBD</param>
         [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         void Become(UntypedReceive receive, bool discardOld = true);
 

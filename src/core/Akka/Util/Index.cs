@@ -20,8 +20,13 @@ namespace Akka.Util
     /// Add/remove is serialized over the specified key.
     /// Reads are fully concurrent.
     /// </summary>
+    /// <typeparam name="TKey">TBD</typeparam>
+    /// <typeparam name="TValue">TBD</typeparam>
     public class Index<TKey, TValue> where TValue : IComparable<TValue>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Index()
         {
             _container = new ConcurrentDictionary<TKey, ConcurrentSet<TValue>>();
@@ -100,6 +105,10 @@ namespace Akka.Util
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
         public IEnumerable<TValue> this[TKey index]
         {
             get

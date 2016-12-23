@@ -9,12 +9,24 @@ using System;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class InetAddressDnsProvider : IDnsProvider
     {
         private readonly DnsBase _cache = new SimpleDnsCache();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public DnsBase Cache { get { return _cache; }}
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Type ActorClass { get { return typeof (InetAddressDnsResolver); } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Type ManagerClass { get { return typeof (SimpleDnsManager); } }
     }
 }

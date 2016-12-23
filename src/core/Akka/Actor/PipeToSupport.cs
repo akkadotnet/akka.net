@@ -21,6 +21,13 @@ namespace Akka.Actor
         /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
         /// the task completes
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="taskToPipe">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="success">TBD</param>
+        /// <param name="failure">TBD</param>
+        /// <returns>TBD</returns>
         public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null, Func<T, object> success = null, Func<Exception, object> failure = null)
         {
             sender = sender ?? ActorRefs.NoSender;
@@ -41,6 +48,10 @@ namespace Akka.Actor
         /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
         /// the task completes.  As this task has no result, only exceptions will be piped to the <paramref name="recipient"/>
         /// </summary>
+        /// <param name="taskToPipe">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         public static Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null)
         {
             sender = sender ?? ActorRefs.NoSender;

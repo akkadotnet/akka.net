@@ -16,11 +16,28 @@ namespace Akka.Util.Internal
     /// </summary>
     public static class StringBuilderExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="sb">TBD</param>
+        /// <param name="separator">TBD</param>
+        /// <param name="values">TBD</param>
+        /// <returns>TBD</returns>
         public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values)
         {
             return AppendJoin(sb, separator, values, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="sb">TBD</param>
+        /// <param name="separator">TBD</param>
+        /// <param name="values">TBD</param>
+        /// <param name="valueAppender">TBD</param>
+        /// <returns>TBD</returns>
         public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values, Action<StringBuilder, T, int> valueAppender)
         {
             if (values == null) return sb;

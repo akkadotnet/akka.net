@@ -20,12 +20,15 @@ namespace Akka.Dispatch.MessageQueues
         // doesn't need to be threadsafe - only called from within actor
         private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly IMessageQueue MessageQueue;
         /// <summary>
         /// Takes another <see cref="IMessageQueue"/> as an argument - wraps <paramref name="messageQueue"/>
         /// in order to provide it with prepend (<see cref="EnqueueFirst"/>) semantics.
         /// </summary>
-        /// <param name="messageQueue"></param>
+        /// <param name="messageQueue">TBD</param>
         public DequeWrapperMessageQueue(IMessageQueue messageQueue)
         {
             MessageQueue = messageQueue;
@@ -48,6 +51,11 @@ namespace Akka.Dispatch.MessageQueues
             get { return MessageQueue.Count + _prependBuffer.Count; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receiver">TBD</param>
+        /// <param name="envelope">TBD</param>
         public void Enqueue(IActorRef receiver, Envelope envelope)
         {
             MessageQueue.Enqueue(receiver, envelope);
@@ -72,6 +80,11 @@ namespace Akka.Dispatch.MessageQueues
             return MessageQueue.TryDequeue(out envelope);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="deadletters">TBD</param>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
             Envelope msg;
