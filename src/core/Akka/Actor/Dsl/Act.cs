@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 
 namespace Akka.Actor.Dsl
 {
@@ -60,6 +61,26 @@ namespace Akka.Actor.Dsl
         /// </summary>
         /// <param name="handler">TBD</param>
         void ReceiveAny(Action<object, IActorContext> handler);
+
+        /// <summary>
+        /// Registers an async handler for messages of the specified type <typeparamref name="T"/>
+        /// </summary>
+        /// <typeparam name="T">the type of the message</typeparam>
+        /// <param name="handler">the message handler invoked on the incoming message</param>
+        /// <param name="shouldHandle">when not null, determines whether this handler should handle the message</param>
+        void ReceiveAsync<T>(Func<T, IActorContext, Task> handler, Predicate<T> shouldHandle = null);
+        /// <summary>
+        /// Registers an async handler for messages of the specified type <typeparamref name="T"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="shouldHandle">determines whether this handler should handle the message</param>
+        /// <param name="handler">the message handler invoked on the incoming message</param>
+        void ReceiveAsync<T>(Predicate<T> shouldHandle, Func<T, IActorContext, Task> handler);
+        /// <summary>
+        /// Registers an asynchronous handler for any incoming message that has not already been handled.
+        /// </summary>
+        /// <param name="handler">The message handler that is invoked for all</param>
+        void ReceiveAnyAsync(Func<object, IActorContext, Task> handler);
 
         /// <summary>
         /// TBD
@@ -195,6 +216,35 @@ namespace Akka.Actor.Dsl
         public void ReceiveAny(Action<object, IActorContext> handler)
         {
             ReceiveAny(msg => handler(msg, Context));
+        }
+
+        /// <summary>
+        /// Registers an async handler for messages of the specified type <typeparamref name="T"/>
+        /// </summary>
+        /// <typeparam name="T">the type of the message</typeparam>
+        /// <param name="handler">the message handler invoked on the incoming message</param>
+        /// <param name="shouldHandle">when not null, determines whether this handler should handle the message</param>
+        public void ReceiveAsync<T>(Func<T, IActorContext, Task> handler, Predicate<T> shouldHandle = null)
+        {
+            ReceiveAsync(msg => handler(msg, Context), shouldHandle);
+        }
+        /// <summary>
+        /// Registers an async handler for messages of the specified type <typeparamref name="T"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="shouldHandle">determines whether this handler should handle the message</param>
+        /// <param name="handler">the message handler invoked on the incoming message</param>
+        public void ReceiveAsync<T>(Predicate<T> shouldHandle, Func<T, IActorContext, Task> handler)
+        {
+            ReceiveAsync(shouldHandle, msg => handler(msg, Context));
+        }
+        /// <summary>
+        /// Registers an asynchronous handler for any incoming message that has not already been handled.
+        /// </summary>
+        /// <param name="handler">The message handler that is invoked for all</param>
+        public void ReceiveAnyAsync(Func<object, IActorContext, Task> handler)
+        {
+            ReceiveAnyAsync(msg => handler(msg, Context));
         }
 
         /// <summary>
