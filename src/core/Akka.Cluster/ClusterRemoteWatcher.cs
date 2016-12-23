@@ -27,6 +27,10 @@ namespace Akka.Cluster
         /// <summary>
         /// Factory method for <see cref="Akka.Remote.RemoteWatcher"/>
         /// </summary>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="unreachableReaperInterval">TBD</param>
+        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
         public static Props Props(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -45,6 +49,13 @@ namespace Akka.Cluster
         private readonly Cluster _cluster;
         private ImmutableHashSet<Address> _clusterNodes = ImmutableHashSet.Create<Address>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="unreachableReaperInterval">TBD</param>
+        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
         public ClusterRemoteWatcher(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -54,18 +65,28 @@ namespace Akka.Cluster
             _cluster = Cluster.Get(Context.System);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             base.PreStart();
             _cluster.Subscribe(Self, new []{typeof(ClusterEvent.IMemberEvent)});
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
             _cluster.Unsubscribe(Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             var state = message as ClusterEvent.CurrentClusterState;
@@ -120,6 +141,10 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watchee">TBD</param>
         protected override void WatchNode(IInternalActorRef watchee)
         {
             if (!_clusterNodes.Contains(watchee.Path.Address)) base.WatchNode(watchee);
