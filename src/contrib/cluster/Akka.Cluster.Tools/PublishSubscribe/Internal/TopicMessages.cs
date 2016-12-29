@@ -29,8 +29,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         private Count() { }
     }
 
+    // Made public for proper Wire serialization (Issue #2271)
     [Serializable]
-    internal class Bucket : IEquatable<Bucket>
+    public class Bucket : IEquatable<Bucket>
     {
         public readonly Address Owner;
         public readonly long Version;
@@ -74,8 +75,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    // Made public for proper Wire serialization (Issue #2271)
     [Serializable]
-    internal sealed class ValueHolder : IEquatable<ValueHolder>
+    public sealed class ValueHolder : IEquatable<ValueHolder>
     {
         public readonly long Version;
         public readonly IActorRef Ref;
