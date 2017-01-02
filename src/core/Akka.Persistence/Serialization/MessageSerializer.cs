@@ -15,17 +15,30 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Persistence.Serialization
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IMessage { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class MessageSerializer : Serializer
     {
         private Information _transportInformation;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public MessageSerializer(ExtendedActorSystem system)
             : base(system)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Information TransportInformation
         {
             get
@@ -34,11 +47,20 @@ namespace Akka.Persistence.Serialization
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IncludeManifest
         {
             get { return true; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is IPersistentRepresentation) return PersistentToProto(obj as IPersistentRepresentation).Build().ToByteArray();
@@ -49,6 +71,13 @@ namespace Akka.Persistence.Serialization
             throw new ArgumentException(typeof(MessageSerializer) + " cannot serialize object of type " + obj.GetType());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bytes">TBD</param>
+        /// <param name="type">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (type == null || type == typeof(Persistent) || type == typeof(IPersistentRepresentation)) return PersistentMessageFrom(bytes);
