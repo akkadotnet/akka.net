@@ -19,6 +19,13 @@ namespace Akka.Remote
     /// </summary>
     internal static class IpExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="type">TBD</param>
+        /// <param name="instance">TBD</param>
+        /// <param name="fieldName">TBD</param>
+        /// <returns>TBD</returns>
         internal static object GetInstanceField(Type type, object instance, string fieldName)
         {
             BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
@@ -27,6 +34,11 @@ namespace Akka.Remote
             return field.GetValue(instance);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ipa">TBD</param>
+        /// <returns>TBD</returns>
         public static IPAddress MapToIPv4(this IPAddress ipa)
         {
             ushort[] m_Numbers = GetInstanceField(typeof(IPAddress), ipa, "m_Numbers") as ushort[];
@@ -49,6 +61,11 @@ namespace Akka.Remote
             return new IPAddress(address);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ipa">TBD</param>
+        /// <returns>TBD</returns>
         public static IPAddress MapToIPv6(this IPAddress ipa)
         {
             if (ipa.AddressFamily == AddressFamily.InterNetworkV6)
