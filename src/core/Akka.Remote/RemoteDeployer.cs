@@ -21,10 +21,21 @@ namespace Akka.Remote
     /// </summary>
     internal class RemoteDeployer : Deployer
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
         public RemoteDeployer(Settings settings) : base(settings)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="key">TBD</param>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <returns>TBD</returns>
         public override Deploy ParseConfig(string key, Config config)
         {
             var deploy = base.ParseConfig(key, config);

@@ -12,9 +12,19 @@ using Akka.Configuration;
 
 namespace Akka.Cluster
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     static class Utils
     {
         //TODO: Tests
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="source">TBD</param>
+        /// <param name="comparer">TBD</param>
+        /// <returns>TBD</returns>
         public static T Min<T>(this IEnumerable<T> source,
             IComparer<T> comparer)
         {
@@ -37,6 +47,14 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TSource">TBD</typeparam>
+        /// <typeparam name="TKey">TBD</typeparam>
+        /// <param name="source">TBD</param>
+        /// <param name="selector">TBD</param>
+        /// <returns>TBD</returns>
         public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source,
             Func<TSource, TKey> selector)
         {
@@ -44,6 +62,15 @@ namespace Akka.Cluster
         }
 
         //TODO: Test
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TSource">TBD</typeparam>
+        /// <typeparam name="TKey">TBD</typeparam>
+        /// <param name="source">TBD</param>
+        /// <param name="selector">TBD</param>
+        /// <param name="comparer">TBD</param>
+        /// <returns>TBD</returns>
         public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source,
             Func<TSource, TKey> selector, IComparer<TKey> comparer)
         {
@@ -74,12 +101,24 @@ namespace Akka.Cluster
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="this">TBD</param>
+        /// <param name="key">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use GetTimeSpanWithOffSwitch instead")]
         public static TimeSpan? GetMillisDurationWithOffSwitch(this Config @this, string key)
         {
             return GetTimeSpanWithOffSwitch(@this, key);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="this">TBD</param>
+        /// <param name="key">TBD</param>
+        /// <returns>TBD</returns>
         public static TimeSpan? GetTimeSpanWithOffSwitch(this Config @this, string key)
         {
             TimeSpan? ret = null;
@@ -87,6 +126,13 @@ namespace Akka.Cluster
             return ret;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="this">TBD</param>
+        /// <param name="partitioner">TBD</param>
+        /// <returns>TBD</returns>
         public static Tuple<ImmutableSortedSet<T>, ImmutableSortedSet<T>> Partition<T>(this ImmutableSortedSet<T> @this,
             Func<T, bool> partitioner)
         {

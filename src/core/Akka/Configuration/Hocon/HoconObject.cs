@@ -161,6 +161,7 @@ namespace Akka.Configuration.Hocon
             var sb = new StringBuilder();
             foreach (var kvp in Items)
             {
+                if (kvp.Value.AdoptedFromFallback) continue;
                 string key = QuoteIfNeeded(kvp.Key);
                 sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent));
             }
@@ -202,9 +203,44 @@ namespace Akka.Configuration.Hocon
                 else
                 {
                     //other key was not present in this object, just copy it over
-                    Items.Add(otherItem.Key,otherItem.Value);
+                    Items.Add(otherItem.Key, otherItem.Value);
                 }
             }
+        }
+
+        /// <summary>
+        /// Merges the specified object with this instance producing new one.
+        /// </summary>
+        /// <param name="other">The object to merge into this instance.</param>
+        internal HoconObject MergeImmutable(HoconObject other)
+        {
+            var thisItems = new Dictionary<string, HoconValue>(Items);
+            var otherItems = other.Items;
+
+            foreach (var otherItem in otherItems)
+            {
+                if (thisItems.ContainsKey(otherItem.Key))
+                {
+                    //other key was present in this object.
+                    //if we have a value, just ignore the other value, unless it is an object
+                    var thisItem = thisItems[otherItem.Key];
+
+                    //if both values are objects, merge them
+                    if (thisItem.IsObject() && otherItem.Value.IsObject())
+                    {
+                        var mergedObject = thisItem.GetObject().MergeImmutable(otherItem.Value.GetObject());
+                        var mergedValue = new HoconValue();
+                        mergedValue.AppendValue(mergedObject);
+                        thisItems[otherItem.Key] = mergedValue;
+                    }
+                }
+                else
+                {
+                    //other key was not present in this object, just copy it over
+                    thisItems.Add(otherItem.Key, new HoconValue(otherItem.Value.Values));
+                }
+            }
+            return new HoconObject {Items = thisItems};
         }
     }
 }

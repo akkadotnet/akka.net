@@ -50,5 +50,25 @@ namespace Akka.Tests.Actor
             }
         }
 
+        [Fact]
+        public async Task TimedOut_ask_should_remove_temp_actor()
+        {
+            var actor = Sys.ActorOf<SleepyActor>();
+
+            var actorCell = actor as ActorRefWithCell;
+            var container = actorCell.Provider.TempContainer as VirtualPathContainer;
+            try
+            {
+                await actor.Ask<string>("should time out");
+            }
+            catch (Exception)
+            {
+                var childCounter = 0;
+                container.ForEachChild(x => childCounter++);
+                Assert.True(childCounter==0,"Number of children in temp container should be 0.");
+            }
+
+        }
+
     }
 }

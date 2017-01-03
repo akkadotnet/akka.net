@@ -13,6 +13,9 @@ namespace Akka.Actor.Internal
     /// </summary>
     public interface IInitializableActor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         void Init();
     }
 }

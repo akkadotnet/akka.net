@@ -10,14 +10,30 @@ using Akka.Configuration;
 
 namespace Akka.Remote
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class AkkaProtocolSettings
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Config TransportFailureDetectorConfig { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string TransportFailureDetectorImplementationClass { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan TransportHeartBeatInterval { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
         public AkkaProtocolSettings(Config config)
         {
             TransportFailureDetectorConfig = config.GetConfig("akka.remote.transport-failure-detector");

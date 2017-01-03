@@ -20,14 +20,24 @@ namespace Akka.Dispatch
     /// </summary>
     internal abstract class ThreadPoolExecutorService : ExecutorService
     {
-        // cache the delegate used for execution to prevent allocations
+        // cache the delegate used for execution to prevent allocations		
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected static readonly WaitCallback Executor = t => { ((IRunnable)t).Run(); };
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Shutdown()
         {
             // do nothing. No cleanup required.
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
         protected ThreadPoolExecutorService(string id) : base(id)
         {
         }
@@ -38,11 +48,19 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class FullThreadPoolExecutorServiceImpl : ThreadPoolExecutorService
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="run">TBD</param>
         public override void Execute(IRunnable run)
         {
             ThreadPool.UnsafeQueueUserWorkItem(Executor, run);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
         public FullThreadPoolExecutorServiceImpl(string id) : base(id)
         {
         }
@@ -53,11 +71,19 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class PartialTrustThreadPoolExecutorService : ThreadPoolExecutorService
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="run">TBD</param>
         public override void Execute(IRunnable run)
         {
             ThreadPool.QueueUserWorkItem(Executor, run);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
         public PartialTrustThreadPoolExecutorService(string id) : base(id)
         {
         }
@@ -76,6 +102,11 @@ namespace Akka.Dispatch
         /// </summary>
         private TaskScheduler _scheduler;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <param name="scheduler">TBD</param>
         public TaskSchedulerExecutor(string id, TaskScheduler scheduler) : base(id)
         {
             _scheduler = scheduler;
@@ -84,12 +115,19 @@ namespace Akka.Dispatch
         // cache the delegate used for execution to prevent allocations
         private static readonly Action<object> Executor = t => { ((IRunnable)t).Run(); };
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="run">TBD</param>
         public override void Execute(IRunnable run)
         {
             var t = new Task(Executor, run);
             t.Start(_scheduler);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Shutdown()
         {
             // clear the scheduler
@@ -120,12 +158,20 @@ namespace Akka.Dispatch
         private DedicatedThreadPool _dedicatedThreadPool;
         private byte _shuttingDown = 0;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <param name="poolSettings">TBD</param>
         public ForkJoinExecutor(string id, DedicatedThreadPoolSettings poolSettings) : base(id)
         {
             _dedicatedThreadPool = new DedicatedThreadPool(poolSettings);
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="run">TBD</param>
         /// <exception cref="RejectedExecutionException">
         /// This exception is thrown if this method is called during the shutdown of this executor.
         /// </exception>
@@ -136,6 +182,9 @@ namespace Akka.Dispatch
             _dedicatedThreadPool.QueueUserWorkItem(run.Run);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Shutdown()
         {
             // shut down the dedicated threadpool and null it out
@@ -207,6 +256,7 @@ namespace Akka.Dispatch
         /// 
         /// Used when a plugin like Akka.Persistence needs to be able to load dispatcher configurations to the chain.
         /// </summary>
+        /// <param name="prerequisites">TBD</param>
         internal void ReloadPrerequisites(IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
@@ -222,9 +272,11 @@ namespace Akka.Dispatch
         /// Returns a dispatcher as specified in configuration. Please note that this method _MAY_
         /// create and return a new dispatcher on _EVERY_ call.
         /// </summary>
+        /// <param name="dispatcherName">TBD</param>
         /// <exception cref="ConfigurationException">
         /// This exception is thrown if the specified dispatcher cannot be found in the configuration.
         /// </exception>
+        /// <returns>TBD</returns>
         public MessageDispatcher Lookup(string dispatcherName)
         {
             return LookupConfigurator(dispatcherName).Dispatcher();
@@ -236,6 +288,7 @@ namespace Akka.Dispatch
         /// when using the dispatcher, because the details can only be checked by trying to
         /// instantiate it, which might be undesirable when just checking.
         /// </summary>
+        /// <param name="id">TBD</param>
         public bool HasDispatcher(string id)
         {
             return _dispatcherConfigurators.ContainsKey(id) || _cachingConfig.HasPath(id);
@@ -299,6 +352,8 @@ namespace Akka.Dispatch
         /// first registration will be used.
         /// </remarks>
         /// </summary>
+        /// <param name="id">TBD</param>
+        /// <param name="configurator">TBD</param>
         /// <returns>This method returns <c>true</c> if the specified configurator was successfully registered.</returns>
         public bool RegisterConfigurator(string id, MessageDispatcherConfigurator configurator)
         {
@@ -417,7 +472,7 @@ namespace Akka.Dispatch
         /// or returns a reference to an existing instance is an implementation detail of the
         /// underlying implementation.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public override MessageDispatcher Dispatcher()
         {
             return _instance;

@@ -11,6 +11,9 @@ using System.Reflection.Emit;
 
 namespace Akka.Tools.MatchHandler
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface ILambdaExpressionCompiler
     {
         /// <summary>

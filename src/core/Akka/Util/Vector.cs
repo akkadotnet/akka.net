@@ -11,8 +11,17 @@ using System.Linq;
 
 namespace Akka.Util
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Vector
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="number">TBD</param>
+        /// <returns>TBD</returns>
         public static Func<Func<T>, IList<T>> Fill<T>(int number)
         {
             return func => Enumerable

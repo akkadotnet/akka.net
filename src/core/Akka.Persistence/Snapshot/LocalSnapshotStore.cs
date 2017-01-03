@@ -196,7 +196,6 @@ namespace Akka.Persistence.Snapshot
             try
             {
                 var result = p(stream);
-                stream.Close();
                 return result;
             }
             finally

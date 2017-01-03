@@ -101,6 +101,7 @@ namespace Akka.Routing
         /// <summary>
         /// Check that everything is there which is needed. Called in constructor of RoutedActorRef to fail early.
         /// </summary>
+        /// <param name="path">TBD</param>
         public virtual void VerifyConfig(ActorPath path)
         {
         }
@@ -117,10 +118,10 @@ namespace Akka.Routing
         /// <returns>The surrogate representation of the current router.</returns>
         public abstract ISurrogate ToSurrogate(ActorSystem system);
 
-        /// <summary>		
-        /// Determines whether the specified router, is equal to this instance.		
-        /// </summary>		
-        /// <param name="other">The router to compare.</param>		
+        /// <summary>
+        /// Determines whether the specified router, is equal to this instance.
+        /// </summary>
+        /// <param name="other">The router to compare.</param>
         /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
         public bool Equals(RouterConfig other)
         {
@@ -130,6 +131,11 @@ namespace Akka.Routing
             return GetType() == other.GetType() && (GetType() == typeof(NoRouter) || string.Equals(RouterDispatcher, other.RouterDispatcher));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as RouterConfig);
@@ -144,16 +150,26 @@ namespace Akka.Routing
     /// </summary>
     public abstract class Group : RouterConfig, IEquatable<Group>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="paths">TBD</param>
+        /// <param name="routerDispatcher">TBD</param>
         protected Group(IEnumerable<string> paths, string routerDispatcher) : base(routerDispatcher)
         {
             Paths = paths;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IEnumerable<string> Paths { get; }
 
         /// <summary>
         /// Retrieves the actor paths used by this router during routee selection.
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IEnumerable<string> GetPaths(ActorSystem system);
 
         /// <summary>
@@ -165,11 +181,21 @@ namespace Akka.Routing
             return Actor.Props.Empty.WithRouter(this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         internal Routee RouteeFor(string path, IActorContext context)
         {
             return new ActorSelectionRoutee(context.ActorSelection(path));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         internal override RouterActor CreateRouterActor()
         {
             return new RouterActor();
@@ -246,12 +272,15 @@ namespace Akka.Routing
             UsePoolDispatcher = usePoolDispatcher;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int NrOfInstances { get; }
 
         /// <summary>
         /// Used by the <see cref="RoutedActorCell"/> to determine the initial number of routees.
         /// </summary>
-        /// <param name="system"></param>
+        /// <param name="system">TBD</param>
         /// <returns>The number of routees associated with this pool.</returns>
         public abstract int GetNrOfInstances(ActorSystem system);
 
@@ -276,6 +305,12 @@ namespace Akka.Routing
             return new ActorRefRoutee(context.ActorOf(EnrichWithPoolDispatcher(routeeProps, context)));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routeeProps">TBD</param>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         internal Props EnrichWithPoolDispatcher(Props routeeProps, IActorContext context)
         {
             if (UsePoolDispatcher && routeeProps.Dispatcher == Dispatchers.DefaultDispatcherId)
@@ -320,6 +355,10 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         internal override RouterActor CreateRouterActor()
         {
             if (Resizer == null)
@@ -328,6 +367,9 @@ namespace Akka.Routing
             return new ResizablePoolActor(SupervisorStrategy);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static SupervisorStrategy DefaultSupervisorStrategy
         {
             get
@@ -388,14 +430,25 @@ namespace Akka.Routing
     /// </summary>
     public abstract class CustomRouterConfig : RouterConfig
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected CustomRouterConfig() : base(Dispatchers.DefaultDispatcherId)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routerDispatcher">TBD</param>
         protected CustomRouterConfig(string routerDispatcher) : base(routerDispatcher)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         internal override RouterActor CreateRouterActor()
         {
             return new RouterActor();
@@ -408,10 +461,19 @@ namespace Akka.Routing
     /// </summary>
     public class FromConfig : Pool
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected FromConfig() : this(null, DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="resizer">TBD</param>
+        /// <param name="supervisorStrategy">TBD</param>
+        /// <param name="routerDispatcher">TBD</param>
         protected FromConfig(Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher)
             : base(0, resizer, supervisorStrategy, routerDispatcher, false)
         {
@@ -466,6 +528,8 @@ namespace Akka.Routing
         /// <summary>
         /// Setting the supervisor strategy to be used for the "head" Router actor
         /// </summary>
+        /// <param name="strategy">TBD</param>
+        /// <returns>TBD</returns>
         public FromConfig WithSupervisorStrategy(SupervisorStrategy strategy)
         {
             return new FromConfig(Resizer, strategy, RouterDispatcher);
@@ -474,6 +538,8 @@ namespace Akka.Routing
         /// <summary>
         /// Setting the resizer to be used.
         /// </summary>
+        /// <param name="resizer">TBD</param>
+        /// <returns>TBD</returns>
         public FromConfig WithResizer(Resizer resizer)
         {
             return new FromConfig(resizer, SupervisorStrategy, RouterDispatcher);
@@ -483,11 +549,18 @@ namespace Akka.Routing
         /// Setting the dispatcher to be used for the router head actor, which handles
         /// supervision, death watch and router management messages.
         /// </summary>
+        /// <param name="dispatcherId">TBD</param>
+        /// <returns>TBD</returns>
         public FromConfig WithDispatcher(string dispatcherId)
         {
             return new FromConfig(Resizer, SupervisorStrategy, dispatcherId);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sys">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem sys)
         {
             return 0;
@@ -496,7 +569,7 @@ namespace Akka.Routing
         /// <summary>
         /// Enriches a <see cref="Akka.Actor.Props"/> with what what's stored in the router configuration.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public Props Props()
         {
             return Actor.Props.Empty.WithRouter(Instance);
@@ -538,6 +611,9 @@ namespace Akka.Routing
     /// </summary>
     public class NoRouter : RouterConfig
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected NoRouter()
         {
         }
@@ -581,16 +657,29 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routerConfig">TBD</param>
+        /// <returns>TBD</returns>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             return routerConfig;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routeeProps">TBD</param>
+        /// <returns>TBD</returns>
         public Props Props(Props routeeProps)
         {
             return routeeProps.WithRouter(this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static NoRouter Instance { get; } = new NoRouter();
 
         /// <summary>

@@ -9,19 +9,33 @@ using System;
 
 namespace Akka.Tools.MatchHandler
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class CompiledMatchHandlerWithArguments
     {
         private readonly Delegate _compiledDelegate;
         private readonly object[] _delegateArguments;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="compiledDelegate">TBD</param>
+        /// <param name="delegateArguments">TBD</param>
         public CompiledMatchHandlerWithArguments(Delegate compiledDelegate, object[] delegateArguments)
         {
             _compiledDelegate = compiledDelegate;
             _delegateArguments = delegateArguments;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Delegate CompiledDelegate { get { return _compiledDelegate; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object[] DelegateArguments { get { return _delegateArguments; } }
     }
 }

@@ -268,10 +268,20 @@ namespace Akka.Routing
             Routee = routee;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Routee Routee { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address SelfAddress { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             if (Routee is ActorRefRoutee)
@@ -399,6 +409,11 @@ namespace Akka.Routing
                     _hashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return this.NrOfInstances;
@@ -638,6 +653,10 @@ namespace Akka.Routing
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routees">TBD</param>
         [Obsolete("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead")]
         public ConsistentHashingGroup(IEnumerable<IActorRef> routees)
             : this(routees.Select(c => c.Path.ToString()))
@@ -679,6 +698,11 @@ namespace Akka.Routing
         /// </summary>
         public int VirtualNodesFactor { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;

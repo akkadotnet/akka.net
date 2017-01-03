@@ -31,6 +31,7 @@ namespace Akka.Actor
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <returns>TBD</returns>
         protected override sealed bool Receive(object message)
         {
             //dynamic method resolution will resolve the method on runtime

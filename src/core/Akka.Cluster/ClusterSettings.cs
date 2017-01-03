@@ -14,11 +14,19 @@ using Akka.Dispatch;
 
 namespace Akka.Cluster
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class ClusterSettings
     {
         readonly Config _failureDetectorConfig;
         readonly string _useDispatcher;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="systemName">TBD</param>
         public ClusterSettings(Config config, string systemName)
         {
             //TODO: Requiring!
@@ -72,59 +80,140 @@ namespace Akka.Cluster
                 DowningProviderType = typeof(NoDowning);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool LogInfo { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Config FailureDetectorConfig => _failureDetectorConfig;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string FailureDetectorImplementationClass { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan HeartbeatInterval { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan HeartbeatExpectedResponseAfter { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MonitoredByNrOfMembers { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableList<Address> SeedNodes { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan SeedNodeTimeout { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan? RetryUnsuccessfulJoinAfter { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan PeriodicTasksInitialDelay { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan GossipInterval { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan GossipTimeToLive { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan LeaderActionsInterval { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan UnreachableNodesReaperInterval { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan? PublishStatsInterval { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan? AutoDownUnreachableAfter { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<string> Roles { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public double GossipDifferentViewProbability { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int ReduceGossipDifferentViewProbability { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string UseDispatcher => _useDispatcher;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan SchedulerTickDuration { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int SchedulerTicksPerWheel { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MinNrOfMembers { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin")]
         public TimeSpan DownRemovalMargin { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool VerboseHeartbeatLogging { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Type DowningProviderType { get; }
     }
 }

@@ -22,6 +22,7 @@ using Akka.Util;
 namespace Akka.Actor.Internal
 {
     /// <summary>
+    /// TBD
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     public class ActorSystemImpl : ExtendedActorSystem
@@ -41,6 +42,10 @@ namespace Akka.Actor.Internal
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
         private TerminationCallbacks _terminationCallbacks;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
         {
@@ -77,40 +82,98 @@ namespace Akka.Actor.Internal
             ConfigureActorProducerPipeline();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRefProvider Provider { get { return _provider; } }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Settings Settings { get { return _settings; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override string Name { get { return _name; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Serialization.Serialization Serialization { get { return _serialization; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override EventStream EventStream { get { return _eventStream; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRef DeadLetters { get { return Provider.DeadLetters; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Dispatchers Dispatchers { get { return _dispatchers; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IScheduler Scheduler { get { return _scheduler; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ILoggingAdapter Log { get { return _log; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IInternalActorRef LookupRoot => _provider.RootGuardian;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
 
-        /// <summary>Creates a new system actor.</summary>
+        /// <summary>
+        /// Creates a new system actor.
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IActorRef SystemActorOf(Props props, string name = null)
         {
             return _provider.SystemGuardian.Cell.AttachChild(props, true, name);
         }
 
-        /// <summary>Creates a new system actor.</summary>
+        /// <summary>
+        /// Creates a new system actor.
+        /// </summary>
+        /// <typeparam name="TActor">TBD</typeparam>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IActorRef SystemActorOf<TActor>(string name = null)
         {
             return _provider.SystemGuardian.Cell.AttachChild(Props.Create<TActor>(), true, name);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal volatile bool Aborting = false;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Abort()
         {
             Aborting = true;
@@ -171,17 +234,32 @@ namespace Akka.Actor.Internal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IActorRef ActorOf(Props props, string name = null)
         {
             return _provider.Guardian.Cell.AttachChild(props, false, name);
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
         public override ActorSelection ActorSelection(ActorPath actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
         public override ActorSelection ActorSelection(string actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this, _provider.RootGuardian);
@@ -237,15 +315,25 @@ namespace Akka.Actor.Internal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="extension">TBD</param>
+        /// <returns>TBD</returns>
         public override object RegisterExtension(IExtensionId extension)
         {
-            if(extension == null) return null;
+            if (extension == null) return null;
 
             _extensions.GetOrAdd(extension.ExtensionType, t => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return extension.Get(this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="extensionId">TBD</param>
+        /// <returns>TBD</returns>
         public override object GetExtension(IExtensionId extensionId)
         {
             object extension;
@@ -253,6 +341,12 @@ namespace Akka.Actor.Internal
             return extension;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="extensionType">TBD</param>
+        /// <param name="extension">TBD</param>
+        /// <returns>TBD</returns>
         public override bool TryGetExtension(Type extensionType, out object extension)
         {
             Lazy<object> lazyExtension;
@@ -261,6 +355,12 @@ namespace Akka.Actor.Internal
             return wasFound;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="extension">TBD</param>
+        /// <returns>TBD</returns>
         public override bool TryGetExtension<T>(out T extension)
         {
             Lazy<object> lazyExtension;
@@ -269,6 +369,11 @@ namespace Akka.Actor.Internal
             return wasFound;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public override T GetExtension<T>()
         {
             T extension;
@@ -276,15 +381,25 @@ namespace Akka.Actor.Internal
             return extension;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="t">TBD</param>
+        /// <returns>TBD</returns>
         public override bool HasExtension(Type t)
         {
-            if(typeof(IExtension).IsAssignableFrom(t))
+            if (typeof(IExtension).IsAssignableFrom(t))
             {
                 return _extensions.ContainsKey(t);
             }
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public override bool HasExtension<T>()
         {
             return _extensions.ContainsKey(typeof(T));
@@ -416,6 +531,7 @@ namespace Akka.Actor.Internal
         /// using the `dispatcher` of this actor system as it will have been shut down before the
         /// task completes.
         /// </summary>
+        /// <returns>TBD</returns>
         public override Task Terminate()
         {
             Log.Debug("System shutdown initiated");
@@ -423,29 +539,46 @@ namespace Akka.Actor.Internal
             return WhenTerminated;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
         public override Task TerminationTask { get { return _terminationCallbacks.TerminationTask; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override void AwaitTermination()
         {
             AwaitTermination(Timeout.InfiniteTimeSpan, CancellationToken.None);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override bool AwaitTermination(TimeSpan timeout)
         {
             return AwaitTermination(timeout, CancellationToken.None);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken)
         {
             try
             {
-                return WhenTerminated.Wait((int) timeout.TotalMilliseconds, cancellationToken);
+                return WhenTerminated.Wait((int)timeout.TotalMilliseconds, cancellationToken);
             }
-            catch(OperationCanceledException)
+            catch (OperationCanceledException)
             {
                 //The cancellationToken was canceled.
                 return false;
@@ -460,13 +593,17 @@ namespace Akka.Actor.Internal
         /// </summary>
         public override Task WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
         public override void Stop(IActorRef actor)
         {
             var path = actor.Path;
             var parentPath = path.Parent;
-            if(parentPath == _provider.Guardian.Path)
+            if (parentPath == _provider.Guardian.Path)
                 _provider.Guardian.Tell(new StopChild(actor));
-            else if(parentPath == _provider.SystemGuardian.Path)
+            else if (parentPath == _provider.SystemGuardian.Path)
                 _provider.SystemGuardian.Tell(new StopChild(actor));
             else
                 ((IInternalActorRef)actor).Stop();
@@ -474,14 +611,21 @@ namespace Akka.Actor.Internal
 
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     class TerminationCallbacks
     {
         private Task _terminationTask;
         private readonly AtomicReference<Task> _atomicRef;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="upStreamTerminated">TBD</param>
         public TerminationCallbacks(Task upStreamTerminated)
         {
-            _atomicRef = new AtomicReference<Task>(new Task(() => {}));
+            _atomicRef = new AtomicReference<Task>(new Task(() => { }));
 
             upStreamTerminated.ContinueWith(_ =>
             {
@@ -490,8 +634,12 @@ namespace Akka.Actor.Internal
             });
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="code">TBD</param>
         /// <exception cref="InvalidOperationException">This exception is thrown if the actor system has been terminated.</exception>
+        /// <returns>TBD</returns>
         public void Add(Action code)
         {
             var previous = _atomicRef.Value;
@@ -510,6 +658,9 @@ namespace Akka.Actor.Internal
             Add(code);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Task TerminationTask { get { return _atomicRef.Value ?? _terminationTask; } }
     }
 }

@@ -108,7 +108,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
-    public sealed class ReplayTaggedMessages
+    public sealed class ReplayTaggedMessages : IJournalRequest
     {
         public readonly long FromOffset;
         public readonly long ToOffset;

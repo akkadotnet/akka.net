@@ -20,10 +20,15 @@ namespace Akka.Util.Internal
         private readonly ConcurrentQueue<Action> _listeners;
         private readonly TimeSpan _callTimeout;
 
-        protected AtomicState( TimeSpan callTimeout, long startingCount )
-            : base( startingCount )
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="callTimeout">TBD</param>
+        /// <param name="startingCount">TBD</param>
+        protected AtomicState(TimeSpan callTimeout, long startingCount)
+            : base(startingCount)
         {
-            _listeners = new ConcurrentQueue<Action>( );
+            _listeners = new ConcurrentQueue<Action>();
             _callTimeout = callTimeout;
         }
 
@@ -31,9 +36,9 @@ namespace Akka.Util.Internal
         /// Add a listener function which is invoked on state entry
         /// </summary>
         /// <param name="listener">listener implementation</param>
-        public void AddListener( Action listener )
+        public void AddListener(Action listener)
         {
-            _listeners.Enqueue( listener );
+            _listeners.Enqueue(listener);
         }
 
         /// <summary>
@@ -47,18 +52,19 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Notifies the listeners of the transition event via a 
         /// </summary>
-        protected async Task NotifyTransitionListeners( )
+        /// <returns>TBD</returns>
+        protected async Task NotifyTransitionListeners()
         {
-            if ( !HasListeners ) return;
+            if (!HasListeners) return;
             await Task
                 .Factory
                 .StartNew
                 (
-                    ( ) =>
+                    () =>
                     {
-                        foreach ( var listener in _listeners )
+                        foreach (var listener in _listeners)
                         {
-                            listener.Invoke( );
+                            listener.Invoke();
                         }
                     }
                 );
@@ -73,33 +79,33 @@ namespace Akka.Util.Internal
         /// 
         /// see http://blogs.msdn.com/b/pfxteam/archive/2011/11/10/10235834.aspx 
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">TBD</typeparam>
         /// <param name="task">Implementation of the call</param>
         /// <returns>result of the call</returns>
-        public async Task<T> CallThrough<T>( Func<Task<T>> task )
+        public async Task<T> CallThrough<T>(Func<Task<T>> task)
         {
-            var deadline = DateTime.UtcNow.Add( _callTimeout );
+            var deadline = DateTime.UtcNow.Add(_callTimeout);
             ExceptionDispatchInfo capturedException = null;
             T result = default(T);
             try
             {
                 result = await task();
             }
-            catch ( Exception ex )
+            catch (Exception ex)
             {
-                capturedException = ExceptionDispatchInfo.Capture( ex );
+                capturedException = ExceptionDispatchInfo.Capture(ex);
             }
 
             bool throwException = capturedException != null;
-            if ( throwException || DateTime.UtcNow.CompareTo( deadline ) >= 0 )
+            if (throwException || DateTime.UtcNow.CompareTo(deadline) >= 0)
             {
-                CallFails( );
-                if ( throwException )
-                    capturedException.Throw( );
+                CallFails();
+                if (throwException)
+                    capturedException.Throw();
             }
             else
             {
-                CallSucceeds( );
+                CallSucceeds();
             }
             return result;
         }
@@ -115,18 +121,18 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
         /// <returns><see cref="Task"/></returns>
-        public async Task CallThrough( Func<Task> task )
+        public async Task CallThrough(Func<Task> task)
         {
-            var deadline = DateTime.UtcNow.Add( _callTimeout );
+            var deadline = DateTime.UtcNow.Add(_callTimeout);
             ExceptionDispatchInfo capturedException = null;
 
             try
             {
                 await task();
             }
-            catch ( Exception ex )
+            catch (Exception ex)
             {
-                capturedException = ExceptionDispatchInfo.Capture( ex );
+                capturedException = ExceptionDispatchInfo.Capture(ex);
             }
 
             bool throwException = capturedException != null;
@@ -146,41 +152,41 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Abstract entry point for all states
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public abstract Task<T> Invoke<T>( Func<Task<T>> body );
+        public abstract Task<T> Invoke<T>(Func<Task<T>> body);
 
         /// <summary>
         /// Abstract entry point for all states
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public abstract Task Invoke( Func<Task> body );
+        public abstract Task Invoke(Func<Task> body);
 
         /// <summary>
         /// Invoked when call fails
         /// </summary>
-        protected abstract void CallFails( );
+        protected abstract void CallFails();
 
         /// <summary>
         /// Invoked when call succeeds
         /// </summary>
-        protected abstract void CallSucceeds( );
+        protected abstract void CallSucceeds();
 
         /// <summary>
         /// Invoked on the transitioned-to state during transition. Notifies listeners after invoking subclass template method _enter
         /// </summary>
-        protected abstract void EnterInternal( );
+        protected abstract void EnterInternal();
 
         /// <summary>
         /// Enter the state. NotifyTransitionListeners is not awaited -- its "fire and forget". 
         /// It is up to the user to handle any errors that occur in this state.
         /// </summary>
-        public void Enter( )
+        public void Enter()
         {
-            EnterInternal( );
-            NotifyTransitionListeners( );
+            EnterInternal();
+            NotifyTransitionListeners();
         }
 
     }
@@ -190,9 +196,25 @@ namespace Akka.Util.Internal
     /// </summary>
     public interface IAtomicState
     {
-        void AddListener( Action listener );
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="listener">TBD</param>
+        void AddListener(Action listener);
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool HasListeners { get; }
-        Task<T> Invoke<T>( Func<Task<T>> body );
-        void Enter( );
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="body">TBD</param>
+        /// <returns>TBD</returns>
+        Task<T> Invoke<T>(Func<Task<T>> body);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        void Enter();
     }
 }

@@ -35,7 +35,7 @@ namespace Akka.Remote
         /// Serializes the specified message.
         /// </summary>
         /// <param name="system">The system.</param>
-        /// <param name="address"></param>
+        /// <param name="address">TBD</param>
         /// <param name="message">The message.</param>
         /// <returns>SerializedMessage.</returns>
         public static SerializedMessage Serialize(ActorSystem system, Address address, object message)

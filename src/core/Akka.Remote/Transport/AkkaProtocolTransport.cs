@@ -25,14 +25,25 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal class ProtocolTransportAddressPair
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="protocolTransport">TBD</param>
+        /// <param name="address">TBD</param>
         public ProtocolTransportAddressPair(AkkaProtocolTransport protocolTransport, Address address)
         {
             ProtocolTransport = protocolTransport;
             Address = address;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AkkaProtocolTransport ProtocolTransport { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address Address { get; private set; }
     }
 
@@ -70,6 +81,13 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal class AkkaProtocolTransport : ActorTransportAdapter
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="codec">TBD</param>
         public AkkaProtocolTransport(Transport wrappedTransport, ActorSystem system, AkkaProtocolSettings settings, AkkaPduCodec codec)
             : base(wrappedTransport, system)
         {
@@ -77,18 +95,30 @@ namespace Akka.Remote.Transport
             Settings = settings;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AkkaProtocolSettings Settings { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected AkkaPduCodec Codec { get; private set; }
 
         private readonly SchemeAugmenter _schemeAugmenter = new SchemeAugmenter(RemoteSettings.AkkaScheme);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override SchemeAugmenter SchemeAugmenter
         {
             get { return _schemeAugmenter; }
         }
 
         private string _managerName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string ManagerName
         {
             get
@@ -101,6 +131,9 @@ namespace Akka.Remote.Transport
         }
 
         private Props _managerProps;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Props ManagerProps
         {
             get {
@@ -111,11 +144,22 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public override Task<bool> ManagementCommand(object message)
         {
             return WrappedTransport.ManagementCommand(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="refuseUid">TBD</param>
+        /// <returns>TBD</returns>
         public Task<AkkaProtocolHandle> Associate(Address remoteAddress, int? refuseUid)
         {
             // Prepare a Task and pass its completion source to the manager
@@ -128,13 +172,24 @@ namespace Akka.Remote.Transport
 
         #region Static properties
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static AtomicCounter UniqueId = new AtomicCounter(0);
 
         #endregion
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class AkkaProtocolManager : ActorTransportAdapterManager
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="settings">TBD</param>
         public AkkaProtocolManager(Transport wrappedTransport, AkkaProtocolSettings settings)
         {
             _wrappedTransport = wrappedTransport;
@@ -150,6 +205,10 @@ namespace Akka.Remote.Transport
         /// in the remoting itself. Hence the strategy <see cref="Directive.Stop"/>.
         /// </summary>
         private readonly SupervisorStrategy _supervisor = new OneForOneStrategy(exception => Directive.Stop);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return _supervisor;
@@ -157,6 +216,10 @@ namespace Akka.Remote.Transport
 
         #region ActorBase / ActorTransportAdapterManager overrides
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void Ready(object message)
         {
             message.Match()
@@ -215,8 +278,17 @@ namespace Akka.Remote.Transport
         #endregion
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class AssociateUnderlyingRefuseUid : INoSerializationVerificationNeeded
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="statusCompletionSource">TBD</param>
+        /// <param name="refuseUid">TBD</param>
         public AssociateUnderlyingRefuseUid(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusCompletionSource, int? refuseUid = null)
         {
             RefuseUid = refuseUid;
@@ -224,25 +296,53 @@ namespace Akka.Remote.Transport
             RemoteAddress = remoteAddress;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address RemoteAddress { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int? RefuseUid { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class HandshakeInfo
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="origin">TBD</param>
+        /// <param name="uid">TBD</param>
         public HandshakeInfo(Address origin, int uid)
         {
             Origin = origin;
             Uid = uid;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address Origin { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Uid { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -255,6 +355,10 @@ namespace Akka.Remote.Transport
             return Equals(Origin, other.Origin) && Uid == other.Uid;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -264,8 +368,21 @@ namespace Akka.Remote.Transport
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class AkkaProtocolHandle : AbstractTransportAdapterHandle
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="originalLocalAddress">TBD</param>
+        /// <param name="originalRemoteAddress">TBD</param>
+        /// <param name="readHandlerCompletionSource">TBD</param>
+        /// <param name="wrappedHandle">TBD</param>
+        /// <param name="handshakeInfo">TBD</param>
+        /// <param name="stateActor">TBD</param>
+        /// <param name="codec">TBD</param>
         public AkkaProtocolHandle(Address originalLocalAddress, Address originalRemoteAddress,
             TaskCompletionSource<IHandleEventListener> readHandlerCompletionSource, AssociationHandle wrappedHandle,
             HandshakeInfo handshakeInfo, IActorRef stateActor, AkkaPduCodec codec)
@@ -277,27 +394,53 @@ namespace Akka.Remote.Transport
             Codec = codec;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly HandshakeInfo HandshakeInfo;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef StateActor;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly AkkaPduCodec Codec;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Write(ByteString payload)
         {
             return WrappedHandle.Write(Codec.ConstructPayload(payload));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Disassociate()
         {
             Disassociate(DisassociateInfo.Unknown);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
         public void Disassociate(DisassociateInfo info)
         {
             StateActor.Tell(new DisassociateUnderlying(info));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -306,11 +449,20 @@ namespace Akka.Remote.Transport
             return Equals((AkkaProtocolHandle) obj);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         protected bool Equals(AkkaProtocolHandle other)
         {
             return base.Equals(other) && Equals(HandshakeInfo, other.HandshakeInfo) && Equals(StateActor, other.StateActor);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -323,36 +475,77 @@ namespace Akka.Remote.Transport
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal enum AssociationState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         Closed = 0,
+        /// <summary>
+        /// TBD
+        /// </summary>
         WaitHandshake = 1,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Open = 2
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class HeartbeatTimer : INoSerializationVerificationNeeded { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class HandleMsg : INoSerializationVerificationNeeded
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handle">TBD</param>
         public HandleMsg(AssociationHandle handle)
         {
             Handle = handle;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AssociationHandle Handle { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class HandleListenerRegistered : INoSerializationVerificationNeeded
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="listener">TBD</param>
         public HandleListenerRegistered(IHandleEventListener listener)
         {
             Listener = listener;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IHandleEventListener Listener { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal abstract class ProtocolStateData { }
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal abstract class InitialProtocolStateData : ProtocolStateData { }
 
     /// <summary>
@@ -360,6 +553,12 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class OutboundUnassociated : InitialProtocolStateData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="statusCompletionSource">TBD</param>
+        /// <param name="transport">TBD</param>
         public OutboundUnassociated(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusCompletionSource, Transport transport)
         {
             Transport = transport;
@@ -367,10 +566,19 @@ namespace Akka.Remote.Transport
             RemoteAddress = remoteAddress;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address RemoteAddress { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Transport Transport { get; private set; }
     }
 
@@ -379,14 +587,25 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class OutboundUnderlyingAssociated : ProtocolStateData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="statusCompletionSource">TBD</param>
+        /// <param name="wrappedHandle">TBD</param>
         public OutboundUnderlyingAssociated(TaskCompletionSource<AssociationHandle> statusCompletionSource, AssociationHandle wrappedHandle)
         {
             WrappedHandle = wrappedHandle;
             StatusCompletionSource = statusCompletionSource;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TaskCompletionSource<AssociationHandle> StatusCompletionSource { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AssociationHandle WrappedHandle { get; private set; }
     }
 
@@ -395,14 +614,25 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class InboundUnassociated : InitialProtocolStateData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="associationEventListener">TBD</param>
+        /// <param name="wrappedHandle">TBD</param>
         public InboundUnassociated(IAssociationEventListener associationEventListener, AssociationHandle wrappedHandle)
         {
             WrappedHandle = wrappedHandle;
             AssociationEventListener = associationEventListener;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IAssociationEventListener AssociationEventListener { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AssociationHandle WrappedHandle { get; private set; }
     }
 
@@ -411,6 +641,12 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class AssociatedWaitHandler : ProtocolStateData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handlerListener">TBD</param>
+        /// <param name="wrappedHandle">TBD</param>
+        /// <param name="queue">TBD</param>
         public AssociatedWaitHandler(Task<IHandleEventListener> handlerListener, AssociationHandle wrappedHandle, Queue<ByteString> queue)
         {
             Queue = queue;
@@ -418,10 +654,19 @@ namespace Akka.Remote.Transport
             HandlerListener = handlerListener;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Task<IHandleEventListener> HandlerListener { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AssociationHandle WrappedHandle { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Queue<ByteString> Queue { get; private set; }
     }
 
@@ -430,14 +675,25 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class ListenerReady : ProtocolStateData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="listener">TBD</param>
+        /// <param name="wrappedHandle">TBD</param>
         public ListenerReady(IHandleEventListener listener, AssociationHandle wrappedHandle)
         {
             WrappedHandle = wrappedHandle;
             Listener = listener;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IHandleEventListener Listener { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AssociationHandle WrappedHandle { get; private set; }
     }
 
@@ -446,20 +702,38 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal class TimeoutReason
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="errorMessage">TBD</param>
         public TimeoutReason(string errorMessage)
         {
             ErrorMessage = errorMessage;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string ErrorMessage { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("Timeout: {0}", ErrorMessage);
         }
     }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ForbiddenUidReason { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -474,6 +748,14 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Constructor for outbound ProtocolStateActors
         /// </summary>
+        /// <param name="handshakeInfo">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="statusCompletionSource">TBD</param>
+        /// <param name="transport">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="codec">TBD</param>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="refuseUid">TBD</param>
         public ProtocolStateActor(HandshakeInfo handshakeInfo, Address remoteAddress,
             TaskCompletionSource<AssociationHandle> statusCompletionSource, Transport transport,
             AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid = null)
@@ -487,12 +769,24 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Constructor for inbound ProtocolStateActors
         /// </summary>
+        /// <param name="handshakeInfo">TBD</param>
+        /// <param name="wrappedHandle">TBD</param>
+        /// <param name="associationEventListener">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="codec">TBD</param>
+        /// <param name="failureDetector">TBD</param>
         public ProtocolStateActor(HandshakeInfo handshakeInfo, AssociationHandle wrappedHandle, IAssociationEventListener associationEventListener, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector)
             : this(new InboundUnassociated(associationEventListener, wrappedHandle), handshakeInfo, settings, codec, failureDetector, refuseUid: null) { }
 
         /// <summary>
         /// Common constructor used by both the outbound and the inbound cases
         /// </summary>
+        /// <param name="initialData">TBD</param>
+        /// <param name="localHandshakeInfo">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="codec">TBD</param>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="refuseUid">TBD</param>
         protected ProtocolStateActor(InitialProtocolStateData initialData, HandshakeInfo localHandshakeInfo, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid)
         {
             _initialData = initialData;
@@ -832,6 +1126,10 @@ namespace Akka.Remote.Transport
 
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
         protected override void LogTermination(Reason reason)
         {
             var failure = reason as Failure;
@@ -850,6 +1148,9 @@ namespace Akka.Remote.Transport
 
         #region Actor methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             CancelTimer("heartbeat-timer");
@@ -985,21 +1286,22 @@ namespace Akka.Remote.Transport
         #region Static methods
 
 
+
         /// <summary>
         /// <see cref="Props"/> used when creating OUTBOUND associations to remote endpoints.
         /// 
         /// These <see cref="Props"/> create outbound <see cref="ProtocolStateActor"/> instances,
         /// which begin a state of 
         /// </summary>
-        /// <param name="handshakeInfo"></param>
-        /// <param name="remoteAddress"></param>
-        /// <param name="statusCompletionSource"></param>
-        /// <param name="transport"></param>
-        /// <param name="settings"></param>
-        /// <param name="codec"></param>
-        /// <param name="failureDetector"></param>
-        /// <param name="refuseUid"></param>
-        /// <returns></returns>
+        /// <param name="handshakeInfo">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="statusCompletionSource">TBD</param>
+        /// <param name="transport">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="codec">TBD</param>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="refuseUid">TBD</param>
+        /// <returns>TBD</returns>
         public static Props OutboundProps(HandshakeInfo handshakeInfo, Address remoteAddress,
             TaskCompletionSource<AssociationHandle> statusCompletionSource,
             Transport transport, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid = null)
@@ -1007,6 +1309,16 @@ namespace Akka.Remote.Transport
             return Props.Create(() => new ProtocolStateActor(handshakeInfo, remoteAddress, statusCompletionSource, transport, settings, codec, failureDetector, refuseUid));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handshakeInfo">TBD</param>
+        /// <param name="wrappedHandle">TBD</param>
+        /// <param name="associationEventListener">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="codec">TBD</param>
+        /// <param name="failureDetector">TBD</param>
+        /// <returns>TBD</returns>
         public static Props InboundProps(HandshakeInfo handshakeInfo, AssociationHandle wrappedHandle,
             IAssociationEventListener associationEventListener, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector)
         {

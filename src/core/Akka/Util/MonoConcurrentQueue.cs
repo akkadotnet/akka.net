@@ -37,6 +37,10 @@ namespace Akka.Util
     // THE SOFTWARE.
     //
     //
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     [DebuggerDisplay("Count={Count}")]
     public class MonoConcurrentQueue<T> : IProducerConsumerCollection<T>, IEnumerable<T>, ICollection,
         IEnumerable
@@ -46,11 +50,18 @@ namespace Akka.Util
         private Node _head = new Node();
         private Node _tail;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public MonoConcurrentQueue()
         {
             _tail = _head;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="collection">TBD</param>
         public MonoConcurrentQueue(IEnumerable<T> collection)
             : this()
         {
@@ -58,6 +69,9 @@ namespace Akka.Util
                 Enqueue(item);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsEmpty
         {
             get { return _count == 0; }
@@ -74,6 +88,10 @@ namespace Akka.Util
             return (IEnumerator) InternalGetEnumerator();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IEnumerator<T> GetEnumerator()
         {
             return InternalGetEnumerator();
@@ -110,7 +128,11 @@ namespace Akka.Util
             CopyTo(dest, index);
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="array">TBD</param>
+        /// <param name="index">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the index is greater than the length of the array
         /// or the number of elements in the collection exceed that array's capactiy.
@@ -140,6 +162,9 @@ namespace Akka.Util
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public T[] ToArray()
         {
             return new List<T>(this).ToArray();
@@ -160,11 +185,18 @@ namespace Akka.Util
             get { return _syncRoot; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Count
         {
             get { return _count; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
         public void Enqueue(T item)
         {
             var node = new Node();
@@ -199,6 +231,11 @@ namespace Akka.Util
             Interlocked.Increment(ref _count);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="result">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryDequeue(out T result)
         {
             result = default(T);
@@ -241,6 +278,11 @@ namespace Akka.Util
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="result">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryPeek(out T result)
         {
             result = default(T);
@@ -265,6 +307,9 @@ namespace Akka.Util
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal void Clear()
         {
             _count = 0;

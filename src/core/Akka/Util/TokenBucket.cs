@@ -20,6 +20,12 @@ namespace Akka.Util
         private long _lastUpdate;
         private long _availableTokens;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="capacity">TBD</param>
+        /// <param name="ticksBetweenTokens">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         protected TokenBucket(long capacity, long ticksBetweenTokens)
         {
             if(capacity<0)
@@ -58,6 +64,8 @@ namespace Akka.Util
         /// calls. 
         /// </summary>
         /// <param name="cost">How many tokens the element costs. Can be larger than the capacity of the bucket.</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public long Offer(long cost)
         {
             if(cost < 0)
@@ -109,10 +117,19 @@ namespace Akka.Util
     /// </summary>
     public sealed class TickTimeTokenBucket : TokenBucket
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="capacity">TBD</param>
+        /// <param name="period">TBD</param>
+        /// <returns>TBD</returns>
         public TickTimeTokenBucket(long capacity, long period) : base(capacity, period)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override long CurrentTime => DateTime.Now.Ticks;
     }
 }

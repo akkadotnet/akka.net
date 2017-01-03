@@ -20,6 +20,10 @@ namespace Akka.Pattern
     {
         private readonly CircuitBreaker _breaker;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="breaker">TBD</param>
         public Open(CircuitBreaker breaker)
             : base(breaker.CallTimeout, 0)
         {
@@ -83,6 +87,10 @@ namespace Akka.Pattern
         private readonly CircuitBreaker _breaker;
         private readonly AtomicBoolean _lock;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="breaker">TBD</param>
         public HalfOpen(CircuitBreaker breaker)
             : base(breaker.CallTimeout, 0)
         {
@@ -94,9 +102,9 @@ namespace Akka.Pattern
         /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
         /// If the call succeeds, the breaker closes.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException"></exception>
+        /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
@@ -112,7 +120,7 @@ namespace Akka.Pattern
         /// If the call succeeds, the breaker closes.
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException"></exception>
+        /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task Invoke(Func<Task> body)
         {
@@ -150,7 +158,7 @@ namespace Akka.Pattern
         /// <summary>
         /// Override for more descriptive toString
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", (_lock == true));
@@ -164,6 +172,10 @@ namespace Akka.Pattern
     {
         private readonly CircuitBreaker _breaker;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="breaker">TBD</param>
         public Closed(CircuitBreaker breaker)
             : base(breaker.CallTimeout, 0)
         {
@@ -173,7 +185,7 @@ namespace Akka.Pattern
         /// <summary>
         /// Implementation of invoke, which simply attempts the call
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task<T> Invoke<T>(Func<Task<T>> body)
@@ -222,7 +234,7 @@ namespace Akka.Pattern
         /// <summary>
         /// Override for more descriptive toString
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("Closed with failure count = {0}", Current);
