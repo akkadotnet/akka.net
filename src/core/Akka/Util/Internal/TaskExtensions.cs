@@ -10,8 +10,18 @@ using System.Threading.Tasks;
 
 namespace Akka.Util.Internal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class TaskExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TTask">TBD</typeparam>
+        /// <typeparam name="TResult">TBD</typeparam>
+        /// <param name="task">TBD</param>
+        /// <returns>TBD</returns>
         public static Task<TResult> CastTask<TTask, TResult>(this Task<TTask> task)
         {
             if (task.IsCompleted)

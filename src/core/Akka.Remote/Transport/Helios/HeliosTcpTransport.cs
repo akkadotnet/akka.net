@@ -29,31 +29,63 @@ namespace Akka.Remote.Transport.Helios
     {
         private IHandleEventListener _listener;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="msg">TBD</param>
         protected void NotifyListener(IHandleEvent msg)
         {
             _listener?.Notify(msg);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="log">TBD</param>
         protected TcpHandlers(HeliosTransport wrappedTransport, ILoggingAdapter log) : base(wrappedTransport, log)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="channel">TBD</param>
+        /// <param name="listener">TBD</param>
+        /// <param name="msg">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
         protected override void RegisterListener(IChannel channel, IHandleEventListener listener, object msg, IPEndPoint remoteAddress)
         {
             _listener = listener;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="channel">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <returns>TBD</returns>
         protected override AssociationHandle CreateHandle(IChannel channel, Address localAddress, Address remoteAddress)
         {
             return new TcpAssociationHandle(localAddress, remoteAddress, WrappedTransport, channel);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
         public override void ChannelInactive(IChannelHandlerContext context)
         {
             NotifyListener(new Disassociated(DisassociateInfo.Unknown));
             base.ChannelInactive(context);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="message">TBD</param>
         public override void ChannelRead(IChannelHandlerContext context, object message)
         {
             var buf = (IByteBuf)message;
@@ -68,6 +100,11 @@ namespace Akka.Remote.Transport.Helios
             ReferenceCountUtil.SafeRelease(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="exception">TBD</param>
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
             base.ExceptionCaught(context, exception);
@@ -83,11 +120,21 @@ namespace Akka.Remote.Transport.Helios
     {
         private readonly Task<IAssociationEventListener> _associationEventListener;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="log">TBD</param>
+        /// <param name="associationEventListener">TBD</param>
         public TcpServerHandler(HeliosTransport wrappedTransport, ILoggingAdapter log, Task<IAssociationEventListener> associationEventListener) : base(wrappedTransport, log)
         {
             _associationEventListener = associationEventListener;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
         public override void ChannelActive(IChannelHandlerContext context)
         {
             InitInbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
@@ -116,15 +163,31 @@ namespace Akka.Remote.Transport.Helios
     /// </summary>
     class TcpClientHandler : TcpHandlers
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly TaskCompletionSource<AssociationHandle> StatusPromise = new TaskCompletionSource<AssociationHandle>();
         private readonly Address _remoteAddress;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Task<AssociationHandle> StatusFuture { get { return StatusPromise.Task; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="log">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
         public TcpClientHandler(HeliosTransport wrappedTransport, ILoggingAdapter log, Address remoteAddress) : base(wrappedTransport, log)
         {
             _remoteAddress = remoteAddress;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
         public override void ChannelActive(IChannelHandlerContext context)
         {
             InitOutbound(context.Channel,(IPEndPoint)context.Channel.RemoteAddress, null);
@@ -147,6 +210,13 @@ namespace Akka.Remote.Transport.Helios
         private readonly IChannel _channel;
         private HeliosTransport _transport;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="transport">TBD</param>
+        /// <param name="connection">TBD</param>
         public TcpAssociationHandle(Address localAddress, Address remoteAddress, HeliosTransport transport, IChannel connection)
             : base(localAddress, remoteAddress)
         {
@@ -154,6 +224,11 @@ namespace Akka.Remote.Transport.Helios
             _transport = transport;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Write(ByteString payload)
         {
             if (_channel.IsOpen && _channel.IsWritable)
@@ -164,6 +239,9 @@ namespace Akka.Remote.Transport.Helios
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Disassociate()
         {
             _channel.CloseAsync();
@@ -180,11 +258,22 @@ namespace Akka.Remote.Transport.Helios
     /// </summary>
     class HeliosTcpTransport : HeliosTransport
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="config">TBD</param>
         public HeliosTcpTransport(ActorSystem system, Config config)
             : base(system, config)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <exception cref="HeliosConnectionException">TBD</exception>
+        /// <returns>TBD</returns>
         protected override Task<AssociationHandle> AssociateInternal(Address remoteAddress)
         {
             var clientBootstrap = ClientFactory(remoteAddress);

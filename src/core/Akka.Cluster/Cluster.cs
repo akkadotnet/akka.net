@@ -21,8 +21,16 @@ using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ClusterExtension : ExtensionIdProvider<Cluster>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override Cluster CreateExtension(ExtendedActorSystem system)
         {
             return new Cluster((ActorSystemImpl)system);
@@ -43,20 +51,39 @@ namespace Akka.Cluster
     {
         //TODO: Issue with missing overrides for Get and Lookup
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static Cluster Get(ActorSystem system)
         {
             return system.WithExtension<Cluster, ClusterExtension>();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal static bool IsAssertInvariantsEnabled
         {
             //TODO: Consequences of this?
             get { return false; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ClusterSettings Settings { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UniqueAddress SelfUniqueAddress { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ConfigurationException">TBD</exception>
         public Cluster(ActorSystemImpl system)
         {
             System = system;
@@ -149,6 +176,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Unsubscribe to all cluster domain events.
         /// </summary>
+        /// <param name="subscriber">TBD</param>
         public void Unsubscribe(IActorRef subscriber)
         {
             Unsubscribe(subscriber, null);
@@ -157,6 +185,8 @@ namespace Akka.Cluster
         /// <summary>
         /// Unsubscribe to a specific type of cluster domain event
         /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="to">TBD</param>
         public void Unsubscribe(IActorRef subscriber, Type to)
         {
             ClusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
@@ -167,6 +197,7 @@ namespace Akka.Cluster
         /// If you want this to happen periodically, you can use the <see cref="Scheduler"/> to schedule
         /// a call to this method. You can also call <see cref="State"/> directly for this information.
         /// </summary>
+        /// <param name="receiver">TBD</param>
         public void SendCurrentClusterState(IActorRef receiver)
         {
             ClusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
@@ -180,6 +211,7 @@ namespace Akka.Cluster
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
         /// </summary>
+        /// <param name="address">TBD</param>
         public void Join(Address address)
         {
             ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
@@ -206,6 +238,7 @@ namespace Akka.Cluster
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
         /// </summary>
+        /// <param name="seedNodes">TBD</param>
         public void JoinSeedNodes(IEnumerable<Address> seedNodes)
         {
             ClusterCore.Tell(
@@ -224,7 +257,7 @@ namespace Akka.Cluster
         /// this process it might still be necessary to set the node's status to <see cref="MemberStatus.Down"/> in order
         /// to complete the removal.
         /// </summary>
-        /// <param name="address"></param>
+        /// <param name="address">TBD</param>
         public void Leave(Address address)
         {
             ClusterCore.Tell(new ClusterUserAction.Leave(FillLocal(address)));
@@ -262,6 +295,7 @@ namespace Akka.Cluster
         /// The status of the unreachable member must be changed to <see cref="MemberStatus.Down"/>, which can be done with
         /// this method.
         /// </summary>
+        /// <param name="address">TBD</param>
         public void Down(Address address)
         {
             ClusterCore.Tell(new ClusterUserAction.Down(FillLocal(address)));
@@ -296,7 +330,8 @@ namespace Akka.Cluster
         /// Generate the remote actor path by replacing the Address in the RootActor Path for the given
         /// ActorRef with the cluster's `SelfAddress`, unless address' host is already defined
         /// </summary>
-        /// <param name="actorRef"></param>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public ActorPath RemotePathOf(IActorRef actorRef)
         {
             var path = actorRef.Path;
@@ -342,17 +377,29 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ExtendedActorSystem System { get; }
 
         private Lazy<IDowningProvider> _downingProvider;
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal ClusterReadView ReadView { get { return _readView; } }
 
         private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
 
         private Lazy<TaskCompletionSource<bool>> _leaveTask = new Lazy<TaskCompletionSource<bool>>(() => new TaskCompletionSource<bool>(), LazyThreadSafetyMode.ExecutionAndPublication);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IDowningProvider DowningProvider => _downingProvider.Value;
 
         // ========================================================
@@ -360,6 +407,9 @@ namespace Akka.Cluster
         // ========================================================
 
         readonly IScheduler _scheduler;
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal IScheduler Scheduler { get { return _scheduler; } }
 
         private static IScheduler CreateScheduler(ActorSystem system)
@@ -396,6 +446,9 @@ namespace Akka.Cluster
         private readonly IActorRef _clusterDaemons;
         private IActorRef _clusterCore;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal IActorRef ClusterCore
         {
             get
@@ -408,16 +461,31 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         internal void LogInfo(string message)
         {
             _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="template">TBD</param>
+        /// <param name="arg1">TBD</param>
         internal void LogInfo(string template, object arg1)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="template">TBD</param>
+        /// <param name="arg1">TBD</param>
+        /// <param name="arg2">TBD</param>
         internal void LogInfo(string template, object arg1, object arg2)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);

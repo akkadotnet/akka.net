@@ -22,8 +22,17 @@ namespace Akka.Actor.Internal
         {
             //Intentionally left blank
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public new static IChildrenContainer Instance { get { return _instance; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <returns>TBD</returns>
         public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             return this;
@@ -40,10 +49,20 @@ namespace Akka.Actor.Internal
             throw new InvalidOperationException($"Cannot reserve actor name '{name}': already terminated");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsTerminating { get { return true; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsNormal { get { return false; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "Terminated";

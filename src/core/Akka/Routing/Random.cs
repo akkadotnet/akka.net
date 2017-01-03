@@ -31,7 +31,7 @@ namespace Akka.Routing
                 return Routee.NoRoutee;
             }
 
-            return routees[ThreadLocalRandom.Current.Next(routees.Length - 1)%routees.Length];
+            return routees[ThreadLocalRandom.Current.Next(routees.Length)];
         }
     }
 
@@ -88,9 +88,14 @@ namespace Akka.Routing
         /// <returns>The newly created router tied to the given system.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new RoundRobinRoutingLogic());
+            return new Router(new RandomLogic());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return NrOfInstances;
@@ -288,6 +293,11 @@ namespace Akka.Routing
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;

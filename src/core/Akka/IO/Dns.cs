@@ -16,12 +16,27 @@ using Akka.Routing;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class DnsBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public virtual Dns.Resolved Cached(string name)
         {
             return null;
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         public virtual Dns.Resolved Resolve(string name, ActorSystem system, IActorRef sender)
         {
             var ret = Cached(name);
@@ -31,29 +46,60 @@ namespace Akka.IO
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class Dns : ExtensionIdProvider<DnsExt>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Dns Instance = new Dns();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract class Command
         { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class Resolve : Command, IConsistentHashable
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="name">TBD</param>
             public Resolve(string name)
             {
                 Name = name;
                 ConsistentHashKey = name;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object ConsistentHashKey { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Name { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class Resolved : Command
         {
             private readonly IPAddress _addr;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="name">TBD</param>
+            /// <param name="ipv4">TBD</param>
+            /// <param name="ipv6">TBD</param>
             public Resolved(string name, IEnumerable<IPAddress> ipv4, IEnumerable<IPAddress> ipv6)
             {
                 Name = name;
@@ -63,10 +109,22 @@ namespace Akka.IO
                 _addr = ipv4.FirstOrDefault() ?? ipv6.FirstOrDefault();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Name { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IEnumerable<IPAddress> Ipv4 { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IEnumerable<IPAddress> Ipv6 { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IPAddress Addr
             {
                 get
@@ -77,6 +135,12 @@ namespace Akka.IO
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="name">TBD</param>
+            /// <param name="addresses">TBD</param>
+            /// <returns>TBD</returns>
             public static Resolved Create(string name, IEnumerable<IPAddress> addresses)
             {
                 var ipv4 = addresses.Where(x => x.AddressFamily == AddressFamily.InterNetwork);
@@ -85,26 +149,54 @@ namespace Akka.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static Resolved Cached(string name, ActorSystem system)
         {
             return Instance.Apply(system).Cache.Cached(name);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         public static Resolved ResolveName(string name, ActorSystem system, IActorRef sender)
         {
             return Instance.Apply(system).Cache.Resolve(name, system, sender);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override DnsExt CreateExtension(ExtendedActorSystem system)
         {
             return new DnsExt(system);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class DnsExt : IOExtension
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class DnsSettings
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="config">TBD</param>
             public DnsSettings(Config config)
             {
                 Dispatcher = config.GetString("dispatcher");
@@ -113,15 +205,31 @@ namespace Akka.IO
                 ProviderObjectName = ResolverConfig.GetString("provider-object");
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Dispatcher { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Resolver { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Config ResolverConfig { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string ProviderObjectName { get; private set; }
         }
         
         private readonly ExtendedActorSystem _system;
         private IActorRef _manager;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public DnsExt(ExtendedActorSystem system)
         {
             _system = system;
@@ -131,6 +239,9 @@ namespace Akka.IO
             Cache = Provider.Cache;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRef Manager
         {
             get
@@ -141,13 +252,26 @@ namespace Akka.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IActorRef GetResolver()
         {
             return _manager;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public DnsSettings Settings { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public DnsBase Cache { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IDnsProvider Provider { get; private set; }
     }
 }

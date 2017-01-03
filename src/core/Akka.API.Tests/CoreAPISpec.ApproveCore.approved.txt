@@ -837,7 +837,11 @@ namespace Akka.Actor
     public class static Futures
     {
         public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
+        public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
+        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
     }
     public class static GracefulStopSupport
     {
@@ -2042,7 +2046,7 @@ namespace Akka.Configuration
         public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
         [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__46))]
         public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
-        protected Akka.Configuration.Config Copy() { }
+        protected Akka.Configuration.Config Copy(Akka.Configuration.Config fallback = null) { }
         public virtual bool GetBoolean(string path, bool default = False) { }
         public virtual System.Collections.Generic.IList<bool> GetBooleanList(string path) { }
         public virtual System.Collections.Generic.IList<byte> GetByteList(string path) { }
@@ -2217,6 +2221,7 @@ namespace Akka.Configuration.Hocon
     public class HoconValue : Akka.Configuration.Hocon.IMightBeAHoconObject
     {
         public HoconValue() { }
+        public HoconValue(System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> values, bool adoptedFromFallback = True) { }
         public bool IsEmpty { get; }
         public System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> Values { get; }
         public void AppendValue(Akka.Configuration.Hocon.IHoconElement value) { }

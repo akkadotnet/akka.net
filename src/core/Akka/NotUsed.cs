@@ -18,32 +18,58 @@ namespace Akka
     [Serializable]
     public sealed class NotUsed : IEquatable<NotUsed>, IComparable<NotUsed>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly NotUsed Instance = new NotUsed();
 
         private NotUsed()
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return 0;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return obj is NotUsed;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "()";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(NotUsed other)
         {
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(NotUsed other)
         {
             return 0;

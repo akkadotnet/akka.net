@@ -27,13 +27,26 @@ namespace Akka.IO
     /// </summary>
     public class Udp : ExtensionIdProvider<UdpExt>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Udp Instance = new Udp();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static IActorRef Manager(ActorSystem system)
         {
             return Instance.Apply(system).Manager;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override UdpExt CreateExtension(ExtendedActorSystem system)
         {
             return new UdpExt(system);
@@ -47,7 +60,11 @@ namespace Akka.IO
         {
             private object _failureMessage;
 
-            public object FailureMessage {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public object FailureMessage
+            {
                 get { return _failureMessage = _failureMessage ?? new CommandFailed(this); }
             }
         }
@@ -66,11 +83,18 @@ namespace Akka.IO
             /// </summary>
             public static readonly NoAck Instance = new NoAck(null);
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="token">TBD</param>
             public NoAck(object token)
             {
                 Token = token;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Token { get; private set; }
         }
 
@@ -92,6 +116,13 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="payload">TBD</param>
+            /// <param name="target">TBD</param>
+            /// <param name="ack">TBD</param>
+            /// <exception cref="ArgumentNullException">TBD</exception>
             public Send(ByteString payload, EndPoint target, Event ack)
             {
                 if (ack == null)
@@ -101,15 +132,33 @@ namespace Akka.IO
                 Ack = ack;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ByteString Payload { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public EndPoint Target { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Event Ack { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool WantsAck
             {
                 get { return !(Ack is NoAck); }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="data">TBD</param>
+            /// <param name="target">TBD</param>
+            /// <returns>TBD</returns>
             public static Send Create(ByteString data, EndPoint target)
             {
                 return new Send(data, target, NoAck.Instance);
@@ -124,6 +173,12 @@ namespace Akka.IO
         /// </summary>
         public sealed class Bind : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="handler">TBD</param>
+            /// <param name="localAddress">TBD</param>
+            /// <param name="options">TBD</param>
             public Bind(IActorRef handler, EndPoint localAddress, IEnumerable<Inet.SocketOption> options = null)
             {
                 Handler = handler;
@@ -131,8 +186,17 @@ namespace Akka.IO
                 Options = options ?? Enumerable.Empty<Inet.SocketOption>();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Handler { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public EndPoint LocalAddress { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IEnumerable<Inet.SocketOption> Options { get; private set; }
         }
 
@@ -143,6 +207,9 @@ namespace Akka.IO
         /// </summary>
         public class Unbind : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Unbind Instance = new Unbind();
 
             private Unbind() { }
@@ -160,13 +227,23 @@ namespace Akka.IO
         /// </summary>
         public class SimpleSender : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly SimpleSender Instance = new SimpleSender();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="options">TBD</param>
             public SimpleSender(IEnumerable<Inet.SocketOption> options = null)
             {
                 Options = options ?? Enumerable.Empty<Inet.SocketOption>();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IEnumerable<Inet.SocketOption> Options { get; private set; }
         }
 
@@ -178,6 +255,9 @@ namespace Akka.IO
         /// </summary>
         public class SuspendReading : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly SuspendReading Instance = new SuspendReading();
 
             private SuspendReading()
@@ -190,6 +270,9 @@ namespace Akka.IO
         /// </summary>
         public class ResumeReading : Command
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ResumeReading Instance = new ResumeReading();
 
             private ResumeReading()
@@ -205,13 +288,24 @@ namespace Akka.IO
         /// </summary>
         public sealed class Received : Event
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="data">TBD</param>
+            /// <param name="sender">TBD</param>
             public Received(ByteString data, EndPoint sender)
             {
                 Data = data;
                 Sender = sender;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ByteString Data { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public EndPoint Sender { get; private set; }
         }
 
@@ -221,10 +315,17 @@ namespace Akka.IO
         /// </summary>
         public sealed class CommandFailed : Event
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cmd">TBD</param>
             public CommandFailed(Command cmd)
             {
                 Cmd = cmd;
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Command Cmd { get; private set; }
         }
 
@@ -235,17 +336,27 @@ namespace Akka.IO
         /// </summary>
         public sealed class Bound : Event
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="localAddress">TBD</param>
             public Bound(EndPoint localAddress)
             {
                 LocalAddress = localAddress;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public EndPoint LocalAddress { get; private set; }
         }
 
         /// <summary> The “simple sender” sends this message type in response to a <see cref="SimpleSender"/> query. </summary>
         public sealed class SimpleSenderReady : Event
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly SimpleSenderReady Instance = new SimpleSenderReady();
 
             private  SimpleSenderReady() { }
@@ -257,10 +368,16 @@ namespace Akka.IO
         /// </summary>
         public class Unbound
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Unbound Instance = new Unbound();
             private Unbound() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class SO : Inet.SoForwarders
         {
             /// <summary>
@@ -270,13 +387,23 @@ namespace Akka.IO
             /// </summary>
             public sealed class Broadcast : Inet.SocketOption
             {
+                /// <summary>
+                /// TBD
+                /// </summary>
+                /// <param name="on">TBD</param>
                 public Broadcast(bool on)
                 {
                     On = on;
                 }
-
+                /// <summary>
+                /// TBD
+                /// </summary>
                 public bool On { get; private set; }
 
+                /// <summary>
+                /// TBD
+                /// </summary>
+                /// <param name="s">TBD</param>
                 public override void BeforeDatagramBind(Socket s)
                 {
                     s.EnableBroadcast = On;
@@ -284,8 +411,15 @@ namespace Akka.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class UdpSettings : SelectionHandlerSettings
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="config">TBD</param>
             public UdpSettings(Config config) 
                 : base(config)
             {
@@ -299,19 +433,41 @@ namespace Akka.IO
                 MaxChannelsPerSelector = MaxChannels == -1 ? -1 : Math.Max(MaxChannels/NrOfSelectors, 1);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int NrOfSelectors { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int DirectBufferSize { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int MaxDirectBufferPoolSize { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int BatchReceiveLimit { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string ManagementDispatcher { get; private set; }
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class UdpExt : IOExtension
     {
         private readonly Udp.UdpSettings _settings;
         private readonly IActorRef _manager;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public UdpExt(ExtendedActorSystem system)
         {
             _settings = new Udp.UdpSettings(system.Settings.Config.GetConfig("akka.io.udp"));
@@ -322,18 +478,35 @@ namespace Akka.IO
             BufferPool = new DirectByteBufferPool(_settings.DirectBufferSize, _settings.MaxDirectBufferPoolSize);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRef Manager
         {
             get { return _manager; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal Udp.UdpSettings Setting { get { return _settings; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal DirectByteBufferPool BufferPool { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class UdpExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static IActorRef Udp(this ActorSystem system)
         {
             return IO.Udp.Manager(system);

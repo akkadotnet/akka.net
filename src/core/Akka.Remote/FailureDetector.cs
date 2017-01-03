@@ -34,7 +34,11 @@ namespace Akka.Remote
 
         #region Static members
 
-		//fixed: sign will no longer flip, but the tickcount will go back down to zero every 24.9 days 
+        //fixed: sign will no longer flip, but the tickcount will go back down to zero every 24.9 days 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static readonly Clock DefaultClock = () => Environment.TickCount & Int32.MaxValue;
 
         #endregion

@@ -28,6 +28,8 @@ namespace Akka.Actor.Internal
         /// Abstract base class for stash support
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="capacity">TBD</param>
         /// <exception cref="NotSupportedException">This exception is thrown if the actor's mailbox isn't deque-based (e.g. <see cref="UnboundedDequeBasedMailbox"/>).</exception>
         protected AbstractStash(IActorContext context, int capacity = 100)
         {
@@ -140,6 +142,10 @@ An (unbounded) deque-based mailbox can be configured as follows:
             return stashed;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelopes">TBD</param>
         public void Prepend(IEnumerable<Envelope> envelopes)
         {
             // since we want to save the order of messages, but still prepending using AddFirst,

@@ -22,6 +22,9 @@ namespace Akka.Remote
         private readonly IDictionary<IActorRef, IInternalActorRef> _supervisors =
             new Dictionary<IActorRef, IInternalActorRef>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public RemoteDeploymentWatcher()
         {
             Receive<WatchRemote>(w =>
@@ -43,15 +46,29 @@ namespace Akka.Remote
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class WatchRemote
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="actor">TBD</param>
+            /// <param name="supervisor">TBD</param>
             public WatchRemote(IActorRef actor, IInternalActorRef supervisor)
             {
                 Actor = actor;
                 Supervisor = supervisor;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Actor { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IInternalActorRef Supervisor { get; private set; }
         }
     }

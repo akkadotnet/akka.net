@@ -21,13 +21,28 @@ namespace Akka.Actor
     {
         private readonly IActorRef _deadLetters;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="deadLetters">TBD</param>
         public DeadLetterMessageQueue(IActorRef deadLetters)
         {
             _deadLetters = deadLetters;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool HasMessages => false;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Count => 0;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receiver">TBD</param>
+        /// <param name="envelope">TBD</param>
         public void Enqueue(IActorRef receiver, Envelope envelope)
         {
             if (envelope.Message is DeadLetter)
@@ -39,12 +54,22 @@ namespace Akka.Actor
             _deadLetters.Tell(new DeadLetter(envelope.Message, envelope.Sender, receiver), envelope.Sender);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryDequeue(out Envelope envelope)
         {
             envelope = new Envelope(new NoMessage(), ActorRefs.NoSender);
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="deadletters">TBD</param>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
             // do nothing
@@ -60,18 +85,35 @@ namespace Akka.Actor
     {
         private readonly IActorRef _deadLetters;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="deadLetters">TBD</param>
         public DeadLetterMailbox(IActorRef deadLetters) : base(new DeadLetterMessageQueue(deadLetters))
         {
             _deadLetters = deadLetters;
             BecomeClosed(); // always closed
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal override bool HasSystemMessages => false;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="newContents">TBD</param>
+        /// <returns>TBD</returns>
         internal override EarliestFirstSystemMessageList SystemDrain(LatestFirstSystemMessageList newContents)
         {
             return SystemMessageList.ENil;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
         internal override void SystemEnqueue(IActorRef receiver, SystemMessage message)
         {
             _deadLetters.Tell(new DeadLetter(message, receiver, receiver));

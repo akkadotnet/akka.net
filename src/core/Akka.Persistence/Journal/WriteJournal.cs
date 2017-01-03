@@ -27,7 +27,8 @@ namespace Akka.Persistence.Journal
         {
             return resequencables
                .OfType<AtomicWrite>()
-               .Select(aw => new AtomicWrite(((IEnumerable<IPersistentRepresentation>)aw.Payload).Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));
+               .Select(aw => new AtomicWrite(((IEnumerable<IPersistentRepresentation>)aw.Payload)
+                    .Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));
         }
 
         protected IEnumerable<IPersistentRepresentation> AdaptFromJournal(IPersistentRepresentation representation)

@@ -13,12 +13,20 @@ using Akka.Configuration;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class InetAddressDnsResolver : ActorBase
     {
         private readonly SimpleDnsCache _cache;
         private readonly long _positiveTtl;
         private readonly long _negativeTtl;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cache">TBD</param>
+        /// <param name="config">TBD</param>
         public InetAddressDnsResolver(SimpleDnsCache cache, Config config)
         {
             _cache = cache;
@@ -26,6 +34,11 @@ namespace Akka.IO
             _negativeTtl = (long) config.GetTimeSpan("negative-ttl").TotalMilliseconds;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var resolve = message as Dns.Resolve;

@@ -22,16 +22,28 @@ namespace Akka.Util
         private readonly List<Envelope> _data;
         private Func<object, int> _priorityCalculator = message => 1;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialCapacity">TBD</param>
         public ListPriorityQueue(int initialCapacity)
         {
             _data = new List<Envelope>(initialCapacity);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="priorityCalculator">TBD</param>
         public void SetPriorityCalculator(Func<object, int> priorityCalculator)
         {
             _priorityCalculator = priorityCalculator;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
         public void Enqueue(Envelope item)
         {
 
@@ -46,6 +58,10 @@ namespace Akka.Util
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public Envelope Dequeue()
         {
             // assumes pq is not empty; up to calling code
@@ -70,17 +86,29 @@ namespace Akka.Util
             return frontItem;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public Envelope Peek()
         {
             var frontItem = _data[0];
             return frontItem;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public int Count()
         {
             return _data.Count;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             var s = "";
@@ -90,6 +118,10 @@ namespace Akka.Util
             return s;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsConsistent()
         {
             // is the heap property true for all data?

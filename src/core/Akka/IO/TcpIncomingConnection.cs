@@ -17,11 +17,23 @@ namespace Akka.IO
     *
     * INTERNAL API
     */
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class TcpIncomingConnection : TcpConnection
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tcp">TBD</param>
+        /// <param name="channel">TBD</param>
+        /// <param name="registry">TBD</param>
+        /// <param name="bindHandler">TBD</param>
+        /// <param name="options">TBD</param>
+        /// <param name="readThrottling">TBD</param>
         public TcpIncomingConnection(TcpExt tcp, 
                                      SocketChannel channel, 
                                      IChannelRegistry registry, 
@@ -38,6 +50,11 @@ namespace Akka.IO
             registry.Register(channel, SocketAsyncOperation.None, Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var registration = message as ChannelRegistration;

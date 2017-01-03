@@ -10,6 +10,9 @@ using System.Linq.Expressions;
 
 namespace Akka.Tools.MatchHandler
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class PredicateAndHandler
     {
         private readonly HandlerKind _handlerKind;
@@ -21,12 +24,34 @@ namespace Akka.Tools.MatchHandler
             _handlerFirstArgumentShouldBeBaseType = handlerFirstArgumentShouldBeBaseType;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public HandlerKind HandlerKind { get { return _handlerKind; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IReadOnlyList<Argument> Arguments { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool HandlerFirstArgumentShouldBeBaseType { get { return _handlerFirstArgumentShouldBeBaseType; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Expression ActionOrFuncExpression { get; set; }
-        public Expression PredicateExpression { get; set; }        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Expression PredicateExpression { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
+        /// <param name="predicate">TBD</param>
+        /// <param name="handlerFirstArgumentShouldBeBaseType">TBD</param>
+        /// <returns>TBD</returns>
         public static PredicateAndHandler CreateAction(object action, object predicate = null, bool handlerFirstArgumentShouldBeBaseType=false)
         {
             if(predicate == null)
@@ -41,6 +66,12 @@ namespace Akka.Tools.MatchHandler
             return predicateActionHandler;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="func">TBD</param>
+        /// <param name="handlerFirstArgumentShouldBeBaseType">TBD</param>
+        /// <returns>TBD</returns>
         public static PredicateAndHandler CreateFunc(object func, bool handlerFirstArgumentShouldBeBaseType=false)
         {
             var funcHandler = new PredicateAndHandler(HandlerKind.Func, handlerFirstArgumentShouldBeBaseType);

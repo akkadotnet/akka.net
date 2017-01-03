@@ -9,10 +9,22 @@ using System;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IDnsProvider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         DnsBase Cache { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         Type ActorClass { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         Type ManagerClass { get; }
     }
 }

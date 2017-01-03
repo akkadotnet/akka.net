@@ -13,6 +13,10 @@ namespace Akka.Actor
     /// </summary>
     public sealed class SchedulerException : AkkaException
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public SchedulerException(string message) : base(message) { }
     }
 }

@@ -54,6 +54,8 @@
       <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Sharding\bin\Release\Akka.Cluster.Sharding.xml" />
       <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\Akka.Cluster.Tools.dll" />
       <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\Akka.Cluster.Tools.xml" />
+	  <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.DistributedData\bin\Release\Akka.DistributedData.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.DistributedData\bin\Release\Akka.DistributedData.xml" />
       <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Core\bin\Release\Akka.DI.Core.dll" />
       <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Core\bin\Release\Akka.DI.Core.xml" />
 	  <DocumentationSource sourceFile="..\src\contrib\persistence\Akka.Persistence.Query.Sql\bin\Release\Akka.Persistence.Query.Sql.dll" />
@@ -66,23 +68,29 @@
       <DocumentationSource sourceFile="..\src\contrib\serializers\Akka.Serialization.Wire\bin\Release\Akka.Serialization.Wire.xml" />
       <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\Akka.TestKit.Xunit.dll" />
       <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\Akka.TestKit.Xunit.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit2\bin\Release\Akka.TestKit.Xunit2.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit2\bin\Release\Akka.TestKit.Xunit2.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.ExternalAnnotations.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.Cluster\bin\Release\Akka.Cluster.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.Cluster\bin\Release\Akka.Cluster.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Cluster.TestKit\bin\Release\Akka.Cluster.TestKit.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Cluster.TestKit\bin\Release\Akka.Cluster.TestKit.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.Persistence\bin\Release\Akka.Persistence.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.Persistence\bin\Release\Akka.Persistence.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.Persistence.FSharp\bin\Release\Akka.Persistence.FSharp.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.Persistence.FSharp\bin\Release\Akka.Persistence.FSharp.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Persistence.Query\bin\Release\Akka.Persistence.Query.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Persistence.Query\bin\Release\Akka.Persistence.Query.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.Persistence.TestKit\bin\Release\Akka.Persistence.TestKit.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.Persistence.TestKit\bin\Release\Akka.Persistence.TestKit.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.Remote\bin\Release\Akka.Remote.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Remote\bin\Release\Akka.Remote.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.Remote.TestKit\bin\Release\Akka.Remote.TestKit.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.Remote.TestKit\bin\Release\Akka.Remote.TestKit.xml" />
-      <DocumentationSource sourceFile="..\src\core\Akka.Remote\bin\Release\Akka.Remote.xml" />
 	  <DocumentationSource sourceFile="..\src\core\Akka.Streams\bin\Release\Akka.Streams.dll" />
 	  <DocumentationSource sourceFile="..\src\core\Akka.Streams\bin\Release\Akka.Streams.xml" />
 	  <DocumentationSource sourceFile="..\src\core\Akka.Streams.TestKit\bin\Release\Akka.Streams.TestKit.dll" />
@@ -121,6 +129,11 @@
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Cluster.Sharding.Serialization" isDocumented="True">
         The Akka.Cluster.Sharding.Serialization namespace contains classes used to (de-)serialize cluster sharding messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.TestKit" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tests.MultiNode" isDocumented="False">
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Cluster.Tools" isDocumented="False">
       </NamespaceSummaryItem>
@@ -163,6 +176,15 @@
       <NamespaceSummaryItem name="Akka.Dispatch.SysMsg" isDocumented="True">
         The Akka.Dispatch.SysMsg namespace contains classes used to dispatch system messages to the actors.
       </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.DistributedData" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.DistributedData.Internal" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.DistributedData.Local" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Event" isDocumented="True">
         The Akka.Event namespace contains classes used to publish/subscribe to events in the Event Stream.
       </NamespaceSummaryItem>
@@ -183,6 +205,9 @@
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Persistence.Journal" isDocumented="True">
         The Akka.Persistence.Journal namespace contains classes used to journal sequences of events the actor state.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Persistence.Query" isDocumented="True">
+        TBD
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Persistence.Query.Sql" isDocumented="True">
         The Akka.Persistence.Query.Sql namespace contains classes used to to query ranges of information directly from their underlying persistence stores for more powerful types of reads, aggregations, and more.
@@ -266,6 +291,9 @@
       <NamespaceSummaryItem name="Akka.Streams.Dsl" isDocumented="True">
         TBD
       </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Dsl.Internal" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Streams.Extra" isDocumented="True">
         TBD
       </NamespaceSummaryItem>
@@ -273,6 +301,12 @@
         TBD
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Streams.Implementation.Fusing" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Implementation.IO" isDocumented="True">
+        TBD
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Streams.Implementation.Stages" isDocumented="True">
         TBD
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Streams.IO" isDocumented="True">
@@ -318,6 +352,14 @@
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.TestKit.Xunit.Internals" isDocumented="True">
         The Akka.TestKit.Xunit.Internals namespace contains classes that provide for writing tests in Xunit.
+        These classes are part of an internal API. As such, these classes may break without warning. Use at
+        your own risk.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Xunit2" isDocumented="True">
+        The Akka.TestKit.Xunit2 namespace contains classes that provide for writing tests in Xunit2.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.TestKit.Xunit2.Internals" isDocumented="True">
+        The Akka.TestKit.Xunit2.Internals namespace contains classes that provide for writing tests in Xunit2.
         These classes are part of an internal API. As such, these classes may break without warning. Use at
         your own risk.
       </NamespaceSummaryItem>

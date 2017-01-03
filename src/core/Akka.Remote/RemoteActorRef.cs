@@ -94,6 +94,9 @@ namespace Akka.Remote
 
         private RemoteActorRefProvider RemoteProvider => Provider as RemoteActorRefProvider;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated>")]
         public override bool IsTerminated { get { return false; } }
 
@@ -103,7 +106,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns>ActorRef.</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <exception cref="System.NotImplementedException">TBD</exception>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
             throw new NotImplementedException();
@@ -143,11 +146,17 @@ namespace Akka.Remote
             SendSystemMessage(new Akka.Dispatch.SysMsg.Suspend());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsLocal
         {
             get { return false; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path
         {
             get { return _path; }
@@ -197,6 +206,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
+        /// <exception cref="InvalidMessageException">TBD</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if(message == null) throw new InvalidMessageException("Message is null.");
@@ -209,7 +219,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="watchee">The actor being watched.</param>
         /// <param name="watcher">The actor watching.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public bool IsWatchIntercepted(IActorRef watchee, IActorRef watcher)
         {
             return !watcher.Equals(RemoteProvider.RemoteWatcher) && watchee.Equals(this);

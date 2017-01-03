@@ -69,6 +69,13 @@ namespace Akka.Event
     /// </summary>
     public sealed class DeadLetter : AllDeadLetters
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public DeadLetter(object message, IActorRef sender, IActorRef recipient) : base(message, sender, recipient)
         {
             if (sender == null) throw new ArgumentNullException(nameof(sender), "DeadLetter sender may not be null");
@@ -82,6 +89,13 @@ namespace Akka.Event
     /// </summary>
     public sealed class SuppressedDeadLetter : AllDeadLetters
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public SuppressedDeadLetter(IDeadLetterSuppression message, IActorRef sender, IActorRef recipient) : base(message, sender, recipient)
         {
             if (sender == null) throw new ArgumentNullException(nameof(sender), "SuppressedDeadLetter sender may not be null");

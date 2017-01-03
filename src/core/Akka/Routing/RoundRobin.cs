@@ -138,6 +138,11 @@ namespace Akka.Routing
             return new Router(new RoundRobinRoutingLogic());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sys">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem sys)
         {
             return NrOfInstances;
@@ -332,6 +337,10 @@ namespace Akka.Routing
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routees">TBD</param>
         [Obsolete("Use RoundRobinGroup constructor with IEnumerable<string> parameter")]
         public RoundRobinGroup(IEnumerable<IActorRef> routees)
             : this(routees.Select(c => c.Path.ToString()))
@@ -348,6 +357,11 @@ namespace Akka.Routing
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;

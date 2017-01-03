@@ -10,17 +10,29 @@ using Akka.Actor;
 
 namespace Akka.IO
 {
-    // INTERNAL API
+    // INTERNAL API	
+    /// <summary>
+    /// TBD
+    /// </summary>
     class UdpConnectedManager : SelectionHandler.SelectorBasedManager
     {
         private readonly UdpConnectedExt _udpConn;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="udpConn">TBD</param>
         public UdpConnectedManager(UdpConnectedExt udpConn)
             : base(udpConn.Settings, udpConn.Settings.NrOfSelectors)
         {
             _udpConn = udpConn;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="m">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object m)
         {
             return WorkerForCommandHandler(message =>

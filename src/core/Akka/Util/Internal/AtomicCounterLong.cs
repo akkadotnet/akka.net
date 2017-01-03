@@ -44,6 +44,7 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Increments the counter and returns the next value.
         /// </summary>
+        /// <returns>TBD</returns>
         public long Next()
         {
             return Interlocked.Increment(ref _value);
@@ -113,6 +114,8 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Returns current counter value and sets a new value on it's place in one operation.
         /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public long GetAndSet(long value)
         {
             return Interlocked.Exchange(ref _value, value);
@@ -123,11 +126,18 @@ namespace Akka.Util.Internal
         /// and sets it to <paramref name="newValue"/> if compared values where equal.
         /// Returns true if replacement has succeed.
         /// </summary>
+        /// <param name="expected">TBD</param>
+        /// <param name="newValue">TBD</param>
+        /// <returns>TBD</returns>
         public bool CompareAndSet(long expected, long newValue)
         {
              return Interlocked.CompareExchange(ref _value, newValue, expected) != _value;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return Current.ToString();

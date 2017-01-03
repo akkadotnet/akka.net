@@ -20,6 +20,9 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IActorRefProvider
     {
         /// <summary>
@@ -33,6 +36,8 @@ namespace Akka.Actor
         /// this is exposed so that the ActorRefFactory can use it as lookupRoot, i.e.
         /// for anchoring absolute actor selections.
         /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         IActorRef RootGuardianAt(Address address);
 
         /// <summary> Gets the supervisor used for all top-level user actors.</summary>
@@ -58,12 +63,14 @@ namespace Akka.Actor
         /// and then—when the ActorSystem is constructed—the second phase during
         /// which actors may be created (e.g. the guardians).
         /// </summary>
+        /// <param name="system">TBD</param>
         void Init(ActorSystemImpl system);
 
         /// <summary>Gets the deployer.</summary>
         Deployer Deployer { get; }
 
         /// <summary>Generates and returns a unique actor path below "/temp".</summary>
+        /// <returns>TBD</returns>
         ActorPath TempPath();
 
         /// <summary>Returns the actor reference representing the "/temp" path.</summary>
@@ -87,12 +94,25 @@ namespace Akka.Actor
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <param name="systemService">TBD</param>
+        /// <param name="deploy">TBD</param>
+        /// <param name="lookupDeploy">TBD</param>
+        /// <param name="async">TBD</param>
+        /// <returns>TBD</returns>
         IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
 
         /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         IActorRef ResolveActorRef(string path);
 
         /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
         IActorRef ResolveActorRef(ActorPath actorPath);
 
         /// <summary>
@@ -107,6 +127,8 @@ namespace Akka.Actor
         /// reached from this system (i.e. no means of communication known; no
         /// attempt is made to verify actual reachability).
         /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         Address GetExternalAddressFor(Address address);
 
         /// <summary>Gets the external address of the default transport. </summary>
@@ -137,12 +159,26 @@ namespace Akka.Actor
         private MailboxType _defaultMailbox;
         private LocalActorRef _systemGuardian;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="systemName">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="eventStream">TBD</param>
         public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream)
             : this(systemName, settings, eventStream, null, null)
         {
             //Intentionally left blank
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="systemName">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="eventStream">TBD</param>
+        /// <param name="deployer">TBD</param>
+        /// <param name="deadLettersFactory">TBD</param>
         public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream, Deployer deployer, Func<ActorPath, IInternalActorRef> deadLettersFactory)
         {
             _settings = settings;
@@ -160,30 +196,64 @@ namespace Akka.Actor
             _userGuardianStrategyConfigurator = SupervisorStrategyConfigurator.CreateConfigurator(Settings.SupervisorStrategyClass);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef DeadLetters { get { return _deadLetters; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Deployer Deployer { get { return _deployer; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IInternalActorRef RootGuardian { get { return _rootGuardian; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorPath RootPath { get { return _rootPath; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Settings Settings { get { return _settings; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public LocalActorRef SystemGuardian { get { return _systemGuardian; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IInternalActorRef TempContainer { get { return _tempContainer; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Task TerminationTask { get { return _terminationPromise.Task; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public LocalActorRef Guardian { get { return _userGuardian; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public EventStream EventStream { get { return _eventStream; } }
 
         private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
 
         private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public ActorPath TempPath()
         {
             return _tempNode / GetNextTempName();
@@ -200,6 +270,8 @@ namespace Akka.Actor
         /// Just be careful to complete all this before <see cref="ActorSystemImpl.Start"/> finishes,
         /// or before you start your own auto-spawned actors.
         /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="actor">TBD</param>
         public void RegisterExtraName(string name, IInternalActorRef actor)
         {
             _extraNames.Add(name, actor);
@@ -218,6 +290,11 @@ namespace Akka.Actor
             return rootGuardian;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef RootGuardianAt(Address address)
         {
             return address == _rootPath.Address ? _rootGuardian : _deadLetters;
@@ -272,6 +349,10 @@ namespace Akka.Actor
             _tempContainer.RemoveChild(path.Name);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public void Init(ActorSystemImpl system)
         {
             _system = system;
@@ -292,6 +373,11 @@ namespace Akka.Actor
             _eventStream.StartDefaultLoggers(_system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef ResolveActorRef(string path)
         {
             ActorPath actorPath;
@@ -333,6 +419,12 @@ namespace Akka.Actor
             //throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="pathElements">TBD</param>
+        /// <returns>TBD</returns>
         internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
         {
             if (pathElements.Count == 0)
@@ -358,6 +450,14 @@ namespace Akka.Actor
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <param name="systemService">TBD</param>
+        /// <param name="deploy">TBD</param>
+        /// <param name="lookupDeploy">TBD</param>
+        /// <param name="async">TBD</param>
         /// <exception cref="ConfigurationException">
         /// This exception can be thrown for a number of reasons. The following are some examples:
         /// <dl>
@@ -373,7 +473,7 @@ namespace Akka.Actor
         /// <dd>$There was a configuration problem while creating the given <paramref name="path"/> with router dispatcher and mailbox and routee dispatcher and mailbox.</dd>
         /// </dl>
         /// </exception>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             if (props.Deploy.RouterConfig is NoRouter)
@@ -461,13 +561,24 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public Address GetExternalAddressFor(Address address)
         {
             return address == _rootPath.Address ? address : null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address DefaultAddress { get { return _rootPath.Address; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ILoggingAdapter Log { get { return _log; } }
     }
 }

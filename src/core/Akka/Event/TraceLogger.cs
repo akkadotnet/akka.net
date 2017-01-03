@@ -31,6 +31,10 @@ namespace Akka.Event
     /// </summary>
     public class TraceLogger : UntypedActor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             message.Match()

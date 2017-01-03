@@ -9,8 +9,14 @@ using Akka.Actor;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class IOExtension : IExtension
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract IActorRef Manager { get; }
     }
 }

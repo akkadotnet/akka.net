@@ -13,8 +13,18 @@ using Akka.Actor;
 
 namespace Akka.Remote.Transport.AkkaIO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class AddressConverters
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="endpoint">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ArgumentException">TbD</exception>
+        /// <returns>TBD</returns>
         public static Address ToAddress(this EndPoint endpoint, ActorSystem system)
         {
             var dns = endpoint as DnsEndPoint;
@@ -26,6 +36,12 @@ namespace Akka.Remote.Transport.AkkaIO
             throw new ArgumentException("endpoint");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static EndPoint ToEndpoint(this Address address)
         {
             if (address == null || address.Host == null || !address.Port.HasValue)

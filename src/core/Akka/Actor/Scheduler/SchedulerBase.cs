@@ -29,6 +29,11 @@ namespace Akka.Actor
         /// </summary>
         protected readonly ILoggingAdapter Log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="scheduler">TBD</param>
+        /// <param name="log">TBD</param>
         protected SchedulerBase(Config scheduler, ILoggingAdapter log)
         {
             SchedulerConfig = scheduler;
@@ -89,7 +94,10 @@ namespace Akka.Actor
 
         IAdvancedScheduler IScheduler.Advanced { get { return this; } }
         DateTimeOffset ITimeProvider.Now { get { return TimeNow; } }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected abstract DateTimeOffset TimeNow { get; }
 
         /// <summary>
@@ -110,13 +118,47 @@ namespace Akka.Actor
         /// </remarks>
         public abstract TimeSpan HighResMonotonicClock { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected abstract void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected abstract void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected abstract void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
         protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="interval">TBD</param>
+        /// <param name="parameterName">TBD</param>
         /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="interval"/> is negative or zero.</exception>
         protected static void ValidateInterval(TimeSpan interval, string parameterName)
         {
@@ -124,7 +166,11 @@ namespace Akka.Actor
                 throw new ArgumentOutOfRangeException(nameof(parameterName), $"Interval must be >0. It was {interval}");
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="parameterName">TBD</param>
         /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="delay"/> is negative.</exception>
         protected static void ValidateDelay(TimeSpan delay, string parameterName)
         {

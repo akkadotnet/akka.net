@@ -20,9 +20,21 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     internal static class SystemMessageList
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly LatestFirstSystemMessageList LNil = new LatestFirstSystemMessageList(null);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly EarliestFirstSystemMessageList ENil = new EarliestFirstSystemMessageList(null);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="head">TBD</param>
+        /// <param name="acc">TBD</param>
+        /// <returns>TBD</returns>
         internal static int SizeInner(SystemMessage head, int acc)
         {
             while (true)
@@ -33,6 +45,12 @@ namespace Akka.Dispatch.SysMsg
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="head">TBD</param>
+        /// <param name="acc">TBD</param>
+        /// <returns>TBD</returns>
         internal static SystemMessage ReverseInner(SystemMessage head, SystemMessage acc)
         {
             while (true)
@@ -68,6 +86,10 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         public SystemMessage Head;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="head">TBD</param>
         public LatestFirstSystemMessageList(SystemMessage head)
         {
             Head = head;
@@ -138,6 +160,10 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         public SystemMessage Head;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="head">TBD</param>
         public EarliestFirstSystemMessageList(SystemMessage head)
         {
             Head = head;
@@ -252,14 +278,23 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public abstract class SystemMessage : ISystemMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         [NonSerialized]
         internal SystemMessage Next;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Unlink()
         {
             Next = null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool Unlinked { get { return Next == null; } }
     }
 
@@ -268,6 +303,10 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class NoMessage : SystemMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "NoMessage";
@@ -310,6 +349,10 @@ namespace Akka.Dispatch.SysMsg
         /// <value><c>true</c> if [address terminated]; otherwise, <c>false</c>.</value>
         public bool AddressTerminated { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<DeathWatchNotification>: " + Actor + ", ExistenceConfirmed=" + ExistenceConfirmed + ", AddressTerminated=" + AddressTerminated;
@@ -350,8 +393,15 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The cause.</value>
         public Exception Cause { get { return _cause; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long Uid { get { return _uid; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Failed>: " + _child + " (" + _uid + ") " + (_cause != null ? ", Cause=" + _cause : "");
@@ -386,6 +436,10 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The child.</value>
         public IActorRef Child { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Supervise>: " + Child + ", Async=" + Async;
@@ -424,6 +478,10 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The watcher.</value>
         public IInternalActorRef Watcher { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Watch>: " + Watcher + " wants to watch " + Watchee;
@@ -458,6 +516,10 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The watcher.</value>
         public IInternalActorRef Watcher { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Unwatch>: " + Watcher + " wants to unwatch " + Watchee;
@@ -485,6 +547,9 @@ namespace Akka.Dispatch.SysMsg
         public Task Task { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class ActorTaskSchedulerMessage : SystemMessage
     {
         private readonly ActorTaskScheduler _scheduler;
@@ -493,6 +558,9 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
+        /// <param name="scheduler">TBD</param>
+        /// <param name="task">TBD</param>
+        /// <param name="message">TBD</param>
         public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
             _scheduler = scheduler;
@@ -511,14 +579,27 @@ namespace Akka.Dispatch.SysMsg
             Message = message;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Exception Exception { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object Message { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void ExecuteTask()
         {
             _scheduler.ExecuteTask(_task);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<ActorTaskSchedulerMessage>";
@@ -545,6 +626,10 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The cause.</value>
         public Exception Cause { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Recreate>" + (Cause == null ? "" : " Cause: " + Cause);
@@ -571,6 +656,10 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The caused by failure.</value>
         public Exception CausedByFailure { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Resume>" + (CausedByFailure == null ? "" : " CausedByFailure: " + CausedByFailure);
@@ -582,6 +671,10 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Suspend : SystemMessage, IStashWhenWaitingForChildren
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Suspend>";
@@ -593,6 +686,10 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Stop : SystemMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Stop>";
@@ -620,6 +717,10 @@ namespace Akka.Dispatch.SysMsg
         public IActorRef Child { get; private set; }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<StopChild> " + Child;
@@ -647,6 +748,10 @@ namespace Akka.Dispatch.SysMsg
         public Exception Reason { get; private set; }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Escalate>" + (Reason == null ? "" : " Reason: " + Reason);
@@ -659,6 +764,10 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Terminate : SystemMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Terminate>";
@@ -672,26 +781,43 @@ namespace Akka.Dispatch.SysMsg
     {
         private readonly ActorInitializationException _failure;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="failure">TBD</param>
         public Create(ActorInitializationException failure = null)
         {
             _failure = failure;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorInitializationException Failure
         {
             get { return _failure; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Create>" + (_failure == null ? "" : " Failure: " + _failure);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
         private static readonly RegisterTerminationHook _instance = new RegisterTerminationHook();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static RegisterTerminationHook Instance
         {
             get
@@ -700,16 +826,26 @@ namespace Akka.Dispatch.SysMsg
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<RegisterTerminationHook>";
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class TerminationHook
     {
         private TerminationHook() { }
         private static readonly TerminationHook _instance = new TerminationHook();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static TerminationHook Instance
         {
             get
@@ -718,6 +854,10 @@ namespace Akka.Dispatch.SysMsg
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<TerminationHook>";
@@ -731,6 +871,9 @@ namespace Akka.Dispatch.SysMsg
     {
         private TerminationHookDone() { }
         private static readonly TerminationHookDone _instance = new TerminationHookDone();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static TerminationHookDone Instance
         {
             get
@@ -739,6 +882,10 @@ namespace Akka.Dispatch.SysMsg
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<TerminationHookDone>";
