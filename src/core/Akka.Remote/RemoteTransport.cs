@@ -25,13 +25,24 @@ namespace Akka.Remote
     /// </summary>
     public abstract class RemoteTransport
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="provider">TBD</param>
         protected RemoteTransport(ExtendedActorSystem system, RemoteActorRefProvider provider)
         {
             System = system;
             Provider = provider;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ExtendedActorSystem System { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public RemoteActorRefProvider Provider { get; private set; }
 
         /// <summary>
@@ -49,6 +60,9 @@ namespace Akka.Remote
         /// When true, some functionality will be turned off for security purposes
         /// </summary>
         protected bool UseUntrustedMode { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool logRemoteLifeCycleEvents { get; protected set; }
 
         /// <summary>
@@ -70,6 +84,9 @@ namespace Akka.Remote
         /// <summary>
         /// Sends the given message to the recipient, supplying <paramref name="sender"/> if any.
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="recipient">TBD</param>
         public abstract void Send(object message, IActorRef sender, RemoteActorRef recipient);
 
         /// <summary>

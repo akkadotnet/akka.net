@@ -22,17 +22,35 @@ using Helios.Topology;
 
 namespace Akka.Remote.Transport.Helios
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal abstract class CommonHandlers : ChannelHandlerAdapter
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly HeliosTransport WrappedTransport;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly ILoggingAdapter Log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="log">TBD</param>
         protected CommonHandlers(HeliosTransport wrappedTransport, ILoggingAdapter log)
         {
             WrappedTransport = wrappedTransport;
             Log = log;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
         public override void ChannelActive(IChannelHandlerContext context)
         {
             if (!WrappedTransport.ConnectionGroup.TryAdd(context.Channel))
@@ -42,6 +60,10 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
         public override void ChannelInactive(IChannelHandlerContext context)
         {
             if (!WrappedTransport.ConnectionGroup.TryRemove(context.Channel))
@@ -51,17 +73,45 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="exception">TBD</param>
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
             Log.Error(exception, "Error caught channel [{0}->{1}](Id={2})", context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="channel">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract AssociationHandle CreateHandle(IChannel channel, Address localAddress,
             Address remoteAddress);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="channel">TBD</param>
+        /// <param name="listener">TBD</param>
+        /// <param name="msg">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract void RegisterListener(IChannel channel, IHandleEventListener listener, object msg,
             IPEndPoint remoteAddress);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="channel">TBD</param>
+        /// <param name="remoteSocketAddress">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="msg">TBD</param>
+        /// <param name="op">TBD</param>
         protected void Init(IChannel channel, IPEndPoint remoteSocketAddress, Address remoteAddress, object msg,
             out AssociationHandle op)
         {

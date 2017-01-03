@@ -25,6 +25,11 @@ namespace Akka.Remote.Routing
         private readonly IEnumerator<Address> _nodeAddrEnumerator;
         private readonly AtomicCounter _childNameCounter = new AtomicCounter();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="local">TBD</param>
+        /// <param name="nodes">TBD</param>
         public RemoteRouterConfig(Pool local, IEnumerable<Address> nodes) 
             : base(local.NrOfInstances,local.Resizer,local.SupervisorStrategy,local.RouterDispatcher,local.UsePoolDispatcher)
         {
@@ -35,20 +40,42 @@ namespace Akka.Remote.Routing
             _nodeAddrEnumerator = Nodes.GetContinuousEnumerator();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal Pool Local { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal IList<Address> Nodes { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             return Local.CreateRouter(system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return Local.GetNrOfInstances(system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routeeProps">TBD</param>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         internal override Routee NewRoutee(Props routeeProps, IActorContext context)
         {
             var name = "c" + _childNameCounter.IncrementAndGet();
@@ -65,26 +92,45 @@ namespace Akka.Remote.Routing
         }
 
         // TODO: why internal?
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         internal override RouterActor CreateRouterActor()
         {
             return Local.CreateRouterActor();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SupervisorStrategy SupervisorStrategy
         {
             get { return Local.SupervisorStrategy; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override string RouterDispatcher
         {
             get { return Local.RouterDispatcher; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Resizer Resizer
         {
             get { return Local.Resizer; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routerConfig">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             var other = routerConfig as RemoteRouterConfig;
@@ -100,6 +146,11 @@ namespace Akka.Remote.Routing
             return new RemoteRouterConfig(local ?? Local, nodes ?? Nodes);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(RouterConfig other)
         {
             if (!base.Equals(other)) return false;
@@ -109,6 +160,11 @@ namespace Akka.Remote.Routing
                    Nodes.Intersect(otherRemote.Nodes).Count() == Nodes.Count;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return new RemoteRouterConfigSurrogate
@@ -118,11 +174,25 @@ namespace Akka.Remote.Routing
             };
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class RemoteRouterConfigSurrogate : ISurrogate
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Pool Local { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address[] Nodes { get; set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new RemoteRouterConfig(Local, Nodes);

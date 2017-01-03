@@ -24,6 +24,11 @@ namespace Akka.Remote
         private volatile bool _active = false;
         private readonly long _deadlineMillis;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="acceptableHeartbeatPause">TBD</param>
+        /// <param name="clock">TBD</param>
         [Obsolete("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) instead. (1.1.2)")]
         public DeadlineFailureDetector(TimeSpan acceptableHeartbeatPause, Clock clock = null) 
             : this(acceptableHeartbeatPause, TimeSpan.Zero, clock)
@@ -62,13 +67,16 @@ namespace Akka.Remote
         /// Constructor that reads parameters from an Akka <see cref="Config"/> section.
         /// Expects property 'acceptable-heartbeat-pause'.
         /// </summary>
-        /// <param name="config"></param>
-        /// <param name="ev"></param>
+        /// <param name="config">TBD</param>
+        /// <param name="ev">TBD</param>
         public DeadlineFailureDetector(Config config, EventStream ev) 
             : this(
                   config.GetTimeSpan("acceptable-heartbeat-pause"),
                   config.GetTimeSpan("heartbeat-interval")) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsAvailable => IsAvailableTicks(_clock());
 
         private bool IsAvailableTicks(long timestamp)
@@ -77,8 +85,14 @@ namespace Akka.Remote
             return true; //treat unmanaged connections, e.g. with zero heartbeats, as healthy connections
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsMonitoring => _active;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void HeartBeat()
         {
             Interlocked.Exchange(ref _heartbeatTimestamp, _clock());

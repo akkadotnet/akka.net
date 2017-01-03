@@ -22,6 +22,12 @@ namespace Akka.Remote.Transport
     /// </summary>
     public class FailureInjectorProvider : ITransportAdapterProvider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public Transport Create(Transport wrappedTransport, ExtendedActorSystem system)
         {
             return new FailureInjectorTransportAdapter(wrappedTransport, system);
@@ -58,68 +64,132 @@ namespace Akka.Remote.Transport
         public string Msg { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class FailureInjectorTransportAdapter : AbstractTransportAdapter, IAssociationEventListener
     {
         #region Internal message classes
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string FailureInjectorSchemeIdentifier = "gremlin";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public interface IFailureInjectorCommand { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class All
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="mode">TBD</param>
             public All(IGremlinMode mode)
             {
                 Mode = mode;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IGremlinMode Mode { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class One
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="remoteAddress">TBD</param>
+            /// <param name="mode">TBD</param>
             public One(Address remoteAddress, IGremlinMode mode)
             {
                 Mode = mode;
                 RemoteAddress = remoteAddress;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address RemoteAddress { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IGremlinMode Mode { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public interface IGremlinMode { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class PassThru : IGremlinMode
         {
             private PassThru() { }
 // ReSharper disable once InconsistentNaming
             private static readonly PassThru _instance = new PassThru();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static PassThru Instance
             {
                 get { return _instance; }
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Drop : IGremlinMode
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="outboundDropP">TBD</param>
+            /// <param name="inboundDropP">TBD</param>
             public Drop(double outboundDropP, double inboundDropP)
             {
                 InboundDropP = inboundDropP;
                 OutboundDropP = outboundDropP;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public double OutboundDropP { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public double InboundDropP { get; private set; }
         }
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ExtendedActorSystem ExtendedActorSystem;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="extendedActorSystem">TBD</param>
         public FailureInjectorTransportAdapter(Transport wrappedTransport, ExtendedActorSystem extendedActorSystem) : base(wrappedTransport)
         {
             ExtendedActorSystem = extendedActorSystem;
@@ -138,17 +208,28 @@ namespace Akka.Remote.Transport
         private readonly ConcurrentDictionary<Address,IGremlinMode> addressChaosTable = new ConcurrentDictionary<Address, IGremlinMode>();
         private volatile IGremlinMode _allMode = PassThru.Instance;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected int MaximumOverhead = 0;
 
         #region AbstractTransportAdapter members
 
         // ReSharper disable once InconsistentNaming
         private static readonly SchemeAugmenter _augmenter = new SchemeAugmenter(FailureInjectorSchemeIdentifier);
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override SchemeAugmenter SchemeAugmenter
         {
             get { return _augmenter; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public override Task<bool> ManagementCommand(object message)
         {
             if (message is All)
@@ -173,6 +254,12 @@ namespace Akka.Remote.Transport
 
         #region IAssociationEventListener members
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="listenAddress">TBD</param>
+        /// <param name="listenerTask">TBD</param>
+        /// <returns>TBD</returns>
         protected override Task<IAssociationEventListener> InterceptListen(Address listenAddress, Task<IAssociationEventListener> listenerTask)
         {
             _log.Warning("FailureInjectorTransport is active on this system. Gremlins might munch your packets.");
@@ -186,6 +273,12 @@ namespace Akka.Remote.Transport
             return Task.FromResult((IAssociationEventListener)this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="statusPromise">TBD</param>
+        /// <exception cref="FailureInjectorException">TBD</exception>
         protected override void InterceptAssociate(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
         {
             // Association is simulated to be failed if there was either an inbound or outbound message drop
@@ -207,6 +300,10 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ev">TBD</param>
         public void Notify(IAssociationEvent ev)
         {
             if (ev is InboundAssociation && ShouldDropInbound(ev.AsInstanceOf<InboundAssociation>().Association.RemoteAddress, ev, "notify"))
@@ -229,6 +326,13 @@ namespace Akka.Remote.Transport
 
         #region Internal methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="instance">TBD</param>
+        /// <param name="debugMessage">TBD</param>
+        /// <returns>TBD</returns>
         public bool ShouldDropInbound(Address remoteAddress, object instance, string debugMessage)
         {
             var mode = ChaosMode(remoteAddress);
@@ -247,6 +351,13 @@ namespace Akka.Remote.Transport
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="instance">TBD</param>
+        /// <param name="debugMessage">TBD</param>
+        /// <returns>TBD</returns>
         public bool ShouldDropOutbound(Address remoteAddress, object instance, string debugMessage)
         {
             var mode = ChaosMode(remoteAddress);
@@ -299,6 +410,11 @@ namespace Akka.Remote.Transport
         private readonly FailureInjectorTransportAdapter _gremlinAdapter;
         private volatile IHandleEventListener _upstreamListener = null;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedHandle">TBD</param>
+        /// <param name="gremlinAdapter">TBD</param>
         public FailureInjectorHandle(AssociationHandle wrappedHandle, FailureInjectorTransportAdapter gremlinAdapter)
             : base(wrappedHandle, FailureInjectorTransportAdapter.FailureInjectorSchemeIdentifier)
         {
@@ -310,6 +426,11 @@ namespace Akka.Remote.Transport
             }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Write(ByteString payload)
         {
             if (!_gremlinAdapter.ShouldDropOutbound(WrappedHandle.RemoteAddress, payload, "handler.write"))
@@ -317,6 +438,9 @@ namespace Akka.Remote.Transport
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Disassociate()
         {
             WrappedHandle.Disassociate();
@@ -324,6 +448,10 @@ namespace Akka.Remote.Transport
 
         #region IHandleEventListener members
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ev">TBD</param>
         public void Notify(IHandleEvent ev)
         {
             if (!_gremlinAdapter.ShouldDropInbound(WrappedHandle.RemoteAddress, ev, "handler.notify"))
