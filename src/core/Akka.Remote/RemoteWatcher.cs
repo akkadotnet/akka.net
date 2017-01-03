@@ -39,6 +39,14 @@ namespace Akka.Remote
     /// </summary>
     public class RemoteWatcher : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="unreachableReaperInterval">TBD</param>
+        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -49,36 +57,71 @@ namespace Akka.Remote
                 .WithDeploy(Deploy.Local);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract class WatchCommand
         {
             readonly IInternalActorRef _watchee;
             readonly IInternalActorRef _watcher;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="watchee">TBD</param>
+            /// <param name="watcher">TBD</param>
             protected WatchCommand(IInternalActorRef watchee, IInternalActorRef watcher)
             {
                 _watchee = watchee;
                 _watcher = watcher;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IInternalActorRef Watchee => _watchee;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IInternalActorRef Watcher => _watcher;
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class WatchRemote : WatchCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="watchee">TBD</param>
+            /// <param name="watcher">TBD</param>
             public WatchRemote(IInternalActorRef watchee, IInternalActorRef watcher)
                 : base(watchee, watcher)
             {
             }
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class UnwatchRemote : WatchCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="watchee">TBD</param>
+            /// <param name="watcher">TBD</param>
             public UnwatchRemote(IInternalActorRef watchee, IInternalActorRef watcher)
                 : base(watchee, watcher)
             {
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Heartbeat : IPriorityMessage
         {
             private Heartbeat()
@@ -87,6 +130,9 @@ namespace Akka.Remote
 
             private static readonly Heartbeat _instance = new Heartbeat();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static Heartbeat Instance
             {
                 get
@@ -96,15 +142,25 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class HeartbeatRsp : IPriorityMessage
         {
             readonly int _addressUid;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="addressUid">TBD</param>
             public HeartbeatRsp(int addressUid)
             {
                 _addressUid = addressUid;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int AddressUid
             {
                 get { return _addressUid; }
@@ -112,11 +168,17 @@ namespace Akka.Remote
         }
 
         // sent to self only
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class HeartbeatTick
         {
             private HeartbeatTick() { }
             private static readonly HeartbeatTick _instance = new HeartbeatTick();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static HeartbeatTick Instance
             {
                 get
@@ -126,11 +188,17 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class ReapUnreachableTick
         {
             private ReapUnreachableTick() { }
             private static readonly ReapUnreachableTick _instance = new ReapUnreachableTick();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static ReapUnreachableTick Instance
             {
                 get
@@ -140,15 +208,25 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class ExpectedFirstHeartbeat
         {
             readonly Address _from;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="from">TBD</param>
             public ExpectedFirstHeartbeat(Address @from)
             {
                 _from = @from;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address From
             {
                 get { return _from; }
@@ -156,8 +234,16 @@ namespace Akka.Remote
         }
 
         // test purpose
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Stats
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as Stats;
@@ -165,6 +251,10 @@ namespace Akka.Remote
                 return _watching == other._watching && _watchingNodes == other._watchingNodes;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -177,8 +267,17 @@ namespace Akka.Remote
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static Stats Empty = Counts(0, 0);
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="watching">TBD</param>
+            /// <param name="watchingNodes">TBD</param>
+            /// <returns>TBD</returns>
             public static Stats Counts(int watching, int watchingNodes)
             {
                 return new Stats(watching, watchingNodes);
@@ -189,9 +288,21 @@ namespace Akka.Remote
             readonly ImmutableHashSet<Tuple<IActorRef, IActorRef>> _watchingRefs;
             readonly ImmutableHashSet<Address> _watchingAddresses;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="watching">TBD</param>
+            /// <param name="watchingNodes">TBD</param>
             public Stats(int watching, int watchingNodes) : this(watching, watchingNodes, 
                 ImmutableHashSet<Tuple<IActorRef, IActorRef>>.Empty, ImmutableHashSet<Address>.Empty) { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="watching">TBD</param>
+            /// <param name="watchingNodes">TBD</param>
+            /// <param name="watchingRefs">TBD</param>
+            /// <param name="watchingAddresses">TBD</param>
             public Stats(int watching, int watchingNodes, ImmutableHashSet<Tuple<IActorRef, IActorRef>> watchingRefs, ImmutableHashSet<Address> watchingAddresses)
             {
                 _watching = watching;
@@ -200,14 +311,30 @@ namespace Akka.Remote
                 _watchingAddresses = watchingAddresses;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int Watching => _watching;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int WatchingNodes => _watchingNodes;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableHashSet<Tuple<IActorRef, IActorRef>> WatchingRefs => _watchingRefs;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableHashSet<Address> WatchingAddresses => _watchingAddresses;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 Func<string> formatWatchingRefs = () =>
@@ -227,12 +354,28 @@ namespace Akka.Remote
                 return $"Stats(watching={_watching}, watchingNodes={_watchingNodes}, watchingRefs=[{formatWatchingRefs()}], watchingAddresses=[{formatWatchingAddresses()}])";
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="watching">TBD</param>
+            /// <param name="watchingNodes">TBD</param>
+            /// <param name="watchingRefs">TBD</param>
+            /// <param name="watchingAddresses">TBD</param>
+            /// <returns>TBD</returns>
             public Stats Copy(int watching, int watchingNodes, ImmutableHashSet<Tuple<IActorRef, IActorRef>> watchingRefs = null, ImmutableHashSet<Address> watchingAddresses = null)
             {
                 return new Stats(watching, watchingNodes, watchingRefs ?? WatchingRefs, watchingAddresses ?? WatchingAddresses);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="failureDetector">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="unreachableReaperInterval">TBD</param>
+        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
+        /// <exception cref="ConfigurationException">TBD</exception>
         public RemoteWatcher(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -267,7 +410,13 @@ namespace Akka.Remote
         /// </summary>
         protected readonly Dictionary<Address, HashSet<IInternalActorRef>> WatcheeByNodes = new Dictionary<Address, HashSet<IInternalActorRef>>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ICollection<Address> WatchingNodes => WatcheeByNodes.Keys;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected HashSet<Address> Unreachable { get; } = new HashSet<Address>();
 
         readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
@@ -275,6 +424,9 @@ namespace Akka.Remote
         readonly ICancelable _heartbeatCancelable;
         readonly ICancelable _failureDetectorReaperCancelable;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
@@ -282,6 +434,10 @@ namespace Akka.Remote
             _failureDetectorReaperCancelable.Cancel();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is HeartbeatTick) SendHeartbeat();
@@ -368,16 +524,31 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
         protected virtual void PublishAddressTerminated(Address address)
         {
             AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(address));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <param name="addressUid">TBD</param>
         protected virtual void Quarantine(Address address, int? addressUid)
         {
             _remoteProvider.Quarantine(address, addressUid);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watchee">TBD</param>
+        /// <param name="watcher">TBD</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
         protected void AddWatching(IInternalActorRef watchee, IInternalActorRef watcher)
         {
             // TODO: replace with Code Contracts assertion
@@ -394,6 +565,10 @@ namespace Akka.Remote
             Context.Watch(watchee);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watchee">TBD</param>
         protected virtual void WatchNode(IInternalActorRef watchee)
         {
             var watcheeAddress = watchee.Path.Address;
@@ -411,6 +586,12 @@ namespace Akka.Remote
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watchee">TBD</param>
+        /// <param name="watcher">TBD</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
         protected void RemoveWatch(IInternalActorRef watchee, IInternalActorRef watcher)
         {
             if (watcher.Equals(Self)) throw new InvalidOperationException("Watcher cannot be the RemoteWatcher!");
@@ -429,6 +610,10 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watchee">TBD</param>
         protected void RemoveWatchee(IInternalActorRef watchee)
         {
             var watcheeAddress = watchee.Path.Address;
@@ -446,6 +631,10 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="watcheeAddress">TBD</param>
         protected void UnwatchNode(Address watcheeAddress)
         {
             WatcheeByNodes.Remove(watcheeAddress);
@@ -523,6 +712,9 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly ILoggingAdapter Log = Context.GetLogger();
     }
 }

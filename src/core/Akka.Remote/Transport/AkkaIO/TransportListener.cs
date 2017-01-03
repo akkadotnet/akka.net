@@ -10,10 +10,20 @@ using Akka.IO;
 
 namespace Akka.Remote.Transport.AkkaIO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class TransportListener : UntypedActor, IWithUnboundedStash
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IStash Stash { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is IAssociationEventListener)
