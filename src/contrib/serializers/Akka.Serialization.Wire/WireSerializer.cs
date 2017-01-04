@@ -9,7 +9,7 @@ using System;
 using System.IO;
 using Akka.Actor;
 using Akka.Util;
-using Wire;
+using Hyperion;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.Serialization
@@ -19,7 +19,7 @@ namespace Akka.Serialization
     /// </summary>
     public class WireSerializer : Serializer
     {
-        private readonly Wire.Serializer _serializer;
+        private readonly Hyperion.Serializer _serializer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="WireSerializer"/> class.
@@ -34,7 +34,7 @@ namespace Akka.Serialization
                 to => to.FromSurrogate(system));
 
             _serializer =
-                new Wire.Serializer(new SerializerOptions(
+                new Hyperion.Serializer(new SerializerOptions(
                     preserveObjectReferences: true, 
                     versionTolerance: true,
                     surrogates: new[]

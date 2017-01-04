@@ -186,7 +186,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.Wire", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.TestKit", "contrib\serializers\Akka.Serialization.TestKit\Akka.Serialization.TestKit.csproj", "{CAA97041-CFC0-4081-9BD2-8B139E62A611}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.WireTests", "contrib\serializers\Akka.Serialization.WireTests\Akka.Serialization.WireTests.csproj", "{402FA351-D6C6-40FD-8868-F07156035919}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.Wire.Tests", "contrib\serializers\Akka.Serialization.WireTests\Akka.Serialization.Wire.Tests.csproj", "{402FA351-D6C6-40FD-8868-F07156035919}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cluster", "Cluster", "{76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}"
 EndProject
