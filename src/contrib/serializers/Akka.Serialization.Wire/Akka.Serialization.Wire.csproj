@@ -32,8 +32,8 @@
     <DocumentationFile>bin\Release\Akka.Serialization.Wire.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Hyperion, Version=0.9.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Hyperion.0.9.0\lib\net45\Hyperion.dll</HintPath>
+    <Reference Include="Hyperion, Version=0.9.1.1, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Hyperion.0.9.1\lib\net45\Hyperion.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
