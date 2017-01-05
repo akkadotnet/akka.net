@@ -11,6 +11,9 @@ using Akka.Actor;
 
 namespace Akka.Persistence.Journal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IAsyncRecovery
     {
         /// <summary>
@@ -38,7 +41,7 @@ namespace Akka.Persistence.Journal
         /// <param name="toSequenceNr">Inclusive sequence number where replay should end</param>
         /// <param name="max">Maximum number of messages to be replayed</param>
         /// <param name="recoveryCallback">Called to replay a message, may be called from any thread.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
 
         /// <summary>
@@ -59,7 +62,7 @@ namespace Akka.Persistence.Journal
         /// <param name="fromSequenceNr">Hint where to start searching for the highest sequence number.
         /// When a persistent actor is recovering this <paramref name="fromSequenceNr"/> will the sequence
         /// number of the used snapshot, or `0L` if no snapshot is used.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
     }
 }

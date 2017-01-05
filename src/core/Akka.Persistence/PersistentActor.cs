@@ -15,12 +15,23 @@ using Akka.Tools.MatchHandler;
 
 namespace Akka.Persistence
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class RecoveryCompleted
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly RecoveryCompleted Instance = new RecoveryCompleted();
         private RecoveryCompleted(){}
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return obj is RecoveryCompleted;
@@ -43,21 +54,45 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class Recovery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Recovery Default = new Recovery(SnapshotSelectionCriteria.Latest);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Recovery None = new Recovery(SnapshotSelectionCriteria.Latest, 0);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Recovery() : this(SnapshotSelectionCriteria.Latest)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="fromSnapshot">TBD</param>
         public Recovery(SnapshotSelectionCriteria fromSnapshot) : this(fromSnapshot, long.MaxValue)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="fromSnapshot">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
         public Recovery(SnapshotSelectionCriteria fromSnapshot, long toSequenceNr) : this(fromSnapshot, toSequenceNr, long.MaxValue)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="fromSnapshot">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="replayMax">TBD</param>
         public Recovery(SnapshotSelectionCriteria fromSnapshot = null, long toSequenceNr = long.MaxValue, long replayMax = long.MaxValue)
         {
             FromSnapshot = fromSnapshot != null ? fromSnapshot : SnapshotSelectionCriteria.Latest;
@@ -81,16 +116,32 @@ namespace Akka.Persistence
         public long ReplayMax { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class RecoveryTimedOutException : AkkaException
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public RecoveryTimedOutException()
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="cause">TBD</param>
         public RecoveryTimedOutException(string message, Exception cause = null) : base(message, cause)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         public RecoveryTimedOutException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
@@ -107,6 +158,9 @@ namespace Akka.Persistence
     /// </summary>
     public class DiscardToDeadLetterStrategy : IStashOverflowStrategy
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly DiscardToDeadLetterStrategy Instance = new DiscardToDeadLetterStrategy();
 
         private DiscardToDeadLetterStrategy() { }
@@ -121,6 +175,9 @@ namespace Akka.Persistence
     /// </summary>
     public class ThrowOverflowExceptionStrategy : IStashOverflowStrategy
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ThrowOverflowExceptionStrategy Instance = new ThrowOverflowExceptionStrategy();
 
         private ThrowOverflowExceptionStrategy() { }
@@ -131,6 +188,10 @@ namespace Akka.Persistence
     /// </summary>
     public sealed class ReplyToStrategy : IStashOverflowStrategy
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="response">TBD</param>
         public ReplyToStrategy(object response)
         {
             Response = response;
@@ -149,19 +210,40 @@ namespace Akka.Persistence
     /// </summary>
     public interface IStashOverflowStrategyConfigurator
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         IStashOverflowStrategy Create(Config config);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class ThrowExceptionConfigurator : IStashOverflowStrategyConfigurator
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public IStashOverflowStrategy Create(Config config)
         {
             return ThrowOverflowExceptionStrategy.Instance;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class DiscardConfigurator : IStashOverflowStrategyConfigurator
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public IStashOverflowStrategy Create(Config config)
         {
             return DiscardToDeadLetterStrategy.Instance;
@@ -173,6 +255,11 @@ namespace Akka.Persistence
     /// </summary>
     public abstract class PersistentActor : Eventsourced
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return ReceiveCommand(message);
@@ -184,26 +271,54 @@ namespace Akka.Persistence
     /// </summary>
     public abstract class UntypedPersistentActor : Eventsourced
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return ReceiveCommand(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected sealed override bool ReceiveCommand(object message)
         {
             OnCommand(message);
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected sealed override bool ReceiveRecover(object message)
         {
             OnRecover(message);
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected abstract void OnCommand(object message);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected abstract void OnRecover(object message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="discardOld">TBD</param>
         [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         protected void Become(UntypedReceive receive, bool discardOld = true)
         {
@@ -236,9 +351,15 @@ namespace Akka.Persistence
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected static new IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
     {
         
@@ -249,6 +370,9 @@ namespace Akka.Persistence
         private PartialAction<object> _partialReceiveRecover = _ => false;
         private bool _hasBeenInitialized;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ReceivePersistentActor()
         {
             PrepareConfigureMessageHandlers();
@@ -303,11 +427,19 @@ namespace Akka.Persistence
             base.BecomeStacked(m => ExecutePartialMessageHandler(m, newHandler));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected sealed override void OnCommand(object message)
         {
             ExecutePartialMessageHandler(message, _partialReceiveCommand);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected sealed override void OnRecover(object message)
         {
             ExecutePartialMessageHandler(message, _partialReceiveRecover);
@@ -328,40 +460,78 @@ namespace Akka.Persistence
                 throw new InvalidOperationException("You may only call Recover-methods when constructing the actor and inside Become().");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="handler">TBD</param>
+        /// <param name="shouldHandle">TBD</param>
         protected void Recover<T>(Action<T> handler, Predicate<T> shouldHandle = null)
         {
             EnsureMayConfigureRecoverHandlers();
             _matchRecoverBuilders.Peek().Match<T>(handler, shouldHandle);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="shouldHandle">TBD</param>
+        /// <param name="handler">TBD</param>
         protected void Recover<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
             Recover<T>(handler, shouldHandle);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageType">TBD</param>
+        /// <param name="handler">TBD</param>
+        /// <param name="shouldHandle">TBD</param>
         protected void Recover(Type messageType, Action<object> handler, Predicate<object> shouldHandle = null)
         {
             EnsureMayConfigureRecoverHandlers();
             _matchRecoverBuilders.Peek().Match(messageType, handler, shouldHandle);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageType">TBD</param>
+        /// <param name="shouldHandle">TBD</param>
+        /// <param name="handler">TBD</param>
         protected void Recover(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
         {
             Recover(messageType, handler, shouldHandle);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="handler">TBD</param>
         protected void Recover<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureRecoverHandlers();
             _matchRecoverBuilders.Peek().Match<T>(handler);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageType">TBD</param>
+        /// <param name="handler">TBD</param>
         protected void Recover(Type messageType, Func<object, bool> handler)
         {
             EnsureMayConfigureRecoverHandlers();
             _matchRecoverBuilders.Peek().Match(messageType, handler);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
         protected void RecoverAny(Action<object> handler)
         {
             EnsureMayConfigureRecoverHandlers();
@@ -378,46 +548,88 @@ namespace Akka.Persistence
                 throw new InvalidOperationException("You may only call Command-methods when constructing the actor and inside Become().");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="handler">TBD</param>
+        /// <param name="shouldHandle">TBD</param>
         protected void Command<T>(Action<T> handler, Predicate<T> shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
             _matchCommandBuilders.Peek().Match<T>(handler, shouldHandle);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="shouldHandle">TBD</param>
+        /// <param name="handler">TBD</param>
         protected void Command<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
             Command<T>(handler, shouldHandle);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageType">TBD</param>
+        /// <param name="handler">TBD</param>
+        /// <param name="shouldHandle">TBD</param>
         protected void Command(Type messageType, Action<object> handler, Predicate<object> shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
             _matchCommandBuilders.Peek().Match(messageType, handler, shouldHandle);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageType">TBD</param>
+        /// <param name="shouldHandle">TBD</param>
+        /// <param name="handler">TBD</param>
         protected void Command(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
         {
             Command(messageType, handler, shouldHandle);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="handler">TBD</param>
         protected void Command<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
             _matchCommandBuilders.Peek().Match<T>(handler);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageType">TBD</param>
+        /// <param name="handler">TBD</param>
         protected void Command(Type messageType, Func<object, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
             _matchCommandBuilders.Peek().Match(messageType, handler);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
         protected void Command(Action<object> handler)
         {
             EnsureMayConfigureCommandHandlers();
             _matchCommandBuilders.Peek().MatchAny(handler);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handler">TBD</param>
         protected void CommandAny(Action<object> handler)
         {
             EnsureMayConfigureCommandHandlers();
