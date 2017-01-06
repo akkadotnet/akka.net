@@ -10,8 +10,14 @@ using Akka.Actor;
 
 namespace Akka.Persistence
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public partial class PersistentView
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             base.PreStart();
@@ -30,12 +36,21 @@ namespace Akka.Persistence
             LoadSnapshot(SnapshotterId, recovery.FromSnapshot, recovery.ToSequenceNr);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool AroundReceive(Receive receive, object message)
         {
             _currentState.StateReceive(receive, message);
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void AroundPreStart()
         {
             // Fail fast on missing plugins.
@@ -44,6 +59,11 @@ namespace Akka.Persistence
             base.AroundPreStart();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="message">TBD</param>
         protected override void PreRestart(Exception reason, object message)
         {
             try
@@ -56,6 +76,9 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             if (_scheduleCancellation != null)
@@ -66,6 +89,10 @@ namespace Akka.Persistence
             base.PostStop();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void Unhandled(object message)
         {
             if (message is RecoveryCompleted) return; // ignore

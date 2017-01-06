@@ -12,17 +12,28 @@ using Akka.Actor;
 
 namespace Akka.Persistence.Journal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class WriteJournalBase : ActorBase
     {
         private readonly PersistenceExtension _persistence;
         private readonly EventAdapters _eventAdapters;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected WriteJournalBase()
         {
             _persistence = Persistence.Instance.Apply(Context.System);
             _eventAdapters = _persistence.AdaptersFor(Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="resequencables">TBD</param>
+        /// <returns>TBD</returns>
         protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
         {
             return resequencables
@@ -31,6 +42,11 @@ namespace Akka.Persistence.Journal
                     .Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="representation">TBD</param>
+        /// <returns>TBD</returns>
         protected IEnumerable<IPersistentRepresentation> AdaptFromJournal(IPersistentRepresentation representation)
         {
             return _eventAdapters.Get(representation.Payload.GetType())
@@ -39,6 +55,11 @@ namespace Akka.Persistence.Journal
                 .Select(representation.WithPayload);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="representation">TBD</param>
+        /// <returns>TBD</returns>
         protected IPersistentRepresentation AdaptToJournal(IPersistentRepresentation representation)
         {
             var payload = representation.Payload;

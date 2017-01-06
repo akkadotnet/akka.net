@@ -10,8 +10,16 @@ using Akka.Actor;
 
 namespace Akka.Persistence
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public partial class Eventsourced
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
+        /// <returns>TBD</returns>
         public static readonly Func<Envelope, bool> UnstashFilterPredicate =
             envelope => !(envelope.Message is WriteMessageSuccess || envelope.Message is ReplayedMessage);
 
@@ -21,12 +29,21 @@ namespace Akka.Persistence
             LoadSnapshot(SnapshotterId, recovery.FromSnapshot, recovery.ToSequenceNr);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool AroundReceive(Receive receive, object message)
         {
             _currentState.StateReceive(receive, message);
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void AroundPreStart()
         {
             // Fail fast on missing plugins.
@@ -36,6 +53,11 @@ namespace Akka.Persistence
             base.AroundPreStart();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="message">TBD</param>
         public override void AroundPreRestart(Exception cause, object message)
         {
             try
@@ -56,12 +78,20 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="message">TBD</param>
         public override void AroundPostRestart(Exception reason, object message)
         {
             StartRecovery(Recovery);
             base.AroundPostRestart(reason, message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void AroundPostStop()
         {
             try
@@ -75,6 +105,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void Unhandled(object message)
         {
             if (message is RecoveryCompleted) return; // ignore
