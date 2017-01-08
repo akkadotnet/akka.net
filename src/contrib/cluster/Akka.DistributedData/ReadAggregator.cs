@@ -103,7 +103,7 @@ namespace Akka.DistributedData
                 Context.Parent.Tell(new ReadRepair(_key.Id, _result));
                 Context.Become(WaitRepairAck(_result));
             }
-            if (ok && _result == null)
+            else if (ok && _result == null)
             {
                 _replyTo.Tell(new Replicator.NotFound(_key, _req), Context.Parent);
                 Context.Stop(Self);

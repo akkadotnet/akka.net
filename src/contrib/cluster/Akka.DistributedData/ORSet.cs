@@ -15,6 +15,7 @@ using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
@@ -210,12 +211,23 @@ namespace Akka.DistributedData
         /// <summary>
         /// Adds an element to the set
         /// </summary>
+        public ORSet<T> Add(Cluster.Cluster cluster, T element) => Add(cluster.SelfUniqueAddress, element);
+
+        /// <summary>
+        /// Adds an element to the set
+        /// </summary>
         public ORSet<T> Add(UniqueAddress node, T element)
         {
             var vec = _versionVector.Increment(node);
             var dot = VersionVector.Create(node, vec.VersionAt(node));
             return AssignAncestor(new ORSet<T>(_elementsMap.SetItem(element, dot), vec));
         }
+
+        /// <summary>
+        /// Removes an element from the set.
+        /// </summary>
+        public ORSet<T> Remove(Cluster.Cluster node, T element) =>
+            Remove(node.SelfUniqueAddress, element);
 
         /// <summary>
         /// Removes an element from the set.
@@ -323,10 +335,7 @@ namespace Akka.DistributedData
         public override string ToString()
         {
             var sb = new StringBuilder("ORSet(");
-            foreach (var element in Elements)
-            {
-                sb.Append(element).Append(", ");
-            }
+            sb.AppendJoin(", ", Elements);
             sb.Append(')');
             return sb.ToString();
         }

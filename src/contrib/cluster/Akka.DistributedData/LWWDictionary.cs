@@ -14,6 +14,7 @@ using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
@@ -116,6 +117,17 @@ namespace Akka.DistributedData
         /// increasing version number from a database record that is used for optimistic
         /// concurrency control.
         /// </summary>
+        public LWWDictionary<TKey, TValue> SetItem(Cluster.Cluster node, TKey key, TValue value,
+            Clock<TValue> clock = null) => SetItem(node.SelfUniqueAddress, key, value, clock);
+
+        /// <summary>
+        /// Adds an entry to the map.
+        /// 
+        /// You can provide your <paramref name="clock"/> implementation instead of using timestamps based
+        /// on DateTime.UtcNow.Ticks time. The timestamp can for example be an
+        /// increasing version number from a database record that is used for optimistic
+        /// concurrency control.
+        /// </summary>
         public LWWDictionary<TKey, TValue> SetItem(UniqueAddress node, TKey key, TValue value,
             Clock<TValue> clock = null)
         {
@@ -126,6 +138,13 @@ namespace Akka.DistributedData
 
             return new LWWDictionary<TKey, TValue>(_underlying.SetItem(node, key, newRegister));
         }
+
+        /// <summary>
+        /// Removes an entry from the map.
+        /// Note that if there is a conflicting update on another node the entry will
+        /// not be removed after merge.
+        /// </summary>
+        public LWWDictionary<TKey, TValue> Remove(Cluster.Cluster node, TKey key) => Remove(node.SelfUniqueAddress, key);
 
         /// <summary>
         /// Removes an entry from the map.
@@ -186,10 +205,7 @@ namespace Akka.DistributedData
         public override string ToString()
         {
             var sb = new StringBuilder("LWWDictionary(");
-            foreach (var entry in Entries)
-            {
-                sb.Append(entry.Key).Append("->").Append(entry.Value).Append(", ");
-            }
+            sb.AppendJoin(", ", Entries);
             sb.Append(')');
             return sb.ToString();
         }

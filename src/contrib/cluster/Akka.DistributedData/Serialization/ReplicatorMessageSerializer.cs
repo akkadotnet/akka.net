@@ -5,7 +5,7 @@ using Akka.Actor;
 using Akka.DistributedData.Internal;
 using Akka.Util;
 using Akka.Util.Internal;
-using Wire;
+using Hyperion;
 using Serializer = Akka.Serialization.Serializer;
 
 namespace Akka.DistributedData.Serialization
@@ -118,24 +118,41 @@ namespace Akka.DistributedData.Serialization
         
         private readonly SmallCache<Read, byte[]> readCache;
         private readonly SmallCache<Write, byte[]> writeCache;
-        private readonly Wire.Serializer serializer;
+        private readonly Hyperion.Serializer serializer;
         private readonly byte[] writeAckBytes;
 
         public ReplicatorMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             var cacheTtl = system.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live");
-            readCache = new SmallCache<Read, byte[]>(4, cacheTtl, read => ToBinary(read));
-            writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, write => ToBinary(write));
+            readCache = new SmallCache<Read, byte[]>(4, cacheTtl, Serialize);
+            writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, Serialize);
 
             var akkaSurrogate =
-                Wire.Surrogate.Create<ISurrogated, ISurrogate>(
+                Hyperion.Surrogate.Create<ISurrogated, ISurrogate>(
                     toSurrogate: from => from.ToSurrogate(system),
                     fromSurrogate: to => to.FromSurrogate(system));
 
-            serializer = new Wire.Serializer(new SerializerOptions(
+            serializer = new Hyperion.Serializer(new SerializerOptions(
                 preserveObjectReferences: true,
                 versionTolerance: true,
-                surrogates: new[] { akkaSurrogate }));
+                surrogates: new[] { akkaSurrogate },
+                knownTypes: new []
+                {
+                    typeof(Replicator.Get),
+                    typeof(Replicator.GetSuccess),
+                    typeof(Replicator.GetFailure),
+                    typeof(Replicator.NotFound),
+                    typeof(Replicator.Subscribe),
+                    typeof(Replicator.Unsubscribe),
+                    typeof(Replicator.Changed),
+                    typeof(DataEnvelope),
+                    typeof(Write),
+                    typeof(WriteAck),
+                    typeof(Read),
+                    typeof(ReadResult),
+                    typeof(Internal.Status),
+                    typeof(Gossip)
+                }));
 
             using (var stream = new MemoryStream())
             {
@@ -158,6 +175,11 @@ namespace Akka.DistributedData.Serialization
             if (obj is Read) return readCache.GetOrAdd((Read)obj);
             if (obj is WriteAck) return writeAckBytes;
 
+            return Serialize(obj);
+        }
+
+        private byte[] Serialize(object obj)
+        {
             using (var stream = new MemoryStream())
             {
                 serializer.Serialize(obj, stream);

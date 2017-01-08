@@ -22,7 +22,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// Returns true if this member is not tagged with the role configured for the replicas.
         /// </summary>
-        public bool IsTerminated => Cluster.Cluster.Get(_system).IsTerminated || (_settings.Role != null && !Cluster.Cluster.Get(_system).SelfRoles.Contains(_settings.Role));
+        public bool IsTerminated => Cluster.Cluster.Get(_system).IsTerminated || (!string.IsNullOrEmpty(_settings.Role) && !Cluster.Cluster.Get(_system).SelfRoles.Contains(_settings.Role));
 
         /// <summary>
         /// Actor reference of the <see cref="Akka.DistributedData.Replicator"/>.

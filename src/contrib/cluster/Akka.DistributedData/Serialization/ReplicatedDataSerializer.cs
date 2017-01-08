@@ -2,14 +2,14 @@
 using System.IO;
 using Akka.Actor;
 using Akka.Util;
-using Wire;
+using Hyperion;
 using Serializer = Akka.Serialization.Serializer;
 
 namespace Akka.DistributedData.Serialization
 {
     public sealed class ReplicatedDataSerializer : Serializer
     {
-        private readonly Wire.Serializer _serializer;
+        private readonly Hyperion.Serializer _serializer;
         
         public ReplicatedDataSerializer(ExtendedActorSystem system) : base(system)
         {
@@ -20,7 +20,7 @@ namespace Akka.DistributedData.Serialization
                 to => to.FromSurrogate(system));
 
             _serializer =
-                new Wire.Serializer(new SerializerOptions(
+                new Hyperion.Serializer(new SerializerOptions(
                     preserveObjectReferences: true,
                     versionTolerance: true,
                     surrogates: new[]

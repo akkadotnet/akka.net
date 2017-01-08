@@ -56,22 +56,30 @@ namespace Akka.DistributedData
             State = state;
             Value = State.Aggregate(Zero, (v, acc) => v + acc.Value);
         }
+        /// <summary>
+        /// Increment the counter by 1.
+        /// </summary>
+        public GCounter Increment(Cluster.Cluster node) => Increment(node.SelfUniqueAddress);
 
         /// <summary>
         /// Increment the counter by 1.
         /// </summary>
-        public GCounter Increment(UniqueAddress node)
-        {
-            return Increment(node, new BigInteger(1));
-        }
+        public GCounter Increment(UniqueAddress node) => Increment(node, new BigInteger(1));
 
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
-        public GCounter Increment(UniqueAddress node, ulong delta)
-        {
-            return Increment(node, new BigInteger(delta));
-        }
+        public GCounter Increment(Cluster.Cluster node, ulong delta) => Increment(node.SelfUniqueAddress, delta);
+
+        /// <summary>
+        /// Increment the counter with the delta specified. The delta must be zero or positive.
+        /// </summary>
+        public GCounter Increment(UniqueAddress node, ulong delta) => Increment(node, new BigInteger(delta));
+
+        /// <summary>
+        /// Increment the counter with the delta specified. The delta must be zero or positive.
+        /// </summary>
+        public GCounter Increment(Cluster.Cluster node, BigInteger delta) => Increment(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
