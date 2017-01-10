@@ -141,7 +141,7 @@ namespace Akka.Tests.Actor
             {
                 IActorRef realChild = Context.ActorOf(Props.Create<FailingActor>(), "failing");
 
-                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })).WithSupervisorStrategy(strategy));
+                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })));
 
                 Receive<string>(m => child.Tell(m), m => true);
 
@@ -152,7 +152,7 @@ namespace Akka.Tests.Actor
             {
                 IActorRef realChild = Context.ActorOf(Props.Create<FailingActor>(), "failing");
 
-                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })).WithSupervisorStrategy(strategy));
+                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })));
 
                 Receive<string>(m => child.Tell(m), m => true);
 
@@ -163,7 +163,7 @@ namespace Akka.Tests.Actor
             {
                 IActorRef realChild = Context.ActorOf(Props.Create<FailingActor>(), "failing");
 
-                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })).WithSupervisorStrategy(strategy));
+                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })));
 
                 Receive<string>(m => child.Tell(m), m => true);
 
@@ -174,7 +174,7 @@ namespace Akka.Tests.Actor
             {
                 IActorRef realChild = Context.ActorOf(Props.Create<FailingActor>(), "failing");
 
-                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })).WithSupervisorStrategy(strategy));
+                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })));
 
                 Receive<string>(m => child.Tell(m), m => true);
 
@@ -185,7 +185,7 @@ namespace Akka.Tests.Actor
             {
                 IActorRef realChild = Context.ActorOf(Props.Create<FailingActor>(), "failing");
 
-                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })).WithSupervisorStrategy(strategy));
+                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })));
 
                 Receive<string>(m => child.Tell(m), m => true);
 
@@ -196,7 +196,7 @@ namespace Akka.Tests.Actor
             {
                 IActorRef realChild = Context.ActorOf(Props.Create<FailingActor>(), "failing");
 
-                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })).WithSupervisorStrategy(strategy));
+                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })));
 
                 Receive<string>(m => child.Tell(m), m => true);
 
@@ -207,7 +207,7 @@ namespace Akka.Tests.Actor
             {
                 IActorRef realChild = Context.ActorOf(Props.Create<FailingActor>(), "failing");
 
-                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })).WithSupervisorStrategy(strategy));
+                child = Context.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(new string[] { realChild.Path.ToString() })));
 
                 Receive<string>(m => child.Tell(m), m => true);
 
@@ -220,10 +220,33 @@ namespace Akka.Tests.Actor
             }
         }
 
+        public class ResumeDecider : IDecider
+        {
+            private long counter = 0;
+
+            public long Counter
+            {
+                get { return Interlocked.Read(ref counter); }
+            }
+
+            public Directive Decide(Exception cause)
+            {
+                if (cause != null && cause.Message != null && cause.Message.Equals("error", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    Interlocked.Increment(ref counter);
+                }
+
+                return Directive.Resume;
+            }
+
+        }
+
+
         [Fact]
         public void simple_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -235,15 +258,17 @@ namespace Akka.Tests.Actor
 
             Thread.Sleep(500);
 
-            var child = ((ActorRefWithCell)actor).Children.First();
+            var child = ((ActorRefWithCell)actor).Children.OfType<LocalActorRef>().First();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void roundrobinpool_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -256,15 +281,17 @@ namespace Akka.Tests.Actor
             Thread.Sleep(500);
 
             var router = ((ActorRefWithCell)actor).Children.First();
-            var child = ((RoutedActorRef)router).Children.First();
+            var child = ((RoutedActorRef)router).Children.OfType<LocalActorRef>().First();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void randompool_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -277,15 +304,17 @@ namespace Akka.Tests.Actor
             Thread.Sleep(500);
 
             var router = ((ActorRefWithCell)actor).Children.First();
-            var child = ((RoutedActorRef)router).Children.First();
+            var child = ((RoutedActorRef)router).Children.OfType<LocalActorRef>().First();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void consistenthashingpool_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -298,15 +327,17 @@ namespace Akka.Tests.Actor
             Thread.Sleep(500);
 
             var router = ((ActorRefWithCell)actor).Children.First();
-            var child = ((RoutedActorRef)router).Children.First();
+            var child = ((RoutedActorRef)router).Children.OfType<LocalActorRef>().First();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void tailchoppingpool_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -319,15 +350,17 @@ namespace Akka.Tests.Actor
             Thread.Sleep(500);
 
             var router = ((ActorRefWithCell)actor).Children.First();
-            var child = ((RoutedActorRef)router).Children.First();
+            var child = ((RoutedActorRef)router).Children.OfType<LocalActorRef>().First();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void scattergatherfirstcompletedpool_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -340,15 +373,17 @@ namespace Akka.Tests.Actor
             Thread.Sleep(500);
 
             var router = ((ActorRefWithCell)actor).Children.First();
-            var child = ((RoutedActorRef)router).Children.First();
+            var child = ((RoutedActorRef)router).Children.OfType<LocalActorRef>().First();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void smallestmailboxpool_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -361,16 +396,18 @@ namespace Akka.Tests.Actor
             Thread.Sleep(500);
 
             var router = ((ActorRefWithCell)actor).Children.First();
-            var child = ((RoutedActorRef)router).Children.First();
+            var child = ((RoutedActorRef)router).Children.OfType<LocalActorRef>().First();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
 
         [Fact]
         public void roundrobingroup_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -384,13 +421,15 @@ namespace Akka.Tests.Actor
 
             var child = ((ActorRefWithCell)actor).Children.OfType<LocalActorRef>().FirstOrDefault();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void randomgroup_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -404,13 +443,15 @@ namespace Akka.Tests.Actor
 
             var child = ((ActorRefWithCell)actor).Children.OfType<LocalActorRef>().FirstOrDefault();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void consistenthashinggroup_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -424,13 +465,15 @@ namespace Akka.Tests.Actor
 
             var child = ((ActorRefWithCell)actor).Children.OfType<LocalActorRef>().FirstOrDefault();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void tailchoppinggroup_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -444,13 +487,15 @@ namespace Akka.Tests.Actor
 
             var child = ((ActorRefWithCell)actor).Children.OfType<LocalActorRef>().FirstOrDefault();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void scattergatherfirstcompletedgroup_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -464,13 +509,15 @@ namespace Akka.Tests.Actor
 
             var child = ((ActorRefWithCell)actor).Children.OfType<LocalActorRef>().FirstOrDefault();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
 
         [Fact]
         public void smallestmailboxgroup_child_actor_must_clear_currentmessage_after_failure_and_resume()
         {
-            var strategy = new OneForOneStrategy(Decider.From(Directive.Resume));
+            var decider = new ResumeDecider();
+            var strategy = new OneForOneStrategy(decider);
             var resetEvt = new AutoResetEvent(false);
             var actor = Sys.ActorOf(Props.Create<ParentActor>(strategy, resetEvt));
 
@@ -484,7 +531,8 @@ namespace Akka.Tests.Actor
 
             var child = ((ActorRefWithCell)actor).Children.OfType<LocalActorRef>().FirstOrDefault();
 
-            Assert.Null(((LocalActorRef)child).Cell.CurrentMessage);
+            decider.Counter.ShouldBe(1);
+            child.Cell.CurrentMessage.ShouldBe(null);
         }
     }
 }
