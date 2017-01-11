@@ -9,6 +9,7 @@
 
 using System;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -163,7 +164,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         private IByteBuffer ToByteBuffer(ByteString payload)
         {
-            //TODO: optimize DotNetty byte buffer usage
+            //TODO: optimize DotNetty byte buffer usage 
+            // (maybe custom IByteBuffer working directly on ByteString?)
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }
@@ -184,8 +186,17 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var clientBootstrap = ClientFactory(remoteAddress);
             var socketAddress = AddressToSocketAddress(remoteAddress);
+            var ipEndPoint = socketAddress as IPEndPoint;
+            if (ipEndPoint != null && ipEndPoint.Address.Equals(IPAddress.Any))
+            {
+                // client hack
+                socketAddress = ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6
+                    ? new IPEndPoint(IPAddress.IPv6Loopback, ipEndPoint.Port)
+                    : new IPEndPoint(IPAddress.Loopback, ipEndPoint.Port);
+            }
             var associate = clientBootstrap.ConnectAsync(socketAddress).ContinueWith(tr =>
             {
+                //FIXME: connection refused
                 var channel = tr.Result;
                 var handler = (TcpClientHandler)channel.Pipeline.Last();
                 return handler.StatusFuture;

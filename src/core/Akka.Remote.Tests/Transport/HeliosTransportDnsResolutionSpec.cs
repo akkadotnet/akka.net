@@ -15,6 +15,7 @@ using Akka.TestKit;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
+using Xunit.Abstractions;
 using Config = Akka.Configuration.Config;
 using static Akka.Util.RuntimeDetector;
 // ReSharper disable EmptyGeneralCatchClause
@@ -65,7 +66,7 @@ namespace Akka.Remote.Tests.Transport
     /// </summary>
     public class HeliosTransportDnsResolutionSpec : AkkaSpec
     {
-        public HeliosTransportDnsResolutionSpec()
+        public HeliosTransportDnsResolutionSpec(ITestOutputHelper output) : base(output)
         {
             Arb.Register(typeof(EndpointGenerators));
         }

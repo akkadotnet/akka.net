@@ -17,6 +17,7 @@ using Akka.TestKit.TestEvent;
 using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -171,8 +172,8 @@ namespace Akka.Remote.Tests.Transport
 
         #endregion
 
-        public ThrottlerTransportAdapterSpec()
-            : base(ThrottlerTransportAdapterSpecConfig)
+        public ThrottlerTransportAdapterSpec(ITestOutputHelper output)
+            : base(ThrottlerTransportAdapterSpecConfig, output)
         {
             systemB = ActorSystem.Create("systemB", Sys.Settings.Config);
             remote = systemB.ActorOf(Props.Create<Echo>(), "echo");
