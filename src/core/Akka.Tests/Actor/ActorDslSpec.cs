@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit;
@@ -138,6 +139,50 @@ namespace Akka.Tests.Actor
             parent.Tell("crash");
             ExpectMsg("restarting parent");
             ExpectMsg("stopping child");
+        }
+
+        [Fact]
+        public void A_lightweight_creator_must_support_async_receives()
+        {
+            var parent = Sys.ActorOf(act =>
+            {
+                var completedTask = Task.FromResult(true);
+                var child = act.ActorOf(act2 =>
+                {
+                    act2.ReceiveAsync<string>(m => m == "ping", (_, __) =>
+                    {
+                        TestActor.Tell("pong");
+                        return completedTask;
+                    });
+
+                    act2.ReceiveAsync<string>((_, __) =>
+                    {
+                        TestActor.Tell("ping");
+                        return completedTask;
+                    }, msg => msg == "pong");
+
+                    act2.ReceiveAsync<string>((_, __) =>
+                    {
+                        TestActor.Tell("hello");
+                        return completedTask;
+                    });
+                });
+
+                act.ReceiveAnyAsync((msg, _) => 
+                {
+                    child.Tell(msg);
+                    return Task.FromResult(true);
+                });
+            });
+
+            parent.Tell("ping");
+            ExpectMsg("pong");
+
+            parent.Tell("pong");
+            ExpectMsg("ping");
+
+            parent.Tell("hi");
+            ExpectMsg("hello");
         }
     }
 }

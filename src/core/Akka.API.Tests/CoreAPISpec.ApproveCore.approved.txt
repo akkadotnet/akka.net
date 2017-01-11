@@ -1765,6 +1765,9 @@ namespace Akka.Actor.Dsl
         public void Receive<T>(System.Action<T, Akka.Actor.IActorContext> handler, System.Predicate<T> shouldHandle) { }
         public void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler) { }
         public void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler) { }
+        public void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
+        public void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        public void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
         protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
     }
     public class static ActExtensions
@@ -1790,6 +1793,9 @@ namespace Akka.Actor.Dsl
         void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler);
         void Receive<T>(System.Action<T, Akka.Actor.IActorContext> handler, System.Predicate<T> shouldHandle);
         void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler);
+        void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
+        void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null);
+        void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
         void UnbecomeStacked();
     }
 }
