@@ -156,7 +156,7 @@ namespace Akka.Remote.Transport.DotNetty
                     listenAddress = await ResolveNameAsync(dns, addressFamily);
                 }
             }
-
+            
             return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
         }
 
@@ -181,17 +181,17 @@ namespace Akka.Remote.Transport.DotNetty
                 ServerChannel = newServerChannel;
 
                 var addr = MapSocketToAddress(
-                    socketAddress: (IPEndPoint)ServerChannel.LocalAddress, 
+                    socketAddress: (IPEndPoint)newServerChannel.LocalAddress, 
                     schemeIdentifier: SchemeIdentifier, 
                     systemName: System.Name,
                     hostName: Settings.PublicHostname);
 
-                if (addr == null) throw new ConfigurationException($"Unknown local address type {ServerChannel.LocalAddress}");
+                if (addr == null) throw new ConfigurationException($"Unknown local address type {newServerChannel.LocalAddress}");
 
                 LocalAddress = addr;
                 // resume accepting incoming connections
 #pragma warning disable 4014 // we WANT this task to run without waiting
-                AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.Configuration.AutoRead = true,
+                AssociationListenerPromise.Task.ContinueWith(result => newServerChannel.Configuration.AutoRead = true,
                     TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
 #pragma warning restore 4014
 
@@ -305,7 +305,7 @@ namespace Akka.Remote.Transport.DotNetty
                 var certificate = Settings.Ssl.Certificate;
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
-                channel.Pipeline.AddLast("tls", TlsHandler.Client(host, certificate));
+                channel.Pipeline.AddFirst("tls", TlsHandler.Client(host, certificate));
             }
 
             SetInitialChannelPipeline(channel);
@@ -322,7 +322,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (Settings.EnableSsl)
             {
-                channel.Pipeline.AddLast("tls", TlsHandler.Server(Settings.Ssl.Certificate));
+                channel.Pipeline.AddFirst("tls", TlsHandler.Server(Settings.Ssl.Certificate));
             }
 
             SetInitialChannelPipeline(channel);
@@ -331,7 +331,7 @@ namespace Akka.Remote.Transport.DotNetty
             if (Settings.TransportMode == TransportMode.Tcp)
             {
                 var handler = new TcpServerHandler(this, Logging.GetLogger(System, typeof(TcpServerHandler)), AssociationListenerPromise.Task);
-                pipeline.AddLast("clientHandler", handler);
+                pipeline.AddLast("serverHandler", handler);
             }
         }
 
@@ -342,7 +342,7 @@ namespace Akka.Remote.Transport.DotNetty
 
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 
-            var bootstrap = new ServerBootstrap()
+            var serverBootstrap = new ServerBootstrap()
                 .Group(serverEventLoopGroup)
                 .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                 .Option(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
@@ -354,12 +354,12 @@ namespace Akka.Remote.Transport.DotNetty
                     : new TcpServerSocketChannel())
                 .ChildHandler(new ActionChannelInitializer<TcpSocketChannel>(SetServerPipeline));
 
-            if (Settings.ReceiveBufferSize.HasValue) bootstrap.Option(ChannelOption.SoRcvbuf, Settings.ReceiveBufferSize.Value);
-            if (Settings.SendBufferSize.HasValue) bootstrap.Option(ChannelOption.SoSndbuf, Settings.SendBufferSize.Value);
-            if (Settings.WriteBufferHighWaterMark.HasValue) bootstrap.Option(ChannelOption.WriteBufferHighWaterMark, Settings.WriteBufferHighWaterMark.Value);
-            if (Settings.WriteBufferLowWaterMark.HasValue) bootstrap.Option(ChannelOption.WriteBufferLowWaterMark, Settings.WriteBufferLowWaterMark.Value);
+            if (Settings.ReceiveBufferSize.HasValue) serverBootstrap.Option(ChannelOption.SoRcvbuf, Settings.ReceiveBufferSize.Value);
+            if (Settings.SendBufferSize.HasValue) serverBootstrap.Option(ChannelOption.SoSndbuf, Settings.SendBufferSize.Value);
+            if (Settings.WriteBufferHighWaterMark.HasValue) serverBootstrap.Option(ChannelOption.WriteBufferHighWaterMark, Settings.WriteBufferHighWaterMark.Value);
+            if (Settings.WriteBufferLowWaterMark.HasValue) serverBootstrap.Option(ChannelOption.WriteBufferLowWaterMark, Settings.WriteBufferLowWaterMark.Value);
 
-            return bootstrap;
+            return serverBootstrap;
         }
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address)

@@ -31,13 +31,14 @@ namespace Akka.Remote.Transport.DotNetty
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
             var host = config.GetString("hostname");
+            if (string.IsNullOrEmpty(host)) host = IPAddress.Any.ToString();
             var publicHost = config.GetString("public-hostname");
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
                 enableSsl: config.GetBoolean("enable-Ssl", false),
                 connectTimeout: config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(15)),
-                hostname: !string.IsNullOrEmpty(host) ? host : IPAddress.Any.ToString(),
-                publicHostname: !string.IsNullOrEmpty(publicHost) ? publicHost : IPAddress.Any.ToString(),
+                hostname: host,
+                publicHostname: !string.IsNullOrEmpty(publicHost) ? publicHost : host,
                 port: config.GetInt("port", 2552),
                 serverSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("server-socket-worker-pool")),
                 clientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
