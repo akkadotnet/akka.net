@@ -87,7 +87,7 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("watch-established");
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
-                var sb = new StringBuilder().AppendLine("akka.remote.helios.tcp {").AppendLine("hostname = " + addr.Host)
+                var sb = new StringBuilder().AppendLine("akka.remote.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
                         .AppendLine("port = " + addr.Port)
                         .AppendLine("}");
                 var freshSystem = ActorSystem.Create(Sys.Name,

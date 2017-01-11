@@ -43,7 +43,7 @@ akka {
     provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
   }
   remote {
-    helios.tcp {
+    dot-netty.tcp {
       transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
 	  applied-adapters = []
 	  transport-protocol = tcp

@@ -25,7 +25,7 @@ namespace Akka.Remote.Tests
         public RemoteDeployerSpec()
             : base(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            akka.remote.helios.tcp.port = 0
+            akka.remote.dot-netty.tcp.port = 0
             akka.actor.deployment {
                 /service2 {
                   router = round-robin-pool

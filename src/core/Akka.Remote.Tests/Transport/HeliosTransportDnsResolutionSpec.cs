@@ -10,7 +10,7 @@ using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Remote.Transport.Helios;
+using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using FsCheck;
 using FsCheck.Xunit;
@@ -73,11 +73,11 @@ namespace Akka.Remote.Tests.Transport
         public Config BuildConfig(string hostname, int? port = null, string publichostname = null, bool useIpv6 = false, bool enforceIpFamily = false)
         {
             return ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")
-                .WithFallback("akka.remote.helios.tcp.hostname =\"" + hostname + "\"")
-                .WithFallback("akka.remote.helios.tcp.public-hostname =\"" + (publichostname ?? hostname) + "\"")
-                .WithFallback("akka.remote.helios.tcp.port = " + (port ?? 0))
-                .WithFallback("akka.remote.helios.tcp.enforce-ip-family = " + enforceIpFamily.ToString().ToLowerInvariant())
-                .WithFallback("akka.remote.helios.tcp.dns-use-ipv6 = " + useIpv6.ToString().ToLowerInvariant())
+                .WithFallback("akka.remote.dot-netty.tcp.hostname =\"" + hostname + "\"")
+                .WithFallback("akka.remote.dot-netty.tcp.public-hostname =\"" + (publichostname ?? hostname) + "\"")
+                .WithFallback("akka.remote.dot-netty.tcp.port = " + (port ?? 0))
+                .WithFallback("akka.remote.dot-netty.tcp.enforce-ip-family = " + enforceIpFamily.ToString().ToLowerInvariant())
+                .WithFallback("akka.remote.dot-netty.tcp.dns-use-ipv6 = " + useIpv6.ToString().ToLowerInvariant())
                 .WithFallback("akka.test.single-expect-default = 1s")
                 .WithFallback(Sys.Settings.Config);
         }
@@ -289,8 +289,8 @@ namespace Akka.Remote.Tests.Transport
         [Property]
         public Property HeliosTransport_should_map_valid_IPEndpoints_to_Address(IPEndPoint endpoint)
         {
-            var addr = HeliosTransport.MapSocketToAddress(endpoint, "akka.tcp", "foo");
-            var parsedEp = (IPEndPoint)HeliosTransport.AddressToSocketAddress(addr);
+            var addr = DotNettyTransport.MapSocketToAddress(endpoint, "akka.tcp", "foo");
+            var parsedEp = (IPEndPoint)DotNettyTransport.AddressToSocketAddress(addr);
             return endpoint.Equals(parsedEp).Label("Should be able to parse endpoint to address and back");
         }
 
@@ -305,7 +305,7 @@ namespace Akka.Remote.Tests.Transport
             // TODO: remove this once Mono Uris support IPV6 https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (8/22/2016 Aaronontheweb)
             if (IsMono && endpoint.AddressFamily == AddressFamily.InterNetworkV6)
                 return true.Label("Mono does not currently support Uri.TryParse for IPV6");
-            var addr = HeliosTransport.MapSocketToAddress(endpoint, "akka.tcp", "foo");
+            var addr = DotNettyTransport.MapSocketToAddress(endpoint, "akka.tcp", "foo");
             var actorPath = new RootActorPath(addr) / "user" / "foo";
             var serializationFormat = actorPath.ToSerializationFormat();
             var reparsedActorPath = ActorPath.Parse(serializationFormat);

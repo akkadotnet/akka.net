@@ -96,7 +96,7 @@ namespace Akka.Cluster.Tests.MultiNode
                             .WithFallback(Sys.Settings.Config))
                         : ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[round-{round}]")
                             .WithFallback(
-                                $"akka.remote.helios.tcp.port={Cluster.Get(restartingSystem).SelfAddress.Port}")
+                                $"akka.remote.dot-netty.tcp.port={Cluster.Get(restartingSystem).SelfAddress.Port}")
                             .WithFallback(Sys.Settings.Config));
                     Log.Info("Restarting node has address {0}", Cluster.Get(restartingSystem).SelfUniqueAddress);
                     Cluster.Get(restartingSystem).JoinSeedNodes(_seedNodes.Value);

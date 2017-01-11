@@ -14,7 +14,7 @@ akka {
     actor {
         provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
     }    
-    remote.helios.tcp {
+    remote.dot-netty.tcp {
         transport-protocol = tcp
         port = 0                    # get first available port
         hostname = 0.0.0.0          

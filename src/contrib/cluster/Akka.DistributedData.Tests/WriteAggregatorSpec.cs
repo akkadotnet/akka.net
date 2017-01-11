@@ -68,7 +68,7 @@ namespace Akka.DistributedData.Tests
 
         public WriteAggregatorSpec(ITestOutputHelper output) : base(ConfigurationFactory.ParseString(@"
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            akka.remote.helios.tcp.port = 0"), "WriteAggregatorSpec", output)
+            akka.remote.dot-netty.tcp.port = 0"), "WriteAggregatorSpec", output)
         {
             _nodes = ImmutableHashSet.CreateRange(new[] {_nodeA, _nodeB, _nodeC, _nodeD});
         }

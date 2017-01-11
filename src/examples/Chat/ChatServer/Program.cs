@@ -23,7 +23,7 @@ akka {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
     }
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 8081
             hostname = 0.0.0.0
             public-hostname = localhost

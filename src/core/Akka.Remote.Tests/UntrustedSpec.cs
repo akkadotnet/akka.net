@@ -12,6 +12,7 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -24,21 +25,21 @@ namespace Akka.Remote.Tests
         private readonly Lazy<IActorRef> _target2;
 
 
-        public UntrustedSpec()
+        public UntrustedSpec(ITestOutputHelper output)
             : base(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.remote.untrusted-mode = on
             akka.remote.trusted-selection-paths = [""/user/receptionist"", ]    
-            akka.remote.helios.tcp = {
+            akka.remote.dot-netty.tcp = {
                 port = 0
                 hostname = localhost
             }
             akka.loglevel = DEBUG
-            ")
+            ", output)
         {
             _client = ActorSystem.Create("UntrustedSpec-client", ConfigurationFactory.ParseString(@"
                 akka.actor.provider =  ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                 akka.remote.helios.tcp = {
+                 akka.remote.dot-netty.tcp = {
                     port = 0
                     hostname = localhost
                 }                

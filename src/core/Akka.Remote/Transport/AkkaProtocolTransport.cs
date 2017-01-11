@@ -1112,7 +1112,7 @@ namespace Akka.Remote.Transport
                 .With<OutboundUnassociated>(d =>
                 {
                     // attempt to open underlying transport to the remote address
-                    // if using Helios, this is where the socket connection is opened.
+                    // if using DotNetty, this is where the socket connection is opened.
                     d.Transport.Associate(d.RemoteAddress).PipeTo(Self);
                     StartWith(AssociationState.Closed, d);
                 })
