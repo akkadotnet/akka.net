@@ -1063,8 +1063,7 @@ namespace Akka.Remote
         {
             return new OneForOneStrategy(ex =>
             {
-                //we're going to throw an exception anyway
-                PublishAndThrow(ex, LogLevel.ErrorLevel);
+                PublishAndThrow(ex, LogLevel.ErrorLevel, false);
                 return Directive.Escalate;
             });
         }
@@ -1279,14 +1278,17 @@ namespace Akka.Remote
             return Deadline.Now + Settings.SysMsgAckTimeout;
         }
 
-        private void PublishAndThrow(Exception reason, LogLevel level)
+        private void PublishAndThrow(Exception reason, LogLevel level, bool needToThrow = true)
         {
             reason.Match()
                 .With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
                 .With<ShutDownAssociation>(shutdown => {}) // don't log an error for planned shutdowns
                 .Default(msg => PublishError(reason, level));
 
-            throw reason;
+            if (needToThrow)
+            {
+                throw reason;
+            }
         }
 
         private IActorRef StartReadEndpoint(AkkaProtocolHandle handle)
