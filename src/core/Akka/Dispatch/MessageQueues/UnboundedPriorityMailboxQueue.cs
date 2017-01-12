@@ -12,63 +12,63 @@ using Akka.Util;
 namespace Akka.Dispatch.MessageQueues
 {
     /// <summary> 
-    /// Base class message queue that uses a priority generator for messages 
+    /// Base class for a message queue that uses a priority generator for messages 
     /// </summary>
     public class UnboundedPriorityMessageQueue : BlockingMessageQueue
     {
         private readonly ListPriorityQueue _prioQueue;
 
         /// <summary>
-        /// TBD
+        /// DEPRECATED. Use UnboundedPriorityMessageQueue(Func{object, int} priorityGenerator, int initialCapacity) instead.        
         /// </summary>
-        /// <param name="initialCapacity">TBD</param>
-        public UnboundedPriorityMessageQueue(int initialCapacity)
+        /// <param name="initialCapacity">The initial capacity of the priority queue.</param>
+        [Obsolete("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity) instead.")]
+        public UnboundedPriorityMessageQueue(int initialCapacity) : this(ListPriorityQueue.DefaultPriorityCalculator, initialCapacity)
         {
-            _prioQueue = new ListPriorityQueue(initialCapacity);
+
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new unbounded priority message queue.
         /// </summary>
-        /// <param name="priorityGenerator">TBD</param>
-        /// <param name="initialCapacity">TBD</param>
-        public UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity) : this(initialCapacity)
+        /// <param name="priorityGenerator">The calculator function for determining the priority of inbound messages.</param>
+        /// <param name="initialCapacity">The initial capacity of the queue.</param>
+        public UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity)
         {
-            _prioQueue.SetPriorityCalculator(priorityGenerator);
+            _prioQueue = new ListPriorityQueue(initialCapacity, priorityGenerator);
         }
 
         /// <summary>
-        /// TBD
+        /// Unsafe method for computing the underlying message count. 
         /// </summary>
-        /// <param name="priorityGenerator">TBD</param>
-        /// <returns>TBD</returns>
-        internal void SetPriorityGenerator(Func<object, int> priorityGenerator)
-        {
-            _prioQueue.SetPriorityCalculator(priorityGenerator);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <remarks>
+        /// Called from within a synchronization mechanism.
+        /// </remarks>
         protected override int LockedCount
         {
             get { return _prioQueue.Count(); }
         }
 
         /// <summary>
-        /// TBD
+        /// Unsafe method for enquing a new message to the queue.
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">The message to enqueue.</param>
+        /// <remarks>
+        /// Called from within a synchronization mechanism.
+        /// </remarks>
         protected override void LockedEnqueue(Envelope envelope)
         {
             _prioQueue.Enqueue(envelope);
         }
 
         /// <summary>
-        /// TBD
+        /// Unsafe method for attempting to dequeue a message.
         /// </summary>
-        /// <param name="envelope">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="envelope">The message that might be dequed.</param>
+        /// <returns><c>true</c> if a message was available to be dequeued, <c>false</c> otherwise.</returns>
+        /// <remarks>
+        /// Called from within a synchronization mechanism.
+        /// </remarks>
         protected override bool LockedTryDequeue(out Envelope envelope)
         {
             if (_prioQueue.Count() > 0)
