@@ -1284,6 +1284,7 @@ namespace Akka.Actor
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider, bool loggingEnabled = True) { }
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Akka.Actor.IDecider decider, bool loggingEnabled = True) { }
         public OneForOneStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
+        public OneForOneStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider, bool loggingEnabled = True) { }
         public OneForOneStrategy(Akka.Actor.IDecider decider) { }
         protected OneForOneStrategy() { }
         public override Akka.Actor.IDecider Decider { get; }

@@ -349,8 +349,18 @@ namespace Akka.Actor
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
-        /// <param name="localOnlyDecider">TBD</param>
+        /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive" /></param>
         public OneForOneStrategy(Func<Exception, Directive> localOnlyDecider) : this(-1, -1, localOnlyDecider, true)
+        {
+            //Intentionally left blank
+        }
+
+        /// <summary>
+        /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
+        /// </summary>
+        /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive" /></param>
+        /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
+        public OneForOneStrategy(Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true) : this(-1, -1, localOnlyDecider, loggingEnabled)
         {
             //Intentionally left blank
         }
