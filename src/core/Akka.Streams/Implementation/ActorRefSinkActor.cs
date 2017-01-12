@@ -11,17 +11,42 @@ using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ActorRefSinkActor : ActorSubscriber
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ref">TBD</param>
+        /// <param name="highWatermark">TBD</param>
+        /// <param name="onCompleteMessage">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(IActorRef @ref, int highWatermark, object onCompleteMessage)
             => Actor.Props.Create(() => new ActorRefSinkActor(@ref, highWatermark, onCompleteMessage));
 
         private ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly int HighWatermark;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly IActorRef Ref;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly object OnCompleteMessage;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ref">TBD</param>
+        /// <param name="highWatermark">TBD</param>
+        /// <param name="onCompleteMessage">TBD</param>
         public ActorRefSinkActor(IActorRef @ref, int highWatermark, object onCompleteMessage)
         {
             Ref = @ref;
@@ -32,8 +57,16 @@ namespace Akka.Streams.Implementation
             Context.Watch(Ref);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             Terminated terminated;
@@ -61,6 +94,9 @@ namespace Akka.Streams.Implementation
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IRequestStrategy RequestStrategy { get; }
     }
 }

@@ -22,6 +22,15 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class FileSubscriber : ActorSubscriber
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="f">TBD</param>
+        /// <param name="completionPromise">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="fileMode">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int bufferSize, FileMode fileMode)
         {
             if(bufferSize <= 0)
@@ -38,6 +47,13 @@ namespace Akka.Streams.Implementation.IO
         private FileStream _chan;
         private long _bytesWritten;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="f">TBD</param>
+        /// <param name="completionPromise">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="fileMode">TBD</param>
         public FileSubscriber(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int bufferSize, FileMode fileMode)
         {
             _f = f;
@@ -47,8 +63,14 @@ namespace Akka.Streams.Implementation.IO
             _requestStrategy = new WatermarkRequestStrategy(highWatermark: bufferSize);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IRequestStrategy RequestStrategy => _requestStrategy;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             try
@@ -63,6 +85,11 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return message.Match()
@@ -102,6 +129,9 @@ namespace Akka.Streams.Implementation.IO
                 .WasHandled;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             try

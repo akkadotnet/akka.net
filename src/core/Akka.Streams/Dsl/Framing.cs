@@ -13,6 +13,9 @@ using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Framing
     {
         /// <summary>
@@ -27,7 +30,7 @@ namespace Akka.Streams.Dsl
         /// <param name="delimiter">The byte sequence to be treated as the end of the frame.</param>
         /// <param name="maximumFrameLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
         /// <param name="allowTruncation">If false, then when the last frame being decoded contains no valid delimiter this Flow fails the stream instead of returning a truncated frame.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> Delimiter(ByteString delimiter, int maximumFrameLength,
             bool allowTruncation = false)
         {
@@ -47,7 +50,8 @@ namespace Akka.Streams.Dsl
         /// <param name="maximumFramelength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream. This length *includes* the header (i.e the offset and the length of the size field)</param>
         /// <param name="fieldOffset">The offset of the field from the beginning of the frame in bytes</param>
         /// <param name="byteOrder">The <see cref="ByteOrder"/> to be used when decoding the field</param>
-        /// <returns></returns>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
@@ -74,7 +78,7 @@ namespace Akka.Streams.Dsl
         /// The length field encodes the length of the user payload excluding the header itself.
         /// </summary>
         /// <param name="maximumMessageLength">Maximum length of allowed messages. If sent or received messages exceed the configured limit this BidiFlow will fail the stream. The header attached by this BidiFlow are not included in this limit.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public static BidiFlow<ByteString, ByteString, ByteString, ByteString, NotUsed> SimpleFramingProtocol(int maximumMessageLength)
         {
             return BidiFlow.FromFlowsMat(SimpleFramingProtocolEncoder(maximumMessageLength),
@@ -84,6 +88,8 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Protocol decoder that is used by <see cref="SimpleFramingProtocol"/>
         /// </summary>
+        /// <param name="maximumMessageLength">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
         {
             return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Drop(4));
@@ -92,13 +98,22 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Protocol encoder that is used by <see cref="SimpleFramingProtocol"/>
         /// </summary>
+        /// <param name="maximumMessageLength">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength)
         {
             return Flow.Create<ByteString>().Transform(() => new FramingDecoderStage(maximumMessageLength));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class FramingException : Exception
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="message">TBD</param>
             public FramingException(string message) : base(message)
             {
             }

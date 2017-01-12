@@ -25,8 +25,21 @@ namespace Akka.Streams.Implementation
     /// </summary>
     public abstract class ExtendedActorMaterializer : ActorMaterializer
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="subFlowFuser">TBD</param>
+        /// <returns>TBD</returns>
         public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <returns>TBD</returns>
         public override IActorRef ActorOf(MaterializationContext context, Props props)
         {
             var dispatcher = props.Deploy.Dispatcher == Deploy.NoDispatcherGiven
@@ -36,6 +49,14 @@ namespace Akka.Streams.Implementation
             return ActorOf(props, context.StageName, dispatcher);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
+        /// <param name="dispatcher">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         protected IActorRef ActorOf(Props props, string name, string dispatcher)
         {
             if (Supervisor is LocalActorRef)
@@ -57,6 +78,9 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class ActorMaterializerImpl : ExtendedActorMaterializer
     {
         #region Materializer session implementation
@@ -186,6 +210,16 @@ namespace Akka.Streams.Implementation
         private readonly EnumerableActorName _flowNames;
         private ILoggingAdapter _logger;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="dispatchers">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="haveShutDown">TBD</param>
+        /// <param name="flowNames">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor, AtomicBoolean haveShutDown, EnumerableActorName flowNames)
         {
             _system = system;
@@ -203,12 +237,32 @@ namespace Akka.Streams.Implementation
                 Logger.Warning("Fuzzing mode is enabled on this system. If you see this warning on your production system then set 'akka.materializer.debug.fuzzing-mode' to off.");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsShutdown => _haveShutDown.Value;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorMaterializerSettings Settings => _settings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorSystem System => _system;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRef Supervisor => _supervisor;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ILoggingAdapter Logger => _logger ?? (_logger = GetLogger());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IMaterializer WithNamePrefix(string name)
             => new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name));
 
@@ -219,6 +273,11 @@ namespace Akka.Streams.Implementation
                 .And(ActorAttributes.CreateDispatcher(_settings.Dispatcher))
                 .And(ActorAttributes.CreateSupervisionStrategy(_settings.SupervisionDecider));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public override ActorMaterializerSettings EffectiveSettings(Attributes attributes)
         {
             return attributes.AttributeList.Aggregate(Settings, (settings, attribute) =>
@@ -236,14 +295,41 @@ namespace Akka.Streams.Implementation
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         public override ICancelable ScheduleOnce(TimeSpan delay, Action action)
             => _system.Scheduler.Advanced.ScheduleOnceCancelable(delay, action);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         public override ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
             => _system.Scheduler.Advanced.ScheduleRepeatedlyCancelable(initialDelay, interval, action);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <returns>TBD</returns>
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable) => Materialize(runnable, null);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="subFlowFuser">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser)
         {
             var runnableGraph = _settings.IsAutoFusing
@@ -263,8 +349,14 @@ namespace Akka.Streams.Implementation
         }
 
         private readonly Lazy<MessageDispatcher> _executionContext;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override MessageDispatcher ExecutionContext => _executionContext.Value;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Shutdown()
         {
             if (_haveShutDown.CompareAndSet(false, true))
@@ -274,80 +366,182 @@ namespace Akka.Streams.Implementation
         private ILoggingAdapter GetLogger() => _system.Log;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class SubFusingActorMaterializerImpl : IMaterializer
     {
         private readonly ExtendedActorMaterializer _delegateMaterializer;
         private readonly Func<GraphInterpreterShell, IActorRef> _registerShell;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delegateMaterializer">TBD</param>
+        /// <param name="registerShell">TBD</param>
         public SubFusingActorMaterializerImpl(ExtendedActorMaterializer delegateMaterializer, Func<GraphInterpreterShell, IActorRef> registerShell)
         {
             _delegateMaterializer = delegateMaterializer;
             _registerShell = registerShell;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="namePrefix">TBD</param>
+        /// <returns>TBD</returns>
         public IMaterializer WithNamePrefix(string namePrefix)
             => new SubFusingActorMaterializerImpl((ActorMaterializerImpl) _delegateMaterializer.WithNamePrefix(namePrefix), _registerShell);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <returns>TBD</returns>
         public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
             => _delegateMaterializer.Materialize(runnable, _registerShell);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         public ICancelable ScheduleOnce(TimeSpan delay, Action action)
             => _delegateMaterializer.ScheduleOnce(delay, action);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         public ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
             => _delegateMaterializer.ScheduleRepeatedly(initialDelay, interval, action);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public MessageDispatcher ExecutionContext => _delegateMaterializer.ExecutionContext;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class FlowNameCounter : ExtensionIdProvider<FlowNameCounter>, IExtension
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static FlowNameCounter Instance(ActorSystem system)
             => system.WithExtension<FlowNameCounter, FlowNameCounter>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly AtomicCounterLong Counter = new AtomicCounterLong(0);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override FlowNameCounter CreateExtension(ExtendedActorSystem system) => new FlowNameCounter();
     }
-    
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class StreamSupervisor : ActorBase
     {
         #region Messages
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Materialize : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Props Props;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly string Name;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="props">TBD</param>
+            /// <param name="name">TBD</param>
             public Materialize(Props props, string name)
             {
                 Props = props;
                 Name = name;
             }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class GetChildren
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly GetChildren Instance = new GetChildren();
             private GetChildren() { }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class StopChildren
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly StopChildren Instance = new StopChildren();
             private StopChildren() { }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class StoppedChildren
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly StoppedChildren Instance = new StoppedChildren();
             private StoppedChildren() { }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class PrintDebugDump
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly PrintDebugDump Instance = new PrintDebugDump();
             private PrintDebugDump() { }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Children
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IImmutableSet<IActorRef> Refs;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="refs">TBD</param>
             public Children(IImmutableSet<IActorRef> refs)
             {
                 Refs = refs;
@@ -356,24 +550,54 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="haveShutdown">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
             => Actor.Props.Create(() => new StreamSupervisor(settings, haveShutdown)).WithDeploy(Deploy.Local);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static string NextName() => ActorName.Next();
 
         private static readonly EnumerableActorName ActorName = new EnumerableActorNameImpl("StreamSupervisor", new AtomicCounterLong(0L));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ActorMaterializerSettings Settings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly AtomicBoolean HaveShutdown;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="haveShutdown">TBD</param>
         public StreamSupervisor(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
         {
             Settings = settings;
             HaveShutdown = haveShutdown;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override SupervisorStrategy SupervisorStrategy() => Actor.SupervisorStrategy.StoppingStrategy;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if (message is Materialize)
@@ -395,6 +619,9 @@ namespace Akka.Streams.Implementation
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop() => HaveShutdown.Value = true;
     }
 }

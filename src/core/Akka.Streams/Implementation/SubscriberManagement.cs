@@ -14,12 +14,26 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal interface ISubscriptionWithCursor<in T> : ISubscription, ICursor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         ISubscriber<T> Subscriber { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         void Dispatch(T element);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsActive { get; set; }
 
         /// <summary>
@@ -30,49 +44,105 @@ namespace Akka.Streams.Implementation
 
     #region End of stream
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class SubscriberManagement
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public interface IEndOfStream
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="T">TBD</typeparam>
+            /// <param name="subscriber">TBD</param>
             void Apply<T>(ISubscriber<T> subscriber);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class NotReached : IEndOfStream
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly NotReached Instance = new NotReached();
             private NotReached() { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="T">TBD</typeparam>
+            /// <param name="subscriber">TBD</param>
+            /// <exception cref="IllegalStateException">TBD</exception>
             public void Apply<T>(ISubscriber<T> subscriber)
             {
                 throw new IllegalStateException("Called Apply on NotReached");
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Completed : IEndOfStream
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Completed Instance = new Completed();
             private Completed() { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="T">TBD</typeparam>
+            /// <param name="subscriber">TBD</param>
             public void Apply<T>(ISubscriber<T> subscriber) => ReactiveStreamsCompliance.TryOnComplete(subscriber);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class ErrorCompleted : IEndOfStream
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Exception Cause;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cause">TBD</param>
             public ErrorCompleted(Exception cause)
             {
                 Cause = cause;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="T">TBD</typeparam>
+            /// <param name="subscriber">TBD</param>
             public void Apply<T>(ISubscriber<T> subscriber) => ReactiveStreamsCompliance.TryOnError(subscriber, Cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly IEndOfStream ShutDown = new ErrorCompleted(ActorPublisher.NormalShutdownReason);
     }
 
     #endregion
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal abstract class SubscriberManagement<T> : ICursors
     {
         private readonly Lazy<ResizableMultiReaderRingBuffer<T>> _buffer;
@@ -86,22 +156,35 @@ namespace Akka.Streams.Implementation
         // if non-null, holds the end-of-stream state
         private SubscriberManagement.IEndOfStream _endOfStream = SubscriberManagement.NotReached.Instance;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected SubscriberManagement()
         {
             _buffer = new Lazy<ResizableMultiReaderRingBuffer<T>>(() =>
                 new ResizableMultiReaderRingBuffer<T>(InitialBufferSize, MaxBufferSize, this));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract int InitialBufferSize { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract int MaxBufferSize { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IEnumerable<ICursor> Cursors => _subscriptions;
 
         /// <summary>
         /// Called when we are ready to consume more elements from our upstream.
         /// MUST NOT call <see cref="PushToDownstream"/>.
         /// </summary>
+        /// <param name="elements">TBD</param>
         protected abstract void RequestFromUpstream(long elements);
 
         /// <summary>
@@ -113,16 +196,21 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Called when the spi.Publisher/Processor is ready to be shut down.
         /// </summary>
+        /// <param name="isCompleted">TBD</param>
         protected abstract void Shutdown(bool isCompleted);
 
         /// <summary>
         /// Use to register a subscriber
         /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract ISubscriptionWithCursor<T> CreateSubscription(ISubscriber<T> subscriber);
 
         /// <summary>
         /// More demand was signaled from a given subscriber.
         /// </summary>
+        /// <param name="subscription">TBD</param>
+        /// <param name="elements">TBD</param>
         protected void MoreRequested(ISubscriptionWithCursor<T> subscription, long elements)
         {
             if (subscription.IsActive)
@@ -218,6 +306,8 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// This method must be called by the implementing class whenever a new value is available to be pushed downstream.
         /// </summary>
+        /// <param name="value">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
         protected void PushToDownstream(T value)
         {
             if (_endOfStream is SubscriberManagement.NotReached)
@@ -284,6 +374,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// This method must be called by the implementing class to push an error downstream.
         /// </summary>
+        /// <param name="cause">TBD</param>
         protected void AbortDownstream(Exception cause)
         {
             _endOfStream = new SubscriberManagement.ErrorCompleted(cause);
@@ -295,6 +386,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Register a new subscriber.
         /// </summary>
+        /// <param name="subscriber">TBD</param>
         protected void RegisterSubscriber(ISubscriber<T> subscriber)
         {
             if (_endOfStream is SubscriberManagement.NotReached)
@@ -328,6 +420,7 @@ namespace Akka.Streams.Implementation
         /// Called from <see cref="ISubscription.Cancel"/>, i.e. from another thread,
         /// override to add synchronization with itself, <see cref="Subscribe{T}"/> and <see cref="MoreRequested"/>
         /// </summary>
+        /// <param name="subscription">TBD</param>
         protected void UnregisterSubscription(ISubscriptionWithCursor<T> subscription)
             => UnregisterSubscriptionInternal(subscription);
 

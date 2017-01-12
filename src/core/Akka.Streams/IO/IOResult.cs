@@ -43,6 +43,7 @@ namespace Akka.Streams.IO
         /// If the IO operation resulted in an error, returns the corresponding <see cref="Exception"/>
         /// or throws <see cref="NotSupportedException"/> otherwise.
         /// </summary>
+        /// <exception cref="NotSupportedException">TBD</exception>
         public Exception Error
         {
             get
