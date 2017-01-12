@@ -2614,6 +2614,8 @@ namespace Akka.Dispatch.MessageQueues
     }
     public class UnboundedPriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue
     {
+        [System.ObsoleteAttribute("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initia" +
+            "lCapacity) instead.")]
         public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
@@ -4853,14 +4855,17 @@ namespace Akka.Util
         public override bool IsRight { get; }
         public TA Value { get; }
     }
-    public class ListPriorityQueue
+    public sealed class ListPriorityQueue
     {
+        [System.ObsoleteAttribute("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead")]
         public ListPriorityQueue(int initialCapacity) { }
+        public ListPriorityQueue(int initialCapacity, System.Func<object, int> priorityCalculator) { }
         public int Count() { }
         public Akka.Actor.Envelope Dequeue() { }
         public void Enqueue(Akka.Actor.Envelope item) { }
         public bool IsConsistent() { }
         public Akka.Actor.Envelope Peek() { }
+        [System.ObsoleteAttribute("Use the constructor to set the priority calculator instead.")]
         public void SetPriorityCalculator(System.Func<object, int> priorityCalculator) { }
         public override string ToString() { }
     }
