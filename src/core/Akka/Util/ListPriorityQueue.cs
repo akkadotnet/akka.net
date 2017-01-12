@@ -17,33 +17,53 @@ namespace Akka.Util
     /// See http://visualstudiomagazine.com/articles/2012/11/01/priority-queues-with-c.aspx for original implementation
     /// This specific version is adapted for Envelopes only and calculates a priority of envelope.Message
     /// </summary>
-    public class ListPriorityQueue
+    public sealed class ListPriorityQueue
     {
         private readonly List<Envelope> _data;
-        private Func<object, int> _priorityCalculator = message => 1;
+        /// <summary>
+        /// The default priority generator.
+        /// </summary>
+        internal static readonly Func<object, int> DefaultPriorityCalculator = message => 1;
+        private Func<object, int> _priorityCalculator;
 
         /// <summary>
-        /// TBD
+        /// DEPRECATED. Should always specify priority calculator instead.
         /// </summary>
-        /// <param name="initialCapacity">TBD</param>
-        public ListPriorityQueue(int initialCapacity)
+        /// <param name="initialCapacity">The current capacity of the priority queue.</param>
+        [Obsolete("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead")]
+        public ListPriorityQueue(int initialCapacity) : this (initialCapacity, DefaultPriorityCalculator)
         {
-            _data = new List<Envelope>(initialCapacity);
+            
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new priority queue.
         /// </summary>
-        /// <param name="priorityCalculator">TBD</param>
+        /// <param name="initialCapacity">The initial capacity of the queue.</param>
+        /// <param name="priorityCalculator">The calculator function for assinging message priorities.</param>
+        public ListPriorityQueue(int initialCapacity, Func<object, int> priorityCalculator)
+        {
+            _data = new List<Envelope>(initialCapacity);
+            _priorityCalculator = priorityCalculator;
+        }
+
+        /// <summary>
+        /// DEPRECATED. Sets a new priority calculator.
+        /// </summary>
+        /// <param name="priorityCalculator">The calculator function for assinging message priorities.</param>
+        /// <remarks>
+        /// WARNING: SHOULD NOT BE USED. Use the constructor to set priority instead.
+        /// </remarks>
+        [Obsolete("Use the constructor to set the priority calculator instead.")]
         public void SetPriorityCalculator(Func<object, int> priorityCalculator)
         {
             _priorityCalculator = priorityCalculator;
         }
 
         /// <summary>
-        /// TBD
+        /// Enqueues a message into the priority queue.
         /// </summary>
-        /// <param name="item">TBD</param>
+        /// <param name="item">The item to enqueue.</param>
         public void Enqueue(Envelope item)
         {
 
@@ -59,9 +79,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Dequeues the highest priority message at the front of the priority queue.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The highest priority message <see cref="Envelope"/>.</returns>
         public Envelope Dequeue()
         {
             // assumes pq is not empty; up to calling code
@@ -87,9 +107,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Peek at the message at the front of the priority queue.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The highest priority message <see cref="Envelope"/>.</returns>
         public Envelope Peek()
         {
             var frontItem = _data[0];
@@ -97,18 +117,18 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Counts the number of items in the priority queue.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The total number of items in the queue.</returns>
         public int Count()
         {
             return _data.Count;
         }
 
         /// <summary>
-        /// TBD
+        /// Converts the queue to a string representation.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A string representation of the queue.</returns>
         public override string ToString()
         {
             var s = "";
