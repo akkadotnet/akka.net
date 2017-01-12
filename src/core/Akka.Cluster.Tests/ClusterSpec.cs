@@ -130,6 +130,28 @@ namespace Akka.Cluster.Tests
             callbackProbe.ExpectMsg("OnMemberRemoved");
         }
 
+        /// <summary>
+        /// https://github.com/akkadotnet/akka.net/issues/2442
+        /// </summary>
+        [Fact]
+        public void BugFix_2442_RegisterOnMemberUp_should_fire_if_node_already_up()
+        {
+            // TODO: this should be removed
+            _cluster.Join(_selfAddress);
+            LeaderActions(); // Joining -> Up
+
+            // Member should already be up
+            _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
+            ExpectMsg<ClusterEvent.MemberUp>();
+
+            var callbackProbe = CreateTestProbe();
+            _cluster.RegisterOnMemberUp(() =>
+            {
+                callbackProbe.Tell("RegisterOnMemberUp");
+            });
+            callbackProbe.ExpectMsg("RegisterOnMemberUp");
+        }
+
         [Fact]
         public void A_cluster_must_complete_LeaveAsync_task_upon_being_removed()
         {
