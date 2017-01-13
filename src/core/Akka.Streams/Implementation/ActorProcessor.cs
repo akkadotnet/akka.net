@@ -15,8 +15,18 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class ActorProcessor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <param name="impl">TBD</param>
+        /// <returns>TBD</returns>
         public static ActorProcessor<TIn, TOut> Create<TIn, TOut>(IActorRef impl)
         {
             var p = new ActorProcessor<TIn, TOut>(impl);
@@ -26,38 +36,75 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     internal class ActorProcessor<TIn, TOut> : ActorPublisher<TOut>, IProcessor<TIn, TOut>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="impl">TBD</param>
         public ActorProcessor(IActorRef impl) : base(impl)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void OnNext(TIn element) => OnNext((object)element);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
         public void OnSubscribe(ISubscription subscription)
         {
             ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
             Impl.Tell(new OnSubscribe(subscription));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void OnNext(object element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
             Impl.Tell(new OnNext(element));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         public void OnError(Exception cause)
         {
             ReactiveStreamsCompliance.RequireNonNullException(cause);
             Impl.Tell(new OnError(cause));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void OnComplete() => Impl.Tell(Actors.OnComplete.Instance);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class BatchingInputBuffer : IInputs
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int Count;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IPump Pump;
 
         private readonly object[] _inputBuffer;
@@ -68,6 +115,12 @@ namespace Akka.Streams.Implementation
         private bool _isUpstreamCompleted;
         private int _batchRemaining;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
+        /// <param name="pump">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         protected BatchingInputBuffer(int count, IPump pump)
         {
             if (count <= 0) throw new ArgumentException("Buffer Count must be > 0");
@@ -88,10 +141,21 @@ namespace Akka.Streams.Implementation
 
         private int RequestBatchSize => Math.Max(1, _inputBuffer.Length / 2);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"BatchingInputBuffer(Count={Count}, elems={_inputBufferElements}, completed={_isUpstreamCompleted}, remaining={_batchRemaining})";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual SubReceive SubReceive { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public virtual object DequeueInputElement()
         {
             var elem = _inputBuffer[_nextInputElementCursor];
@@ -110,6 +174,11 @@ namespace Akka.Streams.Implementation
             return elem;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
         protected virtual void EnqueueInputElement(object element)
         {
             if (IsOpen)
@@ -122,6 +191,9 @@ namespace Akka.Streams.Implementation
             Pump.Pump();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual void Cancel()
         {
             if (!_isUpstreamCompleted)
@@ -139,15 +211,36 @@ namespace Akka.Streams.Implementation
             _inputBufferElements = 0;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransferState NeedsInput { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransferState NeedsInputOrComplete { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsClosed => _isUpstreamCompleted;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsOpen => !IsClosed;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool AreInputsDepleted => _isUpstreamCompleted && _inputBufferElements == 0;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool AreInputsAvailable => _inputBufferElements > 0;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual void OnComplete()
         {
             _isUpstreamCompleted = true;
@@ -155,6 +248,11 @@ namespace Akka.Streams.Implementation
             Pump.Pump();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         protected virtual void OnSubscribe(ISubscription subscription)
         {
             if (subscription == null) throw new ArgumentException("OnSubscribe require subscription not to be null");
@@ -172,6 +270,10 @@ namespace Akka.Streams.Implementation
             Pump.GotUpstreamSubscription();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         protected virtual void OnError(Exception e)
         {
             _isUpstreamCompleted = true;
@@ -179,6 +281,11 @@ namespace Akka.Streams.Implementation
             InputOnError(e);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual bool WaitingForUpstream(object message)
         {
             if (message is OnComplete)
@@ -192,6 +299,11 @@ namespace Akka.Streams.Implementation
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual bool UpstreamRunning(object message)
         {
             if (message is OnNext)
@@ -207,6 +319,12 @@ namespace Akka.Streams.Implementation
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         protected virtual bool Completed(object message)
         {
             if (message is OnSubscribe)
@@ -214,19 +332,49 @@ namespace Akka.Streams.Implementation
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         protected virtual void InputOnError(Exception e) => Clear();
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class SimpleOutputs : IOutputs
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Actor;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IPump Pump;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IActorPublisher ExposedPublisher;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IUntypedSubscriber Subscriber;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected long DownstreamDemand;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected bool IsDownstreamCompleted;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="pump">TBD</param>
         public SimpleOutputs(IActorRef actor, IPump pump)
         {
             Actor = actor;
@@ -237,14 +385,36 @@ namespace Akka.Streams.Implementation
             NeedsDemandOrCancel = DefaultOutputTransferStates.NeedsDemandOrCancel(this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsSubscribed => Subscriber != null;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual SubReceive SubReceive { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransferState NeedsDemand { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransferState NeedsDemandOrCancel { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long DemandCount => DownstreamDemand;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsDemandAvailable => DownstreamDemand > 0;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void EnqueueOutputElement(object element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
@@ -252,6 +422,9 @@ namespace Akka.Streams.Implementation
             ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual void Complete()
         {
             if (!IsDownstreamCompleted)
@@ -264,6 +437,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual void Cancel()
         {
             if (!IsDownstreamCompleted)
@@ -274,6 +450,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         public virtual void Error(Exception e)
         {
             if (!IsDownstreamCompleted)
@@ -286,9 +466,19 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsClosed => IsDownstreamCompleted && !ReferenceEquals(Subscriber, null);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsOpen => !IsClosed;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected ISubscription CreateSubscription() => ActorSubscription.Create(Actor, Subscriber);
 
         private void SubscribePending(IEnumerable<IUntypedSubscriber> subscribers)
@@ -305,6 +495,12 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         protected bool WaitingExposedPublisher(object message)
         {
             if (message is ExposedPublisher)
@@ -317,6 +513,11 @@ namespace Akka.Streams.Implementation
                 $"The first message must be [{typeof (ExposedPublisher)}] but was [{message}]");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected bool DownstreamRunning(object message)
         {
             if (message is SubscribePending)
@@ -345,7 +546,10 @@ namespace Akka.Streams.Implementation
             return true;
         }
     }
-    
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal abstract class ActorProcessorImpl : ActorBase, IPump
     {
         #region Internal classes
@@ -378,13 +582,26 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ActorMaterializerSettings Settings;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual IInputs PrimaryInputs { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual IOutputs PrimaryOutputs { get; }
 
         private ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
         protected ActorProcessorImpl(ActorMaterializerSettings settings)
         {
             Settings = settings;
@@ -396,10 +613,22 @@ namespace Akka.Streams.Implementation
             this.Init();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransferState TransferState { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Action CurrentAction { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsPumpFinished => this.IsPumpFinished();
 
         private readonly ExposedPublisherReceive _receive;
@@ -407,24 +636,57 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Subclass may override <see cref="ActiveReceive"/>
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected sealed override bool Receive(object message) => _receive.Apply(message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual bool ActiveReceive(object message)
             => PrimaryInputs.SubReceive.CurrentReceive(message) || PrimaryOutputs.SubReceive.CurrentReceive(message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="waitForUpstream">TBD</param>
+        /// <param name="andThen">TBD</param>
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
             => Pumps.InitialPhase(this, waitForUpstream, andThen);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="waitForUpstream">TBD</param>
         public void WaitForUpstream(int waitForUpstream) => Pumps.WaitForUpstream(this, waitForUpstream);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void GotUpstreamSubscription() => Pumps.GotUpstreamSubscription(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="phase">TBD</param>
         public void NextPhase(TransferPhase phase) => Pumps.NextPhase(this, phase);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Pump() => Pumps.Pump(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         public void PumpFailed(Exception e) => Fail(e);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual void PumpFinished()
         {
             PrimaryInputs.Cancel();
@@ -432,8 +694,16 @@ namespace Akka.Streams.Implementation
             Context.Stop(Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         protected virtual void OnError(Exception e) => Fail(e);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         protected virtual void Fail(Exception e)
         {
             if (Settings.IsDebugLogging)
@@ -444,12 +714,20 @@ namespace Akka.Streams.Implementation
             Context.Stop(Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             PrimaryInputs.Cancel();
             PrimaryOutputs.Error(new AbruptTerminationException(Self));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
         protected override void PostRestart(Exception reason)
         {
             base.PostRestart(reason);

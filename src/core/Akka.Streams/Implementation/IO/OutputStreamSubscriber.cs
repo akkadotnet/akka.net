@@ -22,6 +22,15 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class OutputStreamSubscriber : ActorSubscriber
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="os">TBD</param>
+        /// <param name="completionPromise">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="autoFlush">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static Props Props(Stream os, TaskCompletionSource<IOResult> completionPromise, int bufferSize, bool autoFlush)
         {
             if (bufferSize <= 0)
@@ -38,6 +47,13 @@ namespace Akka.Streams.Implementation.IO
         private long _bytesWritten;
         private readonly ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outputStream">TBD</param>
+        /// <param name="completionPromise">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="autoFlush">TBD</param>
         public OutputStreamSubscriber(Stream outputStream, TaskCompletionSource<IOResult> completionPromise, int bufferSize, bool autoFlush)
         {
             _outputStream = outputStream;
@@ -47,8 +63,16 @@ namespace Akka.Streams.Implementation.IO
             _log = Context.GetLogger();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IRequestStrategy RequestStrategy { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return message.Match()
@@ -84,6 +108,9 @@ namespace Akka.Streams.Implementation.IO
                 .WasHandled;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             try

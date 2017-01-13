@@ -17,120 +17,180 @@ using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
 {
-	public interface IUnzipWithCreator<out TIn, in TOut, out T>
-	{
-		T Create(Func<TIn, TOut> unzipper);
-	}	
-	<# for (int i = 2; i < count; i++) { 
-	   var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TOut" + x));
-	#>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="T">TBD</typeparam>
+    public interface IUnzipWithCreator<out TIn, in TOut, out T>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="unzipper">TBD</param>
+        /// <returns>TBD</returns>
+        T Create(Func<TIn, TOut> unzipper);
+    }
 
-	public abstract class UnzipWithCreator<TIn, <#= typeParams #>> : IUnzipWithCreator<TIn, Tuple<<#= typeParams #>>, UnzipWith<TIn, <#= typeParams #>>>
-	{
-		public virtual UnzipWith<TIn, <#= typeParams #>> Create(Func<TIn, Tuple<<#= typeParams #>>> unzipper)
-		{
-			return new UnzipWith<TIn, <#= typeParams #>>(unzipper);
-		}
-	}
-	<# } #>
+<# for (int i = 2; i < count; i++) { 
+    var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TOut" + x));
+#>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+<# for (int t = 0; t < i; t++) {  #>
+    /// <typeparam name="TOut<#= t #>">TBD</typeparam>
+<# } #>
+    public abstract class UnzipWithCreator<TIn, <#= typeParams #>> : IUnzipWithCreator<TIn, Tuple<<#= typeParams #>>, UnzipWith<TIn, <#= typeParams #>>>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="unzipper">TBD</param>
+        /// <returns>TBD</returns>
+        public virtual UnzipWith<TIn, <#= typeParams #>> Create(Func<TIn, Tuple<<#= typeParams #>>> unzipper)
+        {
+            return new UnzipWith<TIn, <#= typeParams #>>(unzipper);
+        }
+    }
+<# } #>
 
-	public partial class UnzipWith 
-	{
-		<# for (int i = 2; i < count; i++) { 
-		   var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TOut" + x));
-		#>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public partial class UnzipWith 
+    {
+<# for (int i = 2; i < count; i++) { 
+    var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TOut" + x));
+#>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+<# for (int t = 0; t < i; t++) {  #>
+        /// <typeparam name="TOut<#= t #>">TBD</typeparam>
+<# } #>
+        /// <param name="unzipper">TBD</param>
+        /// <param name="creator">TBD</param>
+        /// <returns>TBD</returns>
+        public static UnzipWith<TIn, <#=typeParams#>> Apply<TIn, <#=typeParams#>>(Func<TIn, Tuple<<#=typeParams#>>> unzipper, UnzipWithCreator<TIn, <#=typeParams#>> creator)
+        {
+            return creator.Create(unzipper);
+        }	
+<# } #>
+    }
 
-		public static UnzipWith<TIn, <#=typeParams#>> Apply<TIn, <#=typeParams#>>(Func<TIn, Tuple<<#=typeParams#>>> unzipper, UnzipWithCreator<TIn, <#=typeParams#>> creator)
-		{
-			return creator.Create(unzipper);
-		}	
-		<# } #>
+<# for (int i = 2; i < count; i++) { 
+    var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "T" + x));
+#>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+<# for (int t = 0; t < i; t++) {  #>
+    /// <typeparam name="T<#= t #>">TBD</typeparam>
+<# } #>
+    public class UnzipWith<TIn, <#= typeParams #>> : GraphStage<FanOutShape<TIn, <#= typeParams #>>>
+    {
+        private sealed class UnzipWithStageLogic : InGraphStageLogic 
+        {
+            private readonly UnzipWith<TIn, <#= typeParams #>> _stage;
+            private int _pendingCount = <#=i#>;
+            private int _downstreamRunning = <#=i#>;
+    <# for (var t = 0; t < i; t++) { #>
+        private bool _pending<#=t#> = true;
+    <# } #>
 
-	}	
-	<# for (int i = 2; i < count; i++) { 
-	   var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "T" + x));
-	#>
+            public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, <#= typeParams #>> stage) : base(shape)
+            {
+                _stage = stage;
 
-	public class UnzipWith<TIn, <#= typeParams #>> : GraphStage<FanOutShape<TIn, <#= typeParams #>>>
-	{
-		private sealed class UnzipWithStageLogic : InGraphStageLogic 
-		{
-			private readonly UnzipWith<TIn, <#= typeParams #>> _stage;
-			private int _pendingCount = <#=i#>;
-			private int _downstreamRunning = <#=i#>;
-	<# for (var t = 0; t < i; t++) { #>
-		private bool _pending<#=t#> = true;
-	<# } #>
+                SetHandler(stage.In, this);				
+                <# for (var t = 0; t < i; t++) { #>
 
-			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, <#= typeParams #>> stage) : base(shape)
-			{
-				_stage = stage;
+                SetHandler(stage.Out<#=t#>, onPull: () => {
+                    _pendingCount--;
+                    _pending<#=t#> = false;
+                    if (_pendingCount == 0) Pull(stage.In);
+                },
+                onDownstreamFinish: () => {
+                    _downstreamRunning--;
+                    if (_downstreamRunning == 0) CompleteStage();
+                    else 
+                    {
+                        if (_pending<#=t#>) _pendingCount--;
+                        if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
+                    }
+                });
+                <# } #>
 
-				SetHandler(stage.In, this);				
-				<# for (var t = 0; t < i; t++) { #>
+            }
 
-				SetHandler(stage.Out<#=t#>, onPull: () => {
-					_pendingCount--;
-					_pending<#=t#> = false;
-					if (_pendingCount == 0) Pull(stage.In);
-				},
-				onDownstreamFinish: () => {
-					_downstreamRunning--;
-					if (_downstreamRunning == 0) CompleteStage();
-					else 
-					{
-						if (_pending<#=t#>) _pendingCount--;
-						if (_pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
-					}
-				});
-				<# } #>
-
-			}
-
-			public override void  OnPush()
-			{
-				var elements = _stage._unzipper(Grab(_stage.In));
-					
-				<# for (var t = 0; t < i; t++) { #>
+            public override void  OnPush()
+            {
+                var elements = _stage._unzipper(Grab(_stage.In));
+                    
+                <# for (var t = 0; t < i; t++) { #>
 if (!IsClosed(_stage.Out<#=t#>)) 
-				{
-					Push(_stage.Out<#=t#>, elements.Item<#=t+1#>);
-					_pending<#=t#> = true;
-				}
-				<# } #>
+                {
+                    Push(_stage.Out<#=t#>, elements.Item<#=t+1#>);
+                    _pending<#=t#> = true;
+                }
+                <# } #>
 
-				_pendingCount = _downstreamRunning;
-			}
-		}		
+                _pendingCount = _downstreamRunning;
+            }
+        }		
 
-		private readonly Func<TIn, Tuple<<#= typeParams #>>> _unzipper;
-		public UnzipWith(Func<TIn, Tuple<<#= typeParams #>>> unzipper)
-		{
-			_unzipper = unzipper;
+        private readonly Func<TIn, Tuple<<#= typeParams #>>> _unzipper;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="unzipper">TBD</param>
+        public UnzipWith(Func<TIn, Tuple<<#= typeParams #>>> unzipper)
+        {
+            _unzipper = unzipper;
 
-			InitialAttributes = Attributes.CreateName("UnzipWith");
-			Shape = new FanOutShape<TIn, <#= typeParams #>>("UnzipWith");
-			In = Shape.In;
+            InitialAttributes = Attributes.CreateName("UnzipWith");
+            Shape = new FanOutShape<TIn, <#= typeParams #>>("UnzipWith");
+            In = Shape.In;
 
-			<# for (var t = 0; t < i; t++) { #>
-Out<#=t#> = Shape.Out<#=t#>;
-			<# } #>
+<# for (var t = 0; t < i; t++) { #>
+            Out<#=t#> = Shape.Out<#=t#>;
+<# } #>
+        }
 
-		}
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Inlet<TIn> In { get; }
 
-		public Inlet<TIn> In { get; }
+<# for (var t = 0; t < i; t++) { #>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Outlet<T<#=t#>> Out<#=t#> { get; }
+<# } #>
 
-		<# for (var t = 0; t < i; t++) { #>
-public Outlet<T<#=t#>> Out<#=t#> { get; }
-		<# } #>
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
-		public sealed override FanOutShape<TIn, <#= typeParams #>> Shape { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public sealed override FanOutShape<TIn, <#= typeParams #>> Shape { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
-	}
-	<# } #>
-
+    }
+<# } #>
 }

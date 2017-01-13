@@ -25,15 +25,24 @@ namespace Akka.Streams.Implementation
     /// </summary>
     public static class Timers
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public static TimeSpan IdleTimeoutCheckInterval(TimeSpan timeout)
             => new TimeSpan(Math.Min(Math.Max(timeout.Ticks/8, 100*TimeSpan.TicksPerMillisecond), timeout.Ticks/2));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string GraphStageLogicTimer = "GraphStageLogicTimer";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Initial<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -76,23 +85,43 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
         public Initial(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Initial;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "InitialTimeoutTimer";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Completion<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
@@ -126,23 +155,43 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
         public Completion(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Completion;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "CompletionTimeout";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Idle<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
@@ -187,23 +236,43 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
         public Idle(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Idle;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "IdleTimeout";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class BackpressureTimeout<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
@@ -254,23 +323,44 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
         public BackpressureTimeout(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.BackpressureTimeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "BackpressureTimeout";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class IdleTimeoutBidi<TIn, TOut> : GraphStage<BidiShape<TIn, TIn, TOut, TOut>>
     {
         #region Logic
@@ -328,31 +418,66 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<TIn> In1 = new Inlet<TIn>("in1");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<TOut> In2 = new Inlet<TOut>("in2");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<TIn> Out1 = new Outlet<TIn>("out1");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<TOut> Out2 = new Outlet<TOut>("out2");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
         public IdleTimeoutBidi(TimeSpan timeout)
         {
             Timeout = timeout;
             Shape = new BidiShape<TIn, TIn, TOut, TOut>(In1, Out1, In2, Out2);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.IdleTimeoutBidi;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override BidiShape<TIn, TIn, TOut, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "IdleTimeoutBidi";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class DelayInitial<T> : GraphStage<FlowShape<T, T>>
     {
         #region stage logic
@@ -401,28 +526,58 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Delay;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> In = new Inlet<T>("DelayInitial.in");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<T> Out = new Outlet<T>("DelayInitial.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
         public DelayInitial(TimeSpan delay)
         {
             Delay = delay;
             Shape = new FlowShape<T, T>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.DelayInitial;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "DelayTimer";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class IdleInject<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>> where TIn : TOut
     {
         #region Logic
@@ -506,6 +661,11 @@ namespace Akka.Streams.Implementation
         private readonly Inlet<TIn> _in = new Inlet<TIn>("IdleInject.in");
         private readonly Outlet<TOut> _out = new Outlet<TOut>("IdleInject.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <param name="inject">TBD</param>
         public IdleInject(TimeSpan timeout, Func<TOut> inject)
         {
             _timeout = timeout;
@@ -514,12 +674,27 @@ namespace Akka.Streams.Implementation
             Shape = new FlowShape<TIn, TOut>(_in, _out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.IdleInject;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "IdleTimer";
     }
 }

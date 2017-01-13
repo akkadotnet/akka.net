@@ -44,7 +44,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// </summary>
         /// <param name="maximumObjectLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> ObjectScanner(int maximumObjectLength)
         {
             return Flow.Create<ByteString>().Via(new Scanner(maximumObjectLength));
@@ -104,13 +104,25 @@ namespace Akka.Streams.Dsl
 
             private readonly int _maximumObjectLength;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="maximumObjectLength">TBD</param>
             public Scanner(int maximumObjectLength)
             {
                 _maximumObjectLength = maximumObjectLength;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             protected override Attributes InitialAttributes { get; } = Attributes.CreateName("JsonFraming.objectScanner");
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="inheritedAttributes">TBD</param>
+            /// <returns>TBD</returns>
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
     }

@@ -23,14 +23,38 @@ namespace Akka.Streams.Stage
     //    FreeDirective = UpstreamDirective | DownstreamDirective | TerminationDirective | AsyncDirective
     //}
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IDirective { }
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IAsyncDirective : IDirective { }
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface ISyncDirective : IDirective { }
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IUpstreamDirective : ISyncDirective { }
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IDownstreamDirective : ISyncDirective { }
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface ITerminationDirective : ISyncDirective { }
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class FreeDirective : IUpstreamDirective, IDownstreamDirective, ITerminationDirective, IAsyncDirective { }
-    
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface ILifecycleContext
     {
         /// <summary>
@@ -59,46 +83,63 @@ namespace Akka.Streams.Stage
         /// Push one element to downstream immediately followed by
         /// cancel of upstreams and complete of downstreams.
         /// </summary>
+        /// <param name="element">TBD</param>
+        /// <returns>TBD</returns>
         IDownstreamDirective PushAndFinish(object element);
 
         /// <summary>
         /// Push one element to downstreams.
         /// </summary>
+        /// <param name="element">TBD</param>
+        /// <returns>TBD</returns>
         IDownstreamDirective Push(object element);
         
         /// <summary>
         /// Request for more elements from upstreams.
         /// </summary>
+        /// <returns>TBD</returns>
         IUpstreamDirective Pull();
         
         /// <summary>
         /// Cancel upstreams and complete downstreams successfully.
         /// </summary>
+        /// <returns>TBD</returns>
         FreeDirective Finish();
         
         /// <summary>
         /// Cancel upstreams and complete downstreams with failure.
         /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <returns>TBD</returns>
         FreeDirective Fail(Exception cause);
         
         /// <summary>
         /// Puts the stage in a finishing state so that
         /// final elements can be pushed from onPull.
         /// </summary>
+        /// <returns>TBD</returns>
         ITerminationDirective AbsorbTermination();
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
     public interface IContext<in TOut> : IContext
     {
         /// <summary>
         /// Push one element to downstream immediately followed by
         /// cancel of upstreams and complete of downstreams.
         /// </summary>
+        /// <param name="element">TBD</param>
+        /// <returns>TBD</returns>
         IDownstreamDirective PushAndFinish(TOut element);
         
         /// <summary>
         /// Push one element to downstreams.
         /// </summary>
+        /// <param name="element">TBD</param>
+        /// <returns>TBD</returns>
         IDownstreamDirective Push(TOut element);
     }
 
@@ -117,24 +158,70 @@ namespace Akka.Streams.Stage
         /// and it is reset to false after <see cref="PushAndPull"/>.
         /// </summary>
         bool IsHoldingBoth { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsHoldingUpstream { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsHoldingDownstream { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <returns>TBD</returns>
         FreeDirective PushAndPull(object element);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         IUpstreamDirective HoldUpstream();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <returns>TBD</returns>
         IUpstreamDirective HoldUpstreamAndPush(object element);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         IDownstreamDirective HoldDownstream();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         IDownstreamDirective HoldDownstreamAndPull();
-        
     }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
     public interface IDetachedContext<in TOut> : IDetachedContext, IContext<TOut>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <returns>TBD</returns>
         FreeDirective PushAndPull(TOut element);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <returns>TBD</returns>
         IUpstreamDirective HoldUpstreamAndPush(TOut element);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="element">TBD</param>
     public delegate void AsyncCallback(object element);
 
     /// <summary>
@@ -146,6 +233,8 @@ namespace Akka.Streams.Stage
     /// Dispatch an asynchronous notification. This method is thread-safe and
     /// may be invoked from external execution contexts.
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <param name="element">TBD</param>
     public delegate void AsyncCallback<in T>(T element);
     
     /// <summary>
@@ -163,17 +252,23 @@ namespace Akka.Streams.Stage
         /// 
         /// This object can be cached and reused within the same <see cref="IAsyncContext{TOut,TExt}"/>.
         /// </summary>
+        /// <returns>TBD</returns>
         AsyncCallback GetAsyncCallback();
 
         /// <summary>
         /// In response to an asynchronous notification an <see cref="IAsyncContext{TOut,TExt}"/> may choose
         /// to neither push nor pull nor terminate, which is represented as this directive.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         IAsyncDirective Ignore();
         
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TExt">TBD</typeparam>
     public interface IAsyncContext<in TOut, in TExt> : IAsyncContext, IDetachedContext<TOut>
     {
         /// <summary>
@@ -184,11 +279,19 @@ namespace Akka.Streams.Stage
         /// 
         /// This object can be cached and reused within the same <see cref="IAsyncContext{TOut,TExt}"/>.
         /// </summary>
+        /// <returns>TBD</returns>
         new AsyncCallback<TExt> GetAsyncCallback();
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IBoundaryContext : IContext
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         FreeDirective Exit();
     }
 }

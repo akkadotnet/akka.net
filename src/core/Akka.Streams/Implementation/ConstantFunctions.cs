@@ -9,8 +9,16 @@ using System;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class ConstantFunctions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static Func<T, long> OneLong<T>() => _ => 1L;
     }
 }
