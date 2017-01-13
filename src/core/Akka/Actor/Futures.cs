@@ -160,7 +160,7 @@ namespace Akka.Actor
                         timeoutCancellation.Cancel();
                         timeoutCancellation.Dispose();
                     }
-                    for (int i = 0; i < ctrList.Count; i++)
+                    for (var i = 0; i < ctrList.Count; i++)
                     {
                         ctrList[i].Dispose();
                     }

@@ -826,7 +826,8 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         }
 
         /// <summary>
-        /// TBD
+        /// Returns <c>true</c> if the <see cref="VirtualPathContainer"/> contains any children, 
+        /// <c>false</c> otherwise.
         /// </summary>
         public bool HasChildren
         {
@@ -837,9 +838,9 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         }
 
         /// <summary>
-        /// TBD
+        /// Executes an action for each child in the current collection.
         /// </summary>
-        /// <param name="action">TBD</param>
+        /// <param name="action">A lambda which takes a reference to the internal child actor as an argument.</param>
         public void ForEachChild(Action<IInternalActorRef> action)
         {
             foreach (IInternalActorRef child in _children.Values)
