@@ -15,6 +15,9 @@ using Akka.Streams.IO;
 namespace Akka.Streams.Dsl
 {
     // ReSharper disable once InconsistentNaming
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class FileIO
     {
         /// <summary>
@@ -30,6 +33,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="f">the File to read from</param>
         /// <param name="chunkSize">the size of each read operation, defaults to 8192</param>
+        /// <returns>TBD</returns>
         public static Source<ByteString, Task<IOResult>> FromFile(FileInfo f, int chunkSize = 8192) =>
             new Source<ByteString, Task<IOResult>>(new FileSource(f, chunkSize, DefaultAttributes.FileSource,
                 new SourceShape<ByteString>(new Outlet<ByteString>("FileSource"))));
@@ -45,6 +49,9 @@ namespace Akka.Streams.Dsl
         /// This source is backed by an Actor which will use the dedicated "akka.stream.blocking-io-dispatcher",
         /// unless configured otherwise by using <see cref="ActorAttributes"/>.
         /// </summary>
+        /// <param name="f">TBD</param>
+        /// <param name="fileMode">TBD</param>
+        /// <returns>TBD</returns>
         public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null) =>
             new Sink<ByteString, Task<IOResult>>(new FileSink(f, fileMode ?? FileMode.OpenOrCreate, DefaultAttributes.FileSink,
                 new SinkShape<ByteString>(new Inlet<ByteString>("FileSink"))));

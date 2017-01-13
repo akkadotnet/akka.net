@@ -28,10 +28,19 @@ namespace Akka.Streams.Implementation.IO
     {
         #region internal classes
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal interface IAdapterToStageMessage { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Flush : IAdapterToStageMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Flush Instance = new Flush();
 
             private Flush()
@@ -40,8 +49,14 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Close : IAdapterToStageMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Close Instance = new Close();
 
             private Close()
@@ -49,10 +64,19 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal interface IDownstreamStatus { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Ok : IDownstreamStatus
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Ok Instance = new Ok();
 
             private Ok()
@@ -61,8 +85,14 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Canceled : IDownstreamStatus
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Canceled Instance = new Canceled();
 
             private Canceled()
@@ -71,8 +101,16 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal interface IStageWithCallback
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="msg">TBD</param>
+            /// <returns>TBD</returns>
             Task WakeUp(IAdapterToStageMessage msg);
         }
 
@@ -227,16 +265,32 @@ namespace Akka.Streams.Implementation.IO
         private readonly TimeSpan _writeTimeout;
         private readonly Outlet<ByteString> _out = new Outlet<ByteString>("OutputStreamSource.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="writeTimeout">TBD</param>
         public OutputStreamSourceStage(TimeSpan writeTimeout)
         {
             _writeTimeout = writeTimeout;
             Shape = new SourceShape<ByteString>(_out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SourceShape<ByteString> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.OutputStreamSource;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             // has to be in this order as module depends on shape
@@ -256,25 +310,52 @@ namespace Akka.Streams.Implementation.IO
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class OutputStreamAdapter : Stream
     {
         #region not supported 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="offset">TBD</param>
+        /// <param name="origin">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <returns>TBD</returns>
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException("This stream can only write");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
         public override void SetLength(long value)
         {
             throw new NotSupportedException("This stream can only write");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buffer">TBD</param>
+        /// <param name="offset">TBD</param>
+        /// <param name="count">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <returns>TBD</returns>
         public override int Read(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException("This stream can only write");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="NotSupportedException">TBD</exception>
         public override long Length
         {
             get
@@ -283,6 +364,10 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="NotSupportedException">TBD</exception>
         public override long Position
         {
             get
@@ -306,6 +391,13 @@ namespace Akka.Streams.Implementation.IO
         private bool _isActive = true;
         private bool _isPublisherAlive = true;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="dataQueue">TBD</param>
+        /// <param name="downstreamStatus">TBD</param>
+        /// <param name="stageWithCallback">TBD</param>
+        /// <param name="writeTimeout">TBD</param>
         public OutputStreamAdapter(BlockingCollection<ByteString> dataQueue,
             AtomicReference<IDownstreamStatus> downstreamStatus,
             IStageWithCallback stageWithCallback, TimeSpan writeTimeout)
@@ -357,11 +449,24 @@ namespace Akka.Streams.Implementation.IO
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Flush() => SendMessage(OutputStreamSourceStage.Flush.Instance);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buffer">TBD</param>
+        /// <param name="offset">TBD</param>
+        /// <param name="count">TBD</param>
         public override void Write(byte[] buffer, int offset, int count)
             => SendData(ByteString.Create(buffer, offset, count));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="disposing">TBD</param>
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
@@ -369,8 +474,17 @@ namespace Akka.Streams.Implementation.IO
             _isActive = false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool CanRead => false;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool CanSeek => false;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool CanWrite => true;
     }
 }

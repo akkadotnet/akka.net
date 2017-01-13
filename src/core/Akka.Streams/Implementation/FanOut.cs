@@ -15,6 +15,10 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public class OutputBunch<T>
     {
         #region internal classes
@@ -47,6 +51,12 @@ namespace Akka.Streams.Implementation
         private bool _unmarkCancelled = true;
         private int _preferredId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outputCount">TBD</param>
+        /// <param name="impl">TBD</param>
+        /// <param name="pump">TBD</param>
         public OutputBunch(int outputCount, IActorRef impl, IPump pump)
         {
             _outputCount = outputCount;
@@ -121,16 +131,42 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public readonly TransferState AnyOfMarkedOutputs;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly SubReceive SubReceive;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsPending(int output) => _pending[output];
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsCompleted(int output) => _completed[output];
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsCancelled(int output) => _cancelled[output];
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsErrored(int output) => _errored[output];
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Complete()
         {
             if (!_bunchCancelled)
@@ -142,6 +178,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
         public void Complete(int output)
         {
             if (!_completed[output] && !_errored[output] && !_cancelled[output])
@@ -152,6 +192,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         public void Cancel(Exception e)
         {
             if (!_bunchCancelled)
@@ -162,6 +206,11 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
+        /// <param name="e">TBD</param>
         public void Error(int output, Exception e)
         {
             if (!_errored[output] && !_cancelled[output] && !_completed[output])
@@ -172,6 +221,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
         public void MarkOutput(int output)
         {
             if (!_marked[output])
@@ -186,6 +239,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
         public void UnmarkOutput(int output)
         {
             if (_marked[output])
@@ -200,20 +257,35 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void MarkAllOutputs()
         {
             for (var i = 0; i < _outputCount; i++)
                 MarkOutput(i);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void UnmarkAllOutputs()
         {
             for (var i = 0; i < _outputCount; i++)
                 UnmarkOutput(i);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="enabled">TBD</param>
         public void UnmarkCancelledOutputs(bool enabled) => _unmarkCancelled = enabled;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public int IdToEnqueue()
         {
             var id = _preferredId;
@@ -231,6 +303,11 @@ namespace Akka.Streams.Implementation
             return id;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <param name="element">TBD</param>
         public void Enqueue(int id, T element)
         {
             var output = _outputs[id];
@@ -245,6 +322,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void EnqueueMarked(T element)
         {
             for (var id = 0; id < _outputCount; id++)
@@ -252,6 +333,10 @@ namespace Akka.Streams.Implementation
                     Enqueue(id, element);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public int IdToEnqueueAndYield()
         {
             var id = IdToEnqueue();
@@ -263,8 +348,17 @@ namespace Akka.Streams.Implementation
             return id;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void EnqueueAndYield(T element) => Enqueue(IdToEnqueueAndYield(), element);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <param name="preferred">TBD</param>
         public void EnqueueAndPrefer(T element, int preferred)
         {
             var id = IdToEnqueue();
@@ -272,14 +366,28 @@ namespace Akka.Streams.Implementation
             Enqueue(id, element);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
         public void OnCancel(int output)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public TransferState DemandAvailableFor(int id) =>
             new LambdaTransferState(isReady: () => _pending[id],
                 isCompleted: () => _cancelled[id] || _completed[id] || _errored[id]);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public TransferState DemandOrCancelAvailableFor(int id)
             => new LambdaTransferState(isReady: () => _pending[id] || _cancelled[id], isCompleted: () => false);
     }
@@ -289,12 +397,26 @@ namespace Akka.Streams.Implementation
     /// </summary>
     public static class FanOut
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Id;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly long Demand;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="id">TBD</param>
+            /// <param name="demand">TBD</param>
             public SubstreamRequestMore(int id, long demand)
             {
                 Id = id;
@@ -302,51 +424,101 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Id;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="id">TBD</param>
             public SubstreamCancel(int id)
             {
                 Id = id;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Id;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="id">TBD</param>
             public SubstreamSubscribePending(int id)
             {
                 Id = id;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class SubstreamSubscription : ISubscription
         {
             private readonly IActorRef _parent;
             private readonly int _id;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="parent">TBD</param>
+            /// <param name="id">TBD</param>
             public SubstreamSubscription(IActorRef parent, int id)
             {
                 _parent = parent;
                 _id = id;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="elements">TBD</param>
             public void Request(long elements) => _parent.Tell(new SubstreamRequestMore(_id, elements));
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void Cancel() => _parent.Tell(new SubstreamCancel(_id));
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString() => "SubstreamSubscription" + GetHashCode();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
         [Serializable]
         public struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ImmutableList<ActorPublisher<T>> Publishers;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="publishers">TBD</param>
             public ExposedPublishers(ImmutableList<ActorPublisher<T>> publishers)
             {
                 Publishers = publishers;
@@ -357,6 +529,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public abstract class FanOut<T> : ActorBase, IPump
     {
 
@@ -377,9 +550,20 @@ namespace Akka.Streams.Implementation
         #endregion
 
         private readonly ActorMaterializerSettings _settings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly OutputBunch<T> OutputBunch;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly BatchingInputBuffer PrimaryInputs;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="outputCount">TBD</param>
         protected FanOut(ActorMaterializerSettings settings, int outputCount)
         {
             _log = Context.GetLogger();
@@ -392,21 +576,36 @@ namespace Akka.Streams.Implementation
         #region Actor implementation
 
         private ILoggingAdapter _log;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             PrimaryInputs.Cancel();
             OutputBunch.Cancel(new AbruptTerminationException(Self));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
         protected override void PostRestart(Exception reason)
         {
             base.PostRestart(reason);
             throw new IllegalStateException("This actor cannot be restarted");
         }
 
-        protected void Fail(Exception e)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
+       protected void Fail(Exception e)
         {
             if (_settings.IsDebugLogging)
                 Log.Debug($"fail due to: {e.Message}");
@@ -416,6 +615,11 @@ namespace Akka.Streams.Implementation
             Pump();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return PrimaryInputs.SubReceive.CurrentReceive(message) ||
@@ -426,25 +630,60 @@ namespace Akka.Streams.Implementation
 
         #region Pump implementation
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransferState TransferState { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Action CurrentAction { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsPumpFinished => this.IsPumpFinished();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="waitForUpstream">TBD</param>
+        /// <param name="andThen">TBD</param>
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
             => Pumps.InitialPhase(this, waitForUpstream, andThen);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="waitForUpstream">TBD</param>
         public void WaitForUpstream(int waitForUpstream) => Pumps.WaitForUpstream(this, waitForUpstream);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void GotUpstreamSubscription() => Pumps.GotUpstreamSubscription(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="phase">TBD</param>
         public void NextPhase(TransferPhase phase) => Pumps.NextPhase(this, phase);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Pump() => Pumps.Pump(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         public void PumpFailed(Exception e) => Fail(e);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void PumpFinished()
         {
             PrimaryInputs.Cancel();
@@ -460,6 +699,12 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal static class Unzip
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="settings">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props<T>(ActorMaterializerSettings settings)
             => Actor.Props.Create(() => new Unzip<T>(settings, 2)).WithDeploy(Deploy.Local);
     }
@@ -469,8 +714,15 @@ namespace Akka.Streams.Implementation
     /// TODO Find out where this class will be used and check if the type parameter fit
     /// since we need to cast messages into a tuple and therefore maybe need aditional type parameters
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal sealed class Unzip<T> : FanOut<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="outputCount">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>>
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {
             OutputBunch.MarkAllOutputs();

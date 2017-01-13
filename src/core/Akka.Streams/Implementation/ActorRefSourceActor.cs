@@ -12,8 +12,19 @@ using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal class ActorRefSourceActor<T> : Actors.ActorPublisher<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="overflowStrategy">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(int bufferSize, OverflowStrategy overflowStrategy, ActorMaterializerSettings settings)
         {
             if (overflowStrategy == OverflowStrategy.Backpressure)
@@ -23,12 +34,27 @@ namespace Akka.Streams.Implementation
             return Actor.Props.Create(() => new ActorRefSourceActor<T>(bufferSize, overflowStrategy, maxFixedBufferSize));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly IBuffer<T> Buffer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int BufferSize;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly OverflowStrategy OverflowStrategy;
         private ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="overflowStrategy">TBD</param>
+        /// <param name="maxFixedBufferSize">TBD</param>
         public ActorRefSourceActor(int bufferSize, OverflowStrategy overflowStrategy, int maxFixedBufferSize)
         {
             BufferSize = bufferSize;
@@ -36,11 +62,24 @@ namespace Akka.Streams.Implementation
             Buffer = bufferSize != 0 ?  Implementation.Buffer.Create<T>(bufferSize, maxFixedBufferSize) : null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
             => DefaultReceive(message) || RequestElement(message) || (message is T && ReceiveElement((T) message));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected bool DefaultReceive(object message)
         {
             if (message is Actors.Cancel)
@@ -59,6 +98,11 @@ namespace Akka.Streams.Implementation
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual bool RequestElement(object message)
         {
             if (message is Request)
@@ -74,6 +118,11 @@ namespace Akka.Streams.Implementation
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual bool ReceiveElement(T message)
         {
             if (IsActive)

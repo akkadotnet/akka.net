@@ -51,6 +51,14 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     public sealed class GraphAssembly
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inlets">TBD</param>
+        /// <param name="outlets">TBD</param>
+        /// <param name="stages">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static GraphAssembly Create(IList<Inlet> inlets, IList<Outlet> outlets, IList<IGraphStageWithMaterializedValue<Shape, object>> stages)
         {
             // add the contents of an iterator to an array starting at idx
@@ -83,13 +91,42 @@ namespace Akka.Streams.Implementation.Fusing
             return array;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IGraphStageWithMaterializedValue<Shape, object>[] Stages;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Attributes[] OriginalAttributes;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet[] Inlets;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int[] InletOwners;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet[] Outlets;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int[] OutletOwners;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="stages">TBD</param>
+        /// <param name="originalAttributes">TBD</param>
+        /// <param name="inlets">TBD</param>
+        /// <param name="inletOwners">TBD</param>
+        /// <param name="outlets">TBD</param>
+        /// <param name="outletOwners">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public GraphAssembly(IGraphStageWithMaterializedValue<Shape, object>[] stages, Attributes[] originalAttributes, Inlet[] inlets, int[] inletOwners, Outlet[] outlets, int[] outletOwners)
         {
             if (inlets.Length != inletOwners.Length)
@@ -107,6 +144,9 @@ namespace Akka.Streams.Implementation.Fusing
             OutletOwners = outletOwners;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int ConnectionCount => Inlets.Length;
 
         /// <summary>
@@ -119,6 +159,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <para/> - array of the logics
         /// <para/> - materialized value
         /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <param name="copiedModules">TBD</param>
+        /// <param name="materializedValues">TBD</param>
+        /// <param name="register">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public Tuple<Connection[], GraphStageLogic[]> Materialize(
             Attributes inheritedAttributes,
             IModule[] copiedModules,
@@ -206,6 +252,10 @@ namespace Akka.Streams.Implementation.Fusing
             return Tuple.Create(connections, logics);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "GraphAssembly\n  " +
