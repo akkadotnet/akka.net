@@ -12,10 +12,24 @@ using Akka.Actor;
 
 namespace Akka.Persistence
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="receive">TBD</param>
+    /// <param name="message">TBD</param>
     internal delegate void StateReceive(Receive receive, object message);
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class EventsourcedState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="isRecoveryRunning">TBD</param>
+        /// <param name="stateReceive">TBD</param>
         public EventsourcedState(string name, bool isRecoveryRunning, StateReceive stateReceive)
         {
             Name = name;
@@ -23,16 +37,32 @@ namespace Akka.Persistence
             StateReceive = stateReceive;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Name { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsRecoveryRunning { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public StateReceive StateReceive { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return Name;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract partial class Eventsourced
     {
         /// <summary>
@@ -376,11 +406,17 @@ namespace Akka.Persistence
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class LinkedListExtensions
     {
         /// <summary>
         /// Removes first element from the list and returns it or returns default value if list was empty.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <returns>TBD</returns>
         internal static T Pop<T>(this LinkedList<T> self)
         {
             if (self.First != null)

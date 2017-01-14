@@ -16,11 +16,19 @@ namespace Akka.Streams
     {
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class QueueOfferResult
     {
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Enqueued : IQueueOfferResult
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Enqueued Instance = new Enqueued();
 
             private Enqueued()
@@ -28,8 +36,14 @@ namespace Akka.Streams
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Dropped : IQueueOfferResult
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Dropped Instance = new Dropped();
 
             private Dropped()
@@ -37,18 +51,34 @@ namespace Akka.Streams
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Failure : IQueueOfferResult
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Exception Cause { get; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cause">TBD</param>
             public Failure(Exception cause)
             {
                 Cause = cause;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class QueueClosed : IQueueOfferResult
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly QueueClosed Instance = new QueueClosed();
 
             private QueueClosed()

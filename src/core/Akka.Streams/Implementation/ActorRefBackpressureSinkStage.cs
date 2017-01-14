@@ -16,6 +16,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
     internal class ActorRefBackpressureSinkStage<TIn> : GraphStage<SinkShape<TIn>>
     {
         #region internal classes 
@@ -131,6 +132,14 @@ namespace Akka.Streams.Implementation
         private readonly object _onCompleteMessage;
         private readonly Func<Exception, object> _onFailureMessage;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="onInitMessage">TBD</param>
+        /// <param name="ackMessage">TBD</param>
+        /// <param name="onCompleteMessage">TBD</param>
+        /// <param name="onFailureMessage">TBD</param>
         public ActorRefBackpressureSinkStage(IActorRef actorRef, object onInitMessage, object ackMessage,
             object onCompleteMessage, Func<Exception, object> onFailureMessage)
         {
@@ -143,10 +152,22 @@ namespace Akka.Streams.Implementation
             Shape = new SinkShape<TIn>(_inlet);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.ActorRefWithAck;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SinkShape<TIn> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;

@@ -19,6 +19,9 @@ using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class SubFlowOperations
     {
         /// <summary>
@@ -36,6 +39,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="partialFunc">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<Option<TOut>, TMat, TClosed> Recover<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<Exception, Option<TOut>> partialFunc)
         {
             return (SubFlow<Option<TOut>, TMat, TClosed>)InternalFlowOperations.Recover(flow, partialFunc);
@@ -60,6 +69,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="partialFunc">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use RecoverWithRetries instead.")]
         public static SubFlow<TOut, TMat, TClosed> RecoverWith<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
@@ -86,9 +101,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
         /// <param name="partialFunc">Receives the failure cause and returns the new Source to be materialized if any</param>
         /// <param name="attempts">Maximum number of retries or -1 to retry indefinitely</param>
         /// <exception cref="ArgumentException">if <paramref name="attempts"/> is a negative number other than -1</exception>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> RecoverWithRetries<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
         {
@@ -109,6 +129,13 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="mapper">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Select<TIn, TOut, TMat, TClosed>(this SubFlow<TIn, TMat, TClosed> flow, Func<TIn, TOut> mapper)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Select(flow, mapper);
@@ -135,6 +162,13 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="mapConcater">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> SelectMany<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<TOut1, IEnumerable<TOut2>> mapConcater)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.SelectMany(flow, mapConcater);
@@ -166,6 +200,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// See also <see cref="SelectMany{TOut1,TOut2,TMat,TClosed}"/>
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="mapConcaterFactory">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> StatefulSelectMany<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow,
             Func<Func<TOut1, IEnumerable<TOut2>>> mapConcaterFactory)
         {
@@ -202,6 +243,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsyncUnordered{TIn,TOut,TMat,TClosed}"/>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="parallelism">TBD</param>
+        /// <param name="asyncMapper">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> SelectAsync<TIn, TOut, TMat, TClosed>(this SubFlow<TIn, TMat, TClosed> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.SelectAsync(flow, parallelism, asyncMapper);
@@ -236,6 +285,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsync{TIn,TOut,TMat,TClosed}"/>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="parallelism">TBD</param>
+        /// <param name="asyncMapper">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> SelectAsyncUnordered<TIn, TOut, TMat, TClosed>(this SubFlow<TIn, TMat, TClosed> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.SelectAsyncUnordered(flow, parallelism, asyncMapper);
@@ -254,6 +311,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Where<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Where(flow, predicate);
@@ -272,6 +335,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> WhereNot<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.WhereNot(flow, predicate);
@@ -294,6 +363,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> TakeWhile<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.TakeWhile(flow, predicate);
@@ -311,6 +386,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> SkipWhile<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.SkipWhile(flow, predicate);
@@ -329,6 +410,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="collector">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<TOut1, TOut2> collector)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Collect(flow, collector);
@@ -347,7 +435,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="n">TBD</param>
         /// <exception cref="ArgumentException">Thrown, if <paramref name="n"/> is less than or equal zero.</exception>
+        /// <returns>TBD</returns>
         public static SubFlow<IEnumerable<TOut>, TMat, TClosed> Grouped<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int n)
         {
             return (SubFlow<IEnumerable<TOut>, TMat, TClosed>)InternalFlowOperations.Grouped(flow, n);
@@ -376,6 +470,12 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="Take{TOut,TMat,TClosed}"/>
         /// <seealso cref="TakeWithin{TOut,TMat,TClosed}"/>
         /// <seealso cref="TakeWhile{TOut,TMat,TClosed}"/>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<T, TMat, TClosed> Limit<T, TMat, TClosed>(this SubFlow<T, TMat, TClosed> flow, long max)
         {
             return LimitWeighted(flow, max, _ => 1L);
@@ -405,6 +505,13 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="Take{TOut,TMat,TClosed}"/>
         /// <seealso cref="TakeWithin{TOut,TMat,TClosed}"/>
         /// <seealso cref="TakeWhile{TOut,TMat,TClosed}"/>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="costFunc">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<T, TMat, TClosed> LimitWeighted<T, TMat, TClosed>(this SubFlow<T, TMat, TClosed> flow, long max, Func<T, long> costFunc)
         {
             return (SubFlow<T, TMat, TClosed>) InternalFlowOperations.LimitWeighted(flow, max, costFunc);
@@ -425,7 +532,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <param name="step">TBD</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="n"/> or <paramref name="step"/> is less than or equal zero.</exception>
+        /// <returns>TBD</returns>
         public static SubFlow<IEnumerable<TOut>, TMat, TClosed> Sliding<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int n, int step = 1)
         {
             return (SubFlow<IEnumerable<TOut>, TMat, TClosed>)InternalFlowOperations.Sliding(flow, n, step);
@@ -449,6 +563,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="zero">TBD</param>
+        /// <param name="scan">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> Scan<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> scan)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Scan(flow, zero, scan);
@@ -471,6 +593,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="zero">TBD</param>
+        /// <param name="fold">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> Aggregate<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Aggregate(flow, zero, fold);
@@ -495,6 +625,14 @@ namespace Akka.Streams.Dsl
         /// 
         /// <seealso cref="Aggregate{TIn,TOut1,TOut2,TMat}"/>
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="zero">TBD</param>
+        /// <param name="fold">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> AggregateAsync<TIn, TOut, TMat, TClosed>(this SubFlow<TIn, TMat, TClosed> flow, TOut zero,
             Func<TOut, TIn, Task<TOut>> fold)
         {
@@ -518,6 +656,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="reduce">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Sum<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<TOut, TOut, TOut> reduce)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Sum(flow, reduce);
@@ -541,7 +685,15 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="start">TBD</param>
+        /// <param name="inject">TBD</param>
+        /// <param name="end">TBD</param>
         /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is null.</exception>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Intersperse<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TOut start, TOut inject, TOut end)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Intersperse(flow, start, inject, end);
@@ -565,7 +717,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="inject">TBD</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is null.</exception>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Intersperse<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TOut inject)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Intersperse(flow, inject);
@@ -589,7 +747,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream completes
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <param name="timeout">TBD</param>
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
+        /// <returns>TBD</returns>
         public static SubFlow<IEnumerable<TOut>, TMat, TClosed> GroupedWithin<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int n, TimeSpan timeout)
         {
             return (SubFlow<IEnumerable<TOut>, TMat, TClosed>)InternalFlowOperations.GroupedWithin(flow, n, timeout);
@@ -617,8 +782,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
         /// <param name="of">Time to shift all messages.</param>
         /// <param name="strategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Delay<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan of, DelayOverflowStrategy? strategy = null)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Delay(flow, of, strategy);
@@ -636,6 +806,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Skip<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, long n)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Skip(flow, n);
@@ -652,6 +828,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="duration">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> SkipWithin<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan duration)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.SkipWithin(flow, duration);
@@ -674,6 +856,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when the defined number of elements has been taken or downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Take<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, long n)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Take(flow, n);
@@ -696,6 +884,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels or timer fires
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="duration">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> TakeWithin<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan duration)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.TakeWithin(flow, duration);
@@ -720,8 +914,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TSeed">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
         /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param> 
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TSeed, TMat, TClosed> ConflateWithSeed<TOut, TMat, TSeed, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<TOut, TSeed> seed, Func<TSeed, TOut, TSeed> aggregate)
         {
             return (SubFlow<TSeed, TMat, TClosed>)InternalFlowOperations.ConflateWithSeed(flow, seed, aggregate);
@@ -746,7 +946,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Conflate<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<TOut, TOut, TOut> aggregate)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Conflate(flow, aggregate);
@@ -770,9 +975,15 @@ namespace Akka.Streams.Dsl
         ///
         /// See also <seealso cref="ConflateWithSeed{TOut,TMat,TSeed,TClosed}"/>, <seealso cref="BatchWeighted{TOut,TOut2,TMat,TClosed}"/>
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
         /// <param name="max">maximum number of elements to batch before backpressuring upstream (must be positive non-zero)</param>
         /// <param name="seed">Provides the first state for a batched value using the first unconsumed element as a start</param>
         /// <param name="aggregate">Takes the currently batched value and the current pending element to produce a new aggregate</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> Batch<TOut, TOut2, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, long max,
             Func<TOut, TOut2> seed, Func<TOut2, TOut, TOut2> aggregate)
         {
@@ -802,10 +1013,16 @@ namespace Akka.Streams.Dsl
         ///
         /// See also <seealso cref="ConflateWithSeed{TOut,TMat,TSeed,TClosed}"/>, <seealso cref="Batch{TOut,TOut2,TMat,TClosed}"/>
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
         /// <param name="max">maximum weight of elements to batch before backpressuring upstream (must be positive non-zero)</param>
         /// <param name="costFunction">a function to compute a single element weight</param>
         /// <param name="seed">Provides the first state for a batched value using the first unconsumed element as a start</param>
         /// <param name="aggregate">Takes the currently batched value and the current pending element to produce a new aggregate</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> BatchWeighted<TOut, TOut2, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, long max, Func<TOut, long> costFunction,
             Func<TOut, TOut2> seed, Func<TOut2, TOut, TOut2> aggregate)
         {
@@ -832,7 +1049,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
         /// <param name="extrapolate">Takes the current extrapolation state to produce an output element and the next extrapolation state.</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> Expand<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<TOut1, IEnumerator<TOut2>> extrapolate)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Expand(flow, extrapolate);
@@ -854,8 +1077,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
         /// <param name="size">The size of the buffer in element count</param>
         /// <param name="strategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Buffer<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int size, OverflowStrategy strategy)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Buffer(flow, size, strategy);
@@ -866,6 +1094,13 @@ namespace Akka.Streams.Dsl
         /// This operator makes it possible to extend the <see cref="Flow"/> API when there is no specialized
         /// operator that performs the transformation.
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="stageFactory">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use Via(GraphStage) instead.")]
         public static SubFlow<TOut2, TMat, TClosed> Transform<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
@@ -886,6 +1121,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels or substream cancels
         /// </summary> 
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat, TClosed> PrefixAndTail<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int n)
         {
             return (SubFlow<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat, TClosed>)InternalFlowOperations.PrefixAndTail(flow, n);
@@ -904,6 +1145,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="flatten">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> ConcatMany<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.ConcatMany(flow, flatten);
@@ -922,6 +1170,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="breadth">TBD</param>
+        /// <param name="flatten">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> MergeMany<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed>  flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.MergeMany(flow, breadth, flatten);
@@ -939,6 +1195,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> InitialTimeout<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan timeout)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.InitialTimeout(flow, timeout);
@@ -956,6 +1218,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> CompletionTimeout<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan timeout)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.CompletionTimeout(flow, timeout);
@@ -974,6 +1242,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> IdleTimeout<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan timeout)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.IdleTimeout(flow, timeout);
@@ -992,6 +1266,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> BackpressureTimeout<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan timeout)
         {
             return (SubFlow<TOut, TMat, TClosed>) InternalFlowOperations.BackpressureTimeout(flow, timeout);
@@ -1014,6 +1294,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TInjected">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="injectElement">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TInjected, TMat, TClosed> KeepAlive<TOut, TInjected, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan timeout, Func<TInjected> injectElement) where TOut : TInjected
         {
             return (SubFlow<TInjected, TMat, TClosed>)InternalFlowOperations.KeepAlive(flow, timeout, injectElement);
@@ -1042,9 +1330,18 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="elements">TBD</param>
+        /// <param name="per">TBD</param>
+        /// <param name="maximumBurst">TBD</param>
+        /// <param name="mode">TBD</param>
         /// <exception cref="ArgumentException">Thow when <paramref name="elements"/> is less than or equal zero, 
         /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
         /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Throttle<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int elements, TimeSpan per, int maximumBurst, ThrottleMode mode)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Throttle(flow, elements, per, maximumBurst, mode);
@@ -1076,6 +1373,16 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="cost">TBD</param>
+        /// <param name="per">TBD</param>
+        /// <param name="maximumBurst">TBD</param>
+        /// <param name="calculateCost">TBD</param>
+        /// <param name="mode">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Throttle<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int cost, TimeSpan per, int maximumBurst, Func<TOut, int> calculateCost, ThrottleMode mode)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Throttle(flow, cost, per, maximumBurst, calculateCost, mode);
@@ -1090,6 +1397,15 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="materializerFunction">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat3, TClosed> AlsoToMaterialized<TOut, TMat, TMat2, TMat3, TClosed>(
             this SubFlow<TOut, TMat, TClosed> flow, IGraph<SinkShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializerFunction)
@@ -1109,7 +1425,12 @@ namespace Akka.Streams.Dsl
         ///
         /// Cancels when downstream cancels
         /// </summary>
-        /// <returns></returns>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> AlsoTo<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SinkShape<TOut>, TMat> that)
         {
             return (SubFlow<TOut, TMat, TClosed>) InternalFlowOperations.AlsoTo(flow, that);
@@ -1123,7 +1444,14 @@ namespace Akka.Streams.Dsl
         ///
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
-        ///</summary>    
+        ///</summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="materializerFunction">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat2, TClosed> WatchTermination<TOut, TMat, TMat2, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<TMat, Task, TMat2> materializerFunction)
         {
             return (SubFlow<TOut, TMat2, TClosed>) InternalFlowOperations.WatchTermination(flow, materializerFunction);
@@ -1141,6 +1469,11 @@ namespace Akka.Streams.Dsl
         ///
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Detach<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Detach(flow);
@@ -1157,6 +1490,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="delay">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> InitialDelay<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan delay)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.InitialDelay(flow, delay);
@@ -1176,6 +1515,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="name">TBD</param>
+        /// <param name="extract">TBD</param>
+        /// <param name="log">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Log<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, string name, Func<TOut, object> extract = null, ILoggingAdapter log = null)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Log(flow, name, extract, log);
@@ -1192,6 +1539,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="T1">TBD</typeparam>
+        /// <typeparam name="T2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<Tuple<T1, T2>, TMat, TClosed> Zip<T1, T2, TMat, TClosed>(this SubFlow<T1, TMat, TClosed> flow, IGraph<SourceShape<T2>, TMat> other)
         {
             return (SubFlow<Tuple<T1, T2>, TMat, TClosed>)InternalFlowOperations.Zip(flow, other);
@@ -1209,6 +1563,15 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="T1">TBD</typeparam>
+        /// <typeparam name="T2">TBD</typeparam>
+        /// <typeparam name="T3">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<T3, TMat, TClosed> ZipWith<T1, T2, T3, TMat, TClosed>(this SubFlow<T1, TMat, TClosed> flow, IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
         {
             return (SubFlow<T3, TMat, TClosed>)InternalFlowOperations.ZipWith(flow, other, combine);
@@ -1237,6 +1600,14 @@ namespace Akka.Streams.Dsl
         /// Source(List(1, 2, 3)).Interleave(List(4, 5, 6, 7), 2) // 1, 2, 4, 5, 3, 6, 7
         /// </code>
         /// </example>
+        /// <typeparam name="T1">TBD</typeparam>
+        /// <typeparam name="T2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <param name="segmentSize">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<T2, TMat, TClosed> Interleave<T1, T2, TMat, TClosed>(this SubFlow<T1, TMat, TClosed> flow, IGraph<SourceShape<T2>, TMat> other, int segmentSize) where T1 : T2
         {
             return (SubFlow<T2, TMat, TClosed>)InternalFlowOperations.Interleave(flow, other, segmentSize);
@@ -1256,6 +1627,17 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
+        /// <typeparam name="T1">TBD</typeparam>
+        /// <typeparam name="T2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="graph">TBD</param>
+        /// <param name="segmentSize">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<T2, TMat3, TClosed> InterleaveMaterialized<T1, T2, TMat, TMat2, TMat3, TClosed>(this SubFlow<T1, TMat, TClosed> flow,
             IGraph<SourceShape<T2>, TMat2> graph, int segmentSize, Func<TMat, TMat2, TMat3> combine) where T1 : T2
         {
@@ -1274,6 +1656,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <param name="eagerComplete">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> Merge<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, IGraph<SourceShape<TOut2>, TMat> other, bool eagerComplete = false) where TOut1 : TOut2
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Merge(flow, other, eagerComplete);
@@ -1289,6 +1679,16 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat3, TClosed> MergeMaterialized<TOut1, TOut2, TMat, TMat2, TMat3, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow,
             IGraph<SourceShape<TOut2>, TMat2> that, Func<TMat, TMat2, TMat3> combine)
             where TOut1 : TOut2
@@ -1311,6 +1711,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <param name="orderFunc">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> MergeSorted<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.MergeSorted(flow, other, orderFunc);
@@ -1331,6 +1738,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> MergeSorted<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SourceShape<TOut>, TMat> other)
             where TOut : IComparable<TOut>
         {
@@ -1352,6 +1765,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <param name="comparer">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> MergeSorted<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.MergeSorted(flow, other, comparer);
@@ -1375,6 +1795,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Concat<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SourceShape<TOut>, TMat> other)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.Concat(flow, other);
@@ -1398,6 +1824,13 @@ namespace Akka.Streams.Dsl
         ///
         /// Cancels when downstream cancels
         /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<TOut2, TMat, TClosed> Prepend<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow,
             IGraph<SourceShape<TOut2>, TMat> that) where TOut1 : TOut2
         {
@@ -1426,6 +1859,12 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream cancels and additionally the alternative is cancelled as soon as an element passes
         ///                    by from this stream.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="secondary">TBD</param>
+        /// <returns>TBD</returns>
         public static SubFlow<T, TMat, TClosed> OrElse<T, TMat, TClosed>(this SubFlow<T, TMat, TClosed> flow, IGraph<SourceShape<T>, TMat> secondary)
             => (SubFlow<T, TMat, TClosed>)InternalFlowOperations.OrElse(flow, secondary);
     }

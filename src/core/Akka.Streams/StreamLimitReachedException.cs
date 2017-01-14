@@ -10,12 +10,24 @@ using System.Runtime.Serialization;
 
 namespace Akka.Streams
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class StreamLimitReachedException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="max">TBD</param>
         public StreamLimitReachedException(long max) : base($"Limit of {max} reached")
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected StreamLimitReachedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }

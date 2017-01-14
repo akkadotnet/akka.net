@@ -13,11 +13,26 @@ using Akka.Pattern;
 
 namespace Akka.Persistence.Journal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public enum ReplayFilterMode
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         Fail,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Warn,
+        /// <summary>
+        /// TBD
+        /// </summary>
         RepairByDiscardOld,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Disabled
     }
 
@@ -33,6 +48,14 @@ namespace Akka.Persistence.Journal
         private long _sequenceNr = -1;
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistentActor">TBD</param>
+        /// <param name="mode">TBD</param>
+        /// <param name="windowSize">TBD</param>
+        /// <param name="maxOldWriters">TBD</param>
+        /// <param name="debugEnabled">TBD</param>
         public ReplayFilter(IActorRef persistentActor, ReplayFilterMode mode, int windowSize, int maxOldWriters, bool debugEnabled)
         {
             PersistentActor = persistentActor;
@@ -42,6 +65,16 @@ namespace Akka.Persistence.Journal
             DebugEnabled = debugEnabled;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistentActor">TBD</param>
+        /// <param name="mode">TBD</param>
+        /// <param name="windowSize">TBD</param>
+        /// <param name="maxOldWriters">TBD</param>
+        /// <param name="debugEnabled">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <returns>TBD</returns>
         public static Props Props(IActorRef persistentActor, ReplayFilterMode mode, int windowSize, int maxOldWriters, bool debugEnabled)
         {
             if (windowSize <= 0)
@@ -53,12 +86,34 @@ namespace Akka.Persistence.Journal
             return Actor.Props.Create(() => new ReplayFilter(persistentActor, mode, windowSize, maxOldWriters, debugEnabled));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef PersistentActor { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ReplayFilterMode Mode { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int WindowSize { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MaxOldWriters { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool DebugEnabled { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if (message is ReplayedMessage)

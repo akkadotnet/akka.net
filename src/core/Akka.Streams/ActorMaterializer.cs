@@ -31,6 +31,10 @@ namespace Akka.Streams
     /// </summary>
     public abstract class ActorMaterializer : IMaterializer, IDisposable
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig()
             => ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf");
 
@@ -53,6 +57,12 @@ namespace Akka.Streams
         /// `namePrefix-flowNumber-flowStepNumber-stepName`.
         /// </para>
         /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="namePrefix">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <returns>TBD</returns>
         public static ActorMaterializer Create(IActorRefFactory context, ActorMaterializerSettings settings = null, string namePrefix = null)
         {
             var haveShutDown = new AtomicBoolean();
@@ -82,7 +92,10 @@ namespace Akka.Streams
         }
 
         #endregion
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract ActorMaterializerSettings Settings { get; }
 
         /// <summary>
@@ -90,22 +103,63 @@ namespace Akka.Streams
         /// </summary>
         public abstract bool IsShutdown { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract MessageDispatcher ExecutionContext { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract ActorSystem System { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract ILoggingAdapter Logger { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract IActorRef Supervisor { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="namePrefix">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IMaterializer WithNamePrefix(string namePrefix);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <returns>TBD</returns>
         public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ICancelable ScheduleOnce(TimeSpan delay, Action action);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ActorMaterializerSettings EffectiveSettings(Attributes attributes);
 
         /// <summary>
@@ -115,8 +169,17 @@ namespace Akka.Streams
         /// </summary>
         public abstract void Shutdown();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IActorRef ActorOf(MaterializationContext context, Props props);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Dispose() => Shutdown();
     }
 
@@ -125,6 +188,12 @@ namespace Akka.Streams
     /// </summary>
     internal static class ActorMaterializerHelper
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="materializer">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         internal static ActorMaterializer Downcast(IMaterializer materializer)
         {
             //FIXME this method is going to cause trouble for other Materializer implementations
@@ -144,14 +213,26 @@ namespace Akka.Streams
     [Serializable]
     public class AbruptTerminationException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Actor;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
         public AbruptTerminationException(IActorRef actor)
             : base($"Processor actor [{actor}] terminated abruptly")
         {
             Actor = actor;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected AbruptTerminationException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
@@ -163,8 +244,18 @@ namespace Akka.Streams
     /// </summary>
     public class MaterializationException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="innerException">TBD</param>
         public MaterializationException(string message, Exception innerException) : base(message, innerException) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected MaterializationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
@@ -174,6 +265,11 @@ namespace Akka.Streams
     /// </summary>
     public sealed class ActorMaterializerSettings
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.stream.materializer");
@@ -197,18 +293,65 @@ namespace Akka.Streams
         }
 
         private const int DefaultlMaxFixedbufferSize = 1000;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int InitialInputBufferSize;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int MaxInputBufferSize;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string Dispatcher;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Decider SupervisionDecider;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly StreamSubscriptionTimeoutSettings SubscriptionTimeoutSettings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly bool IsDebugLogging;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int OutputBurstLimit;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly bool IsFuzzingMode;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly bool IsAutoFusing;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int MaxFixedBufferSize;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int SyncProcessingLimit;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialInputBufferSize">TBD</param>
+        /// <param name="maxInputBufferSize">TBD</param>
+        /// <param name="dispatcher">TBD</param>
+        /// <param name="supervisionDecider">TBD</param>
+        /// <param name="subscriptionTimeoutSettings">TBD</param>
+        /// <param name="isDebugLogging">TBD</param>
+        /// <param name="outputBurstLimit">TBD</param>
+        /// <param name="isFuzzingMode">TBD</param>
+        /// <param name="isAutoFusing">TBD</param>
+        /// <param name="maxFixedBufferSize">TBD</param>
+        /// <param name="syncProcessingLimit">TBD</param>
         public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Decider supervisionDecider, StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = DefaultlMaxFixedbufferSize)
         {
             InitialInputBufferSize = initialInputBufferSize;
@@ -225,46 +368,92 @@ namespace Akka.Streams
 
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialSize">TBD</param>
+        /// <param name="maxSize">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithInputBuffer(int initialSize, int maxSize)
         {
             return new ActorMaterializerSettings(initialSize, maxSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize, SyncProcessingLimit);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="dispatcher">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithDispatcher(string dispatcher)
         {
             return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize, SyncProcessingLimit);
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="decider">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithSupervisionStrategy(Decider decider)
         {
             return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, decider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize, SyncProcessingLimit);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="isEnabled">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithDebugLogging(bool isEnabled)
         {
             return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, isEnabled, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize, SyncProcessingLimit);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="isFuzzingMode">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithFuzzingMode(bool isFuzzingMode)
         {
             return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, isFuzzingMode, IsAutoFusing, MaxFixedBufferSize, SyncProcessingLimit);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="isAutoFusing">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithAutoFusing(bool isAutoFusing)
         {
             return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, isAutoFusing, MaxFixedBufferSize, SyncProcessingLimit);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="maxFixedBufferSize">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithMaxFixedBufferSize(int maxFixedBufferSize)
         {
             return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, maxFixedBufferSize, SyncProcessingLimit);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="limit">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithSyncProcessingLimit(int limit)
         {
             return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize, limit);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <returns>TBD</returns>
         public ActorMaterializerSettings WithSubscriptionTimeoutSettings(StreamSubscriptionTimeoutSettings settings)
         {
             if (Equals(settings, SubscriptionTimeoutSettings))
@@ -279,6 +468,12 @@ namespace Akka.Streams
     /// </summary>
     public sealed class StreamSubscriptionTimeoutSettings : IEquatable<StreamSubscriptionTimeoutSettings>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static StreamSubscriptionTimeoutSettings Create(Config config)
         {
             var c = config.GetConfig("subscription-timeout") ?? Config.Empty;
@@ -297,16 +492,32 @@ namespace Akka.Streams
                 timeout: c.GetTimeSpan("timeout", TimeSpan.FromSeconds(5)));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly StreamSubscriptionTimeoutTerminationMode Mode;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="mode">TBD</param>
+        /// <param name="timeout">TBD</param>
         public StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode mode, TimeSpan timeout)
         {
             Mode = mode;
             Timeout = timeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null))
@@ -319,9 +530,18 @@ namespace Akka.Streams
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(StreamSubscriptionTimeoutSettings other)
             => Mode == other.Mode && Timeout.Equals(other.Timeout);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -330,6 +550,10 @@ namespace Akka.Streams
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"StreamSubscriptionTimeoutSettings<{Mode}, {Timeout}>";
     }
 
@@ -355,6 +579,9 @@ namespace Akka.Streams
         CancelTermination
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ActorMaterializerExtensions
     {
         /// <summary>
@@ -374,6 +601,10 @@ namespace Akka.Streams
         /// namePrefix-flowNumber-flowStepNumber-stepName.
         /// </para>
         /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="namePrefix">TBD</param>
+        /// <returns>TBD</returns>
         public static ActorMaterializer Materializer(this IActorRefFactory context, ActorMaterializerSettings settings = null, string namePrefix = null)
             => ActorMaterializer.Create(context, settings, namePrefix);
     }

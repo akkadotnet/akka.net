@@ -12,12 +12,19 @@ using Akka.Pattern;
 
 namespace Akka.Persistence.Snapshot
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class SnapshotStore : ActorBase
     {
         private readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         private readonly bool _publish;
         private readonly CircuitBreaker _breaker;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ArgumentException">TBD</exception>
         protected SnapshotStore()
         {
             var extension = Persistence.Instance.Apply(Context.System);
@@ -34,6 +41,11 @@ namespace Akka.Persistence.Snapshot
                 config.GetTimeSpan("circuit-breaker.reset-timeout"));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected sealed override bool Receive(object message)
         {
             return ReceiveSnapshotStore(message) || ReceivePluginInternal(message);
@@ -198,6 +210,9 @@ namespace Akka.Persistence.Snapshot
         /// 
         /// This call is protected with a circuit-breaker
         /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 
         /// <summary>
@@ -205,6 +220,9 @@ namespace Akka.Persistence.Snapshot
         /// 
         /// This call is protected with a circuit-breaker
         /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <param name="snapshot">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract Task SaveAsync(SnapshotMetadata metadata, object snapshot);
 
         /// <summary>
@@ -212,6 +230,8 @@ namespace Akka.Persistence.Snapshot
         /// 
         /// This call is protected with a circuit-breaker
         /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract Task DeleteAsync(SnapshotMetadata metadata);
 
         /// <summary>
@@ -219,12 +239,17 @@ namespace Akka.Persistence.Snapshot
         /// 
         /// This call is protected with a circuit-breaker
         /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 
         /// <summary>
         /// Allows plugin implementers to use <see cref="PipeToSupport.PipeTo{T}"/> <see cref="ActorBase.Self"/>
         /// and handle additional messages for implementing advanced features
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual bool ReceivePluginInternal(object message)
         {
             return false;

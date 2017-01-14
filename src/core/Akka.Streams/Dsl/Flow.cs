@@ -24,13 +24,23 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="TMat">Type of value, flow graph may materialize to.</typeparam>
     public sealed class Flow<TIn, TOut, TMat> : IFlow<TOut, TMat>, IGraph<FlowShape<TIn, TOut>, TMat>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="module">TBD</param>
         internal Flow(IModule module)
         {
             Module = module;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public FlowShape<TIn, TOut> Shape => (FlowShape<TIn, TOut>)Module.Shape;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IModule Module { get; }
 
         private bool IsIdentity => Module == Identity<TIn>.Instance.Module;
@@ -49,6 +59,10 @@ namespace Akka.Streams.Dsl
         /// value of the current flow (ignoring the other flow’s value), use
         /// <see cref="ViaMaterialized{T2,TMat2,TMat3}"/> if a different strategy is needed.
         /// </summary>
+        /// <typeparam name="T2">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn, T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
             => ViaMaterialized(flow, Keep.Left);
 
@@ -65,6 +79,12 @@ namespace Akka.Streams.Dsl
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting Flow.
         /// </summary>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn, TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow,
             Func<TMat, TMat2, TMat3> combine)
         {
@@ -116,6 +136,8 @@ namespace Akka.Streams.Dsl
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat> WithAttributes(Attributes attributes)
             => Module is EmptyModule
                 ? this
@@ -138,6 +160,8 @@ namespace Akka.Streams.Dsl
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat> AddAttributes(Attributes attributes)
             => WithAttributes(Module.Attributes.And(attributes));
 
@@ -149,6 +173,8 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Add a name attribute to this Flow.
         /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat> Named(string name) => AddAttributes(Attributes.CreateName(name));
 
         /// <summary>
@@ -159,6 +185,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Put an asynchronous boundary around this Source.
         /// </summary>
+        /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
 
         /// <summary>
@@ -170,6 +197,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform the materialized value of this Flow, leaving all other properties as they were.
         /// </summary>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="mapFunc">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
             => new Flow<TIn, TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
 
@@ -189,6 +219,11 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="sink">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         public Sink<TIn, TMat3> ToMaterialized<TMat2, TMat3>(IGraph<SinkShape<TOut>, TMat2> sink, Func<TMat, TMat2, TMat3> combine)
         {
             if (IsIdentity)
@@ -218,6 +253,11 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="that">TBD</param>
+        /// <param name="materializedFunction">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(IGraph<SourceShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializedFunction)
             => ViaMaterialized(InternalFlowOperations.ConcatGraph(that), materializedFunction);
@@ -229,12 +269,33 @@ namespace Akka.Streams.Dsl
         /// value of the current flow (ignoring the other Flow’s value), use
         /// <see cref="JoinMaterialized{TMat2,TMat3}"/> if a different strategy is needed.
         /// </summary>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public IRunnableGraph<TMat> Join<TMat2>(IGraph<FlowShape<TOut, TIn>, TMat2> flow)
             => JoinMaterialized(flow, Keep.Left);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn2">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="bidi">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn2, TOut2, TMat> Join<TIn2, TOut2, TMat2>(IGraph<BidiShape<TOut, TOut2, TIn2, TIn>, TMat2> bidi)
             => JoinMaterialized(bidi, Keep.Left);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn2">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMatRes">TBD</typeparam>
+        /// <param name="bidi">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         public Flow<TIn2, TOut2, TMatRes> JoinMaterialized<TIn2, TOut2, TMat2, TMatRes>(IGraph<BidiShape<TOut, TOut2, TIn2, TIn>, TMat2> bidi, Func<TMat, TMat2, TMatRes> combine)
         {
             var copy = bidi.Module.CarbonCopy();
@@ -252,6 +313,11 @@ namespace Akka.Streams.Dsl
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// Flow into the materialized value of the resulting Flow.
         /// </summary>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         public IRunnableGraph<TMat3> JoinMaterialized<TMat2, TMat3>(IGraph<FlowShape<TOut, TIn>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
             var copy = flow.Module.CarbonCopy();
@@ -266,6 +332,12 @@ namespace Akka.Streams.Dsl
         /// The returned tuple contains the materialized values of the <paramref name="source"/> and <paramref name="sink"/>, e.g. the <see cref="ISubscriber{T}"/> 
         /// of a <see cref="Source.AsSubscriber{T}"/> and <see cref="IPublisher{T}"/> of a <see cref="Sink.Publisher{TIn}"/>.
         /// </summary>
+        /// <typeparam name="TMat1">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="source">TBD</param>
+        /// <param name="sink">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
         public Tuple<TMat1, TMat2> RunWith<TMat1, TMat2>(IGraph<SourceShape<TIn>, TMat1> source, IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
             => Source.FromGraph(source).Via(this).ToMaterialized(sink, Keep.Both).Run(materializer);
 
@@ -281,6 +353,10 @@ namespace Akka.Streams.Dsl
                 .ToMaterialized(Sink.AsPublisher<TOut>(false), Keep.Both)
                 .MapMaterializedValue(t => new FlowProcessor<TIn, TOut>(t.Item1, t.Item2) as IProcessor<TIn, TOut>);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"Flow({Shape}, {Module})";
     }
 
@@ -289,42 +365,76 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public static class Flow
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static Flow<T, T, NotUsed> Identity<T>() => new Flow<T, T, NotUsed>(GraphStages.Identity<T>().Module);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static Flow<T, T, TMat> Identity<T, TMat>() => new Flow<T, T, TMat>(GraphStages.Identity<T>().Module);
 
         /// <summary>
         /// Creates flow from the Reactive Streams <see cref="IProcessor{T1,T2}"/>.
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <param name="factory">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, NotUsed> FromProcessor<TIn, TOut>(Func<IProcessor<TIn, TOut>> factory)
             => FromProcessorMaterialized(() => Tuple.Create(factory(), NotUsed.Instance));
 
         /// <summary>
         /// Creates a Flow from a Reactive Streams <see cref="IProcessor{T1,T2}"/> and returns a materialized value.
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="factory">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<Tuple<IProcessor<TIn, TOut>, TMat>> factory) 
             => new Flow<TIn, TOut, TMat>(new ProcessorModule<TIn, TOut, TMat>(factory));
 
         /// <summary>
         /// Helper to create a <see cref="Flow{TIn,TOut,TMat}"/> without a <see cref="Source"/> or <see cref="Sink"/>.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static Flow<T, T, NotUsed> Create<T>() => Identity<T>();
 
         /// <summary>
         /// Helper to create a <see cref="Flow{TIn,TOut,TMat}"/> without a <see cref="Source"/> or <see cref="Sink"/>.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static Flow<T, T, TMat> Create<T, TMat>() => Identity<T, TMat>();
 
         /// <summary>
         /// Creates a <see cref="Flow{TIn,TOut,TMat}"/> which will use the given function to transform its inputs to outputs. It is equivalent
         /// to <see cref="Implementation.Fusing.Select{TIn,TOut}"/>
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <param name="function">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, NotUsed> FromFunction<TIn, TOut>(Func<TIn, TOut> function)
             => Create<TIn>().Select(function);
 
         /// <summary>
         /// A graph with the shape of a flow logically is a flow, this method makes it so also in type.
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="graph">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> FromGraph<TIn, TOut, TMat>(IGraph<FlowShape<TIn, TOut>, TMat> graph)
             => graph as Flow<TIn, TOut, TMat> ?? new Flow<TIn, TOut, TMat>(graph.Module);
 
@@ -332,45 +442,91 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Flow{TIn,TOut,TMat}"/> from a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/> where the flow's input
         /// will be sent to the sink and the flow's output will come from the source.
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="sink">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, NotUsed> FromSinkAndSource<TIn, TOut, TMat>(IGraph<SinkShape<TIn>, TMat> sink, IGraph<SourceShape<TOut>, TMat> source) 
             => FromSinkAndSource(sink, source, Keep.None);
 
         /// <summary>
-        ///  Creates a <see cref="Flow{TIn,TOut,TMat}"/> from a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/> where the flow's input
+        /// Creates a <see cref="Flow{TIn,TOut,TMat}"/> from a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/> where the flow's input
         /// will be sent to the sink and the flow's output will come from the source.
         /// 
         /// The <paramref name="combine"/> function is used to compose the materialized values of the <see cref="Sink{TIn,TMat}"/> and <see cref="Source{TOut,TMat}"/>
         /// into the materialized value of the resulting <see cref="Flow{TIn,TOut,TMat}"/>.
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat1">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="sink">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> FromSinkAndSource<TIn, TOut, TMat1, TMat2, TMat>(IGraph<SinkShape<TIn>, TMat1> sink, IGraph<SourceShape<TOut>, TMat2> source, Func<TMat1, TMat2, TMat> combine) 
             => FromGraph(GraphDsl.Create(sink, source, combine, (builder, @in, @out) => new FlowShape<TIn, TOut>(@in.Inlet, @out.Outlet)));
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     internal sealed class FlowProcessor<TIn, TOut> : IProcessor<TIn, TOut>
     {
         private readonly ISubscriber<TIn> _subscriber;
         private readonly IPublisher<TOut> _publisher;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="publisher">TBD</param>
         public FlowProcessor(ISubscriber<TIn> subscriber, IPublisher<TOut> publisher)
         {
             _subscriber = subscriber;
             _publisher = publisher;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
         public void OnSubscribe(ISubscription subscription) => _subscriber.OnSubscribe(subscription);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         public void OnError(Exception cause) => _subscriber.OnError(cause);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void OnComplete() => _subscriber.OnComplete();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void OnNext(TIn element) => _subscriber.OnNext(element);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
         public void Subscribe(ISubscriber<TOut> subscriber) => _publisher.Subscribe(subscriber);
     }
 
     /// <summary>
     /// Operations offered by Sources and Flows with a free output side: the DSL flows left-to-right only.
     /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TMat">TBD</typeparam>
     public interface IFlow<TOut, out TMat>
     {
         /// <summary>
@@ -379,6 +535,10 @@ namespace Akka.Streams.Dsl
         /// value of the current flow (ignoring the other flow’s value), use
         /// <see cref="ViaMaterialized{T2,TMat2,TMat3}"/> if a different strategy is needed.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         IFlow<T, TMat> Via<T, TMat2>(IGraph<FlowShape<TOut, T>, TMat2> flow);
 
         #region FlowOpsMat methods
@@ -388,11 +548,20 @@ namespace Akka.Streams.Dsl
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting Flow.
         /// </summary>
+        /// <typeparam name="T2">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="combine">TBD</param>
+        /// <returns>TBD</returns>
         IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine);
 
         /// <summary>
         /// Transform the materialized value of this Flow, leaving all other properties as they were.
         /// </summary>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="mapFunc">TBD</param>
+        /// <returns>TBD</returns>
         IFlow<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc);
 
         #endregion

@@ -6,10 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net;
-using System.Runtime.InteropServices;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -107,8 +105,17 @@ namespace Akka.Remote.Transport.Helios
         /// <param name="exception">TBD</param>
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            base.ExceptionCaught(context, exception);
-            NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            var se = exception as SocketException;
+            if (se?.SocketErrorCode == SocketError.OperationAborted)
+            {
+                NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
+            }
+            else
+            {
+                base.ExceptionCaught(context, exception);
+                NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            }
+
             context.CloseAsync(); // close the channel
         }
     }
