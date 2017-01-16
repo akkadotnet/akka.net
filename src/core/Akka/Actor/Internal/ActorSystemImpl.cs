@@ -228,7 +228,7 @@ namespace Akka.Actor.Internal
                 Serialization.FindSerializerForType(typeof (object)) is NewtonSoftJsonSerializer)
             {
                 Log.Warning($"NewtonSoftJsonSerializer has been detected as a default serializer. " +
-                            $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Wire " +
+                            $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Hyperion " +
                             $"(for more info visit: http://getakka.net/docs/Serialization#how-to-setup-wire-as-default-serializer ). " +
                             $"If you want to suppress this message set HOCON `{configPath}` config flag to on.");
             }
