@@ -9,6 +9,9 @@ using System;
 
 namespace Akka.Streams.Supervision
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public enum Directive
     {
         /// <summary>
@@ -29,12 +32,29 @@ namespace Akka.Streams.Supervision
         Restart
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="cause">TBD</param>
+    /// <returns>TBD</returns>
     public delegate Directive Decider(Exception cause);
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Deciders
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Decider StoppingDecider = cause => Directive.Stop;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Decider ResumingDecider = cause => Directive.Resume;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Decider RestartingDecider = cause => Directive.Restart;
     }
 }

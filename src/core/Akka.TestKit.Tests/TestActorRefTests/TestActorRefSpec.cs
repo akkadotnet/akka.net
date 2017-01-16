@@ -185,6 +185,32 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             ExpectMsg("workDone");
         }
 
+        [Fact]
+        public void TestFsmActorRef_must_proxy_receive_for_underlying_actor_with_sender()
+        {
+            var a = new TestFSMRef<FsmActor, TestFsmState, string>(Sys, Props.Create(() => new FsmActor(TestActor)));
+            a.Receive("check");
+            ExpectMsg("first");
+
+            // verify that we can change state
+            a.SetState(TestFsmState.Last);
+            a.Receive("check");
+            ExpectMsg("last");
+        }
+
+        [Fact]
+        public void BugFix1709_TestFsmActorRef_must_work_with_Fsms_with_constructor_arguments()
+        {
+            var a = ActorOfAsTestFSMRef<FsmActor, TestFsmState, string>(Props.Create(() => new FsmActor(TestActor)));
+            a.Receive("check");
+            ExpectMsg("first");
+
+            // verify that we can change state
+            a.SetState(TestFsmState.Last);
+            a.Receive("check");
+            ExpectMsg("last");
+        }
+
         private class SaveStringActor : TActorBase
         {
             public string ReceivedString { get; private set; }

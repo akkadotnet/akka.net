@@ -51,6 +51,10 @@ namespace Akka.Streams.Implementation
         private bool _inStringExpression;
         private bool _isStartOfEscapeSequence;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="maximumObjectLength">TBD</param>
         public JsonObjectParser(int maximumObjectLength = int.MaxValue)
         {
             _maximumObjectLength = maximumObjectLength;
@@ -64,16 +68,20 @@ namespace Akka.Streams.Implementation
         /// Appends input ByteString to internal byte string buffer.
         /// Use <see cref="Poll"/> to extract contained JSON objects.
         /// </summary>
-        /// <param name="input"></param>
+        /// <param name="input">TBD</param>
         public void Offer(ByteString input) => _buffer += input;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsEmpty => _buffer.IsEmpty;
 
         /// <summary>
         /// Attempt to locate next complete JSON object in buffered <see cref="ByteString"/> and returns it if found.
         /// May throw a <see cref="Framing.FramingException"/> if the contained JSON is invalid or max object size is exceeded.
         /// </summary>
-        /// <returns></returns>
+        /// <exception cref="Framing.FramingException">TBD</exception>
+        /// <returns>TBD</returns>
         public Option<ByteString> Poll()
         {
             var foundObject = SeekObject();

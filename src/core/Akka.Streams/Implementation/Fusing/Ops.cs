@@ -25,6 +25,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class Select<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -66,6 +68,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<TIn, TOut> _func;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="func">TBD</param>
         public Select(Func<TIn, TOut> func)
         {
             _func = func;
@@ -73,24 +79,45 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Select;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<TIn> In { get; } = new Inlet<TIn>("Select.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("Select.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Select";
-
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Where<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -137,20 +164,34 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Predicate<T> _predicate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
         public Where(Predicate<T> predicate)
         {
             _predicate = predicate;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Where";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class TakeWhile<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -198,22 +239,39 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Predicate<T> _predicate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
         public TakeWhile(Predicate<T> predicate)
         {
             _predicate = predicate;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.TakeWhile;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "TakeWhile";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class SkipWhile<T> : GraphStage<FlowShape<T, T>>
     {
         #region Logic
@@ -265,23 +323,48 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Predicate<T> _predicate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
         public SkipWhile(Predicate<T> predicate)
         {
             _predicate = predicate;
             Shape = new FlowShape<T, T>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.SkipWhile;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> In { get; } = new Inlet<T>("SkipWhile.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<T> Out { get; } = new Outlet<T>("SkipWhile.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "SkipWhile";
     }
 
@@ -292,6 +375,11 @@ namespace Akka.Streams.Implementation.Fusing
     {
         private readonly Lazy<Decider> _decider;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <param name="shape">TBD</param>
         protected SupervisedGraphStageLogic(Attributes inheritedAttributes, Shape shape) : base(shape)
         {
             _decider = new Lazy<Decider>(() =>
@@ -301,6 +389,12 @@ namespace Akka.Streams.Implementation.Fusing
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="function">TBD</param>
+        /// <returns>TBD</returns>
         protected Option<T> WithSupervision<T>(Func<T> function)
         {
             try
@@ -327,18 +421,32 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ex">TBD</param>
         protected virtual void OnRestart(Exception ex) => OnResume(ex);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ex">TBD</param>
         protected virtual void OnResume(Exception ex)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ex">TBD</param>
         protected virtual void OnStop(Exception ex) => FailStage(ex);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class Collect<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -387,29 +495,55 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<TIn, TOut> _func;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="func">TBD</param>
         public Collect(Func<TIn, TOut> func)
         {
             _func = func;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Collect;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<TIn> In { get; } = new Inlet<TIn>("Collect.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("Collect.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Collect";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Recover<T> : GraphStage<FlowShape<T, T>>
     {
         #region Logic 
@@ -465,6 +599,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<Exception, Option<T>> _recovery;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="recovery">TBD</param>
         public Recover(Func<Exception, Option<T>> recovery)
         {
             _recovery = recovery;
@@ -472,22 +610,44 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, T>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Recover;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> In { get; } = new Inlet<T>("Recover.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<T> Out { get; } = new Outlet<T>("Recover.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Recover";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Take<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -532,21 +692,38 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly long _count;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
         public Take(long count)
         {
             _count = count;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Take;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Take";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Drop<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
@@ -583,21 +760,39 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly long _count;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
         public Drop(long count)
         {
             _count = count;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Drop;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Drop";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class Scan<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic 
@@ -674,6 +869,11 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TOut, TIn, TOut> _aggregate;
         private readonly TOut _zero;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="zero">TBD</param>
+        /// <param name="aggregate">TBD</param>
         public Scan(TOut zero, Func<TOut, TIn, TOut> aggregate)
         {
             _zero = zero;
@@ -682,23 +882,46 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Scan;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<TIn> In { get; } = new Inlet<TIn>("Scan.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("Scan.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Scan";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class Aggregate<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -766,6 +989,11 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly TOut _zero;
         private readonly Func<TOut, TIn, TOut> _aggregate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="zero">TBD</param>
+        /// <param name="aggregate">TBD</param>
         public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate)
         {
             _zero = zero;
@@ -774,23 +1002,46 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Aggregate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<TIn> In { get; } = new Inlet<TIn>("Aggregate.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("Aggregate.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Aggregate";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class AggregateAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region Logic
@@ -907,6 +1158,11 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly TOut _zero;
         private readonly Func<TOut, TIn, Task<TOut>> _aggregate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="zero">TBD</param>
+        /// <param name="aggregate">TBD</param>
         public AggregateAsync(TOut zero, Func<TOut, TIn, Task<TOut>> aggregate)
         {
             _zero = zero;
@@ -915,23 +1171,45 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.AggregateAsync;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<TIn> In { get; } = new Inlet<TIn>("AggregateAsync.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("AggregateAsync.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "AggregateAsync";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Intersperse<T> : GraphStage<FlowShape<T, T>>
     {
         #region internal class
@@ -1002,12 +1280,22 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> In = new Inlet<T>("in");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<T> Out = new Outlet<T>("out");
         private readonly T _start;
         private readonly T _inject;
         private readonly T _end;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inject">TBD</param>
         public Intersperse(T inject)
         {
             _inject = inject;
@@ -1016,6 +1304,12 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, T>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="start">TBD</param>
+        /// <param name="inject">TBD</param>
+        /// <param name="end">TBD</param>
         public Intersperse(T start, T inject, T end)
         {
             _start = start;
@@ -1026,16 +1320,28 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, T>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool InjectStartEnd { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Grouped<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
         #region Logic
@@ -1092,6 +1398,11 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly int _count;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Grouped(int count)
         {
             if (count <= 0)
@@ -1102,22 +1413,44 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, IEnumerable<T>>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Grouped;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> In { get; } = new Inlet<T>("Grouped.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<IEnumerable<T>> Out { get; } = new Outlet<IEnumerable<T>>("Grouped.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<T, IEnumerable<T>> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Grouped";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class LimitWeighted<T> : GraphStage<FlowShape<T, T>>
     {
         #region Logic
@@ -1178,6 +1511,11 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly long _max;
         private readonly Func<T, long> _costFunc;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="max">TBD</param>
+        /// <param name="costFunc">TBD</param>
         public LimitWeighted(long max, Func<T, long> costFunc)
         {
             _max = max;
@@ -1185,23 +1523,45 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, T>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.LimitWeighted;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> In { get; } = new Inlet<T>("LimitWeighted.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<T> Out { get; } = new Outlet<T>("LimitWeighted.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "LimitWeighted";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Sliding<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
         #region Logic
@@ -1264,6 +1624,12 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _count;
         private readonly int _step;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
+        /// <param name="step">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Sliding(int count, int step)
         {
             if (count <= 0)
@@ -1277,40 +1643,82 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, IEnumerable<T>>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Sliding;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> In { get; } = new Inlet<T>("Sliding.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<IEnumerable<T>> Out { get; } = new Outlet<IEnumerable<T>>("Sliding.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<T, IEnumerable<T>> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Sliding";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Buffer<T> : DetachedStage<T, T>
     {
         private readonly int _count;
         private readonly Func<IDetachedContext<T>, T, IUpstreamDirective> _enqueueAction;
         private IBuffer<T> _buffer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
+        /// <param name="overflowStrategy">TBD</param>
         public Buffer(int count, OverflowStrategy overflowStrategy)
         {
             _count = count;
             _enqueueAction = EnqueueAction(overflowStrategy);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
         public override void PreStart(ILifecycleContext context)
             => _buffer = Buffer.Create<T>(_count, context.Materializer);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         public override IUpstreamDirective OnPush(T element, IDetachedContext<T> context)
             => context.IsHoldingDownstream ? context.PushAndPull(element) : _enqueueAction(context, element);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         public override IDownstreamDirective OnPull(IDetachedContext<T> context)
         {
             if (context.IsFinishing)
@@ -1325,6 +1733,11 @@ namespace Akka.Streams.Implementation.Fusing
             return context.Push(_buffer.Dequeue());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         public override ITerminationDirective OnUpstreamFinish(IDetachedContext<T> context)
             => _buffer.IsEmpty ? context.Finish() : context.AbsorbTermination();
 
@@ -1387,25 +1800,49 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class OnCompleted<TIn, TOut> : PushStage<TIn, TOut>
     {
         private readonly Action _success;
         private readonly Action<Exception> _failure;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="success">TBD</param>
+        /// <param name="failure">TBD</param>
         public OnCompleted(Action success, Action<Exception> failure)
         {
             _success = success;
             _failure = failure;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         public override ISyncDirective OnPush(TIn element, IContext<TOut> context) => context.Pull();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<TOut> context)
         {
             _failure(cause);
             return context.Fail(cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <returns>TBD</returns>
         public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
         {
             _success();
@@ -1416,6 +1853,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class Batch<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
@@ -1602,6 +2041,13 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TIn, TOut> _seed;
         private readonly Func<TOut, TIn, TOut> _aggregate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="max">TBD</param>
+        /// <param name="costFunc">TBD</param>
+        /// <param name="seed">TBD</param>
+        /// <param name="aggregate">TBD</param>
         public Batch(long max, Func<TIn, long> costFunc, Func<TIn, TOut> seed, Func<TOut, TIn, TOut> aggregate)
         {
             _max = max;
@@ -1615,8 +2061,16 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(inlet, outlet);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
@@ -1624,6 +2078,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class Expand<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
@@ -1702,6 +2158,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<TIn, IEnumerator<TOut>> _extrapolate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="extrapolate">TBD</param>
         public Expand(Func<TIn, IEnumerator<TOut>> extrapolate)
         {
             _extrapolate = extrapolate;
@@ -1709,26 +2169,48 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes => DefaultAttributes.Expand;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<TIn> In { get; } = new Inlet<TIn>("expand.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("expand.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Expand";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class SelectAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
-
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
@@ -1866,9 +2348,20 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _parallelism;
         private readonly Func<TIn, Task<TOut>> _mapFunc;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<TIn> In = new Inlet<TIn>("SelectAsync.in");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<TOut> Out = new Outlet<TOut>("SelectAsync.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="parallelism">TBD</param>
+        /// <param name="mapFunc">TBD</param>
         public SelectAsync(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
             _parallelism = parallelism;
@@ -1876,10 +2369,21 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("selectAsync");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
@@ -1887,6 +2391,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class SelectAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
@@ -1991,9 +2497,20 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly int _parallelism;
         private readonly Func<TIn, Task<TOut>> _mapFunc;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<TIn> In = new Inlet<TIn>("SelectAsyncUnordered.in");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<TOut> Out = new Outlet<TOut>("SelectAsyncUnordered.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="parallelism">TBD</param>
+        /// <param name="mapFunc">TBD</param>
         public SelectAsyncUnordered(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
             _parallelism = parallelism;
@@ -2001,10 +2518,21 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("selectAsyncUnordered");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
@@ -2012,6 +2540,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Log<T> : SimpleLinearGraphStage<T>
     {
         private static readonly Attributes.LogLevels DefaultLogLevels = new Attributes.LogLevels(
@@ -2122,6 +2651,12 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<T, object> _extract;
         private readonly ILoggingAdapter _adapter;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="extract">TBD</param>
+        /// <param name="adapter">TBD</param>
         public Log(string name, Func<T, object> extract, ILoggingAdapter adapter)
         {
             _name = name;
@@ -2130,9 +2665,18 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         // TODO more optimisations can be done here - prepare logOnPush function etc
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Log";
     }
 
@@ -2141,14 +2685,24 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     internal enum TimerKeys
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         TakeWithin,
+        /// <summary>
+        /// TBD
+        /// </summary>
         DropWithin,
+        /// <summary>
+        /// TBD
+        /// </summary>
         GroupedWithin
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class GroupedWithin<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
         #region internal classes
@@ -2265,6 +2819,11 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _count;
         private readonly TimeSpan _timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
+        /// <param name="timeout">TBD</param>
         public GroupedWithin(int count, TimeSpan timeout)
         {
             _count = count;
@@ -2272,16 +2831,28 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, IEnumerable<T>>(_in, _out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("GroupedWithin");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<T, IEnumerable<T>> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Delay<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
@@ -2425,22 +2996,40 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly TimeSpan _delay;
         private readonly DelayOverflowStrategy _strategy;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="strategy">TBD</param>
         public Delay(TimeSpan delay, DelayOverflowStrategy strategy)
         {
             _delay = delay;
             _strategy = strategy;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Delay;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Delay";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class TakeWithin<T> : SimpleLinearGraphStage<T>
     {
         #region internal class
@@ -2476,17 +3065,27 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly TimeSpan _timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
         public TakeWithin(TimeSpan timeout)
         {
             _timeout = timeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class SkipWithin<T> : SimpleLinearGraphStage<T>
     {
         private readonly TimeSpan _timeout;
@@ -2529,17 +3128,27 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
         public SkipWithin(TimeSpan timeout)
         {
             _timeout = timeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Sum<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
@@ -2586,21 +3195,39 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<T, T, T> _reduce;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reduce">TBD</param>
         public Sum(Func<T, T, T> reduce)
         {
             _reduce = reduce;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Sum;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Sum";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TMat">TBD</typeparam>
     public sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
     {
         #region internal classes
@@ -2680,6 +3307,12 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<Exception, IGraph<SourceShape<TOut>, TMat>> _partialFunction;
         private readonly int _maximumRetries;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="partialFunction">TBD</param>
+        /// <param name="maximumRetries">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public RecoverWith(Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunction, int maximumRetries)
         {
             if (maximumRetries < -1)
@@ -2690,16 +3323,30 @@ namespace Akka.Streams.Implementation.Fusing
             _maximumRetries = maximumRetries;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.RecoverWith;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "RecoverWith";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class StatefulSelectMany<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
@@ -2789,6 +3436,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulSelectMany.in");
         private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulSelectMany.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="concatFactory">TBD</param>
         public StatefulSelectMany(Func<Func<TIn, IEnumerable<TOut>>> concatFactory)
         {
             _concatFactory = concatFactory;
@@ -2796,12 +3447,27 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<TIn, TOut>(_in, _out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulSelectMany;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "StatefulSelectMany";
     }
 }

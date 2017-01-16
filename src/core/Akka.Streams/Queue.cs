@@ -14,6 +14,7 @@ namespace Akka.Streams
     /// <summary>
     /// This interface allows to have the queue as a data source for some stream.
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public interface ISourceQueue<in T>
     {
         /// <summary>
@@ -31,18 +32,21 @@ namespace Akka.Streams
         /// you need to wait for last offer call task completion.</para>
         /// </summary>
         /// <param name="element">element to send to a stream</param>
+        /// <returns>TBD</returns>
         Task<IQueueOfferResult> OfferAsync(T element);
 
         /// <summary>
         /// Method returns task that completes when stream is completed and fails
         /// when stream failed.
         /// </summary>
+        /// <returns>TBD</returns>
         Task WatchCompletionAsync();
     }
 
     /// <summary>
     /// This interface adds completion support to <see cref="ISourceQueue{T}"/>
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public interface ISourceQueueWithComplete<in T> : ISourceQueue<T>
     {
         /// <summary>
@@ -53,6 +57,7 @@ namespace Akka.Streams
         /// <summary>
         /// Complete the stream with a failure. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
         /// </summary>
+        /// <param name="ex">TBD</param>
         void Fail(Exception ex);
     }
 
@@ -60,6 +65,7 @@ namespace Akka.Streams
     /// Trait allows to have the queue as a sink for some stream.
     /// "SinkQueue" pulls data from stream with backpressure mechanism.
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public interface ISinkQueue<T>
     {
         /// <summary>
@@ -68,6 +74,7 @@ namespace Akka.Streams
         /// <para>- completes with None in case if stream is completed after we got task</para>
         /// <para>- completes with `Some(element)` in case next element is available from stream.</para>
         /// </summary>
+        /// <returns>TBD</returns>
         Task<Option<T>> PullAsync();
     }
 }

@@ -26,6 +26,8 @@ namespace Akka.Streams
         /// Creates a new <see cref="SharedKillSwitch"/> with the given name that can be used to control the completion of multiple
         /// streams from the outside simultaneously.
         /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public static SharedKillSwitch Shared(string name) => new SharedKillSwitch(name);
 
         /// <summary>
@@ -34,6 +36,8 @@ namespace Akka.Streams
         /// 
         /// For a Bidi version see <see cref="SingleBidi{TIn1,TOut1}"/>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static IGraph<FlowShape<T, T>, UniqueKillSwitch> Single<T>() => UniqueKillSwitchStage<T>.Instance;
 
         /// <summary>
@@ -42,19 +46,32 @@ namespace Akka.Streams
         /// 
         /// For a Flow version see <see cref="Single{T}"/>
         /// </summary>
+        /// <typeparam name="TIn1">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static IGraph<BidiShape<TIn1, TIn1, TOut1, TOut1>, UniqueKillSwitch> SingleBidi<TIn1, TOut1>
             () => UniqueBidiKillSwitchStage<TIn1, TIn1, TOut1, TOut1>.Instance;
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal abstract class KillableGraphStageLogic : InAndOutGraphStageLogic
         {
             private readonly Task _terminationSignal;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="terminationSignal">TBD</param>
+            /// <param name="shape">TBD</param>
             protected KillableGraphStageLogic(Task terminationSignal, Shape shape) : base(shape)
             {
                 _terminationSignal = terminationSignal;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override void PreStart()
             {
                 if (_terminationSignal.IsCompleted)
@@ -212,6 +229,7 @@ namespace Akka.Streams
         /// <summary>
         /// After calling <see cref="Abort"/> the linked <see cref="IGraph{TShape}"/>s of <see cref="FlowShape{TIn,TOut}"/> are failed.
         /// </summary>
+        /// <param name="cause">TBD</param>
         void Abort(Exception cause);
     }
 
@@ -233,6 +251,10 @@ namespace Akka.Streams
     {
         private readonly TaskCompletionSource<NotUsed> _promise;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="promise">TBD</param>
         internal UniqueKillSwitch(TaskCompletionSource<NotUsed> promise)
         {
             _promise = promise;
@@ -252,8 +274,13 @@ namespace Akka.Streams
         /// (unless if finished or failed already in which case the command is ignored). Subsequent invocations of
         /// completion commands will be ignored.
         /// </summary>
+        /// <param name="cause">TBD</param>
         public void Abort(Exception cause) => _promise.TrySetException(cause);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"SingleKillSwitch({GetHashCode()})";
     }
 
@@ -334,6 +361,10 @@ namespace Akka.Streams
         private readonly TaskCompletionSource<NotUsed> _shutdownPromise = new TaskCompletionSource<NotUsed>();
         private readonly string _name;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
         internal SharedKillSwitch(string name)
         {
             _name = name;
@@ -366,8 +397,13 @@ namespace Akka.Streams
         /// </summary>
         /// <returns>A reusable <see cref="IGraph{TShape}"/> that is linked with the switch. The materialized value provided is this switch itself.</returns> 
         /// <typeparam name="T">Type of the elements the Flow will forward</typeparam>
+        /// <returns>TBD</returns>
         public IGraph<FlowShape<T, T>, SharedKillSwitch> Flow<T>() => new SharedKillSwitchFlow<T>(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"KillSwitch({_name})";
     }
 }
