@@ -64,9 +64,9 @@ namespace Akka.Remote.Tests.Transport
     /// Designed to guarantee that the default Akka.Remote transport "does the right thing" with respect
     /// to DNS resolution and IP binding under a variety of scenarios
     /// </summary>
-    public class HeliosTransportDnsResolutionSpec : AkkaSpec
+    public class DotNettyTransportDnsResolutionSpec : AkkaSpec
     {
-        public HeliosTransportDnsResolutionSpec(ITestOutputHelper output) : base(output)
+        public DotNettyTransportDnsResolutionSpec(ITestOutputHelper output) : base(output)
         {
             Arb.Register(typeof(EndpointGenerators));
         }

@@ -22,6 +22,7 @@ using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Common.Utilities;
+using DotNetty.Handlers.Logging;
 using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
@@ -45,7 +46,7 @@ namespace Akka.Remote.Transport.DotNetty
             base.ChannelActive(context);
             if (!Transport.ConnectionGroup.TryAdd(context.Channel))
             {
-                Log.Warning("Unable to REMOVE channel [{0}->{1}](Id={2}) to connection group. May not shut down cleanly.",
+                Log.Warning("Unable to ADD channel [{0}->{1}](Id={2}) to connection group. May not shut down cleanly.",
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
             }
         }
@@ -55,7 +56,7 @@ namespace Akka.Remote.Transport.DotNetty
             base.ChannelInactive(context);
             if (!Transport.ConnectionGroup.TryRemove(context.Channel))
             {
-                Log.Warning("Unable to ADD channel [{0}->{1}](Id={2}) to connection group. May not shut down cleanly.",
+                Log.Warning("Unable to REMOVE channel [{0}->{1}](Id={2}) from connection group. May not shut down cleanly.",
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
             }
         }

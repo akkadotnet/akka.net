@@ -35,7 +35,7 @@ namespace Akka.Remote.Transport.DotNetty
             var publicHost = config.GetString("public-hostname");
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
-                enableSsl: config.GetBoolean("enable-Ssl", false),
+                enableSsl: config.GetBoolean("enable-ssl", false),
                 connectTimeout: config.GetTimeSpan("connection-timeout", TimeSpan.FromSeconds(15)),
                 hostname: host,
                 publicHostname: !string.IsNullOrEmpty(publicHost) ? publicHost : host,
@@ -129,7 +129,7 @@ namespace Akka.Remote.Transport.DotNetty
 
     public sealed class SslSettings
     {
-        public static readonly SslSettings Empty = new SslSettings(null, null, X509KeyStorageFlags.DefaultKeySet);
+        public static readonly SslSettings Empty = new SslSettings();
         public static SslSettings Create(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
@@ -159,11 +159,17 @@ namespace Akka.Remote.Transport.DotNetty
 
         public readonly X509Certificate2 Certificate;
 
+        public SslSettings()
+        {
+            Certificate = null;
+        }
+
         public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags)
         {
-            Certificate = !string.IsNullOrEmpty(certificatePath)
-                ? new X509Certificate2(certificatePath, certificatePassword, flags)
-                : null;
+            if (string.IsNullOrEmpty(certificatePath))
+                throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
+
+            Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
         }
     }
 }
