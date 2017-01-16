@@ -119,18 +119,32 @@ namespace Akka.TestKit
             return ActExtensions.ActorOf(this, configure, name);
         }
 
-
+        /// <summary>
+        /// Creates an <see cref="ActorSelection(Akka.Actor.ActorPath)"/>
+        /// </summary>
+        /// <param name="actorPath">The path of the actor(s) we want to select.</param>
+        /// <returns>An ActorSelection</returns>
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
             return Sys.ActorSelection(actorPath);
         }
 
+        ///<summary>
+        /// Creates an <see cref="ActorSelection(string)"/>
+        /// </summary>
+        /// <param name="actorPath">The path of the actor(s) we want to select.</param>
+        /// <returns>An ActorSelection</returns>
         public ActorSelection ActorSelection(string actorPath)
         {
             return Sys.ActorSelection(actorPath);
         }
 
-
+        /// <summary>
+        ///  Creates an <see cref="ActorSelection(string)"/>
+        ///  </summary>
+        /// <param name="anchorRef">The base actor that anchros the <see cref="actorPath"/>.</param>
+        /// <param name="actorPath">The path of the actor(s) we want to select.</param>
+        ///  <returns>An ActorSelection</returns>
         public ActorSelection ActorSelection(IActorRef anchorRef, string actorPath)
         {
             return Sys.ActorSelection(anchorRef, actorPath);
@@ -216,10 +230,6 @@ namespace Akka.TestKit
         {
             return new TestActorRef<TActor>(Sys, Props.Create<TActor>(), NoSupervisor, name);
         }
-
-
-
-
 
 
         /// <summary>
