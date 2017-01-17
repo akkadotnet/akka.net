@@ -47,7 +47,7 @@ namespace Akka.DistributedData
         private readonly Serializer _serializer;
         private readonly long _maxPruningDisseminationNanos;
 
-        private IImmutableSet<Address> _nodes = ImmutableHashSet<Address>.Empty;
+        private ImmutableHashSet<Address> _nodes = ImmutableHashSet<Address>.Empty;
 
         private IImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
         private IImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
@@ -436,13 +436,12 @@ namespace Akka.DistributedData
             }
         }
 
-        private Address SelectRandomNode(IEnumerable<Address> addresses)
+        private Address SelectRandomNode(ImmutableHashSet<Address> addresses)
         {
-            var count = addresses.Count();
-            if (count != 0)
+            if (addresses.Count > 0)
             {
-                var random = ThreadLocalRandom.Current.Next(count - 1);
-                return addresses.Skip(count).First();
+                var random = ThreadLocalRandom.Current.Next(addresses.Count - 1);
+                return addresses.Skip(random).First();
             }
 
             return null;

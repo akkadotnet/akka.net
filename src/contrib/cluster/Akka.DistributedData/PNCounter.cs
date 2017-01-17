@@ -46,13 +46,27 @@ namespace Akka.DistributedData
             Increments = increments;
             Decrements = decrements;
         }
-        
+
+        /// <summary>
+        /// Increment the counter with the delta specified.
+        /// If the delta is negative then it will decrement instead of increment.
+        /// </summary>
+        public PNCounter Increment(Cluster.Cluster node, long delta = 1) =>
+            Increment(node.SelfUniqueAddress, delta);
+
         /// <summary>
         /// Increment the counter with the delta specified.
         /// If the delta is negative then it will decrement instead of increment.
         /// </summary>
         public PNCounter Increment(UniqueAddress address, long delta = 1) => 
             Increment(address, new BigInteger(delta));
+
+        /// <summary>
+        /// Decrement the counter with the delta specified.
+        /// If the delta is negative then it will increment instead of decrement.
+        /// </summary>
+        public PNCounter Decrement(Cluster.Cluster node, long delta = 1) =>
+            Decrement(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Decrement the counter with the delta specified.
@@ -65,7 +79,19 @@ namespace Akka.DistributedData
         /// Increment the counter with the delta specified.
         /// If the delta is negative then it will decrement instead of increment.
         /// </summary>
+        public PNCounter Increment(Cluster.Cluster node, BigInteger delta) => Increment(node.SelfUniqueAddress, delta);
+
+        /// <summary>
+        /// Increment the counter with the delta specified.
+        /// If the delta is negative then it will decrement instead of increment.
+        /// </summary>
         public PNCounter Increment(UniqueAddress address, BigInteger delta) => Change(address, delta);
+
+        /// <summary>
+        /// Decrement the counter with the delta specified.
+        /// If the delta is negative then it will increment instead of decrement.
+        /// </summary>
+        public PNCounter Decrement(Cluster.Cluster node, BigInteger delta) => Decrement(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Decrement the counter with the delta specified.

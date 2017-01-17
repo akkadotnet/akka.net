@@ -97,6 +97,13 @@ namespace Akka.DistributedData
         /// Increment the counter with the delta specified.
         /// If the delta is negative then it will decrement instead of increment.
         /// </summary>
+        public PNCounterDictionary<TKey> Increment(Cluster.Cluster node, TKey key, long delta = 1L) =>
+            Increment(node.SelfUniqueAddress, key, delta);
+
+        /// <summary>
+        /// Increment the counter with the delta specified.
+        /// If the delta is negative then it will decrement instead of increment.
+        /// </summary>
         public PNCounterDictionary<TKey> Increment(UniqueAddress node, TKey key, long delta = 1L) =>
             new PNCounterDictionary<TKey>(_underlying.AddOrUpdate(node, key, PNCounter.Empty, old => old.Increment(node, delta)));
 
@@ -104,8 +111,23 @@ namespace Akka.DistributedData
         /// Decrement the counter with the delta specified.
         /// If the delta is negative then it will increment instead of decrement.
         /// </summary>
+        public PNCounterDictionary<TKey> Decrement(Cluster.Cluster node, TKey key, long delta = 1L) =>
+            Decrement(node.SelfUniqueAddress, key, delta);
+
+        /// <summary>
+        /// Decrement the counter with the delta specified.
+        /// If the delta is negative then it will increment instead of decrement.
+        /// </summary>
         public PNCounterDictionary<TKey> Decrement(UniqueAddress node, TKey key, long delta = 1L) =>
             new PNCounterDictionary<TKey>(_underlying.AddOrUpdate(node, key, PNCounter.Empty, old => old.Decrement(node, delta)));
+
+        /// <summary>
+        /// Removes an entry from the map.
+        /// Note that if there is a conflicting update on another node the entry will
+        /// not be removed after merge.
+        /// </summary>
+        public PNCounterDictionary<TKey> Remove(Cluster.Cluster node, TKey key) =>
+            Remove(node.SelfUniqueAddress, key);
 
         /// <summary>
         /// Removes an entry from the map.

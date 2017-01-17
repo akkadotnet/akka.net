@@ -92,10 +92,6 @@
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\serializers\Akka.Serialization.Wire\Akka.Serialization.Wire.csproj">
-      <Project>{b47ca568-40cf-48de-b87e-31bd400ebb08}</Project>
-      <Name>Akka.Serialization.Wire</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
