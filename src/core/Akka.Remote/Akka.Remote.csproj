@@ -130,6 +130,7 @@
     <Compile Include="Transport\AkkaIO\TransportListener.cs" />
     <Compile Include="Transport\AkkaIO\TransportManager.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
+    <Compile Include="Transport\DotNetty\AkkaLoggingHandler.cs" />
     <Compile Include="Transport\DotNetty\DotNettyTransportSettings.cs" />
     <Compile Include="Transport\DotNetty\DotNettyTransport.cs" />
     <Compile Include="Transport\DotNetty\TcpTransport.cs" />

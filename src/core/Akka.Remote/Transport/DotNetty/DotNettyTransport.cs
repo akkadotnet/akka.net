@@ -296,6 +296,10 @@ namespace Akka.Remote.Transport.DotNetty
                 {
                     pipeline.AddLast("FrameEncoder", new LengthFieldPrepender(4, false));
                 }
+                if (Settings.LogTransport)
+                {
+                    pipeline.AddLast("Logger", new AkkaLoggingHandler(Log));
+                }
             }
         }
 
@@ -306,7 +310,7 @@ namespace Akka.Remote.Transport.DotNetty
                 var certificate = Settings.Ssl.Certificate;
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
-                channel.Pipeline.AddFirst("tls", TlsHandler.Client(host, certificate));
+                channel.Pipeline.AddFirst("tlsHandler", TlsHandler.Client(host, certificate));
             }
 
             SetInitialChannelPipeline(channel);
@@ -323,7 +327,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (Settings.EnableSsl)
             {
-                channel.Pipeline.AddFirst("tls", TlsHandler.Server(Settings.Ssl.Certificate));
+                channel.Pipeline.AddFirst("tlsHandler", TlsHandler.Server(Settings.Ssl.Certificate));
             }
 
             SetInitialChannelPipeline(channel);
@@ -343,7 +347,7 @@ namespace Akka.Remote.Transport.DotNetty
 
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 
-            var serverBootstrap = new ServerBootstrap()
+            var server = new ServerBootstrap()
                 .Group(serverEventLoopGroup)
                 .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                 .Option(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
@@ -355,12 +359,12 @@ namespace Akka.Remote.Transport.DotNetty
                     : new TcpServerSocketChannel())
                 .ChildHandler(new ActionChannelInitializer<TcpSocketChannel>(SetServerPipeline));
 
-            if (Settings.ReceiveBufferSize.HasValue) serverBootstrap.Option(ChannelOption.SoRcvbuf, Settings.ReceiveBufferSize.Value);
-            if (Settings.SendBufferSize.HasValue) serverBootstrap.Option(ChannelOption.SoSndbuf, Settings.SendBufferSize.Value);
-            if (Settings.WriteBufferHighWaterMark.HasValue) serverBootstrap.Option(ChannelOption.WriteBufferHighWaterMark, Settings.WriteBufferHighWaterMark.Value);
-            if (Settings.WriteBufferLowWaterMark.HasValue) serverBootstrap.Option(ChannelOption.WriteBufferLowWaterMark, Settings.WriteBufferLowWaterMark.Value);
+            if (Settings.ReceiveBufferSize.HasValue) server.Option(ChannelOption.SoRcvbuf, Settings.ReceiveBufferSize.Value);
+            if (Settings.SendBufferSize.HasValue) server.Option(ChannelOption.SoSndbuf, Settings.SendBufferSize.Value);
+            if (Settings.WriteBufferHighWaterMark.HasValue) server.Option(ChannelOption.WriteBufferHighWaterMark, Settings.WriteBufferHighWaterMark.Value);
+            if (Settings.WriteBufferLowWaterMark.HasValue) server.Option(ChannelOption.WriteBufferLowWaterMark, Settings.WriteBufferLowWaterMark.Value);
 
-            return serverBootstrap;
+            return server;
         }
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address)

@@ -32,9 +32,11 @@ namespace Akka.Remote.Tests.Transport
             var enableSsl = !string.IsNullOrEmpty(certPath);
             var config = ConfigurationFactory.ParseString(@"
             akka {
+                loglevel = DEBUG
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
                 remote {
                     dot-netty.tcp {
+                        log-transport=true
                         port = 0
                         hostname = ""127.0.0.1""
                         enable-ssl = """ + enableSsl.ToString().ToLowerInvariant() + @"""
@@ -45,6 +47,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         private ActorSystem sys2;
+        private Address address1;
         private Address address2;
 
         private ActorPath echoPath;
@@ -56,6 +59,7 @@ namespace Akka.Remote.Tests.Transport
 
             var echo = sys2.ActorOf(Props.Create<Echo>(), "echo");
 
+            address1 = RARP.For(Sys).Provider.DefaultAddress;
             address2 = RARP.For(sys2).Provider.DefaultAddress;
             echoPath = new RootActorPath(address2) / "user" / "echo";
         }

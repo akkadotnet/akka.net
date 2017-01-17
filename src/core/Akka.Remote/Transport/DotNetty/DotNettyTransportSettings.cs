@@ -54,7 +54,8 @@ namespace Akka.Remote.Transport.DotNetty
                 sendBufferSize: ToNullableInt(config.GetByteSize("send-buffer-size") ?? 256000),
                 writeBufferHighWaterMark: ToNullableInt(config.GetByteSize("write-buffer-high-water-mark")),
                 writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark")),
-                backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false));
+                backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false),
+                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"));
         }
 
         private static int? ToNullableInt(long? value) => value.HasValue && value.Value > 0 ? (int?)value.Value : null;
@@ -90,11 +91,12 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly int? WriteBufferHighWaterMark;
         public readonly int? WriteBufferLowWaterMark;
         public readonly bool BackwardsCompatibilityModeEnabled;
+        public readonly bool LogTransport;
 
         public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname,  string publicHostname,
             int port, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
-            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled)
+            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport)
         {
             if (maxFrameSize < 32000) throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(maxFrameSize));
 
@@ -119,6 +121,7 @@ namespace Akka.Remote.Transport.DotNetty
             WriteBufferHighWaterMark = writeBufferHighWaterMark;
             WriteBufferLowWaterMark = writeBufferLowWaterMark;
             BackwardsCompatibilityModeEnabled = backwardsCompatibilityModeEnabled;
+            LogTransport = logTransport;
         }
     }
     public enum TransportMode
