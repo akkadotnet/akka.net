@@ -63,7 +63,8 @@ namespace Akka.Util.Internal
                     index++;
                     sb.Append(separator);
                     // ReSharper disable CompareNonConstrainedGenericWithNull
-                    if (enumerator.Current != null)
+                    current = enumerator.Current;
+                    if (current != null)
                         // ReSharper restore CompareNonConstrainedGenericWithNull
                     {
                         valueAppender(sb, current, index);
