@@ -161,6 +161,7 @@ publish/
 !**/packages/build/
 # If using the old MSBuild-Integrated Package Restore, uncomment this:
 !**/packages/repositories.config
+!akka-validcert.pfx
 
 # Windows Azure Build Output
 csx/

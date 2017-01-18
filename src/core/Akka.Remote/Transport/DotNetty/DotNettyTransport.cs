@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
@@ -310,7 +311,7 @@ namespace Akka.Remote.Transport.DotNetty
                 var certificate = Settings.Ssl.Certificate;
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
-                channel.Pipeline.AddFirst("tlsHandler", TlsHandler.Client(host, certificate));
+                channel.Pipeline.AddFirst("TlsHandler", new TlsHandler(stream => new SslStream(stream, true, (sender, cert, chain, errors) => true), new ClientTlsSettings(host)));
             }
 
             SetInitialChannelPipeline(channel);
@@ -319,7 +320,7 @@ namespace Akka.Remote.Transport.DotNetty
             if (InternalTransport == TransportMode.Tcp)
             {
                 var handler = new TcpClientHandler(this, Logging.GetLogger(System, typeof(TcpClientHandler)), remoteAddress);
-                pipeline.AddLast("clientHandler", handler);
+                pipeline.AddLast("ClientHandler", handler);
             }
         }
 
@@ -327,7 +328,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (Settings.EnableSsl)
             {
-                channel.Pipeline.AddFirst("tlsHandler", TlsHandler.Server(Settings.Ssl.Certificate));
+                channel.Pipeline.AddFirst("TlsHandler", TlsHandler.Server(Settings.Ssl.Certificate));
             }
 
             SetInitialChannelPipeline(channel);
@@ -336,7 +337,7 @@ namespace Akka.Remote.Transport.DotNetty
             if (Settings.TransportMode == TransportMode.Tcp)
             {
                 var handler = new TcpServerHandler(this, Logging.GetLogger(System, typeof(TcpServerHandler)), AssociationListenerPromise.Task);
-                pipeline.AddLast("serverHandler", handler);
+                pipeline.AddLast("ServerHandler", handler);
             }
         }
 
