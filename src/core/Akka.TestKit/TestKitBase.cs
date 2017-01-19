@@ -62,7 +62,7 @@ namespace Akka.TestKit
         /// If no <paramref name="system"/> is passed in, a new system 
         /// with <see cref="DefaultConfig"/> will be created.
         /// </summary>
-        /// <param name="assertions"></param>
+        /// <param name="assertions">TBD</param>
         /// <param name="system">Optional: The actor system.</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
         protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
@@ -74,10 +74,10 @@ namespace Akka.TestKit
         /// Create a new instance of the <see cref="TestKitBase"/> class.
         /// A new system with the specified configuration will be created.
         /// </summary>
+        /// <param name="assertions">TBD</param>
         /// <param name="config">The configuration to use for the system.</param>
+        /// <param name="actorSystemName">TBD</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
-        /// <param name="assertions"></param>
-        /// <param name="actorSystemName"></param>
         protected TestKitBase(ITestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
             : this(assertions, null, config ?? ConfigurationFactory.Empty, actorSystemName, testActorName)
         {
@@ -92,6 +92,13 @@ namespace Akka.TestKit
             InitializeTest(system, config, actorSystemName, testActorName);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="config">TBD</param>
+        /// <param name="actorSystemName">TBD</param>
+        /// <param name="testActorName">TBD</param>
         protected void InitializeTest(ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
             _testState = new TestState();
@@ -145,13 +152,37 @@ namespace Akka.TestKit
 
         private TimeSpan SingleExpectDefaultTimeout { get { return _testState.TestKitSettings.SingleExpectDefault; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorSystem Sys { get { return _testState.System; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TestKitSettings TestKitSettings { get { return _testState.TestKitSettings; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef LastSender { get { return _testState.LastMessage.Sender; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Config DefaultConfig { get { return _defaultConfig; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Config FullDebugConfig { get { return _fullDebugConfig; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ILoggingAdapter Log { get { return _testState.Log; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object LastMessage { get { return _testState.LastMessage.Message; } }
 
         /// <summary>
@@ -263,7 +294,7 @@ namespace Akka.TestKit
         /// block or throw an <see cref="InvalidOperationException" /> if no `within` block surrounds this
         /// call. <remarks>The returned value is always finite.</remarks>
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">Thrown if this was called outside of within</exception>
+        /// <exception cref="InvalidOperationException">Thrown if this was called outside of within</exception>
         public TimeSpan Remaining
         {
             get
@@ -278,6 +309,9 @@ namespace Akka.TestKit
         /// If inside a `within` block obtain time remaining for execution of the innermost enclosing `within`
         /// block; otherwise returns the given duration.
         /// </summary>
+        /// <param name="duration">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         protected TimeSpan RemainingOr(TimeSpan duration)
         {
             if (!_testState.End.HasValue) return duration;
@@ -296,7 +330,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">The maximum.</param>
         /// <returns>A finite <see cref="TimeSpan"/> properly dilated</returns>
-        /// <exception cref="System.ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
         public TimeSpan RemainingOrDilated(TimeSpan? duration)
         {
             if(!duration.HasValue) return RemainingOrDefault;
@@ -309,6 +343,8 @@ namespace Akka.TestKit
         /// Multiplies the duration with the <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>,
         /// i.e. the config value "akka.test.timefactor"
         /// </summary>
+        /// <param name="duration">TBD</param>
+        /// <returns>TBD</returns>
         public TimeSpan Dilated(TimeSpan duration)
         {
             if(duration.IsPositiveFinite())
@@ -322,6 +358,8 @@ namespace Akka.TestKit
         /// If <paramref name="timeout"/> is defined it is returned; otherwise
         /// the config value "akka.test.single-expect-default" is returned.
         /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public TimeSpan GetTimeoutOrDefault(TimeSpan? timeout)
         {
             return timeout.GetValueOrDefault(SingleExpectDefaultTimeout);
@@ -347,6 +385,7 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <exception cref="TimeoutException">TBD</exception>
         protected virtual void Shutdown(ActorSystem system, TimeSpan? duration = null, bool verifySystemShutdown = false)
         {
             if (system == null) system = _testState.System;
@@ -373,7 +412,7 @@ namespace Akka.TestKit
         /// <para>The default test actor can be retrieved from the <see cref="TestActor"/> property</para>
         /// </summary>
         /// <param name="name">The name of the new actor.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public IActorRef CreateTestActor(string name)
         {
             return CreateTestActor(_testState.System, name);
@@ -392,7 +431,7 @@ namespace Akka.TestKit
         /// Creates a new <see cref="TestProbe" />.
         /// </summary>
         /// <param name="name">Optional: The name of the probe.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public virtual TestProbe CreateTestProbe(string name=null)
         {
             return CreateTestProbe(Sys, name);
@@ -403,7 +442,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="system">For multi-actor system tests, you can specify which system the node is for.</param>
         /// <param name="name">Optional: The name of the probe.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public virtual TestProbe CreateTestProbe(ActorSystem system, string name = null)
         {
             return new TestProbe(system, _assertions, name);
@@ -428,12 +467,11 @@ namespace Akka.TestKit
         /// It always uses a timeout when waiting.
         /// Timeouts will always throw an exception. The default timeout is 5 seconds.
         /// </summary>
+        /// <param name="count">TBD</param>
+        /// <returns>TBD</returns>
         public TestBarrier CreateTestBarrier(int count)
         {
             return new TestBarrier(this, count, _testState.TestKitSettings.DefaultTimeout);
         }
-
     }
-
 }
-

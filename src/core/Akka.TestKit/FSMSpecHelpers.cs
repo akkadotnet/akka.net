@@ -11,8 +11,16 @@ using Akka.Util.Internal;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class FSMSpecHelpers
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TS">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static Func<object, object, bool> CurrentStateExpector<TS>()
         {
             return (expected, actual) =>
@@ -24,6 +32,11 @@ namespace Akka.TestKit
             };
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TS">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static Func<object, object, bool> TransitionStateExpector<TS>()
         {
             return (expected, actual) =>
@@ -37,4 +50,3 @@ namespace Akka.TestKit
         } 
     }
 }
-

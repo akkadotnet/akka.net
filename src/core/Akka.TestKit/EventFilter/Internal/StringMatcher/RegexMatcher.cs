@@ -16,21 +16,32 @@ namespace Akka.TestKit.Internal.StringMatcher
     {
         private readonly Regex _regex;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="regex">TBD</param>
         public RegexMatcher(Regex regex)
         {
             _regex = regex;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="s">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsMatch(string s)
         {
             return _regex.IsMatch(s);
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "matches regex \"" + _regex + "\"";
         }
     }
 }
-
