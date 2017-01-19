@@ -10,6 +10,9 @@ using System;
 namespace Akka.TestKit
 {
     // ReSharper disable once InconsistentNaming
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IUnmutableFilter : IDisposable
     {
         /// <summary>
@@ -18,4 +21,3 @@ namespace Akka.TestKit
         void Unmute();
     }
 }
-

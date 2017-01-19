@@ -11,6 +11,9 @@ using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract partial class TestKitBase
     {
         /// <summary>
@@ -53,4 +56,3 @@ namespace Akka.TestKit
         }
     }
 }
-

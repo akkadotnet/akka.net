@@ -22,6 +22,11 @@ namespace Akka.TestKit
         private readonly double _timefactor;
         private readonly bool _logTestKitCalls;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ConfigurationException">TBD</exception>
         public TestKitSettings(Config config)
         {
             _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", allowInfinite:false);
@@ -69,4 +74,3 @@ namespace Akka.TestKit
         public bool LogTestKitCalls { get { return _logTestKitCalls; } }
     }
 }
-

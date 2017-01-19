@@ -54,9 +54,19 @@ namespace Akka.TestKit
     /// </summary>
     public sealed class NoAutoPilot : AutoPilot
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static NoAutoPilot Instance = new NoAutoPilot();
 
         private NoAutoPilot() { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             return this;
@@ -69,16 +79,32 @@ namespace Akka.TestKit
     /// </summary>
     public sealed class KeepRunning : AutoPilot
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static KeepRunning Instance = new KeepRunning();
 
         private KeepRunning(){}
-
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <returns>TBD</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             throw new InvalidOperationException("Must not call");
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="sender">TBD</param>
+    /// <param name="message">TBD</param>
+    /// <returns>TBD</returns>
     public delegate AutoPilot AutoPilotDelegate(IActorRef sender, object message);
 
     /// <summary>
@@ -95,15 +121,24 @@ namespace Akka.TestKit
     {
         private readonly AutoPilotDelegate _autoPilotDelegate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="autoPilotDelegate">TBD</param>
         public DelegateAutoPilot(AutoPilotDelegate autoPilotDelegate)
         {
             _autoPilotDelegate = autoPilotDelegate;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             return _autoPilotDelegate(sender,message);
         }
     }
 }
-

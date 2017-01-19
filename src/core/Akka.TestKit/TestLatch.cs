@@ -30,10 +30,11 @@ namespace Akka.TestKit
         private readonly Func<TimeSpan, TimeSpan> _dilate;
         private readonly TimeSpan _defaultTimeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("This field will be removed. TestKit.TestKitSetting.DefaultTimeout is an alternative.")]
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
-
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TestLatch"/> class with count = 1, i.e. the 
@@ -51,6 +52,7 @@ namespace Akka.TestKit
         /// number of times <see cref="CountDown"/> must be called to make this instance become open.
         /// The default timeout is set to 5 seconds.
         /// </summary>
+        /// <param name="count">TBD</param>
         public TestLatch(int count)
             : this(count, TimeSpan.FromSeconds(5))
         {
@@ -61,6 +63,8 @@ namespace Akka.TestKit
         /// Initializes a new instance of the <see cref="TestLatch"/> class with the specified count, i.e
         /// number of times <see cref="CountDown"/> must be called to make this instance become open.
         /// </summary>
+        /// <param name="count">TBD</param>
+        /// <param name="defaultTimeout">TBD</param>
         public TestLatch(int count, TimeSpan defaultTimeout)
         {
             _latch = new CountdownEvent(count);
@@ -71,6 +75,9 @@ namespace Akka.TestKit
         /// Creates a TestLatch with the specified dilate function, timeout and count. 
         /// Intended to be used by TestKit.
         /// </summary>
+        /// <param name="dilate">TBD</param>
+        /// <param name="count">TBD</param>
+        /// <param name="defaultTimeout">TBD</param>
         [EditorBrowsable(EditorBrowsableState.Never)]
         internal TestLatch(Func<TimeSpan, TimeSpan> dilate, int count, TimeSpan defaultTimeout)
             :this(dilate, defaultTimeout,count)
@@ -78,12 +85,23 @@ namespace Akka.TestKit
         }
 
         //This one exists to be available to inheritors
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="dilate">TBD</param>
+        /// <param name="defaultTimeout">TBD</param>
+        /// <param name="count">TBD</param>
         protected TestLatch(Func<TimeSpan, TimeSpan> dilate, TimeSpan defaultTimeout, int count)
             : this(count, defaultTimeout)
         {
             _dilate = dilate;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="count">TBD</param>
         [Obsolete("Use another constructor instead")]
         public TestLatch(ActorSystem system, int count = 1)
         {
@@ -132,8 +150,9 @@ namespace Akka.TestKit
         /// <paramref name="timeout"/> is dilated, i.e. multiplied by <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>
         /// </para>
         /// </summary>
-        /// <exception cref="TimeoutException">Thrown when the timeout is reached</exception>
+        /// <param name="timeout">TBD</param>
         /// <exception cref="ArgumentException">Thrown when a too large timeout has been specified</exception>
+        /// <exception cref="TimeoutException">Thrown when the timeout is reached</exception>
         public void Ready(TimeSpan timeout)
         {
             if(timeout == TimeSpan.MaxValue) throw new ArgumentException(string.Format("TestLatch does not support waiting for {0}", timeout));
@@ -159,6 +178,10 @@ namespace Akka.TestKit
             Ready(_defaultTimeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="atMost">TBD</param>
         [Obsolete("Use Ready instead. This method will be removed in future versions")]
         public void Result(TimeSpan atMost)
         {
@@ -167,6 +190,12 @@ namespace Akka.TestKit
 
         #region Static methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="count">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use the constructor instead. This method will be removed in future versions")]
         public static TestLatch Apply(ActorSystem system, int count = 1)
         {
@@ -176,4 +205,3 @@ namespace Akka.TestKit
         #endregion
     }
 }
-

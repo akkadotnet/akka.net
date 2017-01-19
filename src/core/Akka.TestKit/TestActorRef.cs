@@ -30,43 +30,75 @@ namespace Akka.TestKit
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testActorRef">TBD</param>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator ==(TestActorRef<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testActorRef">TBD</param>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator !=(TestActorRef<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="testActorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator ==(IActorRef actorRef, TestActorRef<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="testActorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator !=(IActorRef actorRef, TestActorRef<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
 
-        //Here to suppress CS0660, 'class' defines operator == or operator != but does not override Object.Equals(object o)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
+            //Here to suppress CS0660, 'class' defines operator == or operator != but does not override Object.Equals(object o)
             //We have correct implementations in TestActorRefBase, so it's perfectly fine to delegate
             return base.Equals(obj);
         }
 
-        //Here to suppress CS0661, 'class' defines operator == or operator != but does not override Object.GetHashCode()
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
+            //Here to suppress CS0661, 'class' defines operator == or operator != but does not override Object.GetHashCode()
             //We have correct implementations in TestActorRefBase, so it's perfectly fine to delegate
             return base.GetHashCode();
         }
     }
 }
-

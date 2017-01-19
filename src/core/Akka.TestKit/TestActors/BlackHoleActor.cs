@@ -15,6 +15,11 @@ namespace Akka.TestKit.TestActors
     /// </summary>
     public class BlackHoleActor : ActorBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return true;
@@ -26,4 +31,3 @@ namespace Akka.TestKit.TestActors
         public static Props Props { get { return Props.Create<BlackHoleActor>(); } }
     }
 }
-
