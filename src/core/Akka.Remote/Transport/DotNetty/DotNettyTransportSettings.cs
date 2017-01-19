@@ -15,6 +15,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
+using DotNetty.Buffers;
 
 namespace Akka.Remote.Transport.DotNetty
 {
@@ -32,7 +33,17 @@ namespace Akka.Remote.Transport.DotNetty
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
             var host = config.GetString("hostname");
             if (string.IsNullOrEmpty(host)) host = IPAddress.Any.ToString();
-            var publicHost = config.GetString("public-hostname");
+            var publicHost = config.GetString("public-hostname", null);
+
+            var order = ByteOrder.LittleEndian;
+            var byteOrderString = config.GetString("byte-order", "little-endian").ToLowerInvariant();
+            switch (byteOrderString)
+            {
+                case "little-endian": order = ByteOrder.LittleEndian; break;
+                case "big-endian": order = ByteOrder.BigEndian; break;
+                default: throw new ArgumentException($"Unknown byte-order option [{byteOrderString}]. Supported options are: big-endian, little-endian.");
+            }
+            
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
                 enableSsl: config.GetBoolean("enable-ssl", false),
@@ -55,7 +66,8 @@ namespace Akka.Remote.Transport.DotNetty
                 writeBufferHighWaterMark: ToNullableInt(config.GetByteSize("write-buffer-high-water-mark")),
                 writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark")),
                 backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false),
-                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"));
+                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
+                byteOrder: order);
         }
 
         private static int? ToNullableInt(long? value) => value.HasValue && value.Value > 0 ? (int?)value.Value : null;
@@ -92,11 +104,12 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly int? WriteBufferLowWaterMark;
         public readonly bool BackwardsCompatibilityModeEnabled;
         public readonly bool LogTransport;
+        public readonly ByteOrder ByteOrder;
 
         public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname,  string publicHostname,
             int port, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
-            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport)
+            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder)
         {
             if (maxFrameSize < 32000) throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(maxFrameSize));
 
@@ -122,6 +135,7 @@ namespace Akka.Remote.Transport.DotNetty
             WriteBufferLowWaterMark = writeBufferLowWaterMark;
             BackwardsCompatibilityModeEnabled = backwardsCompatibilityModeEnabled;
             LogTransport = logTransport;
+            ByteOrder = byteOrder;
         }
     }
     public enum TransportMode

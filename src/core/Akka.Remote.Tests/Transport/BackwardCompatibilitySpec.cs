@@ -11,8 +11,10 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Internals;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,8 +33,11 @@ namespace Akka.Remote.Tests.Transport
                 }
             }");
 
+        private readonly ITestOutputHelper _output;
+
         public BackwardCompatibilitySpec(ITestOutputHelper output) : base(TestConfig, output)
         {
+            _output = output;
         }
 
         [Fact]
@@ -49,7 +54,57 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public void DotNetty_transport_can_communicate_with_Helios_transport()
         {
-            
+            var heliosConfig = ConfigurationFactory.ParseString(@"
+                akka {
+                    loglevel = DEBUG
+                    actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+
+                    remote {
+                        enabled-transports = [""akka.remote.helios.tcp""]
+                        helios.tcp {
+                            hostname = localhost
+                            port = 11223
+                        }
+                    }
+                }");
+
+            using (var heliosSystem = ActorSystem.Create("helios-system", heliosConfig))
+            {
+                AddTestLogging(heliosSystem);
+                heliosSystem.ActorOf(Props.Create<Echo>(), "echo");
+                var heliosProvider = RARP.For(heliosSystem).Provider;
+
+                Assert.Equal(
+                    "Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote.Transport.Helios", 
+                    heliosProvider.RemoteSettings.Transports.First().TransportClass);
+
+                var address = heliosProvider.DefaultAddress;
+
+                Assert.Equal(11223, address.Port.Value);
+
+                var echo = Sys.ActorSelection(new RootActorPath(address) / "user" / "echo");
+
+                echo.Tell("hello", TestActor);
+                ExpectMsg("hello");
+            }
+        }
+
+        private void AddTestLogging(ActorSystem sys)
+        {
+            if (_output != null)
+            {
+                var system = (ExtendedActorSystem)sys;
+                var logger = system.SystemActorOf(Props.Create(() => new TestOutputLogger(_output)), "log-test");
+                logger.Tell(new InitializeLogger(system.EventStream));
+            }
+        }
+
+        private sealed class Echo : ReceiveActor
+        {
+            public Echo()
+            {
+                ReceiveAny(msg => Sender.Tell(msg));
+            }
         }
     }
 }

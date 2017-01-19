@@ -23,7 +23,6 @@ using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Common.Utilities;
-using DotNetty.Handlers.Logging;
 using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
@@ -286,6 +285,11 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var pipeline = channel.Pipeline;
 
+            if (Settings.LogTransport)
+            {
+                pipeline.AddLast("Logger", new AkkaLoggingHandler(Log));
+            }
+
             if (InternalTransport == TransportMode.Tcp)
             {
                 pipeline.AddLast("FrameDecoder", new LengthFieldBasedFrameDecoder((int)MaximumPayloadBytes, 0, 4, 0, 4));
@@ -295,11 +299,7 @@ namespace Akka.Remote.Transport.DotNetty
                 }
                 else
                 {
-                    pipeline.AddLast("FrameEncoder", new LengthFieldPrepender(4, false));
-                }
-                if (Settings.LogTransport)
-                {
-                    pipeline.AddLast("Logger", new AkkaLoggingHandler(Log));
+                    pipeline.AddLast("FrameEncoder", new LengthFieldPrepender(4, 0, false));
                 }
             }
         }

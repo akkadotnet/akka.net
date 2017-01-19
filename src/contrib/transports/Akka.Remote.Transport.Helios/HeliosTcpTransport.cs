@@ -273,7 +273,7 @@ namespace Akka.Remote.Transport.Helios
         /// <param name="system">TBD</param>
         /// <param name="config">TBD</param>
         public HeliosTcpTransport(ActorSystem system, Config config)
-            : base(system, config)
+            : base(system, config, "akka.remote.helios.tcp")
         {
         }
 

@@ -52,7 +52,7 @@ namespace Akka.Remote.Transport.DotNetty
         
         public override void ChannelRead(IChannelHandlerContext context, object message)
         {
-            var buf = (IByteBuffer)message;
+            var buf = ((IByteBuffer)message);
             if (buf.ReadableBytes > 0)
             {
                 // no need to copy the byte buffer contents; ByteString does that automatically
@@ -141,22 +141,22 @@ namespace Akka.Remote.Transport.DotNetty
 
     internal sealed class TcpAssociationHandle : AssociationHandle
     {
-        private readonly IChannel channel;
-        private readonly DotNettyTransport transport;
+        private readonly IChannel _channel;
+        private readonly DotNettyTransport _transport;
 
         public TcpAssociationHandle(Address localAddress, Address remoteAddress, DotNettyTransport transport, IChannel channel)
             : base(localAddress, remoteAddress)
         {
-            this.channel = channel;
-            this.transport = transport;
+            _channel = channel;
+            _transport = transport;
         }
 
         public override bool Write(ByteString payload)
         {
-            if (channel.Open && channel.IsWritable)
+            if (_channel.Open && _channel.IsWritable)
             {
                 var data = ToByteBuffer(payload);
-                channel.WriteAndFlushAsync(data);
+                _channel.WriteAndFlushAsync(data);
                 return true;
             }
             return false;
@@ -172,7 +172,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override void Disassociate()
         {
-            channel.CloseAsync();
+            _channel.CloseAsync();
         }
     }
     

@@ -55,10 +55,12 @@
     <Compile Include="HeliosHelpers.cs" />
     <Compile Include="HeliosTcpTransport.cs" />
     <Compile Include="HeliosTransport.cs" />
+    <Compile Include="HeliosTransportSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <EmbeddedResource Include="remote.conf" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj">
