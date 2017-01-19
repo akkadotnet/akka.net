@@ -136,7 +136,8 @@ namespace Akka.Remote.Transport
         /// </summary>
         protected override Props ManagerProps
         {
-            get {
+            get
+            {
                 return _managerProps ??
                        (_managerProps =
                            Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
@@ -160,14 +161,14 @@ namespace Akka.Remote.Transport
         /// <param name="remoteAddress">TBD</param>
         /// <param name="refuseUid">TBD</param>
         /// <returns>TBD</returns>
-        public Task<AkkaProtocolHandle> Associate(Address remoteAddress, int? refuseUid)
+        public async Task<AkkaProtocolHandle> Associate(Address remoteAddress, int? refuseUid)
         {
             // Prepare a Task and pass its completion source to the manager
             var statusPromise = new TaskCompletionSource<AssociationHandle>();
 
             manager.Tell(new AssociateUnderlyingRefuseUid(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise, refuseUid));
 
-            return statusPromise.Task.CastTask<AssociationHandle, AkkaProtocolHandle>();
+            return (AkkaProtocolHandle)await statusPromise.Task;
         }
 
         #region Static properties
@@ -231,7 +232,7 @@ namespace Akka.Remote.Transport
                     var stateActorSettings = _settings;
                     var failureDetector = CreateTransportFailureDetector();
                     Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(ProtocolStateActor.InboundProps(
-                        new HandshakeInfo(stateActorLocalAddress, AddressUidExtension.Uid(Context.System)), 
+                        new HandshakeInfo(stateActorLocalAddress, AddressUidExtension.Uid(Context.System)),
                         handle,
                         stateActorAssociationListener,
                         stateActorSettings,
@@ -347,7 +348,7 @@ namespace Akka.Remote.Transport
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is HandshakeInfo && Equals((HandshakeInfo) obj);
+            return obj is HandshakeInfo && Equals((HandshakeInfo)obj);
         }
 
         private bool Equals(HandshakeInfo other)
@@ -446,7 +447,7 @@ namespace Akka.Remote.Transport
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((AkkaProtocolHandle) obj);
+            return Equals((AkkaProtocolHandle)obj);
         }
 
         /// <summary>
@@ -838,7 +839,7 @@ namespace Akka.Remote.Transport
                             {
                                 //Otherwise, retry
                                 SetTimer("associate-retry", wrappedHandle,
-                                    ((RemoteActorRefProvider) ((ActorSystemImpl) Context.System).Provider) //TODO: rewrite using RARP ActorSystem Extension
+                                    ((RemoteActorRefProvider)((ActorSystemImpl)Context.System).Provider) //TODO: rewrite using RARP ActorSystem Extension
                                         .RemoteSettings.BackoffPeriod, repeat: false);
                                 nextState = Stay();
                             }
