@@ -16,20 +16,32 @@ namespace Akka.TestKit.Internal.StringMatcher
     {
         private readonly string _s;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="s">TBD</param>
         public EqualsString(string s)
         {
             _s = s;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="s">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsMatch(string s)
         {
             return String.Equals(_s, s, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "== \"" + _s + "\"";
         }
     }
 }
-

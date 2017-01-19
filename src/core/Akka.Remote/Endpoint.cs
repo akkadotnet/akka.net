@@ -109,7 +109,7 @@ namespace Akka.Remote
                 }
                 if (payload is ActorSelectionMessage)
                 {
-                    var sel = (ActorSelectionMessage) payload;
+                    var sel = (ActorSelectionMessage)payload;
 
                     var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
                     if (settings.UntrustedMode
@@ -214,8 +214,8 @@ namespace Akka.Remote
         /// <param name="localAddress">TBD</param>
         /// <param name="remoteAddress">TBD</param>
         /// <param name="cause">TBD</param>
-        public ShutDownAssociation(Address localAddress, Address remoteAddress, Exception cause = null)
-            : base(string.Format("Shut down address: {0}", remoteAddress), cause)
+        public ShutDownAssociation(string message, Address localAddress, Address remoteAddress, Exception cause = null)
+            : base(message, cause)
         {
             RemoteAddress = remoteAddress;
             LocalAddress = localAddress;
@@ -240,12 +240,13 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
+        /// <param name="message">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <param name="remoteAddress">TbD</param>
         /// <param name="cause">TBD</param>
         /// <param name="disassociateInfo">TBD</param>
-        public InvalidAssociation(Address localAddress, Address remoteAddress, Exception cause = null, DisassociateInfo? disassociateInfo = null)
-            : base(string.Format("Invalid address: {0}", remoteAddress), cause)
+        public InvalidAssociation(string message, Address localAddress, Address remoteAddress, Exception cause = null, DisassociateInfo? disassociateInfo = null)
+            : base(message, cause)
         {
             RemoteAddress = remoteAddress;
             LocalAddress = localAddress;
@@ -653,7 +654,7 @@ namespace Akka.Remote
                         Context.System.Scheduler.ScheduleTellOnce(_settings.RetryGateClosedFor, Self, new Ungate(), Self);
                     }
                 }
-                
+
                 Become(() => Gated(true, earlyUngateRequested));
             });
             Receive<IsIdle>(idle => Sender.Tell(Idle.Instance));
@@ -1063,8 +1064,7 @@ namespace Akka.Remote
         {
             return new OneForOneStrategy(ex =>
             {
-                //we're going to throw an exception anyway
-                PublishAndThrow(ex, LogLevel.ErrorLevel);
+                PublishAndThrow(ex, LogLevel.ErrorLevel, false);
                 return Directive.Escalate;
             });
         }
@@ -1086,18 +1086,7 @@ namespace Akka.Remote
         {
             if (_handle == null)
             {
-                Transport
-                    .Associate(RemoteAddress, _refuseUid)
-                    .ContinueWith(handle =>
-                    {
-                        if (handle.IsFaulted)
-                        {
-                            var inner = handle.Exception?.Flatten().InnerException;
-                            return (object)new Status.Failure(new InvalidAssociationException("Association failure", inner));
-                        }
-                        return new Handle(handle.Result);
-                    }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)
-                    .PipeTo(Self);
+                AssociateAsync().PipeTo(Self);
             }
             else
             {
@@ -1106,6 +1095,18 @@ namespace Akka.Remote
 
             var ackIdleInterval = new TimeSpan(Settings.SysMsgAckTimeout.Ticks / 2);
             _ackIdleTimerCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(ackIdleInterval, ackIdleInterval, Self, AckIdleCheckTimer.Instance, Self);
+        }
+
+        private async Task<object> AssociateAsync()
+        {
+            try
+            {
+                return new Handle(await Transport.Associate(RemoteAddress, _refuseUid));
+            }
+            catch (Exception e)
+            {
+                return new Status.Failure(e.InnerException);
+            }
         }
 
         /// <summary>
@@ -1142,15 +1143,13 @@ namespace Akka.Remote
             {
                 if (failure.Cause is InvalidAssociationException)
                 {
-                    PublishAndThrow(new InvalidAssociation(LocalAddress, RemoteAddress, failure.Cause),
-                        LogLevel.WarningLevel);
+                    if (failure.Cause.InnerException == null)
+                    {
+                        PublishAndThrow(new InvalidAssociation(failure.Cause.Message, LocalAddress, RemoteAddress), LogLevel.WarningLevel);
+                    }
                 }
-                else
-                {
-                    PublishAndThrow(
-                        new EndpointAssociationException(string.Format("Association failed with {0}",
-                            RemoteAddress)), LogLevel.DebugLevel);
-                }
+
+                PublishAndThrow(new InvalidAssociation($"Association failed with {RemoteAddress}", LocalAddress, RemoteAddress, failure.Cause), LogLevel.WarningLevel);
             });
             Receive<Handle>(handle =>
             {
@@ -1279,14 +1278,17 @@ namespace Akka.Remote
             return Deadline.Now + Settings.SysMsgAckTimeout;
         }
 
-        private void PublishAndThrow(Exception reason, LogLevel level)
+        private void PublishAndThrow(Exception reason, LogLevel level, bool needToThrow = true)
         {
             reason.Match()
                 .With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
-                .With<ShutDownAssociation>(shutdown => {}) // don't log an error for planned shutdowns
+                .With<ShutDownAssociation>(shutdown => { }) // don't log an error for planned shutdowns
                 .Default(msg => PublishError(reason, level));
 
-            throw reason;
+            if (needToThrow)
+            {
+                throw reason;
+            }
         }
 
         private IActorRef StartReadEndpoint(AkkaProtocolHandle handle)
@@ -1922,7 +1924,7 @@ namespace Akka.Remote
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                     _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
             });
-            ReceiveAny(o => {}); // ignore
+            ReceiveAny(o => { }); // ignore
         }
 
         #endregion
@@ -1984,10 +1986,10 @@ namespace Akka.Remote
             switch (info)
             {
                 case DisassociateInfo.Quarantined:
-                    throw new InvalidAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system has quarantined this system. No further associations " +
-                                                                                                              "to the remote system are possible until this system is restarted."), DisassociateInfo.Quarantined);
+                    throw new InvalidAssociation("The remote system has quarantined this system. No further associations " +
+                                                   "to the remote system are possible until this system is restarted.", LocalAddress, RemoteAddress, disassociateInfo: DisassociateInfo.Quarantined);
                 case DisassociateInfo.Shutdown:
-                    throw new ShutDownAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system terminated the association because it is shutting down."));
+                    throw new ShutDownAssociation($"The remote system terminated the association because it is shutting down. Shut down address: {RemoteAddress}", LocalAddress, RemoteAddress);
                 case DisassociateInfo.Unknown:
                 default:
                     Context.Stop(Self);

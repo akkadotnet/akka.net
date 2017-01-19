@@ -56,16 +56,24 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf<SleepyActor>();
 
             var actorCell = actor as ActorRefWithCell;
+            Assert.NotNull(actorCell);
+
             var container = actorCell.Provider.TempContainer as VirtualPathContainer;
+            Assert.NotNull(container);
             try
             {
                 await actor.Ask<string>("should time out");
             }
             catch (Exception)
             {
-                var childCounter = 0;
-                container.ForEachChild(x => childCounter++);
-                Assert.True(childCounter==0,"Number of children in temp container should be 0.");
+                // Need to spin here, since the continuation function may not execute immediately
+                AwaitAssert(() =>
+                {
+                    var childCounter = 0;
+                    container.ForEachChild(x => childCounter++);
+                    Assert.True(childCounter == 0, "Number of children in temp container should be 0.");
+                });
+                
             }
 
         }

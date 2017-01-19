@@ -30,6 +30,8 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public class Merge<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region graph stage logic
@@ -124,6 +126,12 @@ namespace Akka.Streams.Dsl
         private readonly int _inputPorts;
         private readonly bool _eagerComplete;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <param name="eagerComplete">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Merge(int inputPorts, bool eagerComplete = false)
         {
             // one input might seem counter intuitive but saves us from special handling in other places
@@ -139,16 +147,39 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanInShape<TIn, TOut>(Out, ins.ToArray());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Inlet<TIn> In(int id) => Shape.In(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Merge");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanInShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Merge";
     }
 
@@ -164,8 +195,14 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Merge<T> : Merge<T, T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <param name="eagerComplete">TBD</param>
         public Merge(int inputPorts, bool eagerComplete = false) : base(inputPorts, eagerComplete)
         {
         }
@@ -186,14 +223,23 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class MergePreferred<T> : GraphStage<MergePreferred<T>.MergePreferredShape>
     {
         #region internal classes
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class MergePreferredShape : UniformFanInShape<T, T>
         {
             private readonly int _secondaryPorts;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="secondaryPorts">TBD</param>
+            /// <param name="init">TBD</param>
             public MergePreferredShape(int secondaryPorts, IInit init) : base(secondaryPorts, init)
             {
                 _secondaryPorts = secondaryPorts;
@@ -201,13 +247,26 @@ namespace Akka.Streams.Dsl
                 Preferred = NewInlet<T>("preferred");
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="secondaryPorts">TBD</param>
+            /// <param name="name">TBD</param>
             public MergePreferredShape(int secondaryPorts, string name) : this(secondaryPorts, new InitName(name)) { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="init">TBD</param>
+            /// <returns>TBD</returns>
             protected override FanInShape<T> Construct(IInit init)
             {
                 return new MergePreferredShape(_secondaryPorts, init);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Inlet<T> Preferred { get; }
         }
 
@@ -310,6 +369,12 @@ namespace Akka.Streams.Dsl
         private readonly int _secondaryPorts;
         private readonly bool _eagerClose;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="secondaryPorts">TBD</param>
+        /// <param name="eagerClose">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public MergePreferred(int secondaryPorts, bool eagerClose = false)
         {
             if (secondaryPorts < 1) throw new ArgumentException("A MergePreferred must have at least one secondary port");
@@ -319,21 +384,54 @@ namespace Akka.Streams.Dsl
             Shape = new MergePreferredShape(_secondaryPorts, "MergePreferred");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MergePreferred");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override MergePreferredShape Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Inlet<T> In(int id) => Shape.In(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<T> Out => Shape.Out;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> Preferred => Shape.Preferred;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Interleave
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inputPorts">TBD</param>
+        /// <param name="segmentSize">TBD</param>
+        /// <param name="eagerClose">TBD</param>
+        /// <returns>TBD</returns>
         public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>(int inputPorts, int segmentSize,
             bool eagerClose = false)
         {
@@ -352,7 +450,9 @@ namespace Akka.Streams.Dsl
     /// Completes when all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true)
     /// </para>
     /// Cancels when downstream cancels
-    /// </summary> 
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class Interleave<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region stage logic
@@ -444,6 +544,13 @@ namespace Akka.Streams.Dsl
         private readonly int _segmentSize;
         private readonly bool _eagerClose;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <param name="segmentSize">TBD</param>
+        /// <param name="eagerClose">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         internal Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
         {
             if (inputPorts <= 1) throw new ArgumentException("Interleave input ports count must be greater than 1", nameof(inputPorts));
@@ -462,14 +569,34 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanInShape<TIn, TOut>(Out, inlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; }
 
-        public Inlet<TIn> In(int id) => Shape.In(id); 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
+        public Inlet<TIn> In(int id) => Shape.In(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanInShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Interleave";
     }
 
@@ -484,6 +611,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class MergeSorted<T> : GraphStage<FanInShape<T, T, T>>
     {
         #region stage logic
@@ -559,20 +687,41 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<T, T, int> _compare;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="compare">TBD</param>
         public MergeSorted(Func<T, T, int> compare)
         {
             _compare = compare;
             Shape = new FanInShape<T, T, T>(Out, Left, Right);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> Left = new Inlet<T>("left");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> Right = new Inlet<T>("right");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<T> Out = new Outlet<T>("out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FanInShape<T, T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
@@ -588,6 +737,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when If eagerCancel is enabled: when any downstream cancels; otherwise: when all downstreams cancel
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Broadcast<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region stage logic
@@ -668,6 +818,12 @@ namespace Akka.Streams.Dsl
         private readonly int _outputPorts;
         private readonly bool _eagerCancel;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outputPorts">TBD</param>
+        /// <param name="eagerCancel">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Broadcast(int outputPorts, bool eagerCancel = false)
         {
             if (outputPorts < 1) throw new ArgumentException("A Broadcast must have one or more output ports", nameof(outputPorts));
@@ -681,16 +837,39 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanOutShape<T, T>(In, outlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> In = new Inlet<T>("Broadcast.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Outlet<T> Out(int id) => Shape.Out(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Broadcast");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanOutShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Broadcast";
     }
 
@@ -706,6 +885,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when when all downstreams cancel
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Partition<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region internal classes
@@ -805,6 +985,11 @@ namespace Akka.Streams.Dsl
         private readonly int _outputPorts;
         private readonly Func<T, int> _partitioner;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outputPorts">TBD</param>
+        /// <param name="partitioner">TBD</param>
         public Partition(int outputPorts, Func<T, int> partitioner)
         {
             _outputPorts = outputPorts;
@@ -813,20 +998,47 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanOutShape<T, T>(In, outlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> In = new Inlet<T>("Partition.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Outlet Out(int id) => Shape.Out(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanOutShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"Partition({_outputPorts})";
 
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class PartitionOutOfBoundsException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public PartitionOutOfBoundsException(string message) : base(message)
         {
             
@@ -848,6 +1060,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when all downstreams cancel
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Balance<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region stage logic
@@ -936,6 +1149,12 @@ namespace Akka.Streams.Dsl
         private readonly int _outputPorts;
         private readonly bool _waitForAllDownstreams;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outputPorts">TBD</param>
+        /// <param name="waitForAllDownstreams">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Balance(int outputPorts, bool waitForAllDownstreams = false)
         {
             if (outputPorts < 1) throw new ArgumentException("A Balance must have one or more output ports");
@@ -949,16 +1168,39 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanOutShape<T, T>(In, outlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> In { get; } = new Inlet<T>("Balance.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Outlet<T> Out(int id) => Shape.Out(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Balance");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanOutShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Balance";
     }
 
@@ -975,10 +1217,19 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
     public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Zip";
     }
 
@@ -995,6 +1246,9 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public sealed partial class ZipWith
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ZipWith Instance = new ZipWith();
         private ZipWith() { }
     }
@@ -1012,10 +1266,19 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when any downstream cancels
     /// </summary>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
     public sealed class UnZip<T1, T2> : UnzipWith<KeyValuePair<T1, T2>, T1, T2>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Unzip";
     }
 
@@ -1032,15 +1295,24 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public partial class UnzipWith
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly UnzipWith Instance = new UnzipWith();
         private UnzipWith() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ZipN
     {
         /// <summary>
         /// Create a new <see cref="ZipN{T}"/>.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
         public static IGraph<UniformFanInShape<T, IImmutableList<T>>> Create<T>(int n) => new ZipN<T>(n);
     }
 
@@ -1057,22 +1329,41 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class ZipN<T> : ZipWithN<T, IImmutableList<T>>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
         public ZipN(int n) : base(x => x, n)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.ZipN;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "ZipN";
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ZipWithN
     {
         /// <summary>
         /// Creates a new <see cref="ZipWithN{TIn,TOut}"/>
         /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <param name="zipper">TBD</param>
+        /// <param name="n">TBD</param>
         public static IGraph<UniformFanInShape<TIn, TOut>> Create<TIn, TOut>(Func<IImmutableList<TIn>, TOut> zipper,
             int n) => new ZipWithN<TIn, TOut>(zipper, n);
     }
@@ -1089,6 +1380,8 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public class ZipWithN<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>>
     {
         #region Logic 
@@ -1147,7 +1440,12 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<IImmutableList<TIn>, TOut> _zipper;
         private readonly int _n;
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="zipper">TBD</param>
+        /// <param name="n">TBD</param>
         public ZipWithN(Func<IImmutableList<TIn>, TOut> zipper, int n)
         {
             _zipper = zipper;
@@ -1157,23 +1455,57 @@ namespace Akka.Streams.Dsl
             Inlets = Shape.Ins;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.ZipWithN;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IImmutableList<Inlet<TIn>> Inlets { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="i">TBD</param>
+        /// <returns>TBD</returns>
         public Inlet<TIn> In(int i) => Inlets[i];
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanInShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "ZipWithN";
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Concat
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <returns>TBD</returns>
         public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>(int inputPorts = 2)
         {
             return GraphStages.WithDetachedInputs(new Concat<T, T>(inputPorts));
@@ -1195,6 +1527,8 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public class Concat<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region stage logic
@@ -1239,6 +1573,11 @@ namespace Akka.Streams.Dsl
 
         private readonly int _inputPorts;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Concat(int inputPorts = 2)
         {
             if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port");
@@ -1251,20 +1590,47 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanInShape<TIn, TOut>(Out, inlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Inlet<TIn> In(int id) => Shape.In(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("Concat.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Concat");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanInShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class OrElse
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>() => new OrElse<T>();
     }
 
@@ -1286,6 +1652,7 @@ namespace Akka.Streams.Dsl
     ///
     /// '''Cancels when''' downstream cancels
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class OrElse<T> : GraphStage<UniformFanInShape<T, T>>
     {
         #region Logic
@@ -1344,23 +1711,50 @@ namespace Akka.Streams.Dsl
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public OrElse()
         {
             Shape = new UniformFanInShape<T, T>(Out, Primary, Secondary);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.OrElse;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> Primary { get; }   = new Inlet<T>("OrElse.primary");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> Secondary { get; } = new Inlet<T>("OrElse.secondary");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<T> Out { get; } = new Outlet<T>("OrElse.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanInShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "OrElse";
     }
 }

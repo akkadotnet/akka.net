@@ -96,6 +96,13 @@ namespace Akka.DistributedData
         /// Sets a <paramref name="bucket"/> of values inside current dictionary under provided <paramref name="key"/>
         /// in the context of the provided cluster <paramref name="node"/>.
         /// </summary>
+        public ORMultiDictionary<TKey, TValue> SetItems(Cluster.Cluster node, TKey key, IImmutableSet<TValue> bucket) =>
+            SetItems(node.SelfUniqueAddress, key, bucket);
+
+        /// <summary>
+        /// Sets a <paramref name="bucket"/> of values inside current dictionary under provided <paramref name="key"/>
+        /// in the context of the provided cluster <paramref name="node"/>.
+        /// </summary>
         public ORMultiDictionary<TKey, TValue> SetItems(UniqueAddress node, TKey key, IImmutableSet<TValue> bucket)
         {
             var newUnderlying = _underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, old => 
@@ -103,6 +110,13 @@ namespace Akka.DistributedData
 
             return new ORMultiDictionary<TKey, TValue>(newUnderlying);
         }
+
+        /// <summary>
+        /// Removes all values inside current dictionary stored under provided <paramref name="key"/>
+        /// in the context of the provided cluster <paramref name="node"/>.
+        /// </summary>
+        public ORMultiDictionary<TKey, TValue> Remove(Cluster.Cluster node, TKey key) =>
+            Remove(node.SelfUniqueAddress, key);
 
         /// <summary>
         /// Removes all values inside current dictionary stored under provided <paramref name="key"/>
@@ -117,8 +131,21 @@ namespace Akka.DistributedData
         /// <summary>
         /// Add an element to a set associated with a key. If there is no existing set then one will be initialised.
         /// </summary>
+        public ORMultiDictionary<TKey, TValue> AddItem(Cluster.Cluster node, TKey key, TValue element) =>
+            AddItem(node.SelfUniqueAddress, key, element);
+
+        /// <summary>
+        /// Add an element to a set associated with a key. If there is no existing set then one will be initialised.
+        /// </summary>
         public ORMultiDictionary<TKey, TValue> AddItem(UniqueAddress node, TKey key, TValue element) => 
             new ORMultiDictionary<TKey, TValue>(_underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, set => set.Add(node, element)));
+
+        /// <summary>
+        /// Remove an element of a set associated with a key. If there are no more elements in the set then the
+        /// entire set will be removed.
+        /// </summary>
+        public ORMultiDictionary<TKey, TValue> RemoveItem(Cluster.Cluster node, TKey key, TValue element) =>
+            RemoveItem(node.SelfUniqueAddress, key, element);
 
         /// <summary>
         /// Remove an element of a set associated with a key. If there are no more elements in the set then the
@@ -135,6 +162,15 @@ namespace Akka.DistributedData
 
             return new ORMultiDictionary<TKey, TValue>(newUnderlying);
         }
+
+        /// <summary>
+        /// Replace an element of a set associated with a key with a new one if it is different. This is useful when an element is removed
+        /// and another one is added within the same Update. The order of addition and removal is important in order
+        /// to retain history for replicated data.
+        /// </summary>
+        public ORMultiDictionary<TKey, TValue> ReplaceItem(Cluster.Cluster node, TKey key, TValue oldElement,
+            TValue newElement) =>
+            ReplaceItem(node.SelfUniqueAddress, key, oldElement, newElement);
 
         /// <summary>
         /// Replace an element of a set associated with a key with a new one if it is different. This is useful when an element is removed

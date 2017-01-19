@@ -19,27 +19,52 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class QueueSource<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, ISourceQueueWithComplete<TOut>>
     {
         #region internal classes
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public interface IInput { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
         internal sealed class Offer<T> : IInput
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="element">TBD</param>
+            /// <param name="completionSource">TBD</param>
             public Offer(T element, TaskCompletionSource<IQueueOfferResult> completionSource)
             {
                 Element = element;
                 CompletionSource = completionSource;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public T Element { get; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TaskCompletionSource<IQueueOfferResult> CompletionSource { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Completion : IInput
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static Completion Instance { get; } = new Completion();
 
             private Completion()
@@ -48,13 +73,23 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Failure : IInput
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="ex">TBD</param>
             public Failure(Exception ex)
             {
                 Ex = ex;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Exception Ex { get; }
         }
 
@@ -265,17 +300,30 @@ namespace Akka.Streams.Implementation
             internal void Invoke(IInput offer) => InvokeCallbacks(offer);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Materialized : ISourceQueueWithComplete<TOut>
         {
             private readonly Action<IInput> _invokeLogic;
             private readonly TaskCompletionSource<object> _completion;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="invokeLogic">TBD</param>
+            /// <param name="completion">TBD</param>
             public Materialized(Action<IInput> invokeLogic, TaskCompletionSource<object> completion)
             {
                 _invokeLogic = invokeLogic;
                 _completion = completion;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="element">TBD</param>
+            /// <returns>TBD</returns>
             public Task<IQueueOfferResult> OfferAsync(TOut element)
             {
                 var promise = new TaskCompletionSource<IQueueOfferResult>();
@@ -283,16 +331,32 @@ namespace Akka.Streams.Implementation
                 return promise.Task;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public Task WatchCompletionAsync() => _completion.Task;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void Complete() => _invokeLogic(Completion.Instance);
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="ex">TBD</param>
             public void Fail(Exception ex) => _invokeLogic(new Failure(ex));
         }
 
         private readonly int _maxBuffer;
         private readonly OverflowStrategy _overflowStrategy;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="maxBuffer">TBD</param>
+        /// <param name="overflowStrategy">TBD</param>
         public QueueSource(int maxBuffer, OverflowStrategy overflowStrategy)
         {
             _maxBuffer = maxBuffer;
@@ -300,10 +364,21 @@ namespace Akka.Streams.Implementation
             Shape = new SourceShape<TOut>(Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("queueSource.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SourceShape<TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<ISourceQueueWithComplete<TOut>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var completion = new TaskCompletionSource<object>();
@@ -315,6 +390,8 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TSource">TBD</typeparam>
     public sealed class UnfoldResourceSource<TOut, TSource> : GraphStage<SourceShape<TOut>>
     {
         #region Logic
@@ -407,6 +484,12 @@ namespace Akka.Streams.Implementation
         private readonly Action<TSource> _close;
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="create">TBD</param>
+        /// <param name="readData">TBD</param>
+        /// <param name="close">TBD</param>
         public UnfoldResourceSource(Func<TSource> create, Func<TSource, Option<TOut>> readData, Action<TSource> close)
         {
             _create = create;
@@ -416,20 +499,40 @@ namespace Akka.Streams.Implementation
             Shape = new SourceShape<TOut>(Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.UnfoldResourceSource;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("UnfoldResourceSource.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SourceShape<TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "UnfoldResourceSource";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TSource">TBD</typeparam>
     public sealed class UnfoldResourceSourceAsync<TOut, TSource> : GraphStage<SourceShape<TOut>>
     {
         #region Logic
@@ -603,6 +706,12 @@ namespace Akka.Streams.Implementation
         private readonly Func<TSource, Task> _close;
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="create">TBD</param>
+        /// <param name="readData">TBD</param>
+        /// <param name="close">TBD</param>
         public UnfoldResourceSourceAsync(Func<Task<TSource>> create, Func<TSource, Task<Option<TOut>>> readData, Func<TSource, Task> close)
         {
             _create = create;
@@ -612,14 +721,32 @@ namespace Akka.Streams.Implementation
             Shape = new SourceShape<TOut>(Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.UnfoldResourceSourceAsync;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("UnfoldResourceSourceAsync.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SourceShape<TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "UnfoldResourceSourceAsync";
     }
 }

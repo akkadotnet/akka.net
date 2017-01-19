@@ -13,6 +13,9 @@ using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract partial class TestKitBase
     {
         /// <summary>
@@ -179,6 +182,11 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="max">TBD</param>
+        /// <param name="filter">TBD</param>
+        /// <param name="msgs">TBD</param>
+        /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue) where T : class
         {
             return ReceiveWhile(filter, max, Timeout.InfiniteTimeSpan, msgs);
@@ -193,6 +201,12 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="max">TBD</param>
+        /// <param name="idle">TBD</param>
+        /// <param name="filter">TBD</param>
+        /// <param name="msgs">TBD</param>
+        /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue) where T : class
         {
             return ReceiveWhile(filter, max, idle, msgs);
@@ -207,6 +221,12 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="filter">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="idle">TBD</param>
+        /// <param name="msgs">TBD</param>
+        /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue) where T : class
         {
             var maxValue = RemainingOrDilated(max);
@@ -256,6 +276,13 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="shouldIgnore">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="idle">TBD</param>
+        /// <param name="msgs">TBD</param>
+        /// <param name="shouldIgnoreOtherMessageTypes">TBD</param>
+        /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldIgnore, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
         {
             var start = Now;
@@ -357,4 +384,3 @@ namespace Akka.TestKit
         }
     }
 }
-

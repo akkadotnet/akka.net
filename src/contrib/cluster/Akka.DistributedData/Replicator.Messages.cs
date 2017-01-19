@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.ExceptionServices;
 using Akka.Actor;
 
 namespace Akka.DistributedData
@@ -26,7 +28,7 @@ namespace Akka.DistributedData
         }
 
         [Serializable]
-        public sealed class GetKeysIdsResult
+        public sealed class GetKeysIdsResult : IEquatable<GetKeysIdsResult>
         {
             public IImmutableSet<string> Keys { get; }
 
@@ -35,11 +37,18 @@ namespace Akka.DistributedData
                 Keys = keys;
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object obj) => 
+                obj is GetKeysIdsResult && Equals((GetKeysIdsResult) obj);
+
+            public bool Equals(GetKeysIdsResult other)
             {
-                var other = obj as GetKeysIdsResult;
-                return other != null && Keys.SetEquals(other.Keys);
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(this, other)) return true;
+
+                return Equals(Keys, other.Keys);
             }
+
+            public override int GetHashCode() => Keys.GetHashCode();
         }
 
         internal interface ICommand
@@ -92,10 +101,52 @@ namespace Akka.DistributedData
             }
         }
 
-        internal interface IGetResponse : INoSerializationVerificationNeeded
+        /// <summary>
+        /// Common response interface on <see cref="Get"/> request. It can take one of 
+        /// the tree possible values:
+        /// 1. <see cref="GetSuccess"/> with the result of the request.
+        /// 2. <see cref="NotFound"/> when a value for requested key didn't exist.
+        /// 3. <see cref="GetFailure"/> when an exception happened when fulfilling the request.
+        /// </summary>
+        public interface IGetResponse : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// Initial key send by <see cref="Get"/> request.
+            /// </summary>
             IKey Key { get; }
+
+            /// <summary>
+            /// Optional object used for request/response correlation.
+            /// </summary>
             object Request { get; }
+
+            /// <summary>
+            /// True if value for request was successfully returned.
+            /// False if value was either not found or ended with failure.
+            /// </summary>
+            bool IsSuccessful { get; }
+
+            /// <summary>
+            /// False if value for request was not found. True otherwise.
+            /// </summary>
+            bool IsFound { get; }
+
+            /// <summary>
+            /// True if a failure happened during request fulfilment.
+            /// False if returned successfully or value not found for the key.
+            /// </summary>
+            bool IsFailure { get; }
+
+            /// <summary>
+            /// Tries to return a result of the request, given a replicated collection 
+            /// <paramref name="key"/> used when sending a <see cref="Replicator.Get"/> request.
+            /// </summary>
+            /// <typeparam name="T">Replicated data.</typeparam>
+            /// <param name="key">Key send originally with a <see cref="Replicator.Get"/> request.</param>
+            /// <exception cref="KeyNotFoundException">Thrown when no value for provided <paramref name="key"/> was found.</exception>
+            /// <exception cref="TimeoutException">Thrown when response with given consistency didn't arrive within specified timeout.</exception>
+            /// <returns></returns>
+            T Get<T>(IKey<T> key) where T : IReplicatedData;
         }
 
         [Serializable]
@@ -123,8 +174,6 @@ namespace Akka.DistributedData
                 return Equals(Key, other.Key) && Equals(Request, other.Request) && Equals(Data, other.Data);
             }
 
-            public T Get<T>(IKey<T> key) where T : IReplicatedData => (T)Data; 
-
             public override bool Equals(object obj) => obj is GetSuccess && Equals((GetSuccess)obj);
 
             public override int GetHashCode()
@@ -136,6 +185,17 @@ namespace Akka.DistributedData
                     hashCode = (hashCode * 397) ^ Data?.GetHashCode() ?? 0;
                     return hashCode;
                 }
+            }
+
+            public bool IsSuccessful => true;
+            public bool IsFound => true;
+            public bool IsFailure => false;
+
+            public T Get<T>(IKey<T> key) where T : IReplicatedData
+            {
+                if (Data is T) return (T) Data;
+
+                throw new InvalidCastException($"Response returned for key '{Key}' is of type [{Data?.GetType()}] and cannot be casted using key '{key}' to type [{typeof(T)}]");
             }
         }
 
@@ -166,8 +226,17 @@ namespace Akka.DistributedData
             {
                 unchecked
                 {
-                    return (Key.GetHashCode() * 397) ^ (Request != null ? Request.GetHashCode() : 0);
+                    return (Key.GetHashCode() * 397) ^ (Request?.GetHashCode() ?? 0);
                 }
+            }
+
+            public bool IsSuccessful => false;
+            public bool IsFound => false;
+            public bool IsFailure => false;
+
+            public T Get<T>(IKey<T> key) where T : IReplicatedData
+            {
+                throw new KeyNotFoundException($"No value was found for the key '{Key}'");
             }
         }
 
@@ -201,8 +270,17 @@ namespace Akka.DistributedData
             {
                 unchecked
                 {
-                    return (Key.GetHashCode() * 397) ^ (Request != null ? Request.GetHashCode() : 0);
+                    return (Key.GetHashCode() * 397) ^ (Request?.GetHashCode() ?? 0);
                 }
+            }
+
+            public bool IsSuccessful => false;
+            public bool IsFound => true;
+            public bool IsFailure => true;
+
+            public T Get<T>(IKey<T> key) where T : IReplicatedData
+            {
+                throw new TimeoutException($"A timeout occurred when trying to retrieve a value for key '{Key}' withing given read consistency");
             }
         }
         
@@ -388,10 +466,33 @@ namespace Akka.DistributedData
             }
         }
 
+        /// <summary>
+        /// A response message for the <see cref="Update"/> request. It can be one of the 3 possible types:
+        /// 1. <see cref="UpdateSuccess"/> when update has finished successfully with given write consistency withing provided time limit.
+        /// 2. <see cref="ModifyFailure"/> if a <see cref="Update.Modify"/> delegate has thrown a failure.
+        /// 3. <see cref="UpdateTimeout"/> if a request couldn't complete withing given timeout and write consistency constraints.
+        /// </summary>
         public interface IUpdateResponse
         {
+            /// <summary>
+            /// Key, under with updated data is going to be stored.
+            /// </summary>
             IKey Key { get; }
+
+            /// <summary>
+            /// Optional object that can be used to correlate this response with particular <see cref="Update"/> request.
+            /// </summary>
             object Request { get; }
+
+            /// <summary>
+            /// Returns true if <see cref="Update"/> request has completed successfully.
+            /// </summary>
+            bool IsSuccessful { get; }
+
+            /// <summary>
+            /// Throws an exception if <see cref="Update"/> request has failed.
+            /// </summary>
+            void ThrowOnFailure();
         }
 
         [Serializable]
@@ -420,18 +521,30 @@ namespace Akka.DistributedData
             {
                 unchecked
                 {
-                    return (Key.GetHashCode() * 397) ^ (Request != null ? Request.GetHashCode() : 0);
+                    return (Key.GetHashCode() * 397) ^ (Request?.GetHashCode() ?? 0);
                 }
             }
+
+            public bool IsSuccessful => true;
+            public void ThrowOnFailure() { }
         }
 
-        public interface IUpdateFailure : IUpdateResponse { }
+        /// <summary>
+        /// A common interface for <see cref="Update"/> responses that have ended with a failure.
+        /// </summary>
+        public interface IUpdateFailure : IUpdateResponse
+        {
+            /// <summary>
+            /// Returns a cause of the exception.
+            /// </summary>
+            Exception Cause { get; }
+        }
 
         /// <summary>
-        /// The direct replication of the <see cref="Update{T}"/> could not be fulfill according to
+        /// The direct replication of the <see cref="Update"/> could not be fulfill according to
         /// the given <see cref="IWriteConsistency"/> level and <see cref="IWriteConsistency.Timeout"/>.
         /// 
-        /// The <see cref="Update{T}"/> was still performed locally and possibly replicated to some nodes.
+        /// The <see cref="Update"/> was still performed locally and possibly replicated to some nodes.
         /// It will eventually be disseminated to other replicas, unless the local replica
         /// crashes before it has been able to communicate with other replicas.
         /// </summary>
@@ -461,14 +574,22 @@ namespace Akka.DistributedData
             {
                 unchecked
                 {
-                    return (Key.GetHashCode() * 397) ^ (Request != null ? Request.GetHashCode() : 0);
+                    return (Key.GetHashCode() * 397) ^ (Request?.GetHashCode() ?? 0);
                 }
+            }
+
+            public bool IsSuccessful => false;
+            public Exception Cause => new TimeoutException($"An update for key '{Key}' didn't completed within given timeout and write consistency constraints.");
+
+            public void ThrowOnFailure()
+            {
+                ExceptionDispatchInfo.Capture(Cause).Throw();
             }
         }
 
         /// <summary>
-        /// If the `modify` function of the <see cref="Update{T}"/> throws an exception the reply message
-        /// will be this <see cref="ModifyFailure{T}"/> message. The original exception is included as <see cref="Cause"/>.
+        /// If the `modify` function of the <see cref="Update"/> throws an exception the reply message
+        /// will be this <see cref="ModifyFailure"/> message. The original exception is included as <see cref="Cause"/>.
         /// </summary>
         [Serializable]
         public sealed class ModifyFailure : IUpdateFailure 
@@ -487,6 +608,12 @@ namespace Akka.DistributedData
             }
 
             public override string ToString() => $"ModifyFailure {Key}: {ErrorMessage}";
+            public bool IsSuccessful => false;
+
+            public void ThrowOnFailure()
+            {
+                ExceptionDispatchInfo.Capture(Cause).Throw();
+            }
         }
         
         /// <summary>
@@ -518,14 +645,33 @@ namespace Akka.DistributedData
             {
                 unchecked
                 {
-                    return (Key.GetHashCode() * 397) ^ (Consistency != null ? Consistency.GetHashCode() : 0);
+                    return (Key.GetHashCode() * 397) ^ (Consistency?.GetHashCode() ?? 0);
                 }
             }
         }
 
+        /// <summary>
+        /// A response for a possible <see cref="Delete"/> request message. It can be one of 3 possible cases:
+        /// 1. <see cref="DeleteSuccess"/> when data was deleted successfully.
+        /// 2. <see cref="ReplicationDeletedFailure"/> when delete operation ended with failure.
+        /// 3. <see cref="DataDeleted"/> when an operation attempted to delete already deleted data.
+        /// </summary>
         public interface IDeleteResponse
         {
+            /// <summary>
+            /// Key, for which data was deleted.
+            /// </summary>
             IKey Key { get; }
+
+            /// <summary>
+            /// Returns true if value for provided <see cref="Key"/> was either successfully deleted, or was deleted already.
+            /// </summary>
+            bool IsSuccessful { get; }
+
+            /// <summary>
+            /// Returns true if value for provided <see cref="Key"/> was already deleted.
+            /// </summary>
+            bool AlreadyDeleted { get; }
         }
 
         [Serializable]
@@ -537,6 +683,8 @@ namespace Akka.DistributedData
             {
                 Key = key;
             }
+            public bool IsSuccessful => true;
+            public bool AlreadyDeleted => false;
 
             public bool Equals(DeleteSuccess other)
             {
@@ -560,6 +708,8 @@ namespace Akka.DistributedData
             {
                 Key = key;
             }
+            public bool IsSuccessful => false;
+            public bool AlreadyDeleted => false;
 
             public bool Equals(ReplicationDeletedFailure other)
             {
@@ -583,6 +733,8 @@ namespace Akka.DistributedData
             {
                 Key = key;
             }
+            public bool IsSuccessful => true;
+            public bool AlreadyDeleted => true;
 
             public override string ToString() => $"DataDeleted {Key.Id}";
 

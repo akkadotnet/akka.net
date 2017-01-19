@@ -7,7 +7,7 @@
 
 using Akka.Tests.Serialization;
 
-namespace Akka.Serialization.WireTests
+namespace Akka.Serialization.Wire.Tests
 {
     public class WireTests : AkkaSerializationSpec
     {

@@ -23,6 +23,13 @@ namespace Akka.TestKit
     {
         private readonly InternalTestActorRef _internalRef;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="actorProps">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="name">TBD</param>
         protected TestActorRefBase(ActorSystem system, Props actorProps, IActorRef supervisor=null, string name=null)
         {
             _internalRef = InternalTestActorRef.Create(system, actorProps, supervisor, name);
@@ -40,16 +47,25 @@ namespace Akka.TestKit
             _internalRef.Receive(message, sender);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Ref
         {
             get { return _internalRef; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected InternalTestActorRef InternalRef
         {
             get { return _internalRef; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TActor UnderlyingActor
         {
             get { return (TActor) _internalRef.UnderlyingActor; }
@@ -123,55 +139,107 @@ namespace Akka.TestKit
             _internalRef.Unwatch(subject);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return _internalRef.ToString();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return _internalRef.Equals(obj);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return _internalRef.GetHashCode();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(object obj)
         {
             return ((IComparable) _internalRef).CompareTo(obj);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(IActorRef other)
         {
             return _internalRef.Equals(other);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testActorRef">TBD</param>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator ==(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testActorRef">TBD</param>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator !=(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="testActorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator ==(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="testActorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator !=(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static IActorRef ToActorRef(TestActorRefBase<TActor> actorRef)
         {
             return actorRef._internalRef;
@@ -238,15 +306,23 @@ namespace Akka.TestKit
             _internalRef.Suspend();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             _internalRef.SendSystemMessage(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public void SendSystemMessage(ISystemMessage message)
         {
             _internalRef.SendSystemMessage(message);
         }
     }
 }
-

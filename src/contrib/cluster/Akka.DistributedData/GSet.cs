@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Akka.Cluster;
+using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
@@ -91,11 +92,7 @@ namespace Akka.DistributedData
         public override string ToString()
         {
             var sb = new StringBuilder("GSet(");
-            foreach (var element in Elements)
-            {
-                sb.Append(element).Append(',');
-            }
-            sb.Append(")");
+            sb.AppendJoin(", ", Elements);
 
             return sb.ToString();
         }

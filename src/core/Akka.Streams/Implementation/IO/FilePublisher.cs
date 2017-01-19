@@ -26,6 +26,16 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class FilePublisher : Actors.ActorPublisher<ByteString>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="f">TBD</param>
+        /// <param name="completionPromise">TBD</param>
+        /// <param name="chunkSize">TBD</param>
+        /// <param name="initialBuffer">TBD</param>
+        /// <param name="maxBuffer">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize,
             int initialBuffer, int maxBuffer)
         {
@@ -56,6 +66,13 @@ namespace Akka.Streams.Implementation.IO
         private IImmutableList<ByteString> _availableChunks = ImmutableList<ByteString>.Empty;
         private FileStream _chan;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="f">TBD</param>
+        /// <param name="completionPromise">TBD</param>
+        /// <param name="chunkSize">TBD</param>
+        /// <param name="maxBuffer">TBD</param>
         public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize, int maxBuffer)
         {
             _f = f;
@@ -69,6 +86,9 @@ namespace Akka.Streams.Implementation.IO
 
         private bool EofEncountered => _eofReachedAtOffset != long.MinValue;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             try
@@ -84,6 +104,11 @@ namespace Akka.Streams.Implementation.IO
             base.PreStart();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
             => message.Match()
                 .With<Request>(() => ReadAndSignal(_maxBuffer))
@@ -149,6 +174,9 @@ namespace Akka.Streams.Implementation.IO
             return chunks;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();

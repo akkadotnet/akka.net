@@ -19,7 +19,7 @@ cd __SOURCE_DIRECTORY__
 
 let product = "Akka.NET"
 let authors = [ "Akka.NET Team" ]
-let copyright = "Copyright © 2013-2016 Akka.NET Team"
+let copyright = "Copyright © 2013-2017 Akka.NET Team"
 let company = "Akka.NET Team"
 let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
@@ -407,6 +407,7 @@ module Nuget =
       | cluster when (cluster.StartsWith("Akka.Cluster.") && not (cluster.EndsWith("TestKit"))) -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | streams when streams.StartsWith("Akka.Streams") -> preReleaseVersion
+      | "Akka.DistributedData" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget

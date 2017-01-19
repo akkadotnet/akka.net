@@ -46,6 +46,9 @@ namespace Akka.Streams
         Fail
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public enum DelayOverflowStrategy
     {
         /// <summary>
@@ -84,17 +87,34 @@ namespace Akka.Streams
         Fail
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public class BufferOverflowException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public BufferOverflowException(string message) : base(message)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="inner">TBD</param>
         public BufferOverflowException(string message, Exception inner) : base(message, inner)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected BufferOverflowException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }

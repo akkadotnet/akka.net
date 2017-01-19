@@ -591,7 +591,7 @@ namespace Akka.Remote
                         {
                             var causedBy = ia.InnerException == null
                                 ? ""
-                                : string.Format("Caused by: [{0}]", ia.InnerException);
+                                : $"Caused by: [{ia.InnerException}]";
                             _log.Warning("Tried to associate with unreachable remote address [{0}]. Address is now gated for {1} ms, all messages to this address will be delivered to dead letters. Reason: [{2}] {3}",
                                 ia.RemoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds, ia.Message, causedBy);
                             _endpoints.MarkAsFailed(Sender, Deadline.Now + _settings.RetryGateClosedFor);
@@ -643,7 +643,7 @@ namespace Akka.Remote
                     });
 
                 return directive;
-            });
+            }, false);
         }
 
         /// <summary>

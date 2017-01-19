@@ -15,6 +15,8 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TState">TBD</typeparam>
+    /// <typeparam name="TElement">TBD</typeparam>
     public class Unfold<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
         #region internal classes
@@ -45,10 +47,24 @@ namespace Akka.Streams.Implementation
         }
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TState State;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Func<TState, Tuple<TState, TElement>> UnfoldFunc;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<TElement> Out = new Outlet<TElement>("Unfold.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="state">TBD</param>
+        /// <param name="unfoldFunc">TBD</param>
         public Unfold(TState state, Func<TState, Tuple<TState, TElement>> unfoldFunc)
         {
             State = state;
@@ -56,14 +72,24 @@ namespace Akka.Streams.Implementation
             Shape = new SourceShape<TElement>(Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SourceShape<TElement> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TState">TBD</typeparam>
+    /// <typeparam name="TElement">TBD</typeparam>
     public class UnfoldAsync<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
         #region stage logic
@@ -107,10 +133,24 @@ namespace Akka.Streams.Implementation
         }
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TState State;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Func<TState, Task<Tuple<TState, TElement>>> UnfoldFunc;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<TElement> Out = new Outlet<TElement>("UnfoldAsync.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="state">TBD</param>
+        /// <param name="unfoldFunc">TBD</param>
         public UnfoldAsync(TState state, Func<TState, Task<Tuple<TState, TElement>>> unfoldFunc)
         {
             State = state;
@@ -118,8 +158,16 @@ namespace Akka.Streams.Implementation
             Shape = new SourceShape<TElement>(Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SourceShape<TElement> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 }

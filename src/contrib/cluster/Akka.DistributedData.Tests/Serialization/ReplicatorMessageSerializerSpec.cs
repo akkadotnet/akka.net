@@ -25,12 +25,6 @@ namespace Akka.DistributedData.Tests.Serialization
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor {
                 provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                serializers {
-                  wire = ""Akka.Serialization.WireSerializer, Akka.Serialization.Wire""
-                }
-                serialization-bindings {
-                  ""Akka.DistributedData.IReplicatorMessage, Akka.DistributedData"" = wire
-                }
             }
             akka.remote.helios.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
         

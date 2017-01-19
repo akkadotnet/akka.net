@@ -6,10 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net;
-using System.Runtime.InteropServices;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -107,8 +105,17 @@ namespace Akka.Remote.Transport.Helios
         /// <param name="exception">TBD</param>
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            base.ExceptionCaught(context, exception);
-            NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            var se = exception as SocketException;
+            if (se?.SocketErrorCode == SocketError.OperationAborted)
+            {
+                NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
+            }
+            else
+            {
+                base.ExceptionCaught(context, exception);
+                NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            }
+
             context.CloseAsync(); // close the channel
         }
     }
@@ -190,7 +197,7 @@ namespace Akka.Remote.Transport.Helios
         /// <param name="context">TBD</param>
         public override void ChannelActive(IChannelHandlerContext context)
         {
-            InitOutbound(context.Channel,(IPEndPoint)context.Channel.RemoteAddress, null);
+            InitOutbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
             base.ChannelActive(context);
         }
 
@@ -274,32 +281,36 @@ namespace Akka.Remote.Transport.Helios
         /// <param name="remoteAddress">TBD</param>
         /// <exception cref="HeliosConnectionException">TBD</exception>
         /// <returns>TBD</returns>
-        protected override Task<AssociationHandle> AssociateInternal(Address remoteAddress)
+        protected override async Task<AssociationHandle> AssociateInternal(Address remoteAddress)
         {
-            var clientBootstrap = ClientFactory(remoteAddress);
-            var socketAddress = AddressToSocketAddress(remoteAddress);
-            var associate = clientBootstrap.ConnectAsync(socketAddress).ContinueWith(tr =>
+            try
             {
-                var channel = tr.Result;
-                var handler = (TcpClientHandler) channel.Pipeline.Last();
-                return handler.StatusFuture;
-            }).Unwrap().ContinueWith(r =>
+                var clientBootstrap = ClientFactory(remoteAddress);
+                var socketAddress = AddressToSocketAddress(remoteAddress);
+
+                var associate = await clientBootstrap.ConnectAsync(socketAddress);
+
+                var handler = (TcpClientHandler) associate.Pipeline.Last();
+                return await handler.StatusFuture;
+            }
+            catch (AggregateException e) when (e.InnerException is ConnectException)
             {
-                if(r.IsCanceled)
-                    throw new HeliosConnectionException(ExceptionType.TimedOut, "Connection was cancelled");
-                if (r.IsFaulted)
+                var heliosException = (ConnectException) e.InnerException;
+                var socketException = heliosException?.InnerException as SocketException;
+
+                if (socketException?.SocketErrorCode == SocketError.ConnectionRefused)
                 {
-                    var ex = r.Exception;
-                    throw new HeliosConnectionException(ExceptionType.Unknown, $"failed as a result of {ex}", ex);
+                    throw new InvalidAssociationException(socketException.Message + " " + remoteAddress);
                 }
 
-                var ah = r.Result;
-                return ah;
-            });
+                throw new InvalidAssociationException("Failed to associate with " + remoteAddress, e);
+            }
+            catch (AggregateException e) when (e.InnerException is ConnectTimeoutException)
+            {
+                var heliosException = (ConnectTimeoutException)e.InnerException;
 
-          
-
-            return associate;
+                throw new InvalidAssociationException(heliosException.Message);
+            }
         }
     }
 }

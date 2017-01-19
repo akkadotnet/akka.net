@@ -9,26 +9,43 @@ using Akka.Actor;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class NullMessageEnvelope : MessageEnvelope
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static NullMessageEnvelope Instance=new NullMessageEnvelope();
 
         private NullMessageEnvelope(){}
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="IllegalActorStateException">TBD</exception>
         public override object Message
         {
             get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="IllegalActorStateException">TBD</exception>
         public override IActorRef Sender
         {
             get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<null>";
         }
     }
 }
-
