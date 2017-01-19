@@ -14,24 +14,41 @@ using Akka.Pattern;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class TestBreaker
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public CountdownEvent HalfOpenLatch { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public CountdownEvent OpenLatch { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public CountdownEvent ClosedLatch { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public CircuitBreaker Instance { get; private set; }
 
-        public TestBreaker( CircuitBreaker instance )
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="instance">TBD</param>
+        public TestBreaker(CircuitBreaker instance)
         {
-            HalfOpenLatch = new CountdownEvent( 1 );
-            OpenLatch = new CountdownEvent( 1 );
-            ClosedLatch = new CountdownEvent( 1 );
+            HalfOpenLatch = new CountdownEvent(1);
+            OpenLatch = new CountdownEvent(1);
+            ClosedLatch = new CountdownEvent(1);
             Instance = instance;
-            Instance.OnClose( ( ) => { if ( !ClosedLatch.IsSet ) ClosedLatch.Signal( ); } )
-                    .OnHalfOpen( ( ) => { if ( !HalfOpenLatch.IsSet ) HalfOpenLatch.Signal( ); } )
-                    .OnOpen( ( ) => { if ( !OpenLatch.IsSet ) OpenLatch.Signal( ); } );
+            Instance.OnClose(() => { if (!ClosedLatch.IsSet) ClosedLatch.Signal(); })
+                    .OnHalfOpen(() => { if (!HalfOpenLatch.IsSet) HalfOpenLatch.Signal(); })
+                    .OnOpen(() => { if (!OpenLatch.IsSet) OpenLatch.Signal(); });
         }
-
-
     }
 }

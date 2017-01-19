@@ -11,9 +11,11 @@ using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract partial class TestKitBase
     {
-
         /// <summary>
         /// Execute code block while bounding its execution time between 0 seconds and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
@@ -21,6 +23,9 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
+        /// <param name="max">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="epsilonValue">TBD</param>
         public void Within(TimeSpan max, Action action, TimeSpan? epsilonValue = null)
         {
             Within(TimeSpan.Zero, max, action, epsilonValue: epsilonValue);
@@ -33,6 +38,11 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
+        /// <param name="min">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="hint">TBD</param>
+        /// <param name="epsilonValue">TBD</param>
         public void Within(TimeSpan min, TimeSpan max, Action action, string hint = null, TimeSpan? epsilonValue = null)
         {
             Within<object>(min, max, () => { action(); return null; }, hint, epsilonValue);
@@ -46,6 +56,11 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="max">TBD</param>
+        /// <param name="function">TBD</param>
+        /// <param name="epsilonValue">TBD</param>
+        /// <returns>TBD</returns>
         public T Within<T>(TimeSpan max, Func<T> function, TimeSpan? epsilonValue = null)
         {
             return Within(TimeSpan.Zero, max, function, epsilonValue: epsilonValue);
@@ -58,6 +73,13 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="min">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="function">TBD</param>
+        /// <param name="hint">TBD</param>
+        /// <param name="epsilonValue">TBD</param>
+        /// <returns>TBD</returns>
         public T Within<T>(TimeSpan min, TimeSpan max, Func<T> function, string hint = null, TimeSpan? epsilonValue = null)
         {
             min.EnsureIsPositiveFinite("min");
@@ -108,4 +130,3 @@ namespace Akka.TestKit
 
     }
 }
-

@@ -23,6 +23,12 @@ namespace Akka.TestKit.Internal
         private readonly TestKitBase _testkit;
         private readonly ActorSystem _actorSystem;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testkit">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <param name="filters">TBD</param>
         public InternalEventFilterApplier(TestKitBase testkit, ActorSystem system, IReadOnlyList<EventFilterBase> filters)
         {
             _filters = filters;
@@ -30,63 +36,127 @@ namespace Akka.TestKit.Internal
             _actorSystem = system;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         public void ExpectOne(Action action)
         {
             InternalExpect(action, _actorSystem, 1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <param name="action">TBD</param>
         public void ExpectOne(TimeSpan timeout, Action action)
         {
             InternalExpect(action, _actorSystem, 1, timeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="expectedCount">TBD</param>
+        /// <param name="action">TBD</param>
         public void Expect(int expectedCount, Action action)
         {
             InternalExpect(action, _actorSystem, expectedCount, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="expectedCount">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="action">TBD</param>
         public void Expect(int expectedCount, TimeSpan timeout, Action action)
         {
             InternalExpect(action, _actorSystem, expectedCount, timeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="func">TBD</param>
+        /// <returns>TBD</returns>
         public T ExpectOne<T>(Func<T> func)
         {
             return Intercept(func, _actorSystem, null, 1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="timeout">TBD</param>
+        /// <param name="func">TBD</param>
+        /// <returns>TBD</returns>
         public T ExpectOne<T>(TimeSpan timeout, Func<T> func)
         {
             return Intercept(func, _actorSystem, timeout, 1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="expectedCount">TBD</param>
+        /// <param name="func">TBD</param>
+        /// <returns>TBD</returns>
         public T Expect<T>(int expectedCount, Func<T> func)
         {
             return Intercept(func, _actorSystem, null, expectedCount);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="timeout">TBD</param>
+        /// <param name="expectedCount">TBD</param>
+        /// <param name="func">TBD</param>
+        /// <returns>TBD</returns>
         public T Expect<T>(int expectedCount, TimeSpan timeout, Func<T> func)
         {
             return Intercept(func, _actorSystem, timeout, expectedCount);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="func">TBD</param>
+        /// <returns>TBD</returns>
         public T Mute<T>(Func<T> func)
         {
             return Intercept(func, _actorSystem, null, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         public void Mute(Action action)
         {
             Intercept<object>(() => { action(); return null; }, _actorSystem, null, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IUnmutableFilter Mute()
         {
             _actorSystem.EventStream.Publish(new Mute(_filters));
             return new InternalUnmutableFilter(_filters, _actorSystem);
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         public EventFilterFactory And
         {
             get
@@ -95,6 +165,16 @@ namespace Akka.TestKit.Internal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="func">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="expectedOccurrences">TBD</param>
+        /// <param name="matchedEventHandler">TBD</param>
+        /// <returns>TBD</returns>
         protected T Intercept<T>(Func<T> func, ActorSystem system, TimeSpan? timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler = null)
         {
             var leeway = system.HasExtension<TestKitSettings>()
@@ -147,6 +227,13 @@ namespace Akka.TestKit.Internal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        /// <param name="expectedOccurrences">TBD</param>
+        /// <param name="matchedEventHandler">TBD</param>
+        /// <returns>TBD</returns>
         protected bool AwaitDone(TimeSpan timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler)
         {
             if(expectedOccurrences.HasValue)
@@ -158,6 +245,11 @@ namespace Akka.TestKit.Internal
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="number">TBD</param>
+        /// <returns>TBD</returns>
         protected static string GetMessageString(int number)
         {
             return number == 1 ? "message" : "messages";
@@ -168,29 +260,51 @@ namespace Akka.TestKit.Internal
             Intercept<object>(() => { action(); return null; }, actorSystem, timeout, expectedCount);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected class MatchedEventHandler
         {
             private int _receivedCount;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int ReceivedCount { get { return _receivedCount; } }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="eventFilter">TBD</param>
+            /// <param name="logEvent">TBD</param>
             public virtual void HandleEvent(EventFilterBase eventFilter, LogEvent logEvent)
             {
                 if(_receivedCount != int.MaxValue) Interlocked.Increment(ref _receivedCount);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected class InternalUnmutableFilter : IUnmutableFilter
         {
             private IReadOnlyCollection<EventFilterBase> _filters;
             private readonly ActorSystem _system;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="filters">TBD</param>
+            /// <param name="system">TBD</param>
             public InternalUnmutableFilter(IReadOnlyCollection<EventFilterBase> filters, ActorSystem system)
             {
                 _filters = filters;
                 _system = system;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void Unmute()
             {
                 var filters = _filters;
@@ -252,4 +366,3 @@ namespace Akka.TestKit.Internal
         }
     }
 }
-

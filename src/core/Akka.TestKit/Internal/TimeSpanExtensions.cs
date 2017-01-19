@@ -19,6 +19,8 @@ namespace Akka.TestKit.Internal
         /// Returns <c>true</c> if the <paramref name="timeSpan"/> has no value.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsUndefined(this TimeSpan? timeSpan)
         {
             return !timeSpan.HasValue;
@@ -28,6 +30,8 @@ namespace Akka.TestKit.Internal
         /// Returns <c>true</c> if the <paramref name="timeSpan"/> <c>== 0</c>
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsZero(this TimeSpan timeSpan)
         {
             return timeSpan.Ticks == 0;
@@ -37,18 +41,19 @@ namespace Akka.TestKit.Internal
         /// Returns <c>true</c> if the <paramref name="timeSpan"/> <c>== 0</c>
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsZero(this TimeSpan? timeSpan)
         {
             return timeSpan.HasValue && timeSpan.Value.Ticks == 0;
         }
 
-
-
-
         /// <summary>
         /// Returns <c>true</c> if the <paramref name="timeSpan"/> <c>&gt;= 0</c>
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsPositiveFinite(this TimeSpan timeSpan)
         {
             return timeSpan.Ticks >= 0;
@@ -58,12 +63,12 @@ namespace Akka.TestKit.Internal
         /// Returns <c>true</c> if the <paramref name="timeSpan"/> <c>&gt;= 0</c>
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsPositiveFinite(this TimeSpan? timeSpan)
         {
             return timeSpan.HasValue && timeSpan.Value.Ticks >= 0;
         }
-
-
 
         /// <summary>
         /// Returns <c>true</c> if the <paramref name="timeSpan"/> is negative.
@@ -71,6 +76,8 @@ namespace Akka.TestKit.Internal
         /// Use <see cref="IsInfiniteTimeout(System.TimeSpan)"/> to test using the stricter definition.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsInfinite(this TimeSpan timeSpan)
         {
             return timeSpan.Ticks < 0;
@@ -82,17 +89,19 @@ namespace Akka.TestKit.Internal
         /// Use <see cref="IsInfiniteTimeout(System.TimeSpan)"/> to test using the stricter definition.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsInfinite(this TimeSpan? timeSpan)
         {
             return timeSpan.HasValue && timeSpan.Value.Ticks < 0;
         }
 
-
-
         /// <summary>
         /// Returns <c>true</c> if the <paramref name="timeSpan"/> equals <see cref="Timeout.InfiniteTimeSpan"/> 
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsInfiniteTimeout(this TimeSpan timeSpan)
         {
             return timeSpan == Timeout.InfiniteTimeSpan;
@@ -102,17 +111,20 @@ namespace Akka.TestKit.Internal
         /// Returns <c>true</c> if the <paramref name="timeSpan"/> equals <see cref="Timeout.InfiniteTimeSpan"/> 
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsInfiniteTimeout(this TimeSpan? timeSpan)
         {
             return timeSpan.HasValue && timeSpan.Value == Timeout.InfiniteTimeSpan;
         }
 
-
-
         /// <summary>
         /// Throws an <see cref="ArgumentException"/> if the <paramref name="timeSpan"/> is not 0 or greater.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="timeSpan">TBD</param>
+        /// <param name="parameterName">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public static void EnsureIsPositiveFinite(this TimeSpan timeSpan, string parameterName)
         {
             if(!IsPositiveFinite(timeSpan))
@@ -124,6 +136,9 @@ namespace Akka.TestKit.Internal
         /// undefined, and <paramref name="a"/> is returned.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="a">TBD</param>
+        /// <param name="b">TBD</param>
+        /// <returns>TBD</returns>
         public static TimeSpan Min(this TimeSpan a, TimeSpan? b)
         {
             if(!b.HasValue) return a;
@@ -137,4 +152,3 @@ namespace Akka.TestKit.Internal
         }
     }
 }
-

@@ -15,11 +15,21 @@ namespace Akka.TestKit.Internal
     /// </summary>
     public class DebugFilter : EventFilterBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageMatcher">TBD</param>
+        /// <param name="sourceMatcher">TBD</param>
         public DebugFilter(IStringMatcher messageMatcher = null, IStringMatcher sourceMatcher = null)
             : base(messageMatcher,sourceMatcher)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
             var debug = evt as Debug;
@@ -31,7 +41,9 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string FilterDescriptiveName { get { return "Debug"; } }
     }
 }
-

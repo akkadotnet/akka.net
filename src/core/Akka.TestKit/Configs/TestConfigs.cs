@@ -9,6 +9,9 @@ using Akka.Configuration;
 
 namespace Akka.TestKit.Configs
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class TestConfigs
     {
         /// <summary>
@@ -26,6 +29,5 @@ namespace Akka.TestKit.Configs
         {
             get { return ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Configs.TestScheduler.conf"); }
         }
-
     }
 }

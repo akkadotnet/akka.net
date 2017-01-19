@@ -24,23 +24,46 @@ namespace Akka.TestKit.Internal
     {
         private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Count { get { return _collection.Count; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
         public void Enqueue(T item)
         {
             _collection.TryAdd(new Positioned(item));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
         public void AddFirst(T item)
         {
             _collection.TryAdd(new Positioned(item, first:true));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
+        /// <param name="millisecondsTimeout">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryEnqueue(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
            return  _collection.TryAdd(new Positioned(item),millisecondsTimeout, cancellationToken);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryTake(out T item)
         {
             Positioned p;
@@ -53,6 +76,13 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="item">TBD</param>
+        /// <param name="millisecondsTimeout">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryTake(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
             Positioned p;
@@ -196,4 +226,3 @@ namespace Akka.TestKit.Internal
         }
     }
 }
-

@@ -18,18 +18,28 @@ namespace Akka.TestKit.Internal.StringMatcher
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static IStringMatcher Instance { get { return _instance; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="s">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsMatch(string s)
         {
             return true;
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "";
         }
     }
 }
-
