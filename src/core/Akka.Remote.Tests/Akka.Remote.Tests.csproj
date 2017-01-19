@@ -150,6 +150,7 @@
     <Compile Include="AckedDeliverySpec.cs" />
     <Compile Include="ActorsLeakSpec.cs" />
     <Compile Include="AddressUidExtensionSpecs.cs" />
+    <Compile Include="Transport\BackwardCompatibilitySpec.cs" />
     <Compile Include="DeadlineFailureDetectorSpec.cs" />
     <Compile Include="EndpointRegistrySpec.cs" />
     <Compile Include="FailureDetectorRegistrySpec.cs" />

@@ -15,7 +15,6 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Internals;
-using Microsoft.Build.Framework;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -75,13 +74,14 @@ namespace Akka.Remote.Tests.Transport
 
         #endregion
 
+        // WARNING: YOU NEED TO RUN TEST IN ADMIN MODE IN ORDER TO ADD/REMOVE CERTIFICATES TO CERT STORE!
         public DotNettySslSupportSpec(ITestOutputHelper output) : base(TestConfig(ValidCertPath, Password), output)
         {
             _output = output;
             _certificateStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
             InstallCertificates();
         }
-
+        
         [Fact]
         public void Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
