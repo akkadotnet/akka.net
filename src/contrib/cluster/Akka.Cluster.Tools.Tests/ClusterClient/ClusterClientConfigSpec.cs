@@ -42,7 +42,7 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
         }
 
         [Theory]
-        [InlineData(0)]
+        [InlineData(-1)]
         [InlineData(10001)]
         public void ClusterClientSettings_must_throw_exception_on_wrong_buffer(int bufferSize)
         {
