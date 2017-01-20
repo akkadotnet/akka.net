@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Akka.Actor;
 using Xunit;
 
@@ -12,6 +13,16 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class TestProbeSpec : AkkaSpec
     {
+        [Fact]
+        public void TestProbe_should_equal_underlying_Ref()
+        {
+            var p = CreateTestProbe();
+            p.Equals(p.Ref).ShouldBeTrue();
+            p.Ref.Equals(p).ShouldBeTrue();
+            var hs = new HashSet<IActorRef> {p, p.Ref};
+            hs.Count.ShouldBe(1);
+        }
+
         /// <summary>
         /// Should be able to receive a <see cref="Terminated"/> message from a <see cref="TestProbe"/>
         /// if we're deathwatching it and it terminates.

@@ -431,7 +431,7 @@ namespace Akka.TestKit
         /// Creates a new <see cref="TestProbe" />.
         /// </summary>
         /// <param name="name">Optional: The name of the probe.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A new <see cref="TestProbe"/> instance.</returns>
         public virtual TestProbe CreateTestProbe(string name=null)
         {
             return CreateTestProbe(Sys, name);

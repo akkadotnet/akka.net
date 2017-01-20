@@ -180,5 +180,17 @@ namespace Akka.TestKit
         {
             return TestActor.CompareTo(obj);
         }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            return TestActor.Equals(obj);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return TestActor.GetHashCode();
+        }
     }
 }
