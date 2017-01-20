@@ -327,6 +327,13 @@ namespace Akka.Cluster.Tools.Client
                 tunnel.Tell(Ping.Instance); // keep alive
                 _pubSubMediator.Tell(message, tunnel);
             }
+            else if (message is PublishSubscribe.Subscribe)
+            {
+                var tunnel = ResponseTunnel(Sender);
+                tunnel.Tell(Ping.Instance); // keep alive
+                var subscribe = (Subscribe)message;
+                _pubSubMediator.Tell(new Subscribe(subscribe.Topic, tunnel, subscribe.Group), tunnel);
+            }
             else if (message is Heartbeat)
             {
                 if (_cluster.Settings.VerboseHeartbeatLogging)
@@ -498,7 +505,11 @@ namespace Akka.Cluster.Tools.Client
                 _log.Debug("ClientResponseTunnel for client [{0}] stopped due to inactivity", _client.Path);
                 Context.Stop(Self);
             }
-            else _client.Tell(message, ActorRefs.NoSender);
+            else
+            {
+                if (!Sender.Equals(Self))
+                    _client.Tell(message, ActorRefs.NoSender);
+            }
 
             return true;
         }

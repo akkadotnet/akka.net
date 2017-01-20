@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util.Internal;
@@ -86,6 +87,28 @@ namespace Akka.Cluster.Tools.Client
             }
         }
 
+        /// <summary>
+        /// The message will be delivered to all recipients Actors that have been registered as subscribers to
+        /// to the named topic.
+        /// </summary>
+        [Serializable]
+        public sealed class Subscribe
+        {
+            public string Topic { get; }
+            public string Group { get; }
+            public Type MessageType { get; }
+            public IActorRef Subscriber { get; }
+
+            public Subscribe(string topic, Type messageType, IActorRef subscriber, string group = null)
+            {
+                Topic = topic;
+                MessageType = messageType;
+                Subscriber = subscriber;
+                Group = group;
+            }
+        }
+
+
         [Serializable]
         internal sealed class RefreshContactsTick
         {
@@ -131,6 +154,7 @@ namespace Akka.Cluster.Tools.Client
         private readonly ICancelable _heartbeatTask;
         private ICancelable _refreshContactsCancelable;
         private readonly Queue<Tuple<object, IActorRef>> _buffer;
+        private ImmutableDictionary<Type, ImmutableList<IActorRef>> _externalSubscribers;
 
         public ClusterClient(ClusterClientSettings settings)
         {
@@ -150,6 +174,7 @@ namespace Akka.Cluster.Tools.Client
 
             _contactPathsPublished = ImmutableHashSet<ActorPath>.Empty;
             _subscribers = ImmutableList<IActorRef>.Empty;
+            _externalSubscribers = ImmutableDictionary<Type, ImmutableList<IActorRef>>.Empty;
 
             _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 settings.HeartbeatInterval,
@@ -265,6 +290,10 @@ namespace Akka.Cluster.Tools.Client
                 var publish = (Publish)message;
                 Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
             }
+            else if (message is Subscribe)
+            {
+                Buffer(message);
+            }
             else if (message is ReconnectTimeout)
             {
                 _log.Warning("Receptionist reconnect not successful within {0} stopping cluster client", _settings.ReconnectTimeout);
@@ -272,7 +301,7 @@ namespace Akka.Cluster.Tools.Client
             }
             else
             {
-                return ContactPointMessages(message);
+                return ContactPointMessages(message) || TryHandleExternalSubcriptions(message);
             }
 
             return true;
@@ -297,6 +326,15 @@ namespace Akka.Cluster.Tools.Client
                     var publish = (Publish)message;
                     receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message));
                 }
+                else if (message is Subscribe)
+                {
+                    ProcessSubscribeMessage((Subscribe)message, receptionist);
+                }
+                //else if (message is SubscribeAck)
+                //{
+                //    var ack = (SubscribeAck)message;
+                //    _log.Info(ack.ToString());
+                //}
                 else if (message is HeartbeatTick)
                 {
                     if (!_failureDetector.IsAvailable)
@@ -338,7 +376,7 @@ namespace Akka.Cluster.Tools.Client
                 }
                 else
                 {
-                    return ContactPointMessages(message);
+                    return ContactPointMessages(message) || TryHandleExternalSubcriptions(message);
                 }
 
                 return true;
@@ -414,7 +452,11 @@ namespace Akka.Cluster.Tools.Client
             while (_buffer.Count != 0)
             {
                 var t = _buffer.Dequeue();
-                receptionist.Tell(t.Item1, t.Item2);
+                var item1 = t.Item1 as Subscribe;
+                if (item1 != null)
+                    ProcessSubscribeMessage(item1, receptionist);
+                else
+                    receptionist.Tell(t.Item1, t.Item2);
             }
         }
 
@@ -439,6 +481,36 @@ namespace Akka.Cluster.Tools.Client
             }
 
             _contactPathsPublished = _contactPaths;
+        }
+
+        private void ProcessSubscribeMessage(Subscribe subscribe, IActorRef receptionist)
+        {
+            RegisterExternalSubscriber(subscribe);
+            //receptionist.Ask<SubscribeAck>(new PublishSubscribe.Subscribe(subscribe.Topic, Self, subscribe.Group)).PipeTo(Self);
+            var ack =
+               receptionist.Ask<SubscribeAck>(new PublishSubscribe.Subscribe(subscribe.Topic, Self,
+                    subscribe.Group)).Result;
+        }
+        private void RegisterExternalSubscriber(Subscribe subscribe)
+        {
+            ImmutableList<IActorRef> actors;
+            if (!_externalSubscribers.TryGetValue(subscribe.MessageType, out actors))
+                actors = ImmutableList<IActorRef>.Empty;
+
+            actors = actors.Add(subscribe.Subscriber);
+            _externalSubscribers = _externalSubscribers.SetItem(subscribe.MessageType, actors);
+        }
+
+        private bool TryHandleExternalSubcriptions(object message)
+        {
+            var type = message.GetType();
+            ImmutableList<IActorRef> actors;
+            if (_externalSubscribers.TryGetValue(type, out actors))
+            {
+                actors.ForEach(a => a.Tell(message));
+                return true;
+            }
+            return false;
         }
     }
 
