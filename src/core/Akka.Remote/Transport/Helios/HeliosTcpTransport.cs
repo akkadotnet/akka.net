@@ -106,8 +106,19 @@ namespace Akka.Remote.Transport.Helios
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
             var se = exception as SocketException;
+
             if (se?.SocketErrorCode == SocketError.OperationAborted)
             {
+                Log.Info("Socket read operation aborted. Connection is about to be closed. Channel [{0}->{1}](Id={2})",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
+
+                NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
+            }
+            else if (se?.SocketErrorCode == SocketError.ConnectionReset)
+            {
+                Log.Warning("Connection was reset by the remote peer. Channel [{0}->{1}](Id={2})",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
+
                 NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
             }
             else
@@ -290,13 +301,13 @@ namespace Akka.Remote.Transport.Helios
 
                 var associate = await clientBootstrap.ConnectAsync(socketAddress);
 
-                var handler = (TcpClientHandler) associate.Pipeline.Last();
+                var handler = (TcpClientHandler)associate.Pipeline.Last();
                 return await handler.StatusFuture;
             }
             catch (AggregateException e) when (e.InnerException is ConnectException)
             {
-                var heliosException = (ConnectException) e.InnerException;
-                var socketException = heliosException?.InnerException as SocketException;
+                var heliosException = (ConnectException)e.InnerException;
+                var socketException = heliosException.InnerException as SocketException;
 
                 if (socketException?.SocketErrorCode == SocketError.ConnectionRefused)
                 {
