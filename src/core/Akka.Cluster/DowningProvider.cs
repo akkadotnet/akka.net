@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DowningProvider.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -39,17 +46,37 @@ namespace Akka.Cluster
     {
         private readonly ActorSystem _system;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public NoDowning(ActorSystem system)
         {
             _system = system;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan DownRemovalMargin => Cluster.Get(_system).Settings.DownRemovalMargin;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Props DowningActorProps => null;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class DowningProvider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="downingProviderType">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <returns>TBD</returns>
         public static IDowningProvider Load(Type downingProviderType, ActorSystem system)
         {
             var extendedSystem = system as ExtendedActorSystem;
@@ -65,3 +92,4 @@ namespace Akka.Cluster
     }
 
 }
+

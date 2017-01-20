@@ -16,8 +16,10 @@ namespace Akka.Routing
     /// </summary>
     internal class RouterActor : UntypedActor
     {
-        /// <summary></summary>
-        /// <exception cref="ActorInitializationException"></exception>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ActorInitializationException">TBD</exception>
         protected RoutedActorCell Cell
         {
             get
@@ -39,6 +41,10 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is GetRoutees)
@@ -68,6 +74,9 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual void StopIfAllRouteesRemoved()
         {
             if (!Cell.Router.Routees.Any() && Cell.RouterConfig.StopRouterWhenAllRouteesRemoved)
@@ -76,6 +85,11 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="message">TBD</param>
         protected override void PreRestart(Exception cause, object message)
         {
             //do not scrap children

@@ -78,13 +78,8 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Scan_must_Scan_empty()
-        {
-            this.AssertAllStagesStopped(() =>
-            {
-                Scan(Source.From(Enumerable.Empty<int>())).ShouldAllBeEquivalentTo(new[] {0});
-            }, Materializer);
-        }
+        public void A_Scan_must_Scan_empty() =>
+            this.AssertAllStagesStopped(() => Scan(Source.Empty<int>()).ShouldAllBeEquivalentTo(new[] {0}), Materializer);
 
         [Fact]
         public void A_Scan_must_emit_values_promptly()
@@ -100,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Scan_must_fail_properly()
+        public void A_Scan_must_restart_properly()
         {
             var scan = Flow.Create<int>().Scan(0, (old, current) =>
             {
@@ -116,6 +111,46 @@ namespace Akka.Streams.Tests.Dsl
                 .ToStrict(TimeSpan.FromSeconds(1))
                 .ShouldAllBeEquivalentTo(new[] {0, 1, 4, 0, 5, 12});
 
+        }
+
+        [Fact]
+        public void A_Scan_must_resume_properly()
+        {
+            var scan = Flow.Create<int>().Scan(0, (old, current) =>
+            {
+                if (current <= 0)
+                    throw new ArgumentException("current must be greater than zero");
+
+                return old + current;
+            }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
+
+            Source.From(new[] {1, 3, -1, 5, 7})
+                .Via(scan)
+                .RunWith(this.SinkProbe<int>(), Materializer)
+                .ToStrict(TimeSpan.FromSeconds(1))
+                .ShouldAllBeEquivalentTo(new[] {0, 1, 4, 9, 16});
+        }
+        
+        [Fact]
+        public void A_Scan_must_scan_normally_for_empty_source()
+        {
+            Source.Empty<int>()
+                .Scan(0, (i, i1) => i + i1)
+                .RunWith(this.SinkProbe<int>(), Materializer)
+                .Request(2)
+                .ExpectNext(0)
+                .ExpectComplete();
+        }
+
+        [Fact]
+        public void A_Scan_must_fail_when_upstream_failed()
+        {
+            var cause = new TestException("");
+            Source.Failed<int>(cause)
+                .Scan(0, (i, i1) => i + i1)
+                .RunWith(this.SinkProbe<int>(), Materializer)
+                .Request(2)
+                .ExpectError().Should().Be(cause);
         }
     }
 }

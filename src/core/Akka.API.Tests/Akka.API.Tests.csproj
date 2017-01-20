@@ -128,6 +128,10 @@
       <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
       <Name>Akka.Remote</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj">
+      <Project>{6180a876-ae4a-41e2-a08f-84fdea0c8a0e}</Project>
+      <Name>Akka.Streams</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>

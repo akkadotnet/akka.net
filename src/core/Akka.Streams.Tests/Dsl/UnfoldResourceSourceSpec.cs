@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly Func<StreamReader, Option<string>> Read =
             reader => reader.ReadLine() ?? Option<string>.None;
 
-        private static readonly Action<StreamReader> Close = reader => reader.Close();
+        private static readonly Action<StreamReader> Close = reader => reader.Dispose();
 
         public UnfoldResourceSourceSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
         {
@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var p = Source.UnfoldResource(_open, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
 
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Close)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -135,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Close)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -164,9 +164,9 @@ namespace Akka.Streams.Tests.Dsl
                     return s > 0
                         ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Take(s)
                         : Option<ByteString>.None;
-                }, reader => reader.Close())
+                }, reader => reader.Dispose())
                 .RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
 
                 var remaining = ManyLines;
                 Func<string> nextChunk = () =>
@@ -235,7 +235,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     throw testException;
                 }, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
 
                 c.ExpectSubscription();
@@ -251,10 +251,10 @@ namespace Akka.Streams.Tests.Dsl
                 var testException = new TestException("");
                 var p = Source.UnfoldResource(_open, Read, reader =>
                 {
-                    reader.Close();
+                    reader.Dispose();
                     throw testException;
                 }).RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
 
                 var sub = c.ExpectSubscription();

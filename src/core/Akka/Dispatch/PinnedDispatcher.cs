@@ -26,6 +26,11 @@ namespace Akka.Dispatch
     {
         private readonly ExecutorServiceConfigurator _executorServiceConfigurator;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="prerequisites">TBD</param>
         public PinnedDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
@@ -34,6 +39,10 @@ namespace Akka.Dispatch
             // We don't bother trying to support any other type of exectuor here. PinnedDispatcher doesn't support them
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override MessageDispatcher Dispatcher()
         {
             return new PinnedDispatcher(this, Config.GetString("id"),
@@ -52,6 +61,15 @@ namespace Akka.Dispatch
     /// </summary>
     public sealed class PinnedDispatcher : Dispatcher
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="configurator">TBD</param>
+        /// <param name="id">TBD</param>
+        /// <param name="throughput">TBD</param>
+        /// <param name="throughputDeadlineTime">TBD</param>
+        /// <param name="executorServiceFactory">TBD</param>
+        /// <param name="shutdownTimeout">TBD</param>
         public PinnedDispatcher(MessageDispatcherConfigurator configurator, 
             string id, int throughput, long? throughputDeadlineTime, 
             ExecutorServiceFactory executorServiceFactory, 
@@ -61,7 +79,10 @@ namespace Akka.Dispatch
 
         private volatile ActorCell _owner;
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the registering <paramref name="actor"/> is not the <see cref="_owner">owner</see>.
         /// </exception>
@@ -73,6 +94,10 @@ namespace Akka.Dispatch
             base.Register(actor);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
         internal override void Unregister(ActorCell actor)
         {
             base.Unregister(actor);

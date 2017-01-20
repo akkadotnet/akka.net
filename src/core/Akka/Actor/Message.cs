@@ -17,6 +17,9 @@ namespace Akka.Actor
         /// <summary>
         /// Initializes a new instance of the <see cref="Envelope"/> struct.
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="system">TBD</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="message"/> is undefined.
         /// </exception>
@@ -31,6 +34,11 @@ namespace Akka.Actor
             Sender = sender != ActorRefs.NoSender ? sender : system.DeadLetters;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         public Envelope(object message, IActorRef sender)
         {
             Message = message;
@@ -49,6 +57,10 @@ namespace Akka.Actor
         /// <value>The message.</value>
         public object Message { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<" + (Message ?? "null") + "> from " + (Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString());

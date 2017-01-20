@@ -12,42 +12,107 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface ISpecViolation { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public class SignalThrewException : IllegalStateException, ISpecViolation
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="cause">TBD</param>
         public SignalThrewException(string message, Exception cause) : base(message, cause) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected SignalThrewException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ReactiveStreamsCompliance
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string CanNotSubscribeTheSameSubscriberMultipleTimes =
             "can not subscribe the same subscriber multiple times (see reactive-streams specification, rules 1.10 and 2.12)";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string SupportsOnlyASingleSubscriber =
             "only supports one subscriber (which is allowed, see reactive-streams specification, rule 1.12)";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string NumberOfElementsInRequestMustBePositiveMsg =
             "The number of requested elements must be > 0 (see reactive-streams specification, rule 3.9)";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string SubscriberMustNotBeNullMsg = "Subscriber must not be null, rule 1.9";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string ExceptionMustNotBeNullMsg = "Exception must not be null, rule 2.13";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string ElementMustNotBeNullMsg = "Element must not be null, rule 2.13";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string SubscriptionMustNotBeNullMsg = "Subscription must not be null, rule 2.13";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Exception NumberOfElementsInRequestMustBePositiveException =
             new ArgumentException(NumberOfElementsInRequestMustBePositiveMsg);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Exception CanNotSubscribeTheSameSubscriberMultipleTimesException =
             new IllegalStateException(CanNotSubscribeTheSameSubscriberMultipleTimes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Exception ElementMustNotBeNullException =
             new ArgumentNullException("element", ElementMustNotBeNullMsg);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Exception SubscriptionMustNotBeNullException =
             new ArgumentNullException("subscription", SubscriptionMustNotBeNullMsg);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Exception SubscriberMustNotBeNullException { get; } = new ArgumentNullException("subscriber", SubscriberMustNotBeNullMsg);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Exception ExceptionMustNotBeNullException { get; } = new ArgumentNullException("exception", ExceptionMustNotBeNullMsg);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="subscription">TBD</param>
+        /// <exception cref="SignalThrewException">TBD</exception>
         public static void TryOnSubscribe<T>(ISubscriber<T> subscriber, ISubscription subscription)
         {
             try
@@ -60,6 +125,12 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="subscription">TBD</param>
+        /// <exception cref="SignalThrewException">TBD</exception>
         internal static void TryOnSubscribe(IUntypedSubscriber subscriber, ISubscription subscription)
         {
             try
@@ -72,6 +143,13 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="element">TBD</param>
+        /// <exception cref="SignalThrewException">TBD</exception>
         public static void TryOnNext<T>(ISubscriber<T> subscriber, T element)
         {
             RequireNonNullElement(element);
@@ -85,6 +163,12 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="element">TBD</param>
+        /// <exception cref="SignalThrewException">TBD</exception>
         internal static void TryOnNext(IUntypedSubscriber subscriber, object element)
         {
             RequireNonNullElement(element);
@@ -98,6 +182,14 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="SignalThrewException">TBD</exception>
         public static void TryOnError<T>(ISubscriber<T> subscriber, Exception cause)
         {
             if (cause is ISpecViolation)
@@ -113,6 +205,13 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="SignalThrewException">TBD</exception>
         internal static void TryOnError(IUntypedSubscriber subscriber, Exception cause)
         {
             if (cause is ISpecViolation)
@@ -128,6 +227,12 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="subscriber">TBD</param>
+        /// <exception cref="SignalThrewException">TBD</exception>
         public static void TryOnComplete<T>(ISubscriber<T> subscriber)
         {
             try
@@ -140,6 +245,11 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <exception cref="SignalThrewException">TBD</exception>
         internal static void TryOnComplete(IUntypedSubscriber subscriber)
         {
             try
@@ -152,6 +262,11 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="subscriber">TBD</param>
         public static void RejectDuplicateSubscriber<T>(ISubscriber<T> subscriber)
         {
             // since it is already subscribed it has received the subscription first
@@ -159,47 +274,88 @@ namespace Akka.Streams.Implementation
             TryOnError(subscriber, CanNotSubscribeTheSameSubscriberMultipleTimesException);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="rejector">TBD</param>
         public static void RejectAdditionalSubscriber<T>(ISubscriber<T> subscriber, string rejector)
         {
             TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-            TryOnError(subscriber, new IllegalStateException(rejector + " supports only a single subscriber"));
+            TryOnError(subscriber, new IllegalStateException(rejector + " " + SupportsOnlyASingleSubscriber));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <param name="rejector">TBD</param>
         internal static void RejectAdditionalSubscriber(IUntypedSubscriber subscriber, string rejector)
         {
             TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-            TryOnError(subscriber, new IllegalStateException(rejector + " supports only a single subscriber"));
+            TryOnError(subscriber, new IllegalStateException(rejector + " " + SupportsOnlyASingleSubscriber));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="subscriber">TBD</param>
         public static void RejectDueToNonPositiveDemand<T>(ISubscriber<T> subscriber)
         {
             TryOnError(subscriber, NumberOfElementsInRequestMustBePositiveException);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="subscriber">TBD</param>
         public static void RequireNonNullSubscriber<T>(ISubscriber<T> subscriber)
         {
             if (ReferenceEquals(subscriber, null))
                 throw SubscriberMustNotBeNullException;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public static void RequireNonNullSubscription(ISubscription subscription)
         {
             if (ReferenceEquals(subscription, null))
                 throw SubscriptionMustNotBeNullException;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public static void RequireNonNullException(Exception e)
         {
             if (ReferenceEquals(e, null))
                 throw ExceptionMustNotBeNullException;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public static void RequireNonNullElement(object element)
         {
             if (ReferenceEquals(element, null))
                 throw ElementMustNotBeNullException;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
+        /// <exception cref="SignalThrewException">TBD</exception>
         public static void TryCancel(ISubscription subscription)
         {
             try
@@ -212,6 +368,12 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
+        /// <param name="demand">TBD</param>
+        /// <exception cref="SignalThrewException">TBD</exception>
         public static void TryRequest(ISubscription subscription, long demand)
         {
             try

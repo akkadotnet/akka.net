@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
@@ -38,8 +37,6 @@ namespace Akka.Streams.Tests.Dsl
         private string[] LogMessages(int n)
             => LogProbe.ReceiveN(n).Cast<Debug>().Select(x => x.Message.ToString()).ToArray();
 
-        private ActorPath SupervisorPath => ActorMaterializer.Downcast(Materializer).Supervisor.Path;
-        private string LogSource => $"Akka.Stream.Log({SupervisorPath})";
         private Type LogType => typeof (IMaterializer);
 
         [Fact]

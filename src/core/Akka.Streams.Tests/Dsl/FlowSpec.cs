@@ -17,7 +17,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -151,7 +150,7 @@ namespace Akka.Streams.Tests.Dsl
             var flowIn = t.Item1;
             var flowOut = t.Item2;
 
-            var c1 = TestSubscriber.CreateManualProbe<string>(this);
+            var c1 = this.CreateManualSubscriberProbe<string>();
             flowOut.Subscribe(c1);
 
             var source = Source.From(new[] {"1", "2", "3"}).RunWith(Sink.AsPublisher<string>(false), Materializer);
@@ -173,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
             var flowIn = t.Item1;
             var flowOut = t.Item2;
 
-            var c1 = TestSubscriber.CreateManualProbe<string>(this);
+            var c1 = this.CreateManualSubscriberProbe<string>();
             flowOut.Subscribe(c1);
 
             var sub1 = c1.ExpectSubscription();
@@ -197,7 +196,7 @@ namespace Akka.Streams.Tests.Dsl
             var flowIn = t.Item1;
             var flowOut = t.Item2;
 
-            var c1 = TestSubscriber.CreateManualProbe<string>(this);
+            var c1 = this.CreateManualSubscriberProbe<string>();
             flowOut.Subscribe(c1);
 
             var sub1 = c1.ExpectSubscription();
@@ -217,7 +216,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_subscribe_Subscriber()
         {
             var flow = Flow.Create<string>();
-            var c1 = TestSubscriber.CreateManualProbe<string>(this);
+            var c1 = this.CreateManualSubscriberProbe<string>();
             var sink = flow.To(Sink.FromSubscriber(c1));
             var publisher = Source.From(new[] { "1", "2", "3" }).RunWith(Sink.AsPublisher<string>(false), Materializer);
             Source.FromPublisher(publisher).To(sink).Run(Materializer);
@@ -250,7 +249,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_must_perform_transformation_operation_and_subscribe_Subscriber()
         {
             var flow = Flow.Create<int>().Select(i => i.ToString());
-            var c1 = TestSubscriber.CreateManualProbe<string>(this);
+            var c1 = this.CreateManualSubscriberProbe<string>();
             var sink = flow.To(Sink.FromSubscriber(c1));
             var publisher = Source.From(new[] { 1, 2, 3 }).RunWith(Sink.AsPublisher<int>(false), Materializer);
             Source.FromPublisher(publisher).To(sink).Run(Materializer);
@@ -271,9 +270,9 @@ namespace Akka.Streams.Tests.Dsl
                 var flow = Source.From(new[] {1, 2, 3}).Select(i => i.ToString());
                 var p1 = flow.RunWith(Sink.AsPublisher<string>(true), Materializer);
                 var p2 = flow.RunWith(Sink.AsPublisher<string>(true), Materializer);
-                var s1 = TestSubscriber.CreateManualProbe<string>(this);
-                var s2 = TestSubscriber.CreateManualProbe<string>(this);
-                var s3 = TestSubscriber.CreateManualProbe<string>(this);
+                var s1 = this.CreateManualSubscriberProbe<string>();
+                var s2 = this.CreateManualSubscriberProbe<string>();
+                var s3 = this.CreateManualSubscriberProbe<string>();
                 p1.Subscribe(s1);
                 p2.Subscribe(s2);
                 p2.Subscribe(s3);
@@ -353,7 +352,7 @@ namespace Akka.Streams.Tests.Dsl
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
-            var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             var downstream2Subscription = downstream2.ExpectSubscription();
 
@@ -382,7 +381,7 @@ namespace Akka.Streams.Tests.Dsl
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 2), this);
-            var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             var downstream2Subscription = downstream2.ExpectSubscription();
 
@@ -438,7 +437,7 @@ namespace Akka.Streams.Tests.Dsl
             setup.Upstream.ExpectRequest(setup.UpstreamSubscription, 1);
 
             // link now while an upstream element is already requested
-            var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             var downstream2Subscription = downstream2.ExpectSubscription();
 
@@ -466,7 +465,7 @@ namespace Akka.Streams.Tests.Dsl
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
-            var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             var downstream2Subscription = downstream2.ExpectSubscription();
 
@@ -506,7 +505,7 @@ namespace Akka.Streams.Tests.Dsl
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
-            var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream2 = this.CreateManualSubscriberProbe<string>();
             // don't link it just yet
 
             setup.DownstreamSubscription.Request(5);
@@ -535,7 +534,7 @@ namespace Akka.Streams.Tests.Dsl
             downstream2.ExpectNext("a3");
             downstream2.ExpectComplete();
 
-            var downstream3 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream3 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream3);
             downstream3.ExpectSubscription();
             downstream3.ExpectError().Should().BeOfType<NormalShutdownException>();
@@ -559,7 +558,7 @@ namespace Akka.Streams.Tests.Dsl
             setup.UpstreamSubscription.ExpectCancellation();
             setup.Downstream.ExpectError().Should().BeOfType<TestException>();
 
-            var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             downstream2.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
         }
@@ -578,7 +577,7 @@ namespace Akka.Streams.Tests.Dsl
             setup.DownstreamSubscription.Cancel();
             setup.UpstreamSubscription.ExpectCancellation();
 
-            var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             // IllegalStateException shut down
             downstream2.ExpectSubscriptionAndError().Should().BeAssignableTo<IllegalStateException>();
@@ -594,7 +593,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_borken_Flow_must_cancel_upstream_and_call_onError_on_current_and_future_downstream_subscribers_if_an_internal_error_occurs()
+        public void A_broken_Flow_must_cancel_upstream_and_call_onError_on_current_and_future_downstream_subscribers_if_an_internal_error_occurs()
         {
             var setup = new ChainSetup<string, string, NotUsed>(FaultyFlow<string,string,string>, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
@@ -607,7 +606,7 @@ namespace Akka.Streams.Tests.Dsl
                 error.Message.Should().StartWith("Processor actor");
             };
 
-            var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
+            var downstream2 = this.CreateManualSubscriberProbe<string>();
             setup.Publisher.Subscribe(downstream2);
             var downstream2Subscription = downstream2.ExpectSubscription();
 
@@ -642,7 +641,7 @@ namespace Akka.Streams.Tests.Dsl
                 checkError(setup.Downstream);
                 checkError(downstream2);
 
-                var downstream3 = TestSubscriber.CreateManualProbe<string>(this);
+                var downstream3 = this.CreateManualSubscriberProbe<string>();
                 setup.Publisher.Subscribe(downstream3);
                 downstream3.ExpectSubscription();
                 // IllegalStateException terminated abruptly
@@ -656,9 +655,13 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_borken_Flow_must_suitably_override_attribute_hanling_methods()
+        public void A_broken_Flow_must_suitably_override_attribute_hanling_methods()
         {
-            Flow.Create<int>().AddAttributes(Attributes.None).Named("");
+            var f = Flow.Create<int>().Select(x => x + 1).Async().AddAttributes(Attributes.None).Named("name");
+            f.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
+            f.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+                .Should()
+                .Be(Attributes.AsyncBoundary.Instance);
         }
 
         private static Flow<TIn, TOut, TMat> Identity<TIn, TOut, TMat>(Flow<TIn, TOut, TMat> flow) => flow.Select(e => e);
@@ -687,18 +690,17 @@ namespace Akka.Streams.Tests.Dsl
         {
             Func<Flow<TOut, TOut2, NotUsed>> createGraph = () =>
             {
-                var stage = new FaultyFlowStage<TOut, TOut2>();
+                var stage = new Select<TOut, TOut2>(x => x);
                 var assembly = new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[] { stage }, new[] { Attributes.None },
                     new Inlet[] { stage.Shape.Inlet , null}, new[] { 0, -1 }, new Outlet[] { null, stage.Shape.Outlet }, new[] { -1, 0 });
 
                 var t = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                     new Dictionary<IModule, object>(), _ => { });
 
-                var inHandlers = t.Item1;
-                var outHandlers = t.Item2;
-                var logics = t.Item3;
+                var connections = t.Item1;
+                var logics = t.Item2;
 
-                var shell = new GraphInterpreterShell(assembly, inHandlers, outHandlers, logics, stage.Shape, Settings,
+                var shell = new GraphInterpreterShell(assembly, connections, logics, stage.Shape, Settings,
                     (ActorMaterializerImpl) Materializer);
 
                 var props =
@@ -717,13 +719,6 @@ namespace Akka.Streams.Tests.Dsl
             };
 
             return flow.Via(createGraph());
-        }
-
-        private sealed class FaultyFlowStage<TIn, TOut> : PushPullGraphStage<TIn, TOut> where TIn:TOut
-        {
-            public FaultyFlowStage()  : base(_ => new Select<TIn,TOut>(x => x, Deciders.StoppingDecider), Attributes.None)
-            {
-            }
         }
 
         private sealed class FaultyFlowPublisher<TOut> : ActorPublisher<TOut>

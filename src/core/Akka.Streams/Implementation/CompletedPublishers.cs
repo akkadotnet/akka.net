@@ -12,12 +12,23 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class EmptyPublisher<T> : IPublisher<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly IPublisher<T> Instance = new EmptyPublisher<T>();
 
         private EmptyPublisher() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             try
@@ -33,14 +44,33 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "already-completed-publisher";
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal sealed class ErrorPublisher<T> : IPublisher<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string Name;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Exception Cause;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="name">TBD</param>
         public ErrorPublisher(Exception cause, string name)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(cause);
@@ -48,6 +78,10 @@ namespace Akka.Streams.Implementation
             Name = name;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             try
@@ -63,9 +97,17 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => Name;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal sealed class MaybePublisher<T> : IPublisher<T>
     {
         private class MaybeSubscription : ISubscription
@@ -107,62 +149,120 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TaskCompletionSource<T> Promise;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string Name;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="promise">TBD</param>
+        /// <param name="name">TBD</param>
         public MaybePublisher(TaskCompletionSource<T> promise, string name)
         {
             Promise = promise;
             Name = name;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
-            try
+            ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
+            ReactiveStreamsCompliance.TryOnSubscribe(subscriber, new MaybeSubscription(subscriber, Promise));
+            Promise.Task.ContinueWith(t =>
             {
-                ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
-                ReactiveStreamsCompliance.TryOnSubscribe(subscriber, new MaybeSubscription(subscriber, Promise));
-                Promise.Task.ContinueWith(t =>
-                {
-                    ReactiveStreamsCompliance.TryOnError(subscriber, t.Exception);
-                }, TaskContinuationOptions.NotOnRanToCompletion);
-            }
-            catch (Exception)
-            {
-                //case sv: SpecViolation ⇒ ec.reportFailure(sv)
-                throw;
-            }
+                ReactiveStreamsCompliance.TryOnError(subscriber, t.Exception);
+            }, TaskContinuationOptions.NotOnRanToCompletion);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => Name;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class CancelledSubscription : ISubscription
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly CancelledSubscription Instance = new CancelledSubscription();
 
         private CancelledSubscription() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
         public void Request(long n) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Cancel() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal sealed class CancellingSubscriber<T> : ISubscriber<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
         public void OnSubscribe(ISubscription subscription) => subscription.Cancel();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void OnNext(T element) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void OnNext(object element) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         public void OnError(Exception cause) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void OnComplete() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal sealed class RejectAdditionalSubscribers<T> : IPublisher<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly IPublisher<T> Instance = new RejectAdditionalSubscribers<T>();
 
         private RejectAdditionalSubscribers() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             try
@@ -176,6 +276,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "already-subscribed-publisher";
     }
 }

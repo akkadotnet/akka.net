@@ -21,32 +21,73 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
+using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 
 namespace Akka.Streams.Stage
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TMaterialized">TBD</typeparam>
     public interface ILogicAndMaterializedValue<out TMaterialized>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         GraphStageLogic Logic { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         TMaterialized MaterializedValue { get; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TMaterialized">TBD</typeparam>
     public struct LogicAndMaterializedValue<TMaterialized> : ILogicAndMaterializedValue<TMaterialized>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="logic">TBD</param>
+        /// <param name="materializedValue">TBD</param>
         public LogicAndMaterializedValue(GraphStageLogic logic, TMaterialized materializedValue)
         {
             Logic = logic;
             MaterializedValue = materializedValue;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public GraphStageLogic Logic { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TMaterialized MaterializedValue { get; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TShape">TBD</typeparam>
+    /// <typeparam name="TMaterialized">TBD</typeparam>
     public interface IGraphStageWithMaterializedValue<out TShape, out TMaterialized> : IGraph<TShape, TMaterialized> where TShape : Shape
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         ILogicAndMaterializedValue<TMaterialized> CreateLogicAndMaterializedValue(Attributes attributes);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TShape">TBD</typeparam>
+    /// <typeparam name="TMaterialized">TBD</typeparam>
     public abstract class GraphStageWithMaterializedValue<TShape, TMaterialized> : IGraphStageWithMaterializedValue<TShape, TMaterialized> where TShape : Shape
     {
         #region anonymous graph class
@@ -76,6 +117,9 @@ namespace Akka.Streams.Stage
 
         private readonly Lazy<IModule> _module;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected GraphStageWithMaterializedValue()
         {
             _module =
@@ -85,19 +129,53 @@ namespace Akka.Streams.Stage
                             (IGraphStageWithMaterializedValue<Shape, object>) this));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual Attributes InitialAttributes => Attributes.None;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract TShape Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes) => new Graph(Shape, Module, attributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         public abstract ILogicAndMaterializedValue<TMaterialized> CreateLogicAndMaterializedValue(Attributes inheritedAttributes);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IModule Module => _module.Value;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes) => WithAttributes(Module.Attributes.And(attributes));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public IGraph<TShape, TMaterialized> Named(string name) => AddAttributes(Attributes.CreateName(name));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IGraph<TShape, TMaterialized> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
     }
 
@@ -106,20 +184,38 @@ namespace Akka.Streams.Stage
     /// its input and output ports and a factory function that creates a <see cref="GraphStageLogic"/> which implements the processing
     /// logic that ties the ports together.
     /// </summary>
+    /// <typeparam name="TShape">TBD</typeparam>
     public abstract class GraphStage<TShape> : GraphStageWithMaterializedValue<TShape, NotUsed> where TShape : Shape
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         public sealed override ILogicAndMaterializedValue<NotUsed> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
             => new LogicAndMaterializedValue<NotUsed>(CreateLogic(inheritedAttributes), NotUsed.Instance);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract GraphStageLogic CreateLogic(Attributes inheritedAttributes);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class TimerGraphStageLogic : GraphStageLogic
     {
         private readonly IDictionary<object, TimerMessages.Timer> _keyToTimers = new Dictionary<object, TimerMessages.Timer>();
         private readonly AtomicCounter _timerIdGen = new AtomicCounter(0);
         private Action<TimerMessages.Scheduled> _timerAsyncCallback;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
         protected TimerGraphStageLogic(Shape shape) : base(shape)
         {
         }
@@ -150,6 +246,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Will be called when the scheduled timer is triggered.
         /// </summary>
+        /// <param name="timerKey">TBD</param>
         protected internal abstract void OnTimer(object timerKey);
 
         /// <summary>
@@ -158,6 +255,9 @@ namespace Akka.Streams.Stage
         /// Any existing timer with the same key will automatically be canceled before
         /// adding the new timer.
         /// </summary>
+        /// <param name="timerKey">TBD</param>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
         protected internal void ScheduleRepeatedly(object timerKey, TimeSpan initialDelay, TimeSpan interval)
         {
             CancelTimer(timerKey);
@@ -175,6 +275,8 @@ namespace Akka.Streams.Stage
         /// Any existing timer with the same key will automatically be canceled before
         /// adding the new timer.
         /// </summary>
+        /// <param name="timerKey">TBD</param>
+        /// <param name="interval">TBD</param>
         protected internal void ScheduleRepeatedly(object timerKey, TimeSpan interval)
             => ScheduleRepeatedly(timerKey, interval, interval);
 
@@ -183,6 +285,8 @@ namespace Akka.Streams.Stage
         /// Any existing timer with the same key will automatically be canceled before
         /// adding the new timer.
         /// </summary>
+        /// <param name="timerKey">TBD</param>
+        /// <param name="delay">TBD</param>
         protected internal void ScheduleOnce(object timerKey, TimeSpan delay)
         {
             CancelTimer(timerKey);
@@ -213,9 +317,14 @@ namespace Akka.Streams.Stage
         /// timer does not exist, has previously been canceled or if it was a
         /// single-shot timer that was already triggered.
         /// </summary>
+        /// <param name="timerKey">TBD</param>
+        /// <returns>TBD</returns>
         protected internal bool IsTimerActive(object timerKey) => _keyToTimers.ContainsKey(timerKey);
 
         // Internal hooks to avoid reliance on user calling super in postStop
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected internal override void AfterPostStop()
         {
             base.AfterPostStop();
@@ -228,15 +337,37 @@ namespace Akka.Streams.Stage
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class TimerMessages
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class Scheduled : IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly object TimerKey;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int TimerId;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly bool IsRepeating;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="timerKey">TBD</param>
+            /// <param name="timerId">TBD</param>
+            /// <param name="isRepeating">TBD</param>
+            /// <exception cref="ArgumentNullException">TBD</exception>
             public Scheduled(object timerKey, int timerId, bool isRepeating)
             {
                 if (timerKey == null)
@@ -248,11 +379,25 @@ namespace Akka.Streams.Stage
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Timer
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Id;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ICancelable Task;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="id">TBD</param>
+            /// <param name="task">TBD</param>
             public Timer(int id, ICancelable task)
             {
                 Id = id;
@@ -452,9 +597,9 @@ namespace Akka.Streams.Stage
             private readonly bool _doFinish;
             private readonly bool _doFail;
 
-            public PassAlongHandler(Inlet<TIn> @from, Outlet<TOut> to, GraphStageLogic logic, bool doFinish, bool doFail)
+            public PassAlongHandler(Inlet<TIn> from, Outlet<TOut> to, GraphStageLogic logic, bool doFinish, bool doFail)
             {
-                From = @from;
+                From = from;
                 To = to;
                 _logic = logic;
                 _doFinish = doFinish;
@@ -478,12 +623,21 @@ namespace Akka.Streams.Stage
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected sealed class LambdaInHandler : InHandler
         {
             private readonly Action _onPush;
             private readonly Action _onUpstreamFinish;
             private readonly Action<Exception> _onUpstreamFailure;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="onPush">TBD</param>
+            /// <param name="onUpstreamFinish">TBD</param>
+            /// <param name="onUpstreamFailure">TBD</param>
             public LambdaInHandler(Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
             {
                 _onPush = onPush;
@@ -491,8 +645,14 @@ namespace Akka.Streams.Stage
                 _onUpstreamFailure = onUpstreamFailure;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override void OnPush() => _onPush();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override void OnUpstreamFinish()
             {
                 if (_onUpstreamFinish != null)
@@ -501,6 +661,10 @@ namespace Akka.Streams.Stage
                     base.OnUpstreamFinish();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="e">TBD</param>
             public override void OnUpstreamFailure(Exception e)
             {
                 if (_onUpstreamFailure != null)
@@ -510,19 +674,33 @@ namespace Akka.Streams.Stage
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected sealed class LambdaOutHandler : OutHandler
         {
             private readonly Action _onPull;
             private readonly Action _onDownstreamFinish;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="onPull">TBD</param>
+            /// <param name="onDownstreamFinish">TBD</param>
             public LambdaOutHandler(Action onPull, Action onDownstreamFinish = null)
             {
                 _onPull = onPull;
                 _onDownstreamFinish = onDownstreamFinish;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override void OnPull() => _onPull();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override void OnDownstreamFinish()
             {
                 if (_onDownstreamFinish != null)
@@ -550,6 +728,8 @@ namespace Akka.Streams.Stage
         /// Input handler that terminates the state upon receiving completion if the
         /// given condition holds at that time. The stage fails upon receiving a failure.
         /// </summary>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public static InHandler ConditionalTerminateInput(Func<bool> predicate) => new ConditionalTerminateInput(predicate);
 
         /// <summary>
@@ -568,22 +748,46 @@ namespace Akka.Streams.Stage
         /// </summary>
         public static readonly OutHandler IgnoreTerminateOutput = Stage.IgnoreTerminateOutput.Instance;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Action DoNothing = () => { };
 
         /// <summary>
         /// Output handler that terminates the state upon receiving completion if the
         /// given condition holds at that time. The stage fails upon receiving a failure.
         /// </summary>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
         public static OutHandler ConditionalTerminateOutput(Func<bool> predicate) => new ConditionalTerminateOutput(predicate);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int InCount;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int OutCount;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal readonly object[] Handlers;
-        internal readonly int[] PortToConn;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal readonly Connection[] PortToConn;
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal int StageId = int.MinValue;
         private GraphInterpreter _interpreter;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="IllegalStateException">TBD</exception>
         internal GraphInterpreter Interpreter
         {
             get
@@ -595,14 +799,23 @@ namespace Akka.Streams.Stage
             set { _interpreter = value; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inCount">TBD</param>
+        /// <param name="outCount">TBD</param>
         protected GraphStageLogic(int inCount, int outCount)
         {
             InCount = inCount;
             OutCount = outCount;
             Handlers = new object[InCount + OutCount];
-            PortToConn = new int[Handlers.Length];
+            PortToConn = new Connection[Handlers.Length];
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
         protected GraphStageLogic(Shape shape) : this(shape.Inlets.Count(), shape.Outlets.Count())
         {
         }
@@ -626,6 +839,9 @@ namespace Akka.Streams.Stage
         public virtual bool KeepGoingAfterAllPortsClosed => false;
 
         private StageActorRef _stageActorRef;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public StageActorRef StageActorRef
         {
             get
@@ -639,6 +855,8 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Inlet{T}"/>.
         /// </summary>
+        /// <param name="inlet">TBD</param>
+        /// <param name="handler">TBD</param>
         protected internal void SetHandler(Inlet inlet, IInHandler handler)
         {
             Handlers[inlet.Id] = handler;
@@ -648,6 +866,11 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
+        /// <param name="inlet">TBD</param>
+        /// <param name="onPush">TBD</param>
+        /// <param name="onUpstreamFinish">TBD</param>
+        /// <param name="onUpstreamFailure">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         protected internal void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
         {
             if (onPush == null)
@@ -659,11 +882,15 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Retrieves the current callback for the events on the given <see cref="Inlet{T}"/>
         /// </summary>
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
         protected IInHandler GetHandler(Inlet inlet) => (IInHandler)Handlers[inlet.Id];
 
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <param name="handler">TBD</param>
         protected internal void SetHandler(Outlet outlet, IOutHandler handler)
         {
             Handlers[outlet.Id + InCount] = handler;
@@ -673,6 +900,10 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <param name="onPull">TBD</param>
+        /// <param name="onDownstreamFinish">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         protected internal void SetHandler(Outlet outlet, Action onPull, Action onDownstreamFinish = null)
         {
             if (onPull == null)
@@ -683,11 +914,13 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Retrieves the current callback for the events on the given <see cref="Outlet{T}"/>
         /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <returns>TBD</returns>
         protected IOutHandler GetHandler(Outlet outlet) => (IOutHandler)Handlers[outlet.Id + InCount];
 
-        private int GetConnection(Inlet inlet) => PortToConn[inlet.Id];
+        private Connection GetConnection(Inlet inlet) => PortToConn[inlet.Id];
 
-        private int GetConnection(Outlet outlet) => PortToConn[outlet.Id + InCount];
+        private Connection GetConnection(Outlet outlet) => PortToConn[outlet.Id + InCount];
 
         private IOutHandler GetNonEmittingHandler(Outlet outlet)
         {
@@ -701,11 +934,18 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
         /// </summary>
-        protected internal void Pull<T>(Inlet inlet)
+        /// <param name="inlet">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        protected internal void Pull(Inlet inlet)
         {
-            var conn = GetConnection(inlet);
-            if ((Interpreter.PortStates[conn] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == GraphInterpreter.InReady)
-                Interpreter.Pull(conn);
+            var connection = GetConnection(inlet);
+            var portState = connection.PortState;
+
+            if ((portState & (InReady | InClosed | OutClosed)) == InReady)
+            {
+                connection.PortState = portState ^ PullStartFlip;
+                Interpreter.ChasePull(connection);
+            }
             else
             {
                 // Detailed error information should not add overhead to the hot path
@@ -714,6 +954,10 @@ namespace Akka.Streams.Stage
                 if (HasBeenPulled(inlet))
                     throw new ArgumentException("Cannot pull port twice");
             }
+
+            // There were no errors, the pull was simply ignored as the target stage already closed its port. We
+            // still need to track proper state though.
+            connection.PortState = portState ^ PullStartFlip;
         }
 
         /// <summary>
@@ -721,7 +965,9 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
         /// </summary>
-        protected internal void Pull<T>(Inlet<T> inlet) => Pull<T>((Inlet)inlet);
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inlet">TBD</param>
+        protected internal void Pull<T>(Inlet<T> inlet) => Pull((Inlet)inlet);
 
         /// <summary>
         /// Requests an element on the given port unless the port is already closed.
@@ -729,10 +975,11 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.
         /// </summary>
-        protected internal void TryPull<T>(Inlet inlet)
+        /// <param name="inlet">TBD</param>
+        protected internal void TryPull(Inlet inlet)
         {
             if (!IsClosed(inlet))
-                Pull<T>(inlet);
+                Pull(inlet);
         }
 
         /// <summary>
@@ -741,11 +988,14 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.
         /// </summary>
-        protected internal void TryPull<T>(Inlet<T> inlet) => TryPull<T>((Inlet)inlet);
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inlet">TBD</param>
+        protected internal void TryPull<T>(Inlet<T> inlet) => TryPull((Inlet)inlet);
 
         /// <summary>
         /// Requests to stop receiving events from a given input port. Cancelling clears any ungrabbed elements from the port.
         /// </summary>
+        /// <param name="inlet">TBD</param>
         protected void Cancel(Inlet inlet) => Interpreter.Cancel(GetConnection(inlet));
 
         /// <summary>
@@ -755,15 +1005,20 @@ namespace Akka.Streams.Stage
         /// 
         /// The method <see cref="IsAvailable(Inlet)"/> can be used to query if the port has an element that can be grabbed or not.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inlet">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         protected internal T Grab<T>(Inlet inlet)
         {
             var connection = GetConnection(inlet);
-            var element = Interpreter.ConnectionSlots[connection];
-            if ((Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) ==
-                GraphInterpreter.InReady && !ReferenceEquals(element, GraphInterpreter.Empty.Instance))
+            var element = connection.Slot;
+
+            if ((connection.PortState & (InReady | InFailed)) ==
+                InReady && !ReferenceEquals(element, Empty.Instance))
             {
                 // fast path
-                Interpreter.ConnectionSlots[connection] = GraphInterpreter.Empty.Instance;
+                connection.Slot = Empty.Instance;
             }
             else
             {
@@ -772,7 +1027,7 @@ namespace Akka.Streams.Stage
                     throw new ArgumentException("Cannot get element from already empty input port");
                 var failed = (GraphInterpreter.Failed)element;
                 element = failed.PreviousElement;
-                Interpreter.ConnectionSlots[connection] = new GraphInterpreter.Failed(failed.Reason, GraphInterpreter.Empty.Instance);
+                connection.Slot = new GraphInterpreter.Failed(failed.Reason, Empty.Instance);
             }
 
             return (T)element;
@@ -785,14 +1040,19 @@ namespace Akka.Streams.Stage
         /// 
         /// The method <see cref="IsAvailable(Inlet)"/> can be used to query if the port has an element that can be grabbed or not.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
         protected internal T Grab<T>(Inlet<T> inlet) => Grab<T>((Inlet)inlet);
 
         /// <summary>
         /// Indicates whether there is already a pending pull for the given input port. If this method returns true 
         /// then <see cref="IsAvailable(Inlet)"/> must return false for that same port.
         /// </summary>
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
         protected bool HasBeenPulled(Inlet inlet) 
-            => (Interpreter.PortStates[GetConnection(inlet)] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == 0;
+            => (GetConnection(inlet).PortState & (InReady | InClosed)) == 0;
 
         /// <summary>
         /// Indicates whether there is an element waiting at the given input port. <see cref="Grab{T}(Inlet{T})"/> can be used to retrieve the
@@ -800,24 +1060,26 @@ namespace Akka.Streams.Stage
         /// 
         /// If this method returns true then <see cref="HasBeenPulled"/> will return false for that same port.
         /// </summary>
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
         protected internal bool IsAvailable(Inlet inlet)
         {
             var connection = GetConnection(inlet);
-            var normalArrived = (Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) == GraphInterpreter.InReady;
+            var normalArrived = (connection.PortState & (InReady | InFailed)) == InReady;
 
             if (normalArrived)
             {
                 // fast path
-                return !ReferenceEquals(Interpreter.ConnectionSlots[connection], GraphInterpreter.Empty.Instance);
+                return !ReferenceEquals(connection.Slot, Empty.Instance);
             }
             
             // slow path on failure
-            if ((Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) ==
-                (GraphInterpreter.InReady | GraphInterpreter.InFailed))
+            if ((connection.PortState & (InReady | InFailed)) ==
+                (InReady | InFailed))
             {
-                var failed = Interpreter.ConnectionSlots[connection] as GraphInterpreter.Failed;
+                var failed = connection.Slot as GraphInterpreter.Failed;
                 // This can only be Empty actually (if a cancel was concurrent with a failure)
-                return failed != null && !ReferenceEquals(failed.PreviousElement, GraphInterpreter.Empty.Instance);
+                return failed != null && !ReferenceEquals(failed.PreviousElement, Empty.Instance);
             }
 
             return false;
@@ -826,24 +1088,43 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pulled.
         /// </summary>
-        protected bool IsClosed(Inlet inlet) => (Interpreter.PortStates[GetConnection(inlet)] & GraphInterpreter.InClosed) != 0;
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
+        protected bool IsClosed(Inlet inlet) => (GetConnection(inlet).PortState & InClosed) != 0;
 
         /// <summary>
         /// Emits an element through the given output port. Calling this method twice before a <see cref="Pull{T}(Inlet{T})"/> has been arrived
         /// will fail. There can be only one outstanding push request at any given time. The method <see cref="IsAvailable(Inlet)"/> can be
         /// used to check if the port is ready to be pushed or not.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="outlet">TBD</param>
+        /// <param name="element">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         protected internal void Push<T>(Outlet outlet, T element)
         {
             var connection = GetConnection(outlet);
-            if ((Interpreter.PortStates[connection] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady && (element != null))
-                Interpreter.Push(connection, element);
+            var portState = connection.PortState;
+
+            connection.PortState = portState ^ PushStartFlip;
+            if ((portState & (OutReady | OutClosed | InClosed)) == OutReady && (element != null))
+            {
+                connection.Slot = element;
+                Interpreter.ChasePush(connection);
+            }
             else
             {
+                // Restore state for the error case
+                connection.PortState = portState;
+
                 // Detailed error information should not add overhead to the hot path
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
-                if (!IsAvailable(outlet)) throw new ArgumentException("Cannot push port twice");
-                if (IsClosed(outlet)) throw new ArgumentException("Cannot pull closed port");
+                if (IsClosed(outlet)) throw new ArgumentException($"Cannot pull closed port {outlet}");
+                if (!IsAvailable(outlet)) throw new ArgumentException($"Cannot push port twice {outlet}");
+
+                // No error, just InClosed caused the actual pull to be ignored, but the status flag still needs to be flipped
+                connection.PortState = portState ^ PushStartFlip;
             }
         }
 
@@ -854,11 +1135,13 @@ namespace Akka.Streams.Stage
         /// it will not be closed until this method is called with a false argument or the
         /// stage is terminated via <see cref="CompleteStage"/> or <see cref="FailStage"/>.
         /// </summary>
+        /// <param name="enabled">TBD</param>
         protected void SetKeepGoing(bool enabled) => Interpreter.SetKeepGoing(this, enabled);
 
         /// <summary>
         /// Signals that there will be no more elements emitted on the given port.
         /// </summary>
+        /// <param name="outlet">TBD</param>
         protected void Complete(Outlet outlet)
         {
             var h = GetHandler(outlet);
@@ -872,6 +1155,8 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Signals failure through the given port.
         /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <param name="reason">TBD</param>
         protected void Fail(Outlet outlet, Exception reason) => Interpreter.Fail(GetConnection(outlet), reason);
 
         /// <summary>
@@ -902,6 +1187,7 @@ namespace Akka.Streams.Stage
         /// Automatically invokes <see cref="Cancel"/> or <see cref="Fail"/> on all the input or output ports that have been called,
         /// then stops the stage, then <see cref="PostStop"/> is called.
         /// </summary>
+        /// <param name="reason">TBD</param>
         public void FailStage(Exception reason)
         {
             for (var i = 0; i < PortToConn.Length; i++)
@@ -918,14 +1204,18 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Return true if the given output port is ready to be pushed.
         /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <returns>TBD</returns>
         protected internal bool IsAvailable(Outlet outlet) 
-            => (Interpreter.PortStates[GetConnection(outlet)] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady;
+            => (GetConnection(outlet).PortState & (OutReady | OutClosed)) == OutReady;
 
         /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pushed.
         /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <returns>TBD</returns>
         protected bool IsClosed(Outlet outlet) 
-            => (Interpreter.PortStates[GetConnection(outlet)] & GraphInterpreter.OutClosed) != 0;
+            => (GetConnection(outlet).PortState & OutClosed) != 0;
 
         /// <summary>
         /// Read a number of elements from the given inlet and continue with the given function,
@@ -936,6 +1226,12 @@ namespace Akka.Streams.Stage
         /// If upstream closes before N elements have been read,
         /// the <paramref name="onComplete"/> function is invoked with the elements which were read.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inlet">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <param name="andThen">TBD</param>
+        /// <param name="onComplete">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         protected void ReadMany<T>(Inlet<T> inlet, int n, Action<IEnumerable<T>> andThen, Action<IEnumerable<T>> onComplete)
         {
             if (n < 0)
@@ -980,6 +1276,10 @@ namespace Akka.Streams.Stage
         /// for the given inlet if suspension is needed and reinstalls the current
         /// handler upon receiving the <see cref="InHandler.OnPush"/> signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inlet">TBD</param>
+        /// <param name="andThen">TBD</param>
+        /// <param name="onClose">TBD</param>
         protected void Read<T>(Inlet<T> inlet, Action<T> andThen, Action onClose)
         {
             if (IsAvailable(inlet))
@@ -1000,6 +1300,8 @@ namespace Akka.Streams.Stage
         /// This will reinstall the replaced handler that was in effect before the read
         /// call.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inlet">TBD</param>
         protected void AbortReading<T>(Inlet<T> inlet)
         {
             Reading<T> reading;
@@ -1020,8 +1322,12 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="outlet">TBD</param>
+        /// <param name="elements">TBD</param>
+        /// <param name="andThen">TBD</param>
         protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerable<T> elements, Action andThen)
-            => EmitMultiple<T>(outlet, elements.GetEnumerator(), andThen);
+            => EmitMultiple(outlet, elements.GetEnumerator(), andThen);
 
         /// <summary>
         /// Emit a sequence of elements through the given outlet, suspending execution if necessary.
@@ -1029,8 +1335,11 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="outlet">TBD</param>
+        /// <param name="elements">TBD</param>
         protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerable<T> elements)
-            => EmitMultiple<T>(outlet, elements, DoNothing);
+            => EmitMultiple(outlet, elements, DoNothing);
 
         /// <summary>
         /// Emit a sequence of elements through the given outlet and continue with the given thunk
@@ -1039,6 +1348,10 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="outlet">TBD</param>
+        /// <param name="enumerator">TBD</param>
+        /// <param name="andThen">TBD</param>
         protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerator<T> enumerator, Action andThen)
         {
             if (enumerator.MoveNext())
@@ -1067,9 +1380,12 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="outlet">TBD</param>
+        /// <param name="enumerator">TBD</param>
         protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerator<T> enumerator)
         {
-            EmitMultiple<T>(outlet, enumerator, DoNothing);
+            EmitMultiple(outlet, enumerator, DoNothing);
         }
 
         /// <summary>
@@ -1079,6 +1395,10 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="outlet">TBD</param>
+        /// <param name="element">TBD</param>
+        /// <param name="andThen">TBD</param>
         protected internal void Emit<T>(Outlet<T> outlet, T element, Action andThen)
         {
             if (IsAvailable(outlet))
@@ -1096,6 +1416,9 @@ namespace Akka.Streams.Stage
         /// This action replaces the <see cref="OutHandler"/> for the given outlet if suspension
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="outlet">TBD</param>
+        /// <param name="element">TBD</param>
         protected internal void Emit<T>(Outlet<T> outlet, T element) => Emit(outlet, element, DoNothing);
 
         /// <summary>
@@ -1103,6 +1426,8 @@ namespace Akka.Streams.Stage
         /// This will reinstall the replaced handler that was in effect before the <see cref="Emit{T}(Outlet{T},T,Action)"/>
         /// call.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="outlet">TBD</param>
         protected internal void AbortEmitting<T>(Outlet<T> outlet)
         {
             Emitting e;
@@ -1125,6 +1450,13 @@ namespace Akka.Streams.Stage
         /// completion or failure of the given inlet shall lead to stage termination or not.
         /// <paramref name="doPull"/> instructs to perform one initial pull on the <paramref name="from"/> port.
         /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <param name="from">TBD</param>
+        /// <param name="to">TBD</param>
+        /// <param name="doFinish">TBD</param>
+        /// <param name="doFail">TBD</param>
+        /// <param name="doPull">TBD</param>
         protected void PassAlong<TOut, TIn>(Inlet<TIn> from, Outlet<TOut> to, bool doFinish = true, bool doFail = true, bool doPull = false)
             where TIn : TOut
         {
@@ -1137,7 +1469,7 @@ namespace Akka.Streams.Stage
                     CompleteStage();
             }
 
-            SetHandler(@from, passHandler);
+            SetHandler(from, passHandler);
             if (doPull)
                 TryPull(from);
         }
@@ -1151,6 +1483,9 @@ namespace Akka.Streams.Stage
         /// 
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="handler">TBD</param>
+        /// <returns>TBD</returns>
         protected Action<T> GetAsyncCallback<T>(Action<T> handler)
             => @event => Interpreter.OnAsyncInput(this, @event, x => handler((T) x));
 
@@ -1163,6 +1498,8 @@ namespace Akka.Streams.Stage
         /// 
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
+        /// <param name="handler">TBD</param>
+        /// <returns>TBD</returns>
         protected Action GetAsyncCallback(Action handler)
             => () => Interpreter.OnAsyncInput(this, NotUsed.Instance, _ => handler());
 
@@ -1171,7 +1508,7 @@ namespace Akka.Streams.Stage
         /// The messages are looped through the <see cref="GetAsyncCallback{T}"/> mechanism of <see cref="GraphStage{TShape}"/> so they are safe to modify
         /// internal state of this stage.
         /// 
-        /// This method must not (the earliest) be called after the <see cref="GraphStageLogic"/> constructor has finished running,
+        /// This method must (the earliest) be called after the <see cref="GraphStageLogic"/> constructor has finished running,
         /// for example from the <see cref="PreStart"/> callback the graph stage logic provides.
         /// 
         /// Created <see cref="StageActorRef"/> to get messages and watch other actors in synchronous way.
@@ -1186,9 +1523,9 @@ namespace Akka.Streams.Stage
         {
             if (_stageActorRef == null)
             {
-                var actorMaterializer = ActorMaterializer.Downcast(Interpreter.Materializer);
+                var actorMaterializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
                 var provider = ((IInternalActorRef)actorMaterializer.Supervisor).Provider;
-                var path = actorMaterializer.Supervisor.Path / Stage.StageActorRef.Name.Next();
+                var path = actorMaterializer.Supervisor.Path / StageActorRef.Name.Next();
                 _stageActorRef = new StageActorRef(provider, actorMaterializer.Logger, r => GetAsyncCallback<Tuple<IActorRef, object>>(tuple => r(tuple)), receive, path);
             }
             else
@@ -1197,8 +1534,14 @@ namespace Akka.Streams.Stage
             return _stageActorRef;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected internal virtual void BeforePreStart() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected internal virtual void AfterPostStop()
         {
             if (_stageActorRef != null)
@@ -1226,6 +1569,7 @@ namespace Akka.Streams.Stage
         /// the <see cref="GraphStageLogic.SubFusingMaterializer"/>). Care needs to be taken to cancel this Inlet
         /// when the stage shuts down lest the corresponding Sink be left hanging.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
         protected class SubSinkInlet<T>
         {
             private readonly string _name;
@@ -1235,6 +1579,11 @@ namespace Akka.Streams.Stage
             private bool _pulled;
             private readonly SubSink<T> _sink;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="logic">TBD</param>
+            /// <param name="name">TBD</param>
             public SubSinkInlet(GraphStageLogic logic, string name)
             {
                 _name = name;
@@ -1263,16 +1612,37 @@ namespace Akka.Streams.Stage
                     }));
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IGraph<SinkShape<T>, NotUsed> Sink => _sink;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="handler">TBD</param>
             public void SetHandler(InHandler handler) => _handler = handler;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool IsAvailable => _elem.HasValue;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool IsClosed => _closed;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool HasBeenPulled => _pulled && !IsClosed;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <exception cref="IllegalStateException">TBD</exception>
+            /// <returns>TBD</returns>
             public T Grab()
             {
                 if (!_elem.HasValue)
@@ -1283,6 +1653,11 @@ namespace Akka.Streams.Stage
                 return ret;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <exception cref="IllegalStateException">TBD</exception>
+            /// <returns>TBD</returns>
             public void Pull()
             {
                 if (_pulled)
@@ -1294,15 +1669,28 @@ namespace Akka.Streams.Stage
                 _sink.PullSubstream();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void Cancel()
             {
                 _closed = true;
                 _sink.CancelSubstream();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString() => $"SubSinkInlet{_name}";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         protected SubSinkInlet<T> CreateSubSinkInlet<T>(string name) => new SubSinkInlet<T>(this, name);
 
         /// <summary>
@@ -1316,6 +1704,7 @@ namespace Akka.Streams.Stage
         /// Outlet in case the corresponding Source is not materialized within a
         /// given time limit, see e.g. ActorMaterializerSettings.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
         protected class SubSourceOutlet<T>
         {
             private readonly string _name;
@@ -1324,6 +1713,11 @@ namespace Akka.Streams.Stage
             private bool _available;
             private bool _closed;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="logic">TBD</param>
+            /// <param name="name">TBD</param>
             public SubSourceOutlet(GraphStageLogic logic, string name)
             {
                 _name = name;
@@ -1371,6 +1765,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// Set the source into timed-out mode if it has not yet been materialized.
             /// </summary>
+            /// <param name="d">TBD</param>
             public void Timeout(TimeSpan d)
             {
                 if (_source.Timeout(d))
@@ -1381,11 +1776,13 @@ namespace Akka.Streams.Stage
             /// Set OutHandler for this dynamic output port; this needs to be done before
             /// the first substream callback can arrive.
             /// </summary>
+            /// <param name="handler">TBD</param>
             public void SetHandler(IOutHandler handler) => _handler = handler;
 
             /// <summary>
             /// Push to this output port.
             /// </summary>
+            /// <param name="elem">TBD</param>
             public void Push(T elem)
             {
                 _available = false;
@@ -1405,6 +1802,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// Fail this output port.
             /// </summary>
+            /// <param name="ex">TBD</param>
             public void Fail(Exception ex)
             {
                 _available = false;
@@ -1412,6 +1810,10 @@ namespace Akka.Streams.Stage
                 _source.FailSubstream(ex);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString() => $"SubSourceOutlet({_name})";
         }
     }
@@ -1434,6 +1836,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
         /// </summary>
+        /// <param name="e">TBD</param>
         void OnUpstreamFailure(Exception e);
     }
 
@@ -1450,12 +1853,13 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFinish() => GraphInterpreter.Current.ActiveStage.CompleteStage();
+        public virtual void OnUpstreamFinish() => Current.ActiveStage.CompleteStage();
 
         /// <summary>
         /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFailure(Exception e) => GraphInterpreter.Current.ActiveStage.FailStage(e);
+        /// <param name="e">TBD</param>
+        public virtual void OnUpstreamFailure(Exception e) => Current.ActiveStage.FailStage(e);
     }
 
     /// <summary>
@@ -1489,7 +1893,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish() => GraphInterpreter.Current.ActiveStage.CompleteStage();
+        public virtual void OnDownstreamFinish() => Current.ActiveStage.CompleteStage();
     }
 
     /// <summary>
@@ -1507,12 +1911,13 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFinish() => GraphInterpreter.Current.ActiveStage.CompleteStage();
+        public virtual void OnUpstreamFinish() => Current.ActiveStage.CompleteStage();
 
         /// <summary>
         /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFailure(Exception e) => GraphInterpreter.Current.ActiveStage.FailStage(e);
+        /// <param name="e">TBD</param>
+        public virtual void OnUpstreamFailure(Exception e) => Current.ActiveStage.FailStage(e);
 
         /// <summary>
         /// Called when the output port has received a pull, and therefore ready to emit an element, 
@@ -1523,15 +1928,160 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish() => GraphInterpreter.Current.ActiveStage.CompleteStage();
+        public virtual void OnDownstreamFinish() => Current.ActiveStage.CompleteStage();
     }
 
+    /// <summary>
+    /// A <see cref="GraphStageLogic"/> that implements <see cref="IInHandler"/>.
+    /// <para/>
+    /// <see cref="OnUpstreamFinish"/> calls <see cref="GraphStageLogic.CompleteStage"/>
+    /// <para/>
+    /// <see cref="OnUpstreamFailure"/> calls <see cref="GraphStageLogic.FailStage"/>
+    /// </summary>
+    public abstract class InGraphStageLogic : GraphStageLogic, IInHandler
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inCount">TBD</param>
+        /// <param name="outCount">TBD</param>
+        protected InGraphStageLogic(int inCount, int outCount) : base(inCount, outCount)
+        {
+        }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
+        protected InGraphStageLogic(Shape shape) : base(shape)
+        {
+        }
+
+        /// <summary>
+        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}(Inlet{T})"/> method.
+        /// </summary>
+        public abstract void OnPush();
+
+        /// <summary>
+        /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnUpstreamFinish() => CompleteStage();
+        
+        /// <summary>
+        /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        /// <param name="e">TBD</param>
+        public virtual void OnUpstreamFailure(Exception e) => FailStage(e);
+    }
+
+    /// <summary>
+    /// A <see cref="GraphStageLogic"/> that implements <see cref="IOutHandler"/>.
+    /// <para/>
+    /// <see cref="OnDownstreamFinish"/> calls <see cref="GraphStageLogic.CompleteStage"/>
+    /// </summary>
+    public abstract class OutGraphStageLogic : GraphStageLogic, IOutHandler
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inCount">TBD</param>
+        /// <param name="outCount">TBD</param>
+        protected OutGraphStageLogic(int inCount, int outCount) : base(inCount, outCount)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
+        protected OutGraphStageLogic(Shape shape) : base(shape)
+        {
+        }
+
+        /// <summary>
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
+        /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
+        /// </summary>
+        public abstract void OnPull();
+
+        /// <summary>
+        /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnDownstreamFinish() => CompleteStage();
+    }
+
+    /// <summary>
+    /// A <see cref="GraphStageLogic"/> that implements <see cref="IInHandler"/> and <see cref="IOutHandler"/>.
+    /// <para/>
+    /// <see cref="OnUpstreamFinish"/> calls <see cref="GraphStageLogic.CompleteStage"/>
+    /// <para/>
+    /// <see cref="OnUpstreamFailure"/> calls <see cref="GraphStageLogic.FailStage"/>
+    /// <para/>
+    /// <see cref="OnDownstreamFinish"/> calls <see cref="GraphStageLogic.CompleteStage"/>
+    /// </summary>
+    public abstract class InAndOutGraphStageLogic : GraphStageLogic, IInHandler, IOutHandler
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inCount">TBD</param>
+        /// <param name="outCount">TBD</param>
+        protected InAndOutGraphStageLogic(int inCount, int outCount) : base(inCount, outCount)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
+        protected InAndOutGraphStageLogic(Shape shape) : base(shape)
+        {
+        }
+
+        /// <summary>
+        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}(Inlet{T})"/> method.
+        /// </summary>
+        public abstract void OnPush();
+        
+        /// <summary>
+        /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnUpstreamFinish() => CompleteStage();
+
+        /// <summary>
+        /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        /// <param name="e">TBD</param>
+        public virtual void OnUpstreamFailure(Exception e) => FailStage(e);
+
+        /// <summary>
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
+        /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
+        /// </summary>
+        public abstract void OnPull();
+
+        /// <summary>
+        /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
+        /// </summary>
+        public virtual void OnDownstreamFinish() => CompleteStage();
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public class StageActorRefNotInitializedException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly StageActorRefNotInitializedException Instance = new StageActorRefNotInitializedException();
         private StageActorRefNotInitializedException() : base("You must first call getStageActorRef, to initialize the Actors behaviour") { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected StageActorRefNotInitializedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
@@ -1540,8 +2090,15 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class EagerTerminateInput : InHandler
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static readonly EagerTerminateInput Instance = new EagerTerminateInput();
         private EagerTerminateInput() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnPush() { }
     }
 
@@ -1550,9 +2107,18 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class IgnoreTerminateInput : InHandler
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly IgnoreTerminateInput Instance = new IgnoreTerminateInput();
         private IgnoreTerminateInput() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnPush() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnUpstreamFinish() { }
     }
 
@@ -1564,16 +2130,26 @@ namespace Akka.Streams.Stage
     {
         private readonly Func<bool> _predicate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
         public ConditionalTerminateInput(Func<bool> predicate)
         {
             _predicate = predicate;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnPush() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnUpstreamFinish()
         {
             if (_predicate())
-                GraphInterpreter.Current.ActiveStage.CompleteStage();
+                Current.ActiveStage.CompleteStage();
         }
     }
 
@@ -1582,10 +2158,23 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class TotallyIgnorantInput : InHandler
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly TotallyIgnorantInput Instance = new TotallyIgnorantInput();
         private TotallyIgnorantInput() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnPush() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnUpstreamFinish() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         public override void OnUpstreamFailure(Exception e) { }
     }
 
@@ -1594,8 +2183,14 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class EagerTerminateOutput : OutHandler
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly EagerTerminateOutput Instance = new EagerTerminateOutput();
         private EagerTerminateOutput() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnPull() { }
     }
 
@@ -1604,9 +2199,18 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class IgnoreTerminateOutput : OutHandler
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly IgnoreTerminateOutput Instance = new IgnoreTerminateOutput();
         private IgnoreTerminateOutput() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnPull() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnDownstreamFinish() { }
     }
 
@@ -1618,16 +2222,26 @@ namespace Akka.Streams.Stage
     {
         private readonly Func<bool> _predicate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="predicate">TBD</param>
         public ConditionalTerminateOutput(Func<bool> predicate)
         {
             _predicate = predicate;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnPull() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void OnDownstreamFinish()
         {
             if (_predicate())
-                GraphInterpreter.Current.ActiveStage.CompleteStage();
+                Current.ActiveStage.CompleteStage();
         }
     }
 
@@ -1636,14 +2250,24 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class StageActorRef : MinimalActorRef
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="args">TBD</param>
         public delegate void Receive(Tuple<IActorRef, object> args);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IImmutableSet<IActorRef> StageTerminatedTombstone = null;
 
         /// <summary>
-        /// Globally sequential, one should not depend on these names in any case.
+        /// TBD
         /// </summary>
         public static readonly EnumerableActorName Name = new EnumerableActorNameImpl("StageActorRef", new AtomicCounterLong(0L));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ILoggingAdapter Log;
         private readonly Action<Tuple<IActorRef, object>> _callback;
         private readonly AtomicReference<IImmutableSet<IActorRef>> _watchedBy = new AtomicReference<IImmutableSet<IActorRef>>(ImmutableHashSet<IActorRef>.Empty);
@@ -1651,6 +2275,15 @@ namespace Akka.Streams.Stage
         private volatile Receive _behavior;
         private IImmutableSet<IActorRef> _watching = ImmutableHashSet<IActorRef>.Empty;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="provider">TBD</param>
+        /// <param name="log">TBD</param>
+        /// <param name="getAsyncCallback">TBD</param>
+        /// <param name="initialReceive">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public StageActorRef(IActorRefProvider provider, ILoggingAdapter log, Func<Receive, Action<Tuple<IActorRef, object>>> getAsyncCallback, Receive initialReceive, ActorPath path)
         {
             Log = log;
@@ -1661,13 +2294,27 @@ namespace Akka.Streams.Stage
             _callback = getAsyncCallback(args => _behavior(args));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRefProvider Provider { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsTerminated => _watchedBy.Value == StageTerminatedTombstone;
 
         private void LogIgnored(object message) => Log.Warning($"{message} message sent to StageActorRef({Path}) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
             var handled = true;
@@ -1690,14 +2337,15 @@ namespace Akka.Streams.Stage
             _callback(Tuple.Create(sender, message));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
             var death = message as DeathWatchNotification;
             if (death != null)
-            {
                 Tell(new Terminated(death.Actor, true, false), ActorRefs.NoSender);
-                return;
-            }
             else if (message is Watch)
             {
                 var w = (Watch) message;
@@ -1710,6 +2358,10 @@ namespace Akka.Streams.Stage
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="behavior">TBD</param>
         public void Become(Receive behavior) => _behavior = behavior;
 
         private void SendTerminated()
@@ -1727,6 +2379,10 @@ namespace Akka.Streams.Stage
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
         public void Watch(IActorRef actorRef)
         {
             var iw = (IInternalActorRef) actorRef;
@@ -1734,6 +2390,10 @@ namespace Akka.Streams.Stage
             iw.SendSystemMessage(new Watch(iw, this));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
         public void Unwatch(IActorRef actorRef)
         {
             var iw = (IInternalActorRef)actorRef;
@@ -1741,6 +2401,9 @@ namespace Akka.Streams.Stage
             iw.SendSystemMessage(new Unwatch(iw, this));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Stop() => SendTerminated();
 
         private void SendTerminated(IInternalActorRef actorRef)
@@ -1821,7 +2484,7 @@ namespace Akka.Streams.Stage
     /// Intended to be used by <see cref="GraphStage{TShape}"/> that share callback with outer world.
     /// </para>
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="T">TBD</typeparam>
     internal class GraphStageLogicWithCallbackWrapper<T> : GraphStageLogic
     {
         private interface ICallbackState { }
@@ -1859,22 +2522,43 @@ namespace Akka.Streams.Stage
         private readonly AtomicReference<ICallbackState> _callbackState =
             new AtomicReference<ICallbackState>(new NotInitialized(new List<T>()));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inCount">TBD</param>
+        /// <param name="outCount">TBD</param>
         public GraphStageLogicWithCallbackWrapper(int inCount, int outCount) : base(inCount, outCount)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
         public GraphStageLogicWithCallbackWrapper(Shape shape) : base(shape)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="callback">TBD</param>
         protected void StopCallback(Action<T> callback) => Locked(() => _callbackState.Value = new Stopped(callback));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="callback">TBD</param>
         protected void InitCallback(Action<T> callback) => Locked(() =>
         {
             var state = _callbackState.GetAndSet(new Initialized(callback));
             (state as NotInitialized)?.Args.ForEach(callback);
         });
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="arg">TBD</param>
         protected void InvokeCallbacks(T arg) => Locked(() =>
         {
             var state = _callbackState.Value;
@@ -1883,10 +2567,7 @@ namespace Akka.Streams.Stage
             else if (state is NotInitialized)
                 ((NotInitialized) state).Args.Add(arg);
             else if (state is Stopped)
-            {
-                Monitor.Exit(this);
                 ((Stopped) state).Callback(arg);
-            }
         });
 
         private void Locked(Action body)
@@ -1898,8 +2579,7 @@ namespace Akka.Streams.Stage
             }
             finally
             {
-                if (Monitor.IsEntered(this))
-                    Monitor.Exit(this);
+                Monitor.Exit(this);
             }
         }
     }

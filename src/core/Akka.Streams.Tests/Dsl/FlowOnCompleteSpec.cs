@@ -8,10 +8,10 @@
 using System;
 using Akka.Actor;
 using Akka.Streams.Dsl;
+using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Xunit;
 using Xunit.Abstractions;
-using TestPublisher = Akka.Streams.TestKit.TestPublisher;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var onCompleteProbe = CreateTestProbe();
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"), _ => { }))
                     .Run(Materializer);
@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var onCompleteProbe = CreateTestProbe();
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => {}, ex => onCompleteProbe.Ref.Tell(ex)))
                     .Run(Materializer);
@@ -69,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var onCompleteProbe = CreateTestProbe();
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"), _ => {}))
                     .Run(Materializer);
@@ -87,7 +87,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var onCompleteProbe = CreateTestProbe();
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var p = this.CreateManualPublisherProbe<int>();
                 var foreachSink = Sink.ForEach<int>(x => onCompleteProbe.Ref.Tell("foreach-" + x));
                 var future = Source.FromPublisher(p).Select(x =>
                 {

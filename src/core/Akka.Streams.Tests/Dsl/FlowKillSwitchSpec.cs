@@ -79,8 +79,8 @@ namespace Akka.Streams.Tests.Dsl
                 .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
                 //ex is a AggregateException from the Task
                 .Recover(ex => ex.InnerException is TestException ? -1 : Option<int>.None)
-                .ViaMaterialized(KillSwitches.Single<Option<int>>(), Keep.Both)
-                .ToMaterialized(this.SinkProbe<Option<int>>(), Keep.Both)
+                .ViaMaterialized(KillSwitches.Single<int>(), Keep.Both)
+                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Materializer);
             var upstream = t.Item1.Item1.Item1;
             var killSwitch1 = t.Item1.Item1.Item2;

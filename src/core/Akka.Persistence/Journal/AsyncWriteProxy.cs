@@ -48,9 +48,17 @@ namespace Akka.Persistence.Journal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class SetStore
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="store">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public SetStore(IActorRef store)
         {
             if (store == null)
@@ -59,17 +67,31 @@ namespace Akka.Persistence.Journal
             Store = store;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Store;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class AsyncWriteTarget
     {
 
         #region Internal Messages
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class ReplayFailure
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cause">TBD</param>
+            /// <exception cref="ArgumentNullException">TBD</exception>
             public ReplayFailure(Exception cause)
             {
                 if (cause == null)
@@ -78,18 +100,36 @@ namespace Akka.Persistence.Journal
                 Cause = cause;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Exception Cause { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class ReplaySuccess : IEquatable<ReplaySuccess>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="highestSequenceNr">TBD</param>
             public ReplaySuccess(long highestSequenceNr)
             {
                 HighestSequenceNr = highestSequenceNr;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long HighestSequenceNr { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             public bool Equals(ReplaySuccess other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -99,20 +139,40 @@ namespace Akka.Persistence.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class WriteMessages
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="messages">TBD</param>
             public WriteMessages(IEnumerable<AtomicWrite> messages)
             {
                 Messages = messages.ToArray();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public AtomicWrite[] Messages { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class ReplayMessages : IEquatable<ReplayMessages>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="persistenceId">TBD</param>
+            /// <param name="fromSequenceNr">TBD</param>
+            /// <param name="toSequenceNr">TBD</param>
+            /// <param name="max">TBD</param>
             public ReplayMessages(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
             {
                 PersistenceId = persistenceId;
@@ -121,10 +181,27 @@ namespace Akka.Persistence.Journal
                 Max = max;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string PersistenceId { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long FromSequenceNr { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long ToSequenceNr { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long Max { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             public bool Equals(ReplayMessages other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -137,17 +214,36 @@ namespace Akka.Persistence.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class DeleteMessagesTo : IEquatable<DeleteMessagesTo>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="persistenceId">TBD</param>
+            /// <param name="toSequenceNr">TBD</param>
             public DeleteMessagesTo(string persistenceId, long toSequenceNr)
             {
                 PersistenceId = persistenceId;
                 ToSequenceNr = toSequenceNr;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string PersistenceId { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long ToSequenceNr { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             public bool Equals(DeleteMessagesTo other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -170,6 +266,9 @@ namespace Akka.Persistence.Journal
         private bool _isInitTimedOut;
         private IActorRef _store;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected AsyncWriteProxy()
         {
             _isInitialized = false;
@@ -177,14 +276,26 @@ namespace Akka.Persistence.Journal
             _store = null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract TimeSpan Timeout { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void AroundPreStart()
         {
             Context.System.Scheduler.ScheduleTellOnce(Timeout, Self, InitTimeout.Instance, Self);
             base.AroundPreStart();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool AroundReceive(Receive receive, object message)
         {
             if (_isInitialized)
@@ -211,6 +322,11 @@ namespace Akka.Persistence.Journal
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messages">TBD</param>
+        /// <returns>TBD</returns>
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
             if (_store == null)
@@ -219,6 +335,12 @@ namespace Akka.Persistence.Journal
             return _store.Ask<IImmutableList<Exception>>(new AsyncWriteTarget.WriteMessages(messages), Timeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <returns>TBD</returns>
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
             if (_store == null)
@@ -227,6 +349,16 @@ namespace Akka.Persistence.Journal
             return _store.Ask(new AsyncWriteTarget.DeleteMessagesTo(persistenceId, toSequenceNr), Timeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="recoveryCallback">TBD</param>
+        /// <returns>TBD</returns>
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
         {
             if (_store == null)
@@ -240,6 +372,12 @@ namespace Akka.Persistence.Journal
             return replayCompletionPromise.Task;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="fromSequenceNr">TBD</param>
+        /// <returns>TBD</returns>
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
             if (_store == null)
@@ -256,14 +394,23 @@ namespace Akka.Persistence.Journal
             return promise.Task;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IStash Stash { get; set; }
 
         // sent to self only
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class InitTimeout
         {
             private InitTimeout() { }
             private static readonly InitTimeout _instance = new InitTimeout();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static InitTimeout Instance
             {
                 get
@@ -274,12 +421,21 @@ namespace Akka.Persistence.Journal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ReplayMediator : ActorBase
     {
         private readonly Action<IPersistentRepresentation> _replayCallback;
         private readonly TaskCompletionSource<object> _replayCompletionPromise;
         private readonly TimeSpan _replayTimeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="replayCallback">TBD</param>
+        /// <param name="replayCompletionPromise">TBD</param>
+        /// <param name="replayTimeout">TBD</param>
         public ReplayMediator(Action<IPersistentRepresentation> replayCallback, TaskCompletionSource<object> replayCompletionPromise, TimeSpan replayTimeout)
         {
             _replayCallback = replayCallback;
@@ -289,6 +445,12 @@ namespace Akka.Persistence.Journal
             Context.SetReceiveTimeout(replayTimeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <exception cref="AsyncReplayTimeoutException">TBD</exception>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if (message is IPersistentRepresentation) _replayCallback(message as IPersistentRepresentation);

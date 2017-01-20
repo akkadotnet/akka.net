@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Skip_must_not_skip_anything_for_negative_n()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
             Source.From(new[] {1, 2, 3}).Skip(-1).To(Sink.FromSubscriber(probe)).Run(Materializer);
             probe.ExpectSubscription().Request(10);
             probe.ExpectNext(1);

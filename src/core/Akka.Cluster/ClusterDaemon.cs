@@ -31,28 +31,52 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterUserAction
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal abstract class BaseClusterUserAction
         {
             readonly Address _address;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address Address { get { return _address; } }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="address">TBD</param>
             protected BaseClusterUserAction(Address address)
             {
                 _address = address;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var baseUserAction = (BaseClusterUserAction)obj;
                 return baseUserAction != null && Equals(baseUserAction);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             protected bool Equals(BaseClusterUserAction other)
             {
                 return Equals(_address, other._address);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 return (_address != null ? _address.GetHashCode() : 0);
@@ -65,6 +89,10 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class JoinTo : BaseClusterUserAction
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="address">TBD</param>
             public JoinTo(Address address)
                 : base(address)
             {
@@ -76,6 +104,10 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class Leave : BaseClusterUserAction, IClusterMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="address">TBD</param>
             public Leave(Address address)
                 : base(address)
             { }
@@ -86,6 +118,10 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class Down : BaseClusterUserAction, IClusterMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="address">TBD</param>
             public Down(Address address)
                 : base(address)
             {
@@ -98,22 +134,39 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class InternalClusterAction
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Join : IClusterMessage
         {
             readonly UniqueAddress _node;
             readonly ImmutableHashSet<string> _roles;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             /// <param name="node">the node that wants to join the cluster</param>
-            /// <param name="roles"></param>
+            /// <param name="roles">TBD</param>
             public Join(UniqueAddress node, ImmutableHashSet<string> roles)
             {
                 _node = node;
                 _roles = roles;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public UniqueAddress Node { get { return _node; } }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableHashSet<string> Roles { get { return _roles; } }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -126,6 +179,10 @@ namespace Akka.Cluster
                 return _node.Equals(other._node) && !_roles.Except(other._roles).Any();
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -134,6 +191,10 @@ namespace Akka.Cluster
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return string.Format("{0}: {1} wants to join on Roles [{2}]", GetType(), Node,
@@ -149,18 +210,32 @@ namespace Akka.Cluster
             readonly UniqueAddress _from;
             readonly Gossip _gossip;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             /// <param name="from">the sender node in the cluster, i.e. the node that received the Join command</param>
-            /// <param name="gossip"></param>
+            /// <param name="gossip">TBD</param>
             public Welcome(UniqueAddress from, Gossip gossip)
             {
                 _from = from;
                 _gossip = gossip;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public UniqueAddress From { get { return _from; } }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Gossip Gossip { get { return _gossip; } }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -173,6 +248,10 @@ namespace Akka.Cluster
                 return _from.Equals(other._from) && _gossip.ToString().Equals(other._gossip.ToString());
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -191,11 +270,18 @@ namespace Akka.Cluster
         {
             readonly ImmutableList<Address> _seedNodes;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="seedNodes">TBD</param>
             public JoinSeedNodes(ImmutableList<Address> seedNodes)
             {
                 _seedNodes = seedNodes;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableList<Address> SeedNodes
             {
                 get { return _seedNodes; }
@@ -219,6 +305,11 @@ namespace Akka.Cluster
         /// </summary>
         internal class InitJoin : IClusterMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 return obj is InitJoin;
@@ -232,16 +323,29 @@ namespace Akka.Cluster
         {
             readonly Address _address;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="address">TBD</param>
+            /// <returns>TBD</returns>
             public InitJoinAck(Address address)
             {
                 _address = address;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address Address
             {
                 get { return _address; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -254,6 +358,10 @@ namespace Akka.Cluster
                 return Equals(_address, other._address);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 return (_address != null ? _address.GetHashCode() : 0);
@@ -267,16 +375,28 @@ namespace Akka.Cluster
         {
             readonly Address _address;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="address">TBD</param>
             public InitJoinNack(Address address)
             {
                 _address = address;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address Address
             {
                 get { return _address; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -289,6 +409,10 @@ namespace Akka.Cluster
                 return Equals(_address, other._address);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 return (_address != null ? _address.GetHashCode() : 0);
@@ -300,10 +424,16 @@ namespace Akka.Cluster
         /// </summary>
         internal interface ITick { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class GossipTick : ITick
         {
             private GossipTick() { }
             private static readonly GossipTick _instance = new GossipTick();
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static GossipTick Instance
             {
                 get
@@ -313,10 +443,16 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class GossipSpeedupTick : ITick
         {
             private GossipSpeedupTick() { }
             private static readonly GossipSpeedupTick _instance = new GossipSpeedupTick();
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static GossipSpeedupTick Instance
             {
                 get
@@ -326,10 +462,16 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class ReapUnreachableTick : ITick
         {
             private ReapUnreachableTick() { }
             private static readonly ReapUnreachableTick _instance = new ReapUnreachableTick();
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static ReapUnreachableTick Instance
             {
                 get
@@ -339,10 +481,16 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class MetricsTick : ITick
         {
             private MetricsTick() { }
             private static readonly MetricsTick _instance = new MetricsTick();
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static MetricsTick Instance
             {
                 get
@@ -352,10 +500,16 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class LeaderActionsTick : ITick
         {
             private LeaderActionsTick() { }
             private static readonly LeaderActionsTick _instance = new LeaderActionsTick();
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static LeaderActionsTick Instance
             {
                 get
@@ -365,10 +519,16 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class PublishStatsTick : ITick
         {
             private PublishStatsTick() { }
             private static readonly PublishStatsTick _instance = new PublishStatsTick();
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static PublishStatsTick Instance
             {
                 get
@@ -378,17 +538,32 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class SendGossipTo
         {
             readonly Address _address;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="address">TBD</param>
             public SendGossipTo(Address address)
             {
                 _address = address;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address Address { get { return _address; } }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as SendGossipTo;
@@ -396,16 +571,26 @@ namespace Akka.Cluster
                 return _address.Equals(other._address);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 return _address.GetHashCode();
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class GetClusterCoreRef
         {
             private GetClusterCoreRef() { }
             private static readonly GetClusterCoreRef _instance = new GetClusterCoreRef();
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static GetClusterCoreRef Instance
             {
                 get
@@ -421,11 +606,18 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class AddOnMemberUpListener : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="callback">TBD</param>
             public AddOnMemberUpListener(Action callback)
             {
                 Callback = callback;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Action Callback { get; }
         }
 
@@ -434,22 +626,41 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class AddOnMemberRemovedListener : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="callback">TBD</param>
             public AddOnMemberRemovedListener(Action callback)
             {
                 Callback = callback;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Action Callback { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public interface ISubscriptionMessage { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Subscribe : ISubscriptionMessage
         {
             readonly IActorRef _subscriber;
             readonly ClusterEvent.SubscriptionInitialStateMode _initialStateMode;
             readonly ImmutableHashSet<Type> _to;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="subscriber">TBD</param>
+            /// <param name="initialStateMode">TBD</param>
+            /// <param name="to">TBD</param>
             public Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode,
                 ImmutableHashSet<Type> to)
             {
@@ -458,53 +669,85 @@ namespace Akka.Cluster
                 _to = to;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Subscriber
             {
                 get { return _subscriber; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ClusterEvent.SubscriptionInitialStateMode InitialStateMode
             {
                 get { return _initialStateMode; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableHashSet<Type> To
             {
                 get { return _to; }
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Unsubscribe : ISubscriptionMessage
         {
             readonly IActorRef _subscriber;
             readonly Type _to;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="subscriber">TBD</param>
+            /// <param name="to">TBD</param>
             public Unsubscribe(IActorRef subscriber, Type to)
             {
                 _to = to;
                 _subscriber = subscriber;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Subscriber
             {
                 get { return _subscriber; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Type To
             {
                 get { return _to; }
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class SendCurrentClusterState : ISubscriptionMessage
         {
             readonly IActorRef _receiver;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Receiver
             {
                 get { return _receiver; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             /// <param name="receiver"><see cref="Akka.Cluster.ClusterEvent.CurrentClusterState"/> will be sent to the `receiver`</param>
             public SendCurrentClusterState(IActorRef receiver)
             {
@@ -512,32 +755,55 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         interface IPublishMessage { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class PublishChanges : IPublishMessage
         {
             readonly Gossip _newGossip;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="newGossip">TBD</param>
             internal PublishChanges(Gossip newGossip)
             {
                 _newGossip = newGossip;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Gossip NewGossip
             {
                 get { return _newGossip; }
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class PublishEvent : IPublishMessage
         {
             readonly ClusterEvent.IClusterDomainEvent _event;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="event">TBD</param>
             internal PublishEvent(ClusterEvent.IClusterDomainEvent @event)
             {
                 _event = @event;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ClusterEvent.IClusterDomainEvent Event
             {
                 get { return _event; }
@@ -554,6 +820,10 @@ namespace Akka.Cluster
         private readonly ClusterSettings _settings;
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
         public ClusterDaemon(ClusterSettings settings)
         {
             // Important - don't use Cluster(context.system) in constructor because that would
@@ -604,6 +874,9 @@ namespace Akka.Cluster
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ClusterCoreSupervisor()
         {
             // Important - don't use Cluster(Context.System) in constructor because that would
@@ -619,6 +892,10 @@ namespace Akka.Cluster
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return new OneForOneStrategy(e =>
@@ -631,6 +908,9 @@ namespace Akka.Cluster
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             Cluster.Get(Context.System).Shutdown();
@@ -645,9 +925,15 @@ namespace Akka.Cluster
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ClusterCoreDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly Cluster _cluster;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly UniqueAddress SelfUniqueAddress;
         private const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 3;
         private const int MaxGossipsBeforeShuttingDownMyself = 5;
@@ -673,6 +959,10 @@ namespace Akka.Cluster
         readonly IActorRef _publisher;
         private int _leaderActionCounter = 0;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="publisher">TBD</param>
         public ClusterCoreDaemon(IActorRef publisher)
         {
             _cluster = Cluster.Get(Context.System);
@@ -739,6 +1029,9 @@ namespace Akka.Cluster
         readonly ICancelable _leaderActionsTaskCancellable;
         readonly ICancelable _publishStatsTaskTaskCancellable;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             Context.System.EventStream.Subscribe(Self, typeof(QuarantinedEvent));
@@ -763,6 +1056,9 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             Context.System.EventStream.Unsubscribe(Self);
@@ -957,11 +1253,19 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             Uninitialized(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void Unhandled(object message)
         {
             if (message is InternalClusterAction.ITick || message is GossipEnvelope || message is GossipStatus)
@@ -978,6 +1282,9 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void InitJoin()
         {
             var selfStatus = _latestGossip.GetMember(SelfUniqueAddress).Status;
@@ -992,6 +1299,10 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="newSeedNodes">TBD</param>
         public void JoinSeedNodes(ImmutableList<Address> newSeedNodes)
         {
             if (!newSeedNodes.IsEmpty)
@@ -1025,7 +1336,8 @@ namespace Akka.Cluster
         /// A `Join(selfUniqueAddress)` command is sent to the node to join,
         /// which will reply with a `Welcome` message.
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">Join can only be done from an empty state</exception>
+        /// <param name="address">TBD</param>
+        /// <exception cref="InvalidOperationException">Join can only be done from an empty state</exception>
         public void Join(Address address)
         {
             if (address.Protocol != _cluster.SelfAddress.Protocol)
@@ -1063,6 +1375,9 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void StopSeedNodeProcess()
         {
             if (_seedNodeProcess != null)
@@ -1083,6 +1398,8 @@ namespace Akka.Cluster
         /// Received `Join` message and replies with `Welcome` message, containing
         /// current gossip state, including the new joining member.
         /// </summary>
+        /// <param name="node">TBD</param>
+        /// <param name="roles">TBD</param>
         public void Joining(UniqueAddress node, ImmutableHashSet<string> roles)
         {
             var selfStatus = _latestGossip.GetMember(SelfUniqueAddress).Status;
@@ -1163,7 +1480,10 @@ namespace Akka.Cluster
         /// <summary>
         /// Reply from Join request
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">Welcome can only be done from an empty state</exception>
+        /// <param name="joinWith">TBD</param>
+        /// <param name="from">TBD</param>
+        /// <param name="gossip">TBD</param>
+        /// <exception cref="InvalidOperationException">Welcome can only be done from an empty state</exception>
         public void Welcome(Address joinWith, UniqueAddress from, Gossip gossip)
         {
             if (!_latestGossip.Members.IsEmpty) throw new InvalidOperationException("Welcome can only be done from an empty state");
@@ -1223,6 +1543,7 @@ namespace Akka.Cluster
         /// The node will eventually be removed by the leader, and only after removal a new node with same address can
         /// join the cluster through the normal joining procedure.
         /// </summary>
+        /// <param name="address">TBD</param>
         public void Downing(Address address)
         {
             var localGossip = _latestGossip;
@@ -1262,6 +1583,10 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
         public void Quarantined(UniqueAddress node)
         {
             var localGossip = _latestGossip;
@@ -1278,6 +1603,10 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="status">TBD</param>
         public void ReceiveGossipStatus(GossipStatus status)
         {
             var from = status.From;
@@ -1309,16 +1638,33 @@ namespace Akka.Cluster
         /// </summary>
         public enum ReceiveGossipType
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             Ignored,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Older,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Newer,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Same,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Merge
         }
 
         /// <summary>
         /// The types of gossip actions that receive gossip has performed.
         /// </summary>
+        /// <param name="envelope">TBD</param>
+        /// <returns>TBD</returns>
         public ReceiveGossipType ReceiveGossip(GossipEnvelope envelope)
         {
             var from = envelope.From;
@@ -1460,6 +1806,9 @@ namespace Akka.Cluster
             return gossipType;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void GossipTick()
         {
             SendGossip();
@@ -1472,11 +1821,17 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void GossipSpeedupTick()
         {
             if (IsGossipSpeedupNeeded()) SendGossip();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsGossipSpeedupNeeded()
         {
             return _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
@@ -1619,6 +1974,10 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsMinNrOfMembersFulfilled()
         {
             return _latestGossip.Members.Count >= _cluster.Settings.MinNrOfMembers
@@ -1809,12 +2168,20 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nodes">TBD</param>
+        /// <returns>TBD</returns>
         public UniqueAddress SelectRandomNode(ImmutableList<UniqueAddress> nodes)
         {
             if (nodes.IsEmpty) return null;
             return nodes[ThreadLocalRandom.Current.Next(nodes.Count)];
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsSingletonCluster
         {
             get { return _latestGossip.IsSingletonCluster; }
@@ -1823,6 +2190,7 @@ namespace Akka.Cluster
         /// <summary>
         /// needed for tests
         /// </summary>
+        /// <param name="address">TBD</param>
         public void SendGossipTo(Address address)
         {
             foreach (var m in _latestGossip.Members)
@@ -1835,36 +2203,60 @@ namespace Akka.Cluster
         /// <summary>
         /// Gossips latest gossip to a node.
         /// </summary>
+        /// <param name="node">TBD</param>
         public void GossipTo(UniqueAddress node)
         {
             if (ValidNodeForGossip(node))
                 ClusterCore(node.Address).Tell(new GossipEnvelope(SelfUniqueAddress, node, _latestGossip));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <param name="destination">TBD</param>
         public void GossipTo(UniqueAddress node, IActorRef destination)
         {
             if (ValidNodeForGossip(node))
                 destination.Tell(new GossipEnvelope(SelfUniqueAddress, node, _latestGossip));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
         public void GossipStatusTo(UniqueAddress node)
         {
             if (ValidNodeForGossip(node))
                 ClusterCore(node.Address).Tell(new GossipStatus(SelfUniqueAddress, _latestGossip.Version));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <param name="destination">TBD</param>
         public void GossipStatusTo(UniqueAddress node, IActorRef destination)
         {
             if (ValidNodeForGossip(node))
                 destination.Tell(new GossipStatus(SelfUniqueAddress, _latestGossip.Version));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public bool ValidNodeForGossip(UniqueAddress node)
         {
             return !node.Equals(SelfUniqueAddress) && _latestGossip.HasMember(node) &&
                     _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(node);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="newGossip">TBD</param>
         public void UpdateLatestGossip(Gossip newGossip)
         {
             // Updating the vclock version for the changes
@@ -1876,6 +2268,10 @@ namespace Akka.Cluster
             AssertLatestGossip();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="InvalidOperationException">TBD</exception>
         public void AssertLatestGossip()
         {
             if (Cluster.IsAssertInvariantsEnabled && _latestGossip.Version.Versions.Count > _latestGossip.Members.Count)
@@ -1884,6 +2280,10 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="newGossip">TBD</param>
         public void Publish(Gossip newGossip)
         {
             _publisher.Tell(new InternalClusterAction.PublishChanges(newGossip));
@@ -1893,6 +2293,9 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void PublishInternalStats()
         {
             var vclockStats = new VectorClockStats(_latestGossip.Version.Versions.Count,
@@ -1935,6 +2338,10 @@ namespace Akka.Cluster
         private readonly ImmutableList<Address> _seeds;
         private readonly Address _selfAddress;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="seeds">TBD</param>
         public JoinSeedNodeProcess(ImmutableList<Address> seeds)
         {
             _selfAddress = Cluster.Get(Context.System).SelfAddress;
@@ -1944,11 +2351,18 @@ namespace Akka.Cluster
             Context.SetReceiveTimeout(Cluster.Get(Context.System).Settings.SeedNodeTimeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             Self.Tell(new InternalClusterAction.JoinSeenNode());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is InternalClusterAction.JoinSeenNode)
@@ -2011,6 +2425,10 @@ namespace Akka.Cluster
         readonly Deadline _timeout;
         readonly ICancelable _retryTaskToken;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="seeds">TBD</param>
         public FirstSeedNodeProcess(ImmutableList<Address> seeds)
         {
             _cluster = Cluster.Get(Context.System);
@@ -2025,11 +2443,18 @@ namespace Akka.Cluster
             Self.Tell(new InternalClusterAction.JoinSeenNode());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             _retryTaskToken.Cancel();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is InternalClusterAction.JoinSeenNode)
@@ -2078,12 +2503,35 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class GossipStats
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long ReceivedGossipCount;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long MergeCount;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long SameCount;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long NewerCount;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long OlderCount;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receivedGossipCount">TBD</param>
+        /// <param name="mergeCount">TBD</param>
+        /// <param name="sameCount">TBD</param>
+        /// <param name="newerCount">TBD</param>
+        /// <param name="olderCount">TBD</param>
         public GossipStats(long receivedGossipCount = 0L,
             long mergeCount = 0L,
             long sameCount = 0L,
@@ -2096,26 +2544,51 @@ namespace Akka.Cluster
             OlderCount = olderCount;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public GossipStats IncrementMergeCount()
         {
             return Copy(mergeCount: MergeCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public GossipStats IncrementSameCount()
         {
             return Copy(sameCount: SameCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public GossipStats IncrementNewerCount()
         {
             return Copy(newerCount: NewerCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public GossipStats IncrementOlderCount()
         {
             return Copy(olderCount: OlderCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receivedGossipCount">TBD</param>
+        /// <param name="mergeCount">TBD</param>
+        /// <param name="sameCount">TBD</param>
+        /// <param name="newerCount">TBD</param>
+        /// <param name="olderCount">TBD</param>
+        /// <returns>TBD</returns>
         public GossipStats Copy(long? receivedGossipCount = null,
             long? mergeCount = null,
             long? sameCount = null,
@@ -2130,6 +2603,12 @@ namespace Akka.Cluster
 
         #region Operator overloads
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="a">TBD</param>
+        /// <param name="b">TBD</param>
+        /// <returns>TBD</returns>
         public static GossipStats operator +(GossipStats a, GossipStats b)
         {
             return new GossipStats(a.ReceivedGossipCount + b.ReceivedGossipCount,
@@ -2139,6 +2618,12 @@ namespace Akka.Cluster
                 a.OlderCount + b.OlderCount);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="a">TBD</param>
+        /// <param name="b">TBD</param>
+        /// <returns>TBD</returns>
         public static GossipStats operator -(GossipStats a, GossipStats b)
         {
             return new GossipStats(a.ReceivedGossipCount - b.ReceivedGossipCount,
@@ -2164,6 +2649,11 @@ namespace Akka.Cluster
         private readonly MemberStatus _targetStatus;
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="callback">TBD</param>
+        /// <param name="targetStatus">TBD</param>
         public OnMemberStatusChangedListener(Action callback, MemberStatus targetStatus)
         {
             _targetStatus = targetStatus;
@@ -2189,6 +2679,9 @@ namespace Akka.Cluster
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             var type = _targetStatus == MemberStatus.Up
@@ -2198,6 +2691,9 @@ namespace Akka.Cluster
             _cluster.Subscribe(Self, new[] { type });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             if (_targetStatus == MemberStatus.Removed)
@@ -2227,17 +2723,36 @@ namespace Akka.Cluster
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class VectorClockStats
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="versionSize">TBD</param>
+        /// <param name="seenLatest">TBD</param>
         public VectorClockStats(int versionSize = 0, int seenLatest = 0)
         {
             VersionSize = versionSize;
             SeenLatest = seenLatest;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int VersionSize { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int SeenLatest { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             var other = obj as VectorClockStats;
@@ -2246,6 +2761,10 @@ namespace Akka.Cluster
                    SeenLatest == other.SeenLatest;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked

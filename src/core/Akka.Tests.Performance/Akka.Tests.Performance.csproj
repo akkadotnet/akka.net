@@ -30,12 +30,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NBench, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NBench.0.3.0\lib\net45\NBench.dll</HintPath>
+    <Reference Include="NBench, Version=0.3.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NBench.0.3.4\lib\net45\NBench.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NBench.PerformanceCounters, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NBench.PerformanceCounters.0.3.0\lib\net45\NBench.PerformanceCounters.dll</HintPath>
+    <Reference Include="NBench.PerformanceCounters, Version=0.3.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NBench.PerformanceCounters.0.3.4\lib\net45\NBench.PerformanceCounters.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -51,6 +51,7 @@
     <Compile Include="Actor\MinimalActorRefThroughputSpec.cs" />
     <Compile Include="Actor\Pattern\AskSpec.cs" />
     <Compile Include="Actor\ReceiveActorThroughputSpec.cs" />
+    <Compile Include="Actor\Scheduler\DefaultSchedulerPerformanceTests.cs" />
     <Compile Include="Actor\UntypedActorThroughputSpec.cs" />
     <Compile Include="Dispatch\CallingThreadExecutor.cs" />
     <Compile Include="Dispatch\DefaultDispatcherColdThroughputSpec.cs" />

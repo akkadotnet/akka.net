@@ -28,7 +28,7 @@ namespace Akka.Streams
     /// <summary>
     /// </summary>
     /// <typeparam name="TShape">Type-level accessor for the shape parameter of this graph.</typeparam>
-    /// <typeparam name="TMaterialized"></typeparam>
+    /// <typeparam name="TMaterialized">TBD</typeparam>
     public interface IGraph<out TShape, out TMaterialized> : IGraph<TShape> where TShape : Shape
     {
         /// <summary>
@@ -38,6 +38,8 @@ namespace Akka.Streams
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes);
 
         /// <summary>
@@ -47,16 +49,21 @@ namespace Akka.Streams
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes);
 
         /// <summary>
         /// Add a name attribute to this Graph.
         /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         IGraph<TShape, TMaterialized> Named(string name);
 
         /// <summary>
         /// Put an asynchronous boundary around this Graph.
         /// </summary>
+        /// <returns>TBD</returns>
         IGraph<TShape, TMaterialized> Async();
     }
 }

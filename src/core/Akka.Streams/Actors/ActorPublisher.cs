@@ -19,28 +19,63 @@ namespace Akka.Streams.Actors
 {
     #region Internal messages
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Subscribe<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ISubscriber<T> Subscriber;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
         public Subscribe(ISubscriber<T> subscriber)
         {
             Subscriber = subscriber;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public enum LifecycleState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         PreSubscriber,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Active,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Canceled,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Completed,
+        /// <summary>
+        /// TBD
+        /// </summary>
         CompleteThenStop,
+        /// <summary>
+        /// TBD
+        /// </summary>
         ErrorEmitted
     }
 
     #endregion
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IActorPublisherMessage: IDeadLetterSuppression { }
 
     /// <summary>
@@ -50,11 +85,29 @@ namespace Akka.Streams.Actors
     [Serializable]
     public sealed class Request : IActorPublisherMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long Count;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
         public Request(long count)
         {
             Count = count;
         }
+
+        /// <summary>
+        /// INTERNAL API: needed for stash support
+        /// </summary>
+        internal void MarkProcessed() => IsProcessed = true;
+
+        /// <summary>
+        /// INTERNAL API: needed for stash support
+        /// </summary>
+        internal bool IsProcessed { get; private set; }
     }
 
     /// <summary>
@@ -64,6 +117,9 @@ namespace Akka.Streams.Actors
     [Serializable]
     public sealed class Cancel : IActorPublisherMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Cancel Instance = new Cancel();
         private Cancel() { }
     }
@@ -76,6 +132,9 @@ namespace Akka.Streams.Actors
     [Serializable]
     public sealed class SubscriptionTimeoutExceeded : IActorPublisherMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly SubscriptionTimeoutExceeded Instance = new SubscriptionTimeoutExceeded();
         private SubscriptionTimeoutExceeded() { }
     }
@@ -133,6 +192,7 @@ namespace Akka.Streams.Actors
     /// failure, completed or canceled.
     /// </para>
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public abstract class ActorPublisher<T> : ActorBase
     {
         private readonly ActorPublisherState _state = ActorPublisherState.Instance.Apply(Context.System);
@@ -144,6 +204,9 @@ namespace Akka.Streams.Actors
         // case and stop fields are used only when combined with LifecycleState.ErrorEmitted
         private OnErrorBlock _onError;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ActorPublisher()
         {
             SubscriptionTimeout = Timeout.InfiniteTimeSpan;
@@ -216,13 +279,14 @@ namespace Akka.Streams.Actors
         /// <see cref="IsActive"/> and <see cref="TotalDemand"/> &gt; 0,
         /// otherwise <see cref="OnNext"/> will throw <see cref="IllegalStateException"/>.
         /// </summary>
+        /// <param name="element">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
         public void OnNext(T element)
         {
             switch (_lifecycleState)
             {
                 case LifecycleState.Active:
                 case LifecycleState.PreSubscriber:
-                case LifecycleState.CompleteThenStop:
                     if (_demand > 0)
                     {
                         _demand--;
@@ -234,8 +298,11 @@ namespace Akka.Streams.Actors
                             "OnNext is not allowed when the stream has not requested elements, total demand was 0");
                     }
                     break;
-                case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnNext must not be called after OnError");
-                case LifecycleState.Completed: throw new IllegalStateException("OnNext must not be called after OnComplete");
+                case LifecycleState.ErrorEmitted:
+                    throw new IllegalStateException("OnNext must not be called after OnError");
+                case LifecycleState.Completed:
+                case LifecycleState.CompleteThenStop:
+                    throw new IllegalStateException("OnNext must not be called after OnComplete");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -244,6 +311,7 @@ namespace Akka.Streams.Actors
         /// Complete the stream. After that you are not allowed to
         /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
         /// </summary>
+        /// <exception cref="IllegalStateException">TBD</exception>
         public void OnComplete()
         {
             switch (_lifecycleState)
@@ -313,6 +381,8 @@ namespace Akka.Streams.Actors
         /// Terminate the stream with failure. After that you are not allowed to
         /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
         /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
         public void OnError(Exception cause)
         {
             switch (_lifecycleState)
@@ -353,6 +423,7 @@ namespace Akka.Streams.Actors
         /// will be delayed until such <see cref="ISubscriber{T}"/> arrives.
         /// </para>
         /// </summary>
+        /// <param name="cause">TBD</param>
         public void OnErrorThenStop(Exception cause)
         {
             switch (_lifecycleState)
@@ -381,21 +452,37 @@ namespace Akka.Streams.Actors
 
         #region Internal API
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool AroundReceive(Receive receive, object message)
         {
             if (message is Request)
             {
                 var req = (Request) message;
-                if (req.Count < 1)
+                if (req.IsProcessed)
                 {
-                    if (_lifecycleState == LifecycleState.Active)
-                        OnError(new ArgumentException("Number of requested elements must be positive. Rule 3.9"));
+                    // it's an unstashed Request, demand is already handled
+                    base.AroundReceive(receive, req);
                 }
                 else
                 {
-                    _demand += req.Count;
-                    if (_demand < 0) _demand = long.MaxValue; // long overflow: effectively unbounded
-                    base.AroundReceive(receive, message);
+                    if (req.Count < 1)
+                    {
+                        if (_lifecycleState == LifecycleState.Active)
+                            OnError(new ArgumentException("Number of requested elements must be positive. Rule 3.9"));
+                    }
+                    else
+                    {
+                        _demand += req.Count;
+                        if (_demand < 0)
+                            _demand = long.MaxValue; // long overflow: effectively unbounded
+                        req.MarkProcessed();
+                        base.AroundReceive(receive, message);
+                    }
                 }
             }
             else if (message is Subscribe<T>)
@@ -426,17 +513,21 @@ namespace Akka.Streams.Actors
                         break;
                     case LifecycleState.Active:
                     case LifecycleState.Canceled:
-                        ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-                        ReactiveStreamsCompliance.TryOnError(subscriber, _subscriber == subscriber
-                            ? new IllegalStateException("Cannot subscribe the same subscriber multiple times")
-                            : new IllegalStateException("Only supports one subscriber"));
+                        if(_subscriber == subscriber)
+                            ReactiveStreamsCompliance.RejectDuplicateSubscriber(subscriber);
+                        else
+                            ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "ActorPublisher");
                         break;
                 }
             }
             else if (message is Cancel)
             {
-                CancelSelf();
-                base.AroundReceive(receive, message);
+                if (_lifecycleState != LifecycleState.Canceled)
+                {
+                    // possible to receive again in case of stash
+                    CancelSelf();
+                    base.AroundReceive(receive, message);
+                }
             }
             else if (message is SubscriptionTimeoutExceeded)
             {
@@ -458,6 +549,9 @@ namespace Akka.Streams.Actors
             _demand = 0L;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void AroundPreStart()
         {
             base.AroundPreStart();
@@ -469,6 +563,11 @@ namespace Akka.Streams.Actors
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="message">TBD</param>
         public override void AroundPreRestart(Exception cause, object message)
         {
             // some state must survive restart
@@ -476,6 +575,11 @@ namespace Akka.Streams.Actors
             base.AroundPreRestart(cause, message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="message">TBD</param>
         public override void AroundPostRestart(Exception cause, object message)
         {
             var s = _state.Remove(Self);
@@ -489,6 +593,9 @@ namespace Akka.Streams.Actors
             base.AroundPostRestart(cause, message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void AroundPostStop()
         {
             _state.Remove(Self);
@@ -506,21 +613,44 @@ namespace Akka.Streams.Actors
         #endregion
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ActorPublisher
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="ref">TBD</param>
+        /// <returns>TBD</returns>
         public static IPublisher<T> Create<T>(IActorRef @ref) => new ActorPublisherImpl<T>(@ref);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class ActorPublisherImpl<T> : IPublisher<T>
     {
         private readonly IActorRef _ref;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ref">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public ActorPublisherImpl(IActorRef @ref)
         {
             if(@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherImpl requires IActorRef to be defined");
             _ref = @ref;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             if (subscriber == null) throw new ArgumentNullException(nameof(subscriber), "Subscriber must not be null");
@@ -528,26 +658,55 @@ namespace Akka.Streams.Actors
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class ActorPublisherSubscription : ISubscription
     {
         private readonly IActorRef _ref;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ref">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public ActorPublisherSubscription(IActorRef @ref)
         {
             if (@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherSubscription requires IActorRef to be defined");
             _ref = @ref;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
         public void Request(long n) => _ref.Tell(new Request(n));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Cancel() => _ref.Tell(Actors.Cancel.Instance);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class OnErrorBlock
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Exception Cause;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly bool Stop;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="stop">TBD</param>
         public OnErrorBlock(Exception cause, bool stop)
         {
             Cause = cause;
@@ -555,14 +714,35 @@ namespace Akka.Streams.Actors
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class State
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IUntypedSubscriber Subscriber;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly long Demand;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly LifecycleState LifecycleState;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="subscriber">TBD</param>
+            /// <param name="demand">TBD</param>
+            /// <param name="lifecycleState">TBD</param>
             public State(IUntypedSubscriber subscriber, long demand, LifecycleState lifecycleState)
             {
                 Subscriber = subscriber;
@@ -573,24 +753,47 @@ namespace Akka.Streams.Actors
 
         private readonly ConcurrentDictionary<IActorRef, State> _state = new ConcurrentDictionary<IActorRef, State>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ActorPublisherState Instance = new ActorPublisherState();
 
         private ActorPublisherState() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public State Get(IActorRef actorRef)
         {
             State state;
             return _state.TryGetValue(actorRef, out state) ? state : null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="s">TBD</param>
         public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (@ref, oldState) => s);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public State Remove(IActorRef actorRef)
         {
             State s;
             return _state.TryRemove(actorRef, out s) ? s : null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override ActorPublisherState CreateExtension(ExtendedActorSystem system) => new ActorPublisherState();
     }
 }

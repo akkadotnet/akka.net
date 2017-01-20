@@ -16,7 +16,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-// ReSharper disable InvokeAsExtensionMethod
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -77,8 +76,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<int>(this);
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
+                var p = this.CreateManualPublisherProbe<int>();
 
                 Source.FromPublisher(p)
                     .Delay(TimeSpan.FromMilliseconds(300))
@@ -138,10 +137,10 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 20))
-                                .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropBuffer)
-                                .WithAttributes(Attributes.CreateInputBuffer(16, 16))
-                                .Grouped(100)
-                                .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                    .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.DropBuffer)
+                    .WithAttributes(Attributes.CreateInputBuffer(16, 16))
+                    .Grouped(100)
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(17, 4));
@@ -154,15 +153,16 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 Source.From(Enumerable.Range(1, 3))
-                .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Backpressure)
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(5)
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                .ExpectNext(1, TimeSpan.FromMilliseconds(200))
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                .ExpectNext(2, TimeSpan.FromMilliseconds(200))
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
-                .ExpectNext(3, TimeSpan.FromMilliseconds(200));
+                    .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Backpressure)
+                    .WithAttributes(Attributes.CreateInputBuffer(1, 1))
+                    .RunWith(this.SinkProbe<int>(), Materializer)
+                    .Request(5)
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
+                    .ExpectNext(1, TimeSpan.FromMilliseconds(200))
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
+                    .ExpectNext(2, TimeSpan.FromMilliseconds(200))
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200))
+                    .ExpectNext(3, TimeSpan.FromMilliseconds(200));
             }, Materializer);
         }
 
@@ -172,11 +172,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var actualError = Source.From(Enumerable.Range(1, 20))
-                                .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Fail)
-                                .WithAttributes(Attributes.CreateInputBuffer(16, 16))
-                                .RunWith(this.SinkProbe<int>(), Materializer)
-                                .Request(100)
-                                .ExpectError();
+                    .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Fail)
+                    .WithAttributes(Attributes.CreateInputBuffer(16, 16))
+                    .RunWith(this.SinkProbe<int>(), Materializer)
+                    .Request(100)
+                    .ExpectError();
 
                 actualError.Should().BeOfType<BufferOverflowException>();
                 actualError.Message.Should().Be("Buffer overflow for Delay combinator (max capacity was: 16)!");
@@ -188,8 +188,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<int>(this);
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
+                var p = this.CreateManualPublisherProbe<int>();
 
                 Source.FromPublisher(p)
                     .Delay(TimeSpan.FromSeconds(10), DelayOverflowStrategy.EmitEarly)
@@ -208,5 +208,51 @@ namespace Akka.Streams.Tests.Dsl
                 pSub.SendError(new Exception());
             }, Materializer);
         }
+
+        [Fact]
+        public void A_Delay_must_properly_delay_according_to_buffer_size()
+        {
+            // With a buffer size of 1, delays add up 
+            var task = Source.From(Enumerable.Range(1, 5))
+                .Delay(TimeSpan.FromMilliseconds(500), DelayOverflowStrategy.Backpressure)
+                .WithAttributes(Attributes.CreateInputBuffer(1, 1))
+                .RunWith(Sink.Ignore<int>(), Materializer);
+
+            task.Wait(TimeSpan.FromSeconds(2)).ShouldBeFalse();
+            task.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+
+            // With a buffer large enough to hold all arriving elements, delays don't add up 
+            task = Source.From(Enumerable.Range(1, 100))
+                .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.Backpressure)
+                .WithAttributes(Attributes.CreateInputBuffer(100, 100))
+                .RunWith(Sink.Ignore<int>(), Materializer);
+
+            task.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+
+            // Delays that are already present are preserved when buffer is large enough 
+            task = Source.Tick(TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100), NotUsed.Instance)
+                .Take(10)
+                .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.Backpressure)
+                .WithAttributes(Attributes.CreateInputBuffer(10, 10))
+                .RunWith(Sink.Ignore<NotUsed>(), Materializer);
+
+            task.Wait(TimeSpan.FromMilliseconds(900)).ShouldBeFalse();
+            task.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+        }
+
+        [Fact]
+        public void A_Delay_must_not_overflow_buffer_when_DelayOverflowStrategy_is_Backpressure()
+        {
+            var probe = Source.From(Enumerable.Range(1, 6))
+                .Delay(TimeSpan.FromMilliseconds(100), DelayOverflowStrategy.Backpressure)
+                .WithAttributes(Attributes.CreateInputBuffer(2, 2))
+                .Throttle(1, TimeSpan.FromMilliseconds(200), 1, ThrottleMode.Shaping)
+                .RunWith(this.SinkProbe<int>(), Materializer);
+
+            probe.Request(10)
+                .ExpectNext(1, 2, 3, 4, 5, 6)
+                .ExpectComplete();
+        }
     }
 }
+

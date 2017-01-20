@@ -12,10 +12,23 @@ using Akka.Dispatch;
 
 namespace Akka.Routing
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class RoutedActorRef : RepointableActorRef
     {
         private readonly Props _routeeProps;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RoutedActorRef"/> class.
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="routerProps">TBD</param>
+        /// <param name="routerDispatcher">TBD</param>
+        /// <param name="routerMailbox">TBD</param>
+        /// <param name="routeeProps">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="path">TBD</param>
         public RoutedActorRef(
             ActorSystemImpl system,
             Props routerProps,
@@ -30,6 +43,10 @@ namespace Akka.Routing
             routerProps.RouterConfig.VerifyConfig(path);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override ActorCell NewCell()
         {
             var pool = Props.RouterConfig as Pool;

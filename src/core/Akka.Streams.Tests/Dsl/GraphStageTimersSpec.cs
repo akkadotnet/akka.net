@@ -107,8 +107,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Via(new TestStage2())
@@ -130,8 +130,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var exception = new TestException("Expected exception to the rule");
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Via(new ThrowStage(exception))

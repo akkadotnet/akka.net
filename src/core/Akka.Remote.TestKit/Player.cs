@@ -120,7 +120,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void Enter(TimeSpan timeout, ImmutableList<string> names)
         {
-            _system.Log.Debug("entering barriers {0}", names.Aggregate((a,b) => a = ", " + b));
+            _system.Log.Debug("entering barriers {0}", names.Aggregate((a, b) => "(" + a + "," + b + ")"));
             var stop = Deadline.Now + timeout;
 
             foreach (var name in names)
@@ -136,7 +136,7 @@ namespace Akka.Remote.TestKit
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
                     // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
                     // of a failed operation
-                    _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Wait();
+                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Result;
                 }
                 catch (AggregateException)
                 {
@@ -402,7 +402,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (@event.StateData.RunningOp == null)
                         {
-                            _log.Warning("did not expect {1}", @event.FsmEvent);
+                            _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
                         else
                         {
@@ -624,6 +624,7 @@ namespace Akka.Remote.TestKit
             Task.Factory.StartNew(() =>
             {
                 RemoteConnection.Shutdown(context.Channel);
+                RemoteConnection.ReleaseAll(); // yep, let it run asynchronously.
             }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
             context.FireChannelInactive();
         }

@@ -40,6 +40,15 @@ namespace Akka.Cluster.Tests
               cluster.allow-local-routees = off
               cluster.use-role = backend
             }
+            /user/service3 {
+              dispatcher = mydispatcher
+              mailbox = mymailbox
+              router = broadcast-group
+              routees.paths = [""/user/myservice""]
+              cluster.enabled = on
+              cluster.allow-local-routees = off
+              cluster.use-role = backend
+            }
           }
           akka.remote.helios.tcp.port = 0");
 
@@ -77,6 +86,26 @@ namespace Akka.Cluster.Tests
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.GetType().ShouldBe(typeof(RoundRobinGroup));
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.AsInstanceOf<RoundRobinGroup>().Paths.ShouldBe(new[]{ "/user/myservice" });
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.TotalInstances.ShouldBe(20);
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.AllowLocalRoutees.ShouldBe(false);
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.UseRole.ShouldBe("backend");
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.AsInstanceOf<ClusterRouterGroupSettings>().RouteesPaths.ShouldBe(new[] { "/user/myservice" });
+            deployment.Scope.ShouldBe(ClusterScope.Instance);
+            deployment.Mailbox.ShouldBe("mymailbox");
+            deployment.Dispatcher.ShouldBe("mydispatcher");
+        }
+
+        [Fact]
+        public void BugFix2266RemoteDeployer_must_be_able_to_parse_broadcast_group_cluster_router_with_default_nr_of_routees_routees()
+        {
+            var service = "/user/service3";
+            var deployment = Sys.AsInstanceOf<ActorSystemImpl>().Provider.Deployer.Lookup(service.Split('/').Drop(1));
+            deployment.Should().NotBeNull();
+
+            deployment.Path.ShouldBe(service);
+            deployment.RouterConfig.GetType().ShouldBe(typeof(ClusterRouterGroup));
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.GetType().ShouldBe(typeof(BroadcastGroup));
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Local.AsInstanceOf<BroadcastGroup>().Paths.ShouldBe(new[] { "/user/myservice" });
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.TotalInstances.ShouldBe(10000);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.AllowLocalRoutees.ShouldBe(false);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.UseRole.ShouldBe("backend");
             deployment.RouterConfig.AsInstanceOf<ClusterRouterGroup>().Settings.AsInstanceOf<ClusterRouterGroupSettings>().RouteesPaths.ShouldBe(new[] { "/user/myservice" });

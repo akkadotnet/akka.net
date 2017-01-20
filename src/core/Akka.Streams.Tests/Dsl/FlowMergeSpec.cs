@@ -23,7 +23,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
             Source.FromPublisher(p1)
                 .Merge(Source.FromPublisher(p2))
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source1 = Source.From(Enumerable.Range(0, 4));
                 var source2 = Source.From(new List<int>());
                 var source3 = Source.From(Enumerable.Range(4, 6));
-                var probe = TestSubscriber.CreateManualProbe<int>(this);
+                var probe = this.CreateManualSubscriberProbe<int>();
 
                 source1
                     .Merge(source2)
@@ -116,9 +116,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var up1 = TestPublisher.CreateManualProbe<int>(this);
-                var up2 = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<int>(this);
+                var up1 = this.CreateManualPublisherProbe<int>();
+                var up2 = this.CreateManualPublisherProbe<int>();
+                var down = this.CreateManualSubscriberProbe<int>();
 
                 var t =
                     Source.AsSubscriber<int>()
@@ -135,6 +135,36 @@ namespace Akka.Streams.Tests.Dsl
 
                 up1.ExpectSubscription().ExpectCancellation();
                 up2.ExpectSubscription().ExpectCancellation();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Merge_for_Flow_must_not_try_to_grab_from_closed_input_previously_enqueued()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var up1 = this.CreatePublisherProbe<int>();
+                var up2 = this.CreatePublisherProbe<int>();
+                var down = this.CreateSubscriberProbe<int>();
+
+                Source.FromPublisher(up1)
+                    .Merge(Source.FromPublisher(up2), true)
+                    .To(Sink.FromSubscriber(down))
+                    .Run(Materializer);
+
+                up1.EnsureSubscription();
+                up2.EnsureSubscription();
+                down.EnsureSubscription();
+
+                up1.ExpectRequest();
+                up2.ExpectRequest();
+                up1.SendNext(7);
+                up2.SendNext(8);
+                // there is a race here, the 8 needs to be queued before the
+                // source completes (it failed consistently on my machine before bugfix)
+                up2.SendComplete();
+                down.Request(1);
+                down.ExpectNext();
             }, Materializer);
         }
     }

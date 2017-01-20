@@ -17,7 +17,7 @@ namespace Akka.Streams.TestKit
     {
         public sealed class CompletedSubscription<T> : ISubscription
         {
-            public ISubscriber<T> Subscriber { get; private set; }
+            public ISubscriber<T> Subscriber { get; }
 
             public CompletedSubscription(ISubscriber<T> subscriber)
             {
@@ -36,8 +36,8 @@ namespace Akka.Streams.TestKit
 
         public sealed class FailedSubscription<T> : ISubscription
         {
-            public ISubscriber<T> Subscriber { get; private set; }
-            public Exception Cause { get; private set; }
+            public ISubscriber<T> Subscriber { get; }
+            public Exception Cause { get; }
 
             public FailedSubscription(ISubscriber<T> subscriber, Exception cause)
             {
@@ -57,8 +57,8 @@ namespace Akka.Streams.TestKit
 
         public sealed class PublisherProbeSubscription<T> : ISubscription
         {
-            public ISubscriber<T> Subscriber { get; private set; }
-            public TestProbe PublisherProbe { get; private set; }
+            public ISubscriber<T> Subscriber { get; }
+            public TestProbe PublisherProbe { get; }
 
             public PublisherProbeSubscription(ISubscriber<T> subscriber, TestProbe publisherProbe)
             {
@@ -134,7 +134,7 @@ namespace Akka.Streams.TestKit
 
             public override IPublisher<T> Create(MaterializationContext context, out TestPublisher.Probe<T> materializer)
             {
-                materializer = TestPublisher.CreateProbe<T>(_testKit);
+                materializer = _testKit.CreatePublisherProbe<T>();
                 return materializer;
             }
         }
@@ -164,7 +164,7 @@ namespace Akka.Streams.TestKit
 
             public override object Create(MaterializationContext context, out TestSubscriber.Probe<T> materializer)
             {
-                materializer = _testKit.CreateProbe<T>();
+                materializer = _testKit.CreateSubscriberProbe<T>();
                 return materializer;
             }
         }

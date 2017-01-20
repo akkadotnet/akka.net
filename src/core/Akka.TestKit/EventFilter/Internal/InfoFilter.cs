@@ -15,10 +15,21 @@ namespace Akka.TestKit.Internal
     /// </summary>
     public class InfoFilter : EventFilterBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageMatcher">TBD</param>
+        /// <param name="sourceMatcher">TBD</param>
         public InfoFilter(IStringMatcher messageMatcher = null, IStringMatcher sourceMatcher = null)
             : base(messageMatcher, sourceMatcher)
         {
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
             var info = evt as Info;
@@ -30,7 +41,9 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string FilterDescriptiveName { get { return "Info"; } }
     }
 }
-

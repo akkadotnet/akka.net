@@ -49,16 +49,28 @@ namespace Akka.IO
      * with a <see cref="Akka.IO.Tcp.CommandFailed"/> message. This message contains the original command for reference.
      *
      */
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class TcpManager : SelectionHandler.SelectorBasedManager
     {
         private readonly TcpExt _tcp;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tcp">TBD</param>
         public TcpManager(TcpExt tcp)
             : base(tcp.Settings, tcp.Settings.NrOfSelectors)
         {
             _tcp = tcp;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="m">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object m)
         {
             return WorkerForCommandHandler(message =>

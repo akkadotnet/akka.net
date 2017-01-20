@@ -18,19 +18,39 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class SubscribePending
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly SubscribePending Instance = new SubscribePending();
         private SubscribePending() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class RequestMore : IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorSubscription Subscription;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long Demand;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
+        /// <param name="demand">TBD</param>
         public RequestMore(IActorSubscription subscription, long demand)
         {
             Subscription = subscription;
@@ -38,44 +58,96 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class Cancel : IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorSubscription Subscription;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
         public Cancel(IActorSubscription subscription)
         {
             Subscription = subscription;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class ExposedPublisher : IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorPublisher Publisher;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="publisher">TBD</param>
         public ExposedPublisher(IActorPublisher publisher)
         {
             Publisher = publisher;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public class NormalShutdownException : IllegalStateException
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public NormalShutdownException(string message) : base(message) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected NormalShutdownException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
-    internal interface IActorPublisher : IUntypedPublisher
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public interface IActorPublisher : IUntypedPublisher
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
         void Shutdown(Exception reason);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         IEnumerable<IUntypedSubscriber> TakePendingSubscribers();
     }
 
-    internal static class ActorPublisher
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public static class ActorPublisher
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string NormalShutdownReasonMessage = "Cannot subscribe to shut-down Publisher";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly NormalShutdownException NormalShutdownReason = new NormalShutdownException(NormalShutdownReasonMessage);
     }
     
@@ -85,8 +157,12 @@ namespace Akka.Streams.Implementation
     /// When you instantiate this class, or its subclasses, you MUST send an ExposedPublisher message to the wrapped
     /// ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
     /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
     public class ActorPublisher<TOut> : IActorPublisher, IPublisher<TOut>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly IActorRef Impl;
 
         // The subscriber of an subscription attempt is first placed in this list of pending subscribers.
@@ -98,14 +174,26 @@ namespace Akka.Streams.Implementation
             new AtomicReference<ImmutableList<ISubscriber<TOut>>>(ImmutableList<ISubscriber<TOut>>.Empty);
 
         private volatile Exception _shutdownReason;
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual object WakeUpMessage => SubscribePending.Instance;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="impl">TBD</param>
         public ActorPublisher(IActorRef impl)
         {
             Impl = impl;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscriber">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public void Subscribe(ISubscriber<TOut> subscriber)
         {
             if (subscriber == null) throw new ArgumentNullException(nameof(subscriber));
@@ -128,6 +216,10 @@ namespace Akka.Streams.Implementation
 
         void IUntypedPublisher.Subscribe(IUntypedSubscriber subscriber) => Subscribe(UntypedSubscriber.ToTyped<TOut>(subscriber));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IEnumerable<ISubscriber<TOut>> TakePendingSubscribers()
         {
             var pending = _pendingSubscribers.GetAndSet(ImmutableList<ISubscriber<TOut>>.Empty);
@@ -136,6 +228,10 @@ namespace Akka.Streams.Implementation
 
         IEnumerable<IUntypedSubscriber> IActorPublisher.TakePendingSubscribers() => TakePendingSubscribers().Select(UntypedSubscriber.FromTyped);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
         public void Shutdown(Exception reason)
         {
             _shutdownReason = reason;
@@ -174,12 +270,24 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IActorSubscription : ISubscription
     {
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ActorSubscription
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="implementor">TBD</param>
+        /// <param name="subscriber">TBD</param>
+        /// <returns>TBD</returns>
         internal static IActorSubscription Create(IActorRef implementor, IUntypedSubscriber subscriber)
         {
             var subscribedType = subscriber.GetType().GetGenericArguments().First(); // assumes type is UntypedSubscriberWrapper
@@ -187,28 +295,66 @@ namespace Akka.Streams.Implementation
             return (IActorSubscription) Activator.CreateInstance(subscriptionType, implementor, UntypedSubscriber.ToTyped(subscriber));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="implementor">TBD</param>
+        /// <param name="subscriber">TBD</param>
+        /// <returns>TBD</returns>
         public static IActorSubscription Create<T>(IActorRef implementor, ISubscriber<T> subscriber)
             => new ActorSubscription<T>(implementor, subscriber);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public class ActorSubscription<T> : IActorSubscription
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Implementor;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ISubscriber<T> Subscriber;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="implementor">TBD</param>
+        /// <param name="subscriber">TBD</param>
         public ActorSubscription(IActorRef implementor, ISubscriber<T> subscriber)
         {
             Implementor = implementor;
             Subscriber = subscriber;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
         public void Request(long n) => Implementor.Tell(new RequestMore(this, n));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Cancel() => Implementor.Tell(new Cancel(this));
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
     public class ActorSubscriptionWithCursor<TIn> : ActorSubscription<TIn>, ISubscriptionWithCursor<TIn>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="implementor">TBD</param>
+        /// <param name="subscriber">TBD</param>
         public ActorSubscriptionWithCursor(IActorRef implementor, ISubscriber<TIn> subscriber) : base(implementor, subscriber)
         {
             IsActive = true;
@@ -218,6 +364,10 @@ namespace Akka.Streams.Implementation
 
         ISubscriber<TIn> ISubscriptionWithCursor<TIn>.Subscriber => Subscriber;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void Dispatch(object element) => ReactiveStreamsCompliance.TryOnNext(Subscriber, (TIn)element);
 
         bool ISubscriptionWithCursor<TIn>.IsActive
@@ -226,8 +376,14 @@ namespace Akka.Streams.Implementation
             set { IsActive = value; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsActive { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Cursor { get; private set; }
 
         long ISubscriptionWithCursor<TIn>.TotalDemand
@@ -236,8 +392,15 @@ namespace Akka.Streams.Implementation
             set { TotalDemand = value; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long TotalDemand { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void Dispatch(TIn element) => ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
 
         int ICursor.Cursor

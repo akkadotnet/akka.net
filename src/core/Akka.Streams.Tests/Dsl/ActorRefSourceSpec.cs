@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_ActorRefSource_must_emit_received_messages_to_the_stream()
         {
-            var s = TestSubscriber.CreateManualProbe<int>(this);
+            var s = this.CreateManualSubscriberProbe<int>();
             var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                 .To(Sink.FromSubscriber(s))
                 .Run(Materializer);
@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_ActorRefSource_must_buffer_when_needed()
         {
-            var s = TestSubscriber.CreateManualProbe<int>(this);
+            var s = this.CreateManualSubscriberProbe<int>();
             var actorRef = Source.ActorRef<int>(100, OverflowStrategy.DropHead)
                 .To(Sink.FromSubscriber(s))
                 .Run(Materializer);
@@ -90,7 +90,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = TestSubscriber.CreateManualProbe<int>(this);
+                var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = TestSubscriber.CreateManualProbe<int>(this);
+                var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.DropHead)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
@@ -123,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = TestSubscriber.CreateManualProbe<int>(this);
+                var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = TestSubscriber.CreateManualProbe<int>(this);
+                var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
@@ -158,7 +158,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = TestSubscriber.CreateManualProbe<int>(this);
+                var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = TestSubscriber.CreateManualProbe<int>(this);
+                var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
@@ -203,7 +203,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = TestSubscriber.CreateManualProbe<int>(this);
+                var s = this.CreateManualSubscriberProbe<int>();
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
@@ -219,7 +219,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = TestSubscriber.CreateManualProbe<int>(this);
+                var s = this.CreateManualSubscriberProbe<int>();
                 const string name = "SomeCustomName";
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .WithAttributes(Attributes.CreateName(name))

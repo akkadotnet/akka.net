@@ -27,9 +27,21 @@ namespace Akka.Persistence
     /// </summary>
     public sealed class AtLeastOnceDeliverySnapshot : IMessage, IEquatable<AtLeastOnceDeliverySnapshot>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long CurrentDeliveryId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="currentDeliveryId">TBD</param>
+        /// <param name="unconfirmedDeliveries">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public AtLeastOnceDeliverySnapshot(long currentDeliveryId, UnconfirmedDelivery[] unconfirmedDeliveries)
         {
             if (unconfirmedDeliveries == null)
@@ -40,6 +52,11 @@ namespace Akka.Persistence
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(AtLeastOnceDeliverySnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -49,11 +66,20 @@ namespace Akka.Persistence
                    && UnconfirmedDeliveries.SequenceEqual(other.UnconfirmedDeliveries);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as AtLeastOnceDeliverySnapshot);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -64,6 +90,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("AtLeastOnceDeliverySnapshot<currentDeliveryId: {0}, unconfirmedDeliveries: {1}>", CurrentDeliveryId,
@@ -78,8 +108,16 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class UnconfirmedWarning : IEquatable<UnconfirmedWarning>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="unconfirmedDeliveries">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public UnconfirmedWarning(UnconfirmedDelivery[] unconfirmedDeliveries)
         {
             if (unconfirmedDeliveries == null)
@@ -89,6 +127,11 @@ namespace Akka.Persistence
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(UnconfirmedWarning other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -97,16 +140,29 @@ namespace Akka.Persistence
             return Equals(UnconfirmedDeliveries, other.UnconfirmedDeliveries);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as UnconfirmedWarning);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("UnconfirmedWarning<unconfirmedDeliveries: {0}>", UnconfirmedDeliveries.Length);
@@ -121,10 +177,25 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class UnconfirmedDelivery : IEquatable<UnconfirmedDelivery>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long DeliveryId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ActorPath Destination;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly object Message;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="deliveryId">TBD</param>
+        /// <param name="destination">TBD</param>
+        /// <param name="message">TBD</param>
         public UnconfirmedDelivery(long deliveryId, ActorPath destination, object message)
         {
             DeliveryId = deliveryId;
@@ -132,6 +203,11 @@ namespace Akka.Persistence
             Message = message;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(UnconfirmedDelivery other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -142,11 +218,20 @@ namespace Akka.Persistence
                    && Equals(Message, other.Message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as UnconfirmedDelivery);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -158,6 +243,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("UnconfirmedDelivery<deliveryId: {0}, dest: {1}, message: {2}>", DeliveryId,
@@ -170,18 +259,35 @@ namespace Akka.Persistence
     /// </summary>
     public class MaxUnconfirmedMessagesExceededException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public MaxUnconfirmedMessagesExceededException()
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public MaxUnconfirmedMessagesExceededException(string message) : base(message)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="innerException">TBD</param>
         public MaxUnconfirmedMessagesExceededException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
@@ -189,17 +295,42 @@ namespace Akka.Persistence
 
     #endregion
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class AtLeastOnceDeliverySemantic
     {
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class Delivery : IEquatable<Delivery>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Attempt;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ActorPath Destination;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly object Message;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly DateTime Timestamp;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="destination">TBD</param>
+            /// <param name="message">TBD</param>
+            /// <param name="timestamp">TBD</param>
+            /// <param name="attempt">TBD</param>
             public Delivery(ActorPath destination, object message, DateTime timestamp, int attempt)
             {
                 Destination = destination;
@@ -208,6 +339,11 @@ namespace Akka.Persistence
                 Attempt = attempt;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             public bool Equals(Delivery other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -219,16 +355,29 @@ namespace Akka.Persistence
                        && Equals(Message, other.Message);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public Delivery IncrementedCopy()
             {
                 return new Delivery(Destination, Message, Timestamp, Attempt + 1);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 return Equals(obj as Delivery);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -241,6 +390,10 @@ namespace Akka.Persistence
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return string.Format("Delivery<dest: {0}, attempt: {1}, timestamp: {2}, message: {3}", Destination,
@@ -249,15 +402,26 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
-        public sealed class RedeliveryTick
+        public sealed class RedeliveryTick: INotInfluenceReceiveTimeout
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly RedeliveryTick Instance = new RedeliveryTick();
 
             private RedeliveryTick()
             {
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 return obj is RedeliveryTick;
@@ -273,6 +437,11 @@ namespace Akka.Persistence
         private ImmutableSortedDictionary<long, Delivery> _unconfirmed = ImmutableSortedDictionary<long, Delivery>.Empty;
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="settings">TBD</param>
         public AtLeastOnceDeliverySemantic(IActorContext context, PersistenceSettings.AtLeastOnceDeliverySettings settings)
         {
             _context = context;
@@ -354,6 +523,13 @@ namespace Akka.Persistence
             return (++_deliverySequenceNr);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="destination">TBD</param>
+        /// <param name="deliveryMessageMapper">TBD</param>
+        /// <param name="isRecovering">TBD</param>
+        /// <exception cref="MaxUnconfirmedMessagesExceededException">TBD</exception>
         public void Deliver(ActorPath destination, Func<long, object> deliveryMessageMapper, bool isRecovering)
         {
             if (_unconfirmed.Count >= MaxUnconfirmedMessages)
@@ -381,6 +557,7 @@ namespace Akka.Persistence
         /// Call this method when a message has been confirmed by the destination,
         /// or to abort re-sending.
         /// </summary>
+        /// <param name="deliveryId">TBD</param>
         /// <returns>True the first time the <paramref name="deliveryId"/> is confirmed, false for duplicate confirmations.</returns>
         public bool ConfirmDelivery(long deliveryId)
         {
@@ -438,6 +615,7 @@ namespace Akka.Persistence
         /// It is easiest to include the bytes of the <see cref="AtLeastOnceDeliverySnapshot"/>
         /// as a blob in your custom snapshot.
         /// </summary>
+        /// <returns>TBD</returns>
         public AtLeastOnceDeliverySnapshot GetDeliverySnapshot()
         {
             UnconfirmedDelivery[] unconfirmedDeliveries = _unconfirmed
@@ -451,6 +629,7 @@ namespace Akka.Persistence
         /// If snapshot from <see cref="GetDeliverySnapshot" /> was saved it will be received during recovery
         /// phase in a <see cref="SnapshotOffer" /> message and should be set with this method.
         /// </summary>
+        /// <param name="snapshot">TBD</param>
         public void SetDeliverySnapshot(AtLeastOnceDeliverySnapshot snapshot)
         {
             _deliverySequenceNr = snapshot.CurrentDeliveryId;
@@ -461,6 +640,9 @@ namespace Akka.Persistence
                     .ToImmutableSortedDictionary();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Cancel()
         {
             // need a null check here, in case actor is terminated before StartRedeliverTask() is called
@@ -468,12 +650,21 @@ namespace Akka.Persistence
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void OnReplaySuccess()
         {
             RedeliverOverdue();
             StartRedeliverTask();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public bool AroundReceive(Receive receive, object message)
         {
             if (message is RedeliveryTick)

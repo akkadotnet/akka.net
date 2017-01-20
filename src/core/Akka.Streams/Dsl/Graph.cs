@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util.Internal;
 // ReSharper disable MemberCanBePrivate.Global
@@ -29,11 +30,13 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public class Merge<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region graph stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
             private readonly Merge<TIn, TOut> _stage;
             private readonly FixedSizeBuffer<Inlet<TIn>> _pendingQueue;
@@ -75,26 +78,46 @@ namespace Akka.Streams.Dsl
                     });
                 }
 
-                SetHandler(outlet, onPull: () =>
-                {
-                    if (IsPending) DequeueAndDispatch();
-                });
+                SetHandler(outlet, this);
+            }
+
+            public override void OnPull()
+            {
+                if (IsPending)
+                    DequeueAndDispatch();
             }
 
             private bool AreUpstreamsClosed => _runningUpstreams == 0;
+
             private bool IsPending => _pendingQueue.NonEmpty;
 
             public override void PreStart()
             {
-                foreach (var inlet in _stage.Shape.Ins) TryPull(inlet);
+                foreach (var inlet in _stage.Shape.Ins)
+                    TryPull(inlet);
             }
 
             private void DequeueAndDispatch()
             {
                 var inlet = _pendingQueue.Dequeue();
-                Push(_stage.Out, Grab(inlet));
-                if (AreUpstreamsClosed && !IsPending) CompleteStage();
-                else TryPull(inlet);
+                if (inlet == null)
+                {
+                    // inlet is null if we reached the end of the queue
+                    if(AreUpstreamsClosed)
+                        CompleteStage();
+                }
+                else if (IsAvailable(inlet))
+                {
+                    Push(_stage.Out, Grab(inlet));
+                    if(AreUpstreamsClosed && !IsPending)
+                        CompleteStage();
+                    else
+                        TryPull(inlet);
+                }
+                else
+                    // inlet was closed after being enqueued
+                    // try next in queue
+                    DequeueAndDispatch();
             }
         }
 
@@ -103,6 +126,12 @@ namespace Akka.Streams.Dsl
         private readonly int _inputPorts;
         private readonly bool _eagerComplete;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <param name="eagerComplete">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Merge(int inputPorts, bool eagerComplete = false)
         {
             // one input might seem counter intuitive but saves us from special handling in other places
@@ -118,16 +147,39 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanInShape<TIn, TOut>(Out, ins.ToArray());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Inlet<TIn> In(int id) => Shape.In(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Merge");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanInShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Merge";
     }
 
@@ -143,8 +195,14 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Merge<T> : Merge<T, T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <param name="eagerComplete">TBD</param>
         public Merge(int inputPorts, bool eagerComplete = false) : base(inputPorts, eagerComplete)
         {
         }
@@ -165,14 +223,23 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class MergePreferred<T> : GraphStage<MergePreferred<T>.MergePreferredShape>
     {
         #region internal classes
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class MergePreferredShape : UniformFanInShape<T, T>
         {
             private readonly int _secondaryPorts;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="secondaryPorts">TBD</param>
+            /// <param name="init">TBD</param>
             public MergePreferredShape(int secondaryPorts, IInit init) : base(secondaryPorts, init)
             {
                 _secondaryPorts = secondaryPorts;
@@ -180,17 +247,30 @@ namespace Akka.Streams.Dsl
                 Preferred = NewInlet<T>("preferred");
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="secondaryPorts">TBD</param>
+            /// <param name="name">TBD</param>
             public MergePreferredShape(int secondaryPorts, string name) : this(secondaryPorts, new InitName(name)) { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="init">TBD</param>
+            /// <returns>TBD</returns>
             protected override FanInShape<T> Construct(IInit init)
             {
                 return new MergePreferredShape(_secondaryPorts, init);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Inlet<T> Preferred { get; }
         }
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             /// <summary>
             /// This determines the unfairness of the merge:
@@ -216,14 +296,7 @@ namespace Akka.Streams.Dsl
                 }
 
                 SetHandler(_stage.Out, EagerTerminateOutput);
-
-                SetHandler(_stage.Preferred,
-                    onUpstreamFinish: OnComplete,
-                    onPush: () =>
-                    {
-                        if (_preferredEmitting == MaxEmitting) { /* blocked */ }
-                        else EmitPreferred();
-                    });
+                SetHandler(_stage.Preferred, this);
 
                 for (int i = 0; i < stage._secondaryPorts; i++)
                 {
@@ -232,12 +305,28 @@ namespace Akka.Streams.Dsl
 
                     SetHandler(port, onPush: () =>
                     {
-                        if (_preferredEmitting > 0) { /* blocked */ }
-                        else Emit(_stage.Out, Grab(port), pullPort);
+                        if (_preferredEmitting > 0)
+                        {
+                             /* blocked */
+                        }
+                        else
+                            Emit(_stage.Out, Grab(port), pullPort);
                     },
                     onUpstreamFinish: OnComplete);
                 }
             }
+
+            public override void OnPush()
+            {
+                if (_preferredEmitting == MaxEmitting)
+                {
+                     /* blocked */
+                }
+                else
+                    EmitPreferred();
+            }
+
+            public override void OnUpstreamFinish() => OnComplete();
 
             private void OnComplete()
             {
@@ -280,6 +369,12 @@ namespace Akka.Streams.Dsl
         private readonly int _secondaryPorts;
         private readonly bool _eagerClose;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="secondaryPorts">TBD</param>
+        /// <param name="eagerClose">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public MergePreferred(int secondaryPorts, bool eagerClose = false)
         {
             if (secondaryPorts < 1) throw new ArgumentException("A MergePreferred must have at least one secondary port");
@@ -289,25 +384,58 @@ namespace Akka.Streams.Dsl
             Shape = new MergePreferredShape(_secondaryPorts, "MergePreferred");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MergePreferred");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override MergePreferredShape Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Inlet<T> In(int id) => Shape.In(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<T> Out => Shape.Out;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> Preferred => Shape.Preferred;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Interleave
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="inputPorts">TBD</param>
+        /// <param name="segmentSize">TBD</param>
+        /// <param name="eagerClose">TBD</param>
+        /// <returns>TBD</returns>
         public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>(int inputPorts, int segmentSize,
             bool eagerClose = false)
         {
-            return GraphStages.WithDetachedInputs<T>(new Interleave<T, T>(inputPorts, segmentSize, eagerClose));
+            return GraphStages.WithDetachedInputs(new Interleave<T, T>(inputPorts, segmentSize, eagerClose));
         }
     }
 
@@ -322,12 +450,14 @@ namespace Akka.Streams.Dsl
     /// Completes when all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true)
     /// </para>
     /// Cancels when downstream cancels
-    /// </summary> 
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public sealed class Interleave<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
             private readonly Interleave<TIn, TOut> _stage;
             private int _counter;
@@ -368,11 +498,13 @@ namespace Akka.Streams.Dsl
                     });
                 }
 
-                SetHandler(_stage.Out, onPull: () =>
-                {
-                    if (!HasBeenPulled(CurrentUpstream))
-                        TryPull(CurrentUpstream);
-                });
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void OnPull()
+            {
+                if (!HasBeenPulled(CurrentUpstream))
+                    TryPull(CurrentUpstream);
             }
 
             private bool IsUpstreamClosed => _runningUpstreams == 0;
@@ -412,6 +544,13 @@ namespace Akka.Streams.Dsl
         private readonly int _segmentSize;
         private readonly bool _eagerClose;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <param name="segmentSize">TBD</param>
+        /// <param name="eagerClose">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         internal Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
         {
             if (inputPorts <= 1) throw new ArgumentException("Interleave input ports count must be greater than 1", nameof(inputPorts));
@@ -430,14 +569,34 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanInShape<TIn, TOut>(Out, inlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; }
 
-        public Inlet<TIn> In(int id) => Shape.In(id); 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
+        public Inlet<TIn> In(int id) => Shape.In(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanInShape<TIn, TOut> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Interleave";
     }
 
@@ -452,6 +611,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class MergeSorted<T> : GraphStage<FanInShape<T, T, T>>
     {
         #region stage logic
@@ -527,20 +687,41 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<T, T, int> _compare;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="compare">TBD</param>
         public MergeSorted(Func<T, T, int> compare)
         {
             _compare = compare;
             Shape = new FanInShape<T, T, T>(Out, Left, Right);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> Left = new Inlet<T>("left");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> Right = new Inlet<T>("right");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Outlet<T> Out = new Outlet<T>("out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FanInShape<T, T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
@@ -556,10 +737,11 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when If eagerCancel is enabled: when any downstream cancels; otherwise: when all downstreams cancel
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Broadcast<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region stage logic
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             private readonly Broadcast<T> _stage;
             private readonly bool[] _pending;
@@ -571,26 +753,10 @@ namespace Akka.Streams.Dsl
                 _stage = stage;
                 _pendingCount = _downstreamsRunning = stage._outputPorts;
                 _pending = new bool[stage._outputPorts];
-                for (int i = 0; i < stage._outputPorts; i++) _pending[i] = true;
+                for (int i = 0; i < stage._outputPorts; i++)
+                    _pending[i] = true;
 
-                SetHandler(_stage.In, onPush: () =>
-                {
-                    _pendingCount = _downstreamsRunning;
-                    var element = Grab(stage.In);
-                    var idx = 0;
-                    var enumerator = stage.Shape.Outlets.GetEnumerator();
-                    while (enumerator.MoveNext())
-                    {
-                        var o = (Outlet<T>)enumerator.Current;
-                        var i = idx;
-                        if (!IsClosed(o))
-                        {
-                            Push(o, element);
-                            _pending[i] = true;
-                        }
-                        idx++;
-                    }
-                });
+                SetHandler(_stage.In, this);
 
                 var outIdx = 0;
                 var outEnumerator = stage.Shape.Outlets.GetEnumerator();
@@ -623,6 +789,25 @@ namespace Akka.Streams.Dsl
                 }
             }
 
+            public override void OnPush()
+            {
+                _pendingCount = _downstreamsRunning;
+                var element = Grab(_stage.In);
+                var idx = 0;
+                var enumerator = _stage.Shape.Outlets.GetEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    var o = (Outlet<T>)enumerator.Current;
+                    var i = idx;
+                    if (!IsClosed(o))
+                    {
+                        Push(o, element);
+                        _pending[i] = true;
+                    }
+                    idx++;
+                }
+            }
+
             private void TryPull()
             {
                 if (_pendingCount == 0 && !HasBeenPulled(_stage.In)) Pull(_stage.In);
@@ -633,6 +818,12 @@ namespace Akka.Streams.Dsl
         private readonly int _outputPorts;
         private readonly bool _eagerCancel;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outputPorts">TBD</param>
+        /// <param name="eagerCancel">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Broadcast(int outputPorts, bool eagerCancel = false)
         {
             if (outputPorts < 1) throw new ArgumentException("A Broadcast must have one or more output ports", nameof(outputPorts));
@@ -646,16 +837,39 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanOutShape<T, T>(In, outlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> In = new Inlet<T>("Broadcast.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Outlet<T> Out(int id) => Shape.Out(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Broadcast");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanOutShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Broadcast";
     }
 
@@ -671,49 +885,24 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when when all downstreams cancel
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Partition<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region internal classes
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
+            private readonly Partition<T> _stage;
             private object _outPendingElement;
             private int _outPendingIndex;
             private int _downstreamRunning;
 
             public Logic(Partition<T> stage) : base(stage.Shape)
             {
+                _stage = stage;
                 _downstreamRunning = stage._outputPorts;
 
-                SetHandler(stage.In, onPush: () =>
-                {
-                    var element = Grab(stage.In);
-                    var index = stage._partitioner(element);
-                    if (index < 0 || index >= stage._outputPorts)
-                        FailStage(
-                            new PartitionOutOfBoundsException(
-                                $"partitioner must return an index in the range [0,{stage._outputPorts - 1}]. returned: [{index}] for input [{element.GetType().Name}]."));
-                    else if (!IsClosed(stage.Out(index)))
-                    {
-                        if (IsAvailable(stage.Out(index)))
-                        {
-                            Push(stage.Out(index), element);
-                            if (stage.Shape.Outlets.Any(IsAvailable))
-                                Pull(stage.In);
-                        }
-                        else
-                        {
-                            _outPendingElement = element;
-                            _outPendingIndex = index;
-                        }
-                    }
-                    else if (stage.Shape.Outlets.Any(IsAvailable))
-                        Pull(stage.In);
-                }, onUpstreamFinish: () =>
-                {
-                    if(_outPendingElement == null)
-                        CompleteStage();
-                });
+                SetHandler(stage.In, this);
 
                 for (var i = 0; i < stage._outputPorts; i++)
                 {
@@ -757,6 +946,38 @@ namespace Akka.Streams.Dsl
                     });
                 }
             }
+
+            public override void OnPush()
+            {
+                var element = Grab(_stage.In);
+                var index = _stage._partitioner(element);
+                if (index < 0 || index >= _stage._outputPorts)
+                    FailStage(
+                        new PartitionOutOfBoundsException(
+                            $"partitioner must return an index in the range [0,{_stage._outputPorts - 1}]. returned: [{index}] for input [{element.GetType().Name}]."));
+                else if (!IsClosed(_stage.Out(index)))
+                {
+                    if (IsAvailable(_stage.Out(index)))
+                    {
+                        Push(_stage.Out(index), element);
+                        if (_stage.Shape.Outlets.Any(IsAvailable))
+                            Pull(_stage.In);
+                    }
+                    else
+                    {
+                        _outPendingElement = element;
+                        _outPendingIndex = index;
+                    }
+                }
+                else if (_stage.Shape.Outlets.Any(IsAvailable))
+                    Pull(_stage.In);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_outPendingElement == null)
+                    CompleteStage();
+            }
         }
 
         #endregion
@@ -764,6 +985,11 @@ namespace Akka.Streams.Dsl
         private readonly int _outputPorts;
         private readonly Func<T, int> _partitioner;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outputPorts">TBD</param>
+        /// <param name="partitioner">TBD</param>
         public Partition(int outputPorts, Func<T, int> partitioner)
         {
             _outputPorts = outputPorts;
@@ -772,20 +998,47 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanOutShape<T, T>(In, outlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Inlet<T> In = new Inlet<T>("Partition.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Outlet Out(int id) => Shape.Out(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanOutShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"Partition({_outputPorts})";
 
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class PartitionOutOfBoundsException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public PartitionOutOfBoundsException(string message) : base(message)
         {
             
@@ -807,10 +1060,11 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when all downstreams cancel
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class Balance<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region stage logic
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             private readonly Balance<T> _stage;
             private readonly FixedSizeBuffer<Outlet<T>> _pendingQueue;
@@ -824,7 +1078,7 @@ namespace Akka.Streams.Dsl
 
                 _needDownstreamPulls = _stage._waitForAllDownstreams ? _stage._outputPorts : 0;
 
-                SetHandler(_stage.In, onPush: DequeueAndDispatch);
+                SetHandler(_stage.In, this);
 
                 foreach (var outlet in _stage.Shape.Outs)
                 {
@@ -864,20 +1118,43 @@ namespace Akka.Streams.Dsl
                 }
             }
 
+            public override void OnPush() => DequeueAndDispatch();
+
             private bool NoPending => _pendingQueue.IsEmpty;
 
             private void DequeueAndDispatch()
             {
                 var outlet = _pendingQueue.Dequeue();
-                Push(outlet, Grab(_stage.In));
-                if (!NoPending) Pull(_stage.In);
+
+                // outlet is null if depleted _pendingQueue without reaching
+                // an outlet that is not closed, in which case we just return
+
+                if (outlet != null)
+                {
+                    if (!IsClosed(outlet))
+                    {
+                        Push(outlet, Grab(_stage.In));
+                        if (!NoPending)
+                            Pull(_stage.In);
+                    }
+                    else
+                        // try to find one output that isn't closed
+                        DequeueAndDispatch();
+                }
             }
         }
+
         #endregion
 
         private readonly int _outputPorts;
         private readonly bool _waitForAllDownstreams;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outputPorts">TBD</param>
+        /// <param name="waitForAllDownstreams">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Balance(int outputPorts, bool waitForAllDownstreams = false)
         {
             if (outputPorts < 1) throw new ArgumentException("A Balance must have one or more output ports");
@@ -891,16 +1168,39 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanOutShape<T, T>(In, outlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Inlet<T> In { get; } = new Inlet<T>("Balance.in");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Outlet<T> Out(int id) => Shape.Out(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Balance");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanOutShape<T, T> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Balance";
     }
 
@@ -917,10 +1217,19 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
     public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Zip";
     }
 
@@ -937,6 +1246,9 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public sealed partial class ZipWith
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ZipWith Instance = new ZipWith();
         private ZipWith() { }
     }
@@ -954,10 +1266,19 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when any downstream cancels
     /// </summary>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="T2">TBD</typeparam>
     public sealed class UnZip<T1, T2> : UnzipWith<KeyValuePair<T1, T2>, T1, T2>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Unzip";
     }
 
@@ -974,15 +1295,220 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public partial class UnzipWith
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly UnzipWith Instance = new UnzipWith();
         private UnzipWith() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public static class ZipN
+    {
+        /// <summary>
+        /// Create a new <see cref="ZipN{T}"/>.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="n">TBD</param>
+        /// <returns>TBD</returns>
+        public static IGraph<UniformFanInShape<T, IImmutableList<T>>> Create<T>(int n) => new ZipN<T>(n);
+    }
+
+    /// <summary>
+    /// Combine the elements of multiple streams into a stream of sequences.
+    /// A <see cref="ZipN{T}"/> has a n input ports and one out port
+    /// 
+    /// <para>
+    /// Emits when all of the inputs has an element available
+    /// </para>
+    /// Backpressures when downstream backpressures
+    /// <para>
+    /// Completes when any upstream completes
+    /// </para>
+    /// Cancels when downstream cancels
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    public sealed class ZipN<T> : ZipWithN<T, IImmutableList<T>>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
+        public ZipN(int n) : base(x => x, n)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.ZipN;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString() => "ZipN";
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public static class ZipWithN
+    {
+        /// <summary>
+        /// Creates a new <see cref="ZipWithN{TIn,TOut}"/>
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <param name="zipper">TBD</param>
+        /// <param name="n">TBD</param>
+        public static IGraph<UniformFanInShape<TIn, TOut>> Create<TIn, TOut>(Func<IImmutableList<TIn>, TOut> zipper,
+            int n) => new ZipWithN<TIn, TOut>(zipper, n);
+    }
+
+    /// <summary>
+    /// Combine the elements of multiple streams into a stream of sequences using a combiner function.
+    /// A <see cref="ZipWithN{TIn,TOut}"/> has a n input ports and one out port
+    /// <para>
+    /// Emits when all of the inputs has an element available
+    /// </para>
+    /// Backpressures when downstream backpressures
+    /// <para>
+    /// Completes when any upstream completes
+    /// </para>
+    /// Cancels when downstream cancels
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
+    public class ZipWithN<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>>
+    {
+        #region Logic 
+
+        private sealed class Logic : OutGraphStageLogic
+        {
+            private readonly ZipWithN<TIn, TOut> _stage;
+            private int _pending;
+            // Without this field the completion signalling would take one extra pull
+            private bool _willShutDown;
+
+            public Logic(ZipWithN<TIn, TOut> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+
+                stage.Inlets.ForEach(i =>
+                {
+                    SetHandler(i, onPush: () =>
+                    {
+                        _pending--;
+                        if(_pending == 0)
+                            PushAll();
+                    }, onUpstreamFinish: () =>
+                    {
+                        if(!IsAvailable(i))
+                            CompleteStage();
+                        _willShutDown = true;
+                    });
+                });
+
+                SetHandler(stage.Out, this);
+            }
+
+            public override void OnPull()
+            {
+                _pending += _stage._n;
+                if (_pending == 0)
+                    PushAll();
+            }
+
+            private void PushAll()
+            {
+                Push(_stage.Out, _stage._zipper(_stage.Inlets.Select(i => Grab((i))).ToImmutableList()));
+                if(_willShutDown)
+                    CompleteStage();
+                else
+                    _stage.Inlets.ForEach(Pull);
+            }
+
+            public override void PreStart() => _stage.Inlets.ForEach(Pull);
+
+            public override string ToString() => "ZipWithNLogic";
+        }
+
+        #endregion
+
+        private readonly Func<IImmutableList<TIn>, TOut> _zipper;
+        private readonly int _n;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="zipper">TBD</param>
+        /// <param name="n">TBD</param>
+        public ZipWithN(Func<IImmutableList<TIn>, TOut> zipper, int n)
+        {
+            _zipper = zipper;
+            _n = n;
+            Shape = new UniformFanInShape<TIn, TOut>(n);
+            Out = Shape.Out;
+            Inlets = Shape.Ins;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.ZipWithN;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Outlet<TOut> Out { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableList<Inlet<TIn>> Inlets { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="i">TBD</param>
+        /// <returns>TBD</returns>
+        public Inlet<TIn> In(int i) => Inlets[i];
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override UniformFanInShape<TIn, TOut> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString() => "ZipWithN";
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Concat
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <returns>TBD</returns>
         public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>(int inputPorts = 2)
         {
-            return GraphStages.WithDetachedInputs<T>(new Concat<T, T>(inputPorts));
+            return GraphStages.WithDetachedInputs(new Concat<T, T>(inputPorts));
         }
     }
 
@@ -1001,15 +1527,20 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// Cancels when downstream cancels
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     public class Concat<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region stage logic
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
-            public Logic(Shape shape, Concat<TIn, TOut> stage) : base(shape)
+            private readonly Concat<TIn, TOut> _stage;
+            private int _activeStream = 0;
+
+            public Logic(Concat<TIn, TOut> stage) : base(stage.Shape)
             {
-                var activeStream = 0;
+                _stage = stage;
                 var iidx = 0;
                 var inEnumerator = stage.Shape.Ins.GetEnumerator();
                 while (inEnumerator.MoveNext())
@@ -1020,26 +1551,33 @@ namespace Akka.Streams.Dsl
                         onPush: () => Push(stage.Out, Grab(i)),
                         onUpstreamFinish: () =>
                         {
-                            if (idx == activeStream)
+                            if (idx == _activeStream)
                             {
-                                activeStream++;
+                                _activeStream++;
                                 // skip closed inputs
-                                while (activeStream < stage._inputPorts && IsClosed(stage.In(activeStream))) activeStream++;
-                                if (activeStream == stage._inputPorts) CompleteStage();
-                                else if (IsAvailable(stage.Out)) Pull(stage.In(activeStream));
+                                while (_activeStream < stage._inputPorts && IsClosed(stage.In(_activeStream))) _activeStream++;
+                                if (_activeStream == stage._inputPorts) CompleteStage();
+                                else if (IsAvailable(stage.Out)) Pull(stage.In(_activeStream));
                             }
                         });
                     iidx++;
                 }
 
-                SetHandler(stage.Out, onPull: () => Pull(stage.In(activeStream)));
+                SetHandler(stage.Out, this);
             }
+
+            public override void OnPull() => Pull(_stage.In(_activeStream));
         }
 
         #endregion
 
         private readonly int _inputPorts;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputPorts">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Concat(int inputPorts = 2)
         {
             if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port");
@@ -1052,14 +1590,171 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanInShape<TIn, TOut>(Out, inlets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public Inlet<TIn> In(int id) => Shape.In(id);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Outlet<TOut> Out { get; } = new Outlet<TOut>("Concat.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Concat");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override UniformFanInShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    }
+
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public static class OrElse
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
+        public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>() => new OrElse<T>();
+    }
+
+    /// <summary>
+    /// Takes two streams and passes the first through, the secondary stream is only passed
+    /// through if the primary stream completes without passing any elements through. When
+    /// the first element is passed through from the primary the secondary is cancelled.
+    /// Both incoming streams are materialized when the stage is materialized.
+    ///
+    /// On errors the stage is failed regardless of source of the error.
+    ///
+    /// '''Emits when''' element is available from primary stream or the primary stream closed without emitting any elements and an element
+    ///                  is available from the secondary stream
+    ///
+    /// '''Backpressures when''' downstream backpressures
+    ///
+    /// '''Completes when''' the primary stream completes after emitting at least one element, when the primary stream completes
+    ///                      without emitting and the secondary stream already has completed or when the secondary stream completes
+    ///
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    public sealed class OrElse<T> : GraphStage<UniformFanInShape<T, T>>
+    {
+        #region Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly OrElse<T> _stage;
+            private Inlet<T> _currentIn;
+            private bool _primaryPushed;
+
+            public Logic(OrElse<T> stage):base(stage.Shape)
+            {
+                _stage = stage;
+                _currentIn = stage.Primary;
+
+                SetHandler(stage.Out, this);
+                SetHandler(stage.Primary, this);
+
+                SetHandler(stage.Secondary,
+                    onPush: () => Push(stage.Out, Grab(stage.Secondary)),
+                    onUpstreamFinish: () =>
+                    {
+                        if (IsClosed(stage.Primary))
+                            CompleteStage();
+                    });
+            }
+
+            public override void OnPush()
+            {
+                // for the primary inHandler
+                if (!_primaryPushed)
+                {
+                    _primaryPushed = true;
+                    Cancel(_stage.Secondary);
+                }
+
+                var element = Grab(_stage.Primary);
+                Push(_stage.Out, element);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                // for the primary inHandler
+                if (!_primaryPushed && !IsClosed(_stage.Secondary))
+                {
+                    _currentIn = _stage.Secondary;
+                    if (IsAvailable(_stage.Out))
+                        Pull(_stage.Secondary);
+                }
+                else
+                    CompleteStage();
+            }
+
+            public override void OnPull() => Pull(_currentIn);
+        }
+
+        #endregion
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public OrElse()
+        {
+            Shape = new UniformFanInShape<T, T>(Out, Primary, Secondary);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.OrElse;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Inlet<T> Primary { get; }   = new Inlet<T>("OrElse.primary");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Inlet<T> Secondary { get; } = new Inlet<T>("OrElse.secondary");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Outlet<T> Out { get; } = new Outlet<T>("OrElse.out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override UniformFanInShape<T, T> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString() => "OrElse";
     }
 }

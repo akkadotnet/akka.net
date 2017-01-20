@@ -13,11 +13,15 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
-    internal class Throttle<T> : SimpleLinearGraphStage<T>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    public class Throttle<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
 
-        private sealed class Logic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private const string TimerName = "ThrottleTimer";
             private readonly Throttle<T> _stage;
@@ -33,34 +37,41 @@ namespace Akka.Streams.Implementation
                 _tokenBucket = new TickTimeTokenBucket(stage._maximumBurst, stage._ticksBetweenTokens);
                 _enforcing = stage._mode == ThrottleMode.Enforcing;
 
-                SetHandler(_stage.Inlet,
-                    onPush: () =>
-                    {
-                        var element = Grab(stage.Inlet);
-                        var cost = stage._costCalculation(element);
-                        var delayTicks = _tokenBucket.Offer(cost);
-
-                        if (delayTicks == 0)
-                            Push(stage.Outlet, element);
-                        else
-                        {
-                            if (_enforcing)
-                                throw new OverflowException("Maximum throttle throughput exceeded.");
-
-                            _currentElement = element;
-                            ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
-                        }
-                    },
-                    onUpstreamFinish: () =>
-                    {
-                        if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName))
-                            _willStop = true;
-                        else
-                            CompleteStage();
-                    });
-
-                SetHandler(_stage.Outlet, onPull: () => Pull(_stage.Inlet));
+                SetHandler(_stage.Inlet, this);
+                SetHandler(_stage.Outlet, this);
             }
+
+            public void OnPush()
+            {
+                var element = Grab(_stage.Inlet);
+                var cost = _stage._costCalculation(element);
+                var delayTicks = _tokenBucket.Offer(cost);
+
+                if (delayTicks == 0)
+                    Push(_stage.Outlet, element);
+                else
+                {
+                    if (_enforcing)
+                        throw new OverflowException("Maximum throttle throughput exceeded.");
+
+                    _currentElement = element;
+                    ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
+                }
+            }
+
+            public void OnUpstreamFinish()
+            {
+                if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName))
+                    _willStop = true;
+                else
+                    CompleteStage();
+            }
+
+            public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            public void OnPull() => Pull(_stage.Inlet);
+
+            public void OnDownstreamFinish() => CompleteStage();
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -81,6 +92,14 @@ namespace Akka.Streams.Implementation
         private readonly ThrottleMode _mode;
         private readonly long _ticksBetweenTokens;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cost">TBD</param>
+        /// <param name="per">TBD</param>
+        /// <param name="maximumBurst">TBD</param>
+        /// <param name="costCalculation">TBD</param>
+        /// <param name="mode">TBD</param>
         public Throttle(int cost, TimeSpan per, int maximumBurst, Func<T, int> costCalculation, ThrottleMode mode)
         {
             _maximumBurst = maximumBurst;
@@ -93,8 +112,17 @@ namespace Akka.Streams.Implementation
             _ticksBetweenTokens = per.Ticks/cost;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => "Throttle";
     }
 }

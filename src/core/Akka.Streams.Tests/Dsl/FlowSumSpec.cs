@@ -18,6 +18,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
+    //JVMN : FlowReduceSpec
     public class FlowSumSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
@@ -126,6 +127,48 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<TestException>().WithMessage("test");
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Sum_must_fail_on_Empty_stream_using_Source_RunSum()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var result = Source.Empty<int>().RunSum((i, i1) => i + i1, Materializer);
+                result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<NoSuchElementException>()
+                    .And.Message.Should()
+                    .Contain("empty stream");
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Sum_must_fail_on_Empty_stream_using_Flow_Sum()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var result = Source.Empty<int>()
+                    .Via(SumFlow)
+                    .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
+                result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<NoSuchElementException>()
+                    .And.Message.Should()
+                    .Contain("empty stream");
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Sum_must_fail_on_Empty_stream_using_Sink_Sum()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var result = Source.Empty<int>()
+                    .RunWith(SumSink, Materializer);
+                result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<NoSuchElementException>()
+                    .And.Message.Should()
+                    .Contain("empty stream");
             }, Materializer);
         }
     }

@@ -148,6 +148,7 @@
     <Compile Include="Actor\RemotePathParsingSpec.cs" />
     <Compile Include="Actor\RepointableActorRefSpecs.cs" />
     <Compile Include="Actor\RootGuardianActorRef_Tests.cs" />
+    <Compile Include="Actor\Scheduler\SchedulerShutdownSpec.cs" />
     <Compile Include="Actor\Scheduler\TaskBasedScheduler_TellScheduler_Schedule_Tests.cs" />
     <Compile Include="Actor\Scheduler\TaskBasedScheduler_TellScheduler_Cancellation_Tests.cs" />
     <Compile Include="Actor\Scheduler\TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs" />

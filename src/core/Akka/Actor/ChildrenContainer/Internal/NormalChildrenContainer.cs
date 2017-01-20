@@ -24,29 +24,54 @@ namespace Akka.Actor.Internal
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="children">TBD</param>
+        /// <returns>TBD</returns>
         public static IChildrenContainer Create(IImmutableDictionary<string, IChildStats> children)
         {
             if (children.Count == 0) return EmptyChildrenContainer.Instance;
             return new NormalChildrenContainer(children);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <returns>TBD</returns>
         public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             return Create(InternalChildren.SetItem(name, stats));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         public override IChildrenContainer Remove(IActorRef child)
         {
             return Create(InternalChildren.Remove(child.Path.Name));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <returns>TBD</returns>
         public override IChildrenContainer ShallDie(IActorRef actor)
         {
             return new TerminatingChildrenContainer(InternalChildren, actor, SuspendReason.UserRequest.Instance);
         }
 
-        /// <summary></summary>
-        /// <exception cref="InvalidActorNameException">This exception is thrown if the given <paramref name="name"/> is not unique in the container.</exception>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        ///  <exception cref="InvalidActorNameException">This exception is thrown if the given <paramref name="name"/> is not unique in the container.</exception>
+        /// <returns>TBD</returns>
         public override IChildrenContainer Reserve(string name)
         {
             if (InternalChildren.ContainsKey(name))
@@ -54,6 +79,11 @@ namespace Akka.Actor.Internal
             return new NormalChildrenContainer(InternalChildren.SetItem(name, ChildNameReserved.Instance));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IChildrenContainer Unreserve(string name)
         {
             IChildStats stats;
@@ -64,6 +94,10 @@ namespace Akka.Actor.Internal
             return this;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             var numberOfChildren = InternalChildren.Count;

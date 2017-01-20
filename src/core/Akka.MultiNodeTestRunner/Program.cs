@@ -132,8 +132,13 @@ namespace Akka.MultiNodeTestRunner
                             continue;
                         }
 
-                        if (!string.IsNullOrWhiteSpace(specName) && !test.Value[0].MethodName.Contains(specName))
+                        // Filtering - check to see if we're supposed to skip this spec or not
+                        if (!string.IsNullOrWhiteSpace(specName) && !test.Value.First().MethodName.Contains(specName))
+                        {
+                            PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
                             continue;
+                        }
+                            
 
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
@@ -156,7 +161,7 @@ namespace Akka.MultiNodeTestRunner
                                     } -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={listenPort}";
                             var nodeIndex = nodeTest.Node;
                             //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
-                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.MethodName));
+                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
                             var logFilePath = Path.Combine(folder.FullName, "node" + nodeIndex + ".txt");
                             var fileActor =
                                 TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));

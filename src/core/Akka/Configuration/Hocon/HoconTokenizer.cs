@@ -22,11 +22,17 @@ namespace Akka.Configuration.Hocon
         private int _index;
         private readonly Stack<int> _indexStack = new Stack<int>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Push()
         {
             _indexStack.Push(_index);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Pop()
         {
             _index = _indexStack.Pop();
@@ -448,11 +454,19 @@ namespace Akka.Configuration.Hocon
             return (!EoF && !IsWhitespace() && !IsStartOfComment() && !NotInUnquotedKey.Contains(Peek()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsWhitespace()
         {
             return char.IsWhiteSpace(Peek());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsWhitespaceOrComment()
         {
             return IsWhitespace() || IsStartOfComment();
@@ -525,8 +539,11 @@ namespace Akka.Configuration.Hocon
             return Token.Key(sb.ToString());
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <exception cref="FormatException">This exception is thrown if an unknown escape code is encountered.</exception>
+        /// <returns>TBD</returns>
         public Token PullInclude()
         {
             Take("include".Length);
@@ -567,6 +584,10 @@ namespace Akka.Configuration.Hocon
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsStartOfComment()
         {
             return (Matches("#", "//"));
@@ -627,8 +648,11 @@ namespace Akka.Configuration.Hocon
             return Matches("${");
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <exception cref="FormatException">This exception is thrown if an unknown escape code is encountered.</exception>
+        /// <returns>TBD</returns>
         public bool IsInclude()
         {
             Push();

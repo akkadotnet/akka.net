@@ -25,6 +25,9 @@ namespace Akka.Cluster
     /// </summary>
     public class ClusterEvent
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public enum SubscriptionInitialStateMode
         {
            /// <summary>
@@ -41,9 +44,15 @@ namespace Akka.Cluster
             InitialStateAsEvents
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly SubscriptionInitialStateMode InitialStateAsSnapshot =
             SubscriptionInitialStateMode.InitialStateAsSnapshot;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly SubscriptionInitialStateMode InitialStateAsEvents =
             SubscriptionInitialStateMode.InitialStateAsEvents;
 
@@ -52,6 +61,9 @@ namespace Akka.Cluster
         /// </summary>
         public interface IClusterDomainEvent { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class CurrentClusterState
         {
             private readonly ImmutableSortedSet<Member> _members;
@@ -60,6 +72,9 @@ namespace Akka.Cluster
             private readonly Address _leader;
             private readonly ImmutableDictionary<string, Address> _roleLeaderMap;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public CurrentClusterState() : this(
                 ImmutableSortedSet<Member>.Empty,
                 ImmutableHashSet<Member>.Empty,
@@ -68,6 +83,14 @@ namespace Akka.Cluster
                 ImmutableDictionary<string, Address>.Empty)
             {}
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="members">TBD</param>
+            /// <param name="unreachable">TBD</param>
+            /// <param name="seenBy">TBD</param>
+            /// <param name="leader">TBD</param>
+            /// <param name="roleLeaderMap">TBD</param>
             public CurrentClusterState(
                 ImmutableSortedSet<Member> members,
                 ImmutableHashSet<Member> unreachable,
@@ -133,6 +156,8 @@ namespace Akka.Cluster
             /// <summary>
             /// Get address of current leader, if any, within the role set
             /// </summary>
+            /// <param name="role">TBD</param>
+            /// <returns>TBD</returns>
             public Address RoleLeader(string role)
             {
                 return _roleLeaderMap.GetOrElse(role, null);
@@ -142,6 +167,12 @@ namespace Akka.Cluster
             /// Creates a deep copy of the <see cref="CurrentClusterState"/> and optionally allows you
             /// to specify different values for the outgoing objects
             /// </summary>
+            /// <param name="members">TBD</param>
+            /// <param name="unreachable">TBD</param>
+            /// <param name="seenBy">TBD</param>
+            /// <param name="leader">TBD</param>
+            /// <param name="roleLeaderMap">TBD</param>
+            /// <returns>TBD</returns>
             public CurrentClusterState Copy(
                 ImmutableSortedSet<Member> members = null,
                 ImmutableHashSet<Member> unreachable = null,
@@ -167,13 +198,28 @@ namespace Akka.Cluster
         /// </summary>
         public interface IMemberEvent : IClusterDomainEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             Member Member { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract class MemberStatusChange : IMemberEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             protected readonly Member _member;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
+            /// <param name="validStatus">TBD</param>
+            /// <exception cref="ArgumentException">TBD</exception>
             protected MemberStatusChange(Member member, MemberStatus validStatus)
             {
                 if (member.Status != validStatus)
@@ -181,11 +227,19 @@ namespace Akka.Cluster
                 _member = member;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Member Member
             {
                 get { return _member; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as MemberStatusChange;
@@ -193,6 +247,10 @@ namespace Akka.Cluster
                 return _member.Equals(other._member);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -203,6 +261,10 @@ namespace Akka.Cluster
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return $"{GetType()}(Member={Member})";
@@ -214,6 +276,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class MemberJoined : MemberStatusChange
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
             public MemberJoined(Member member)
                 : base(member, MemberStatus.Joining) { }
         }
@@ -223,6 +289,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class MemberUp : MemberStatusChange
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
             public MemberUp(Member member)
                 : base(member, MemberStatus.Up) { }
         }
@@ -232,6 +302,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class MemberLeft : MemberStatusChange
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
             public MemberLeft(Member member)
                 : base(member, MemberStatus.Leaving) { }
         }
@@ -242,6 +316,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class MemberExited : MemberStatusChange
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
             public MemberExited(Member member)
                 : base(member, MemberStatus.Exiting)
             {
@@ -259,11 +337,20 @@ namespace Akka.Cluster
         {
             readonly MemberStatus _previousStatus;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public MemberStatus PreviousStatus 
             { 
                 get { return _previousStatus; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
+            /// <param name="previousStatus">TBD</param>
+            /// <exception cref="ArgumentException">TBD</exception>
             public MemberRemoved(Member member, MemberStatus previousStatus)
                 : base(member, MemberStatus.Removed)
             {
@@ -271,6 +358,11 @@ namespace Akka.Cluster
                 _previousStatus = previousStatus;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as MemberRemoved;
@@ -278,6 +370,10 @@ namespace Akka.Cluster
                 return _member.Equals(other._member) && _previousStatus == other._previousStatus;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -298,6 +394,10 @@ namespace Akka.Cluster
         {
             private readonly Address _leader;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="leader">TBD</param>
             public LeaderChanged(Address leader)
             {
                 _leader = leader;
@@ -311,6 +411,11 @@ namespace Akka.Cluster
                 get { return _leader; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as LeaderChanged;
@@ -318,6 +423,10 @@ namespace Akka.Cluster
                 return (_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader));
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -328,6 +437,10 @@ namespace Akka.Cluster
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return $"LeaderChanged(NewLeader={Leader})";
@@ -343,6 +456,11 @@ namespace Akka.Cluster
             private readonly Address _leader;
             private readonly string _role;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="role">TBD</param>
+            /// <param name="leader">TBD</param>
             public RoleLeaderChanged(string role, Address leader)
             {
                 _role = role;
@@ -357,11 +475,18 @@ namespace Akka.Cluster
                 get { return _leader; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Role
             {
                 get { return _role; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -373,6 +498,11 @@ namespace Akka.Cluster
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as RoleLeaderChanged;
@@ -381,20 +511,34 @@ namespace Akka.Cluster
                     && ((_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader)));
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return $"RoleLeaderChanged(Leader={Leader}, Role={Role})";
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class ClusterShuttingDown : IClusterDomainEvent
         {
             private ClusterShuttingDown()
             {
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly IClusterDomainEvent Instance = new ClusterShuttingDown();
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return "ClusterShuttingDown";
@@ -409,20 +553,35 @@ namespace Akka.Cluster
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract class ReachabilityEvent : IReachabilityEvent
         {
             private readonly Member _member;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
             protected ReachabilityEvent(Member member)
             {
                 _member = member;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Member Member
             {
                 get { return _member; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ReachabilityEvent;
@@ -430,6 +589,10 @@ namespace Akka.Cluster
                 return _member.Equals(other._member);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -440,6 +603,10 @@ namespace Akka.Cluster
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return $"{GetType()}(Member={Member})";
@@ -451,6 +618,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class UnreachableMember : ReachabilityEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
             public UnreachableMember(Member member)
                 : base(member)
             {
@@ -464,6 +635,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class ReachableMember : ReachabilityEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
             public ReachableMember(Member member)
                 : base(member)
             {
@@ -478,22 +653,38 @@ namespace Akka.Cluster
             private readonly bool _convergence;
             private readonly ImmutableHashSet<Address> _seenBy;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="convergence">TBD</param>
+            /// <param name="seenBy">TBD</param>
             public SeenChanged(bool convergence, ImmutableHashSet<Address> seenBy)
             {
                 _convergence = convergence;
                 _seenBy = seenBy;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool Convergence
             {
                 get { return _convergence; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableHashSet<Address> SeenBy
             {
                 get { return _seenBy; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as SeenChanged;
@@ -501,6 +692,10 @@ namespace Akka.Cluster
                 return _convergence.Equals(other._convergence) && _seenBy.SequenceEqual(other._seenBy);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -518,20 +713,35 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class ReachabilityChanged : IClusterDomainEvent
         {
             private readonly Reachability _reachability;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="reachability">TBD</param>
             public ReachabilityChanged(Reachability reachability)
             {
                 _reachability = reachability;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Reachability Reachability
             {
                 get { return _reachability; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ReachabilityChanged;
@@ -539,6 +749,10 @@ namespace Akka.Cluster
                 return _reachability.Equals(other._reachability);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -550,27 +764,45 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class CurrentInternalStats : IClusterDomainEvent
         {
             private readonly GossipStats _gossipStats;
             private readonly VectorClockStats _vclockStats;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="gossipStats">TBD</param>
+            /// <param name="vclockStats">TBD</param>
             public CurrentInternalStats(GossipStats gossipStats, VectorClockStats vclockStats)
             {
                 _gossipStats = gossipStats;
                 _vclockStats = vclockStats;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public GossipStats GossipStats
             {
                 get { return _gossipStats; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public VectorClockStats SeenBy
             {
                 get { return _vclockStats; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -582,6 +814,11 @@ namespace Akka.Cluster
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as CurrentInternalStats;
@@ -590,6 +827,13 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldGossip">TBD</param>
+        /// <param name="newGossip">TBD</param>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         internal static ImmutableList<UnreachableMember> DiffUnreachable(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
             if (newGossip.Equals(oldGossip))
@@ -604,6 +848,13 @@ namespace Akka.Cluster
                     .ToImmutableList();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldGossip">TBD</param>
+        /// <param name="newGossip">TBD</param>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         internal static ImmutableList<ReachableMember> DiffReachable(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
             if (newGossip.Equals(oldGossip))
@@ -617,6 +868,12 @@ namespace Akka.Cluster
                     .ToImmutableList();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldGossip">TBD</param>
+        /// <param name="newGossip">TBD</param>
+        /// <returns>TBD</returns>
         internal static ImmutableList<IMemberEvent> DiffMemberEvents(Gossip oldGossip, Gossip newGossip)
         {
             if (newGossip.Equals(oldGossip))
@@ -651,6 +908,13 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldGossip">TBD</param>
+        /// <param name="newGossip">TBD</param>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         internal static ImmutableList<LeaderChanged> DiffLeader(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
             var newLeader = newGossip.Leader(selfUniqueAddress);
@@ -663,6 +927,13 @@ namespace Akka.Cluster
                 : new LeaderChanged(newLeader.Address));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldGossip">TBD</param>
+        /// <param name="newGossip">TBD</param>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         internal static ImmutableHashSet<RoleLeaderChanged> DiffRolesLeader(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
             return InternalDiffRolesLeader(oldGossip, newGossip, selfUniqueAddress).ToImmutableHashSet();
@@ -680,6 +951,13 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldGossip">TBD</param>
+        /// <param name="newGossip">TBD</param>
+        /// <param name="selfUniqueAddress">TBD</param>
+        /// <returns>TBD</returns>
         internal static ImmutableList<SeenChanged> DiffSeen(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
             if (newGossip.Equals(oldGossip))
@@ -697,6 +975,12 @@ namespace Akka.Cluster
             return ImmutableList<SeenChanged>.Empty;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldGossip">TBD</param>
+        /// <param name="newGossip">TBD</param>
+        /// <returns>TBD</returns>
         internal static ImmutableList<ReachabilityChanged> DiffReachability(Gossip oldGossip, Gossip newGossip)
         {
             if (newGossip.Overview.Reachability.Equals(oldGossip.Overview.Reachability))
@@ -706,11 +990,17 @@ namespace Akka.Cluster
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class ClusterDomainEventPublisher : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private Gossip _latestGossip;
         private readonly UniqueAddress _selfUniqueAddress = Cluster.Get(Context.System).SelfUniqueAddress;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ClusterDomainEventPublisher()
         {
             _latestGossip = Gossip.Empty;
@@ -724,11 +1014,19 @@ namespace Akka.Cluster
             Receive<InternalClusterAction.PublishEvent>(evt => Publish(evt));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="message">TBD</param>
         protected override void PreRestart(Exception reason, object message)
         {
             // don't postStop when restarted, no children to stop
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             // publish the final removed state before shutting down

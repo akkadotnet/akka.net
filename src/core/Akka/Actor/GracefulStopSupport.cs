@@ -35,15 +35,27 @@ namespace Akka.Actor
     /// </summary>
     public static class GracefulStopSupport
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="target">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <returns>TBD</returns>
         public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout)
         {
             return GracefulStop(target, timeout, PoisonPill.Instance);
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="target">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="stopMessage">TBD</param>
         /// <exception cref="TaskCanceledException">
         /// This exception is thrown if the underlying task is <see cref="TaskStatus.Canceled"/>.
         /// </exception>
+        /// <returns>TBD</returns>
         public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout, object stopMessage)
         {
             var internalTarget = target.AsInstanceOf<IInternalActorRef>();

@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
 
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
             Source.FromPublisher(p1)
                 .Concat(Source.FromPublisher(p2))
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Dsl
             var s1 = Source.From(new[] {1, 2, 3});
             var s2 = Source.From(new[] { 4,5,6 }).Select(x=> x + "-s");
 
-            var subs = TestSubscriber.CreateManualProbe<string>(this);
+            var subs = this.CreateManualSubscriberProbe<string>();
             var subSink = Sink.AsPublisher<string>(false);
 
             var res = f1.Concat(s2).RunWith(s1, subSink, Materializer).Item2;
@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
             var s2 = Source.From(new[] { 4, 5, 6 });
             var f2 = Flow.Create<int>().Select(x => x + "-s");
 
-            var subs = TestSubscriber.CreateManualProbe<string>(this);
+            var subs = this.CreateManualSubscriberProbe<string>();
             var subSink = Sink.AsPublisher<string>(false);
 
             var res = f2.Prepend(s1).RunWith(s2, subSink, Materializer).Item2;
@@ -149,7 +149,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var promise = new TaskCompletionSource<int>();
-                var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+                var subscriber = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 3))
                     .Concat(Source.FromTask(promise.Task))
                     .RunWith(Sink.FromSubscriber(subscriber), Materializer);
@@ -242,8 +242,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher1 = TestPublisher.CreateProbe<int>(this);
-                var publisher2 = TestPublisher.CreateProbe<int>(this);
+                var publisher1 = this.CreatePublisherProbe<int>();
+                var publisher2 = this.CreatePublisherProbe<int>();
                 var probeSink =
                     Source.FromPublisher(publisher1)
                         .Concat(Source.FromPublisher(publisher2))

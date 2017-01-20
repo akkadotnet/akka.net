@@ -31,15 +31,30 @@ namespace Akka.Actor
     /// </summary>
     public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>, ISurrogated
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class Surrogate : ISurrogate, IEquatable<Surrogate>, IEquatable<ActorPath>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="path">TBD</param>
             public Surrogate(string path)
             {
                 Path = path;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Path { get; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 ActorPath path;
@@ -53,6 +68,11 @@ namespace Akka.Actor
 
             #region Equality
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             public bool Equals(Surrogate other)
             {
                 if (ReferenceEquals(null, other)) return false;
@@ -60,12 +80,22 @@ namespace Akka.Actor
                 return string.Equals(Path, other.Path);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="other">TBD</param>
+            /// <returns>TBD</returns>
             public bool Equals(ActorPath other)
             {
                 if (other == null) return false;
                 return Equals(other.ToSurrogate(null)); //TODO: not so sure if this is OK
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -75,6 +105,10 @@ namespace Akka.Actor
                 return Equals(obj as Surrogate);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 return Path.GetHashCode();
@@ -84,6 +118,9 @@ namespace Akka.Actor
         }
 
         /** INTERNAL API */
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 
         /// <summary> 
@@ -91,6 +128,8 @@ namespace Akka.Actor
         /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
         /// since we use URL Encode to create valid actor names, we must allow them.
         /// </summary>
+        /// <param name="s">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsValidPathElement(string s)
         {
             if (IsNullOrEmpty(s))
@@ -212,7 +251,13 @@ namespace Akka.Actor
         /// <value> The address. </value>
         public Address Address { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract ActorPath Root { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract ActorPath Parent { get; }
 
         /// <summary>
@@ -228,6 +273,11 @@ namespace Akka.Actor
             return Address.Equals(other.Address) && Elements.SequenceEqual(other.Elements);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public abstract int CompareTo(ActorPath other);
 
         /// <summary>
@@ -266,10 +316,14 @@ namespace Akka.Actor
             return a;
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
         /// <exception cref="UriFormatException">
         /// This exception is thrown if the given <paramref name="path"/> cannot be parsed into an <see cref="ActorPath"/>.
         /// </exception>
+        /// <returns>TBD</returns>
         public static ActorPath Parse(string path)
         {
             ActorPath actorPath;
@@ -284,6 +338,9 @@ namespace Akka.Actor
         /// Tries to parse the uri, which should be a full uri, i.e containing protocol.
         /// For example "akka://System/user/my-actor"
         /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
         public static bool TryParse(string path, out ActorPath actorPath)
         {
             actorPath = null;
@@ -302,6 +359,12 @@ namespace Akka.Actor
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public static bool TryParseAddress(string path, out Address address)
         {
             Uri uri;
@@ -386,7 +449,7 @@ namespace Akka.Actor
         /// <summary>
         /// Returns a string representation of this instance including uid.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public string ToStringWithUid()
         {
             var uid = Uid;
@@ -428,11 +491,23 @@ namespace Akka.Actor
             return Equals(other);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="left">TBD</param>
+        /// <param name="right">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator ==(ActorPath left, ActorPath right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="left">TBD</param>
+        /// <param name="right">TBD</param>
+        /// <returns>TBD</returns>
         public static bool operator !=(ActorPath left, ActorPath right)
         {
             return !Equals(left, right);
@@ -447,11 +522,20 @@ namespace Akka.Actor
             return ToStringWithAddress(Address);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public string ToSerializationFormat()
         {
             return AppendUidFragment(ToStringWithAddress());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public string ToSerializationFormatWithAddress(Address address)
         {
             var withAddress = ToStringWithAddress(address);
@@ -481,11 +565,21 @@ namespace Akka.Actor
             return $"{address}{Join()}";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="pathElements">TBD</param>
+        /// <returns>TBD</returns>
         public static string FormatPathElements(IEnumerable<string> pathElements)
         {
             return String.Join("/", pathElements);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public ISurrogate ToSurrogate(ActorSystem system)
         {
             return new Surrogate(ToSerializationFormat());
@@ -507,13 +601,23 @@ namespace Akka.Actor
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Parent => null;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [JsonIgnore]
         public override ActorPath Root => this;
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="uid">TBD</param>
         /// <exception cref="NotSupportedException">This exception is thrown if the given <paramref name="uid"/> is not equal to 0.</exception>
+        /// <returns>TBD</returns>
         public override ActorPath WithUid(long uid)
         {
             if (uid == 0)
@@ -521,6 +625,11 @@ namespace Akka.Actor
             throw new NotSupportedException("RootActorPath must have undefined Uid");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public override int CompareTo(ActorPath other)
         {
             if (other is ChildActorPath) return 1;
@@ -549,8 +658,14 @@ namespace Akka.Actor
             _parent = parentPath;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Parent => _parent;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Root
         {
             get
@@ -576,6 +691,11 @@ namespace Akka.Actor
             return new ChildActorPath(_parent, _name, uid);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public override int CompareTo(ActorPath other)
         {
             return InternalCompareTo(this, other);

@@ -93,6 +93,28 @@ namespace Akka.Streams.Tests.IO
             resultFuture.Result.ShouldBeEquivalentTo(expectedOutput);
         }
 
+        [Fact]
+        public void Outgoing_TCP_stream_must_fail_the_materialized_task_when_the_connection_fails()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var tcpWriteProbe = new TcpWriteProbe(this);
+                var task =
+                    Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                        .ViaMaterialized(
+                            Sys.TcpStream()
+                                .OutgoingConnection(new DnsEndPoint("example.com", 666),
+                                    connectionTimeout: TimeSpan.FromSeconds(1)), Keep.Right)
+                        .ToMaterialized(Sink.Ignore<ByteString>(), Keep.Left)
+                        .Run(Materializer);
+
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<Exception>()
+                    .And.Message.Should()
+                    .Contain("Connection failed");
+            }, Materializer);
+        }
+
         [Fact(Skip = "Fix me")]
         public void Outgoing_TCP_stream_must_work_when_client_closes_write_then_remote_closes_write()
         {
@@ -393,7 +415,7 @@ namespace Akka.Streams.Tests.IO
 
                 var task =
                     Sys.TcpStream()
-                        .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
+                        .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                         .ToMaterialized(
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead).Run(Materializer)),
                             Keep.Left)
@@ -423,7 +445,7 @@ namespace Akka.Streams.Tests.IO
             var serverAddress = TestUtils.TemporaryServerAddress();
 
             var task = Sys.TcpStream()
-                    .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
+                    .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                     .ToMaterialized(
                         Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(Flow.Create<ByteString>())),
                         Keep.Left)
@@ -462,6 +484,37 @@ namespace Akka.Streams.Tests.IO
 
             binding.Result.Unbind().Wait();
             system2.Terminate().Wait();
+        }
+
+        [Fact(Skip = "Fix me")]
+        public void Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
+        {
+            var sys2 = ActorSystem.Create("shutdown-test-system");
+            var mat2 = sys2.Materializer();
+
+            try
+            {
+                var address = TestUtils.TemporaryServerAddress();
+                var bindingTask = sys2.TcpStream()
+                    .BindAndHandle(Flow.Create<ByteString>(), mat2, address.Address.ToString(), address.Port);
+
+                // Ensure server is running
+                bindingTask.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                // and is possible to communicate with 
+                var t = Source.Single(ByteString.FromString(""))
+                    .Via(sys2.TcpStream().OutgoingConnection(address))
+                    .RunWith(Sink.Ignore<ByteString>(), mat2);
+                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+                sys2.Terminate().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+                var binding = bindingTask.Result;
+                binding.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            }
+            finally
+            {
+                sys2.Terminate().Wait(TimeSpan.FromSeconds(5));
+            }
         }
 
         private void ValidateServerClientCommunication(ByteString testData, ServerConnection serverConnection, TcpReadProbe readProbe, TcpWriteProbe writeProbe)

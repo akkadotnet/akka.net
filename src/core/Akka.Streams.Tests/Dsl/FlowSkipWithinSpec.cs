@@ -29,8 +29,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_SkipWithin_must_deliver_elements_after_the_duration_but_not_before()
         {
             var input = Enumerable.Range(1, 200).GetEnumerator();
-            var p = TestPublisher.CreateManualProbe<int>(this);
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var p = this.CreateManualPublisherProbe<int>();
+            var c = this.CreateManualSubscriberProbe<int>();
             Source.FromPublisher(p)
                 .SkipWithin(TimeSpan.FromSeconds(1))
                 .To(Sink.FromSubscriber(c))
@@ -67,8 +67,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_SkipWithin_must_deliver_completion_even_before_the_duration()
         {
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<int>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
 
             Source.FromPublisher(upstream)
                 .SkipWithin(TimeSpan.FromDays(1))

@@ -20,6 +20,11 @@ namespace Akka.Remote
     /// </summary>
     internal class RemoteMetricsExtension : ExtensionIdProvider<IRemoteMetrics>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IRemoteMetrics CreateExtension(ExtendedActorSystem system)
         {
             if (system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding").ToLowerInvariant() == "off")
@@ -29,6 +34,11 @@ namespace Akka.Remote
             return new RemoteMetricsOn(system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static IRemoteMetrics Create(ExtendedActorSystem system)
         {
             return system.WithExtension<IRemoteMetrics, RemoteMetricsExtension>();
@@ -44,12 +54,21 @@ namespace Akka.Remote
         private readonly long? _logFrameSizeExceeding;
         private readonly ConcurrentDictionary<Type, long> _maxPayloadBytes = new ConcurrentDictionary<Type, long>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public RemoteMetricsOn(ExtendedActorSystem system)
         {
             _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.log-frame-size-exceeding");
             _log = Logging.GetLogger(system, this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="msg">TBD</param>
+        /// <param name="payloadBytes">TBD</param>
         public void LogPayloadBytes(object msg, long payloadBytes)
         {
             if (payloadBytes >= _logFrameSizeExceeding)
@@ -111,6 +130,11 @@ namespace Akka.Remote
     /// </summary>
     internal class RemoteMetricsOff : IRemoteMetrics
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="msg">TBD</param>
+        /// <param name="payloadBytes">TBD</param>
         public void LogPayloadBytes(object msg, long payloadBytes)
         {
             //do nothing
@@ -127,6 +151,8 @@ namespace Akka.Remote
         ///     Maximum detected size per message type is logged once, with
         ///     and increase threshold of 10%.
         /// </summary>
+        /// <param name="msg">TBD</param>
+        /// <param name="payloadBytes">TBD</param>
         void LogPayloadBytes(object msg, long payloadBytes);
     }
 }

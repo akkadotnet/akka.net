@@ -39,8 +39,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var input = new Iterator<int>(Enumerable.Range(1, 10000));
-                var p = TestPublisher.CreateManualProbe<int>(this);
-                var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+                var p = this.CreateManualPublisherProbe<int>();
+                var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
                 Source.FromPublisher(p)
                     .GroupedWithin(1000, TimeSpan.FromSeconds(1))
@@ -85,7 +85,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_GroupedWithin_must_deliver_buffered_elements_OnComplete_before_the_timeout()
         {
-            var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+            var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
             Source.From(Enumerable.Range(1, 3))
                 .GroupedWithin(1000, TimeSpan.FromSeconds(10))
@@ -104,8 +104,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_GroupedWithin_must_buffer_groups_until_requested_from_downstream()
         {
             var input = new Iterator<int>(Enumerable.Range(1, 10000));
-            var p = TestPublisher.CreateManualProbe<int>(this);
-            var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+            var p = this.CreateManualPublisherProbe<int>();
+            var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
             Source.FromPublisher(p)
                 .GroupedWithin(1000, TimeSpan.FromSeconds(1))
@@ -137,8 +137,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_GroupedWithin_must_drop_empty_groups()
         {
-            var p = TestPublisher.CreateManualProbe<int>(this);
-            var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+            var p = this.CreateManualPublisherProbe<int>();
+            var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
             Source.FromPublisher(p)
                 .GroupedWithin(1000, TimeSpan.FromMilliseconds(500))
@@ -168,8 +168,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_GroupedWithin_must_reset_time_window_when_max_elements_reached()
         {
             var input = new Iterator<int>(Enumerable.Range(1, 10000));
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<IEnumerable<int>>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<IEnumerable<int>>();
 
             Source.FromPublisher(upstream)
                 .GroupedWithin(3, TimeSpan.FromSeconds(2))
@@ -239,6 +239,17 @@ namespace Akka.Streams.Tests.Dsl
 
             RandomTestRange(Sys)
                 .ForEach(_ => RunScript(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+        }
+
+        [Fact]
+        public void A_GroupedWithin_must_group_with_small_groups_with_backpressure()
+        {
+            var t = Source.From(Enumerable.Range(1, 10))
+                .GroupedWithin(1, TimeSpan.FromDays(1))
+                .Throttle(1, TimeSpan.FromMilliseconds(110), 0, ThrottleMode.Shaping)
+                .RunWith(Sink.Seq<IEnumerable<int>>(), Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> {i}));
         }
     }
 }

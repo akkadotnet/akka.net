@@ -14,6 +14,7 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Akka.Actor;
 // ReSharper disable InvokeAsExtensionMethod
 
 namespace Akka.Streams.Tests.Dsl
@@ -37,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = CreateMaterializer(autoFusing);
 
-            var sub = TestSubscriber.CreateManualProbe<int>(this);
+            var sub = this.CreateManualSubscriberProbe<int>();
             var f = RunnableGraph.FromGraph(GraphDsl.Create(FoldSink, (b, fold) =>
             {
                 var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(0));
@@ -62,7 +63,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = CreateMaterializer(autoFusing);
 
-            var sub = TestSubscriber.CreateManualProbe<int>(this);
+            var sub = this.CreateManualSubscriberProbe<int>();
             var f = RunnableGraph.FromGraph(GraphDsl.Create(FoldSink, (b, fold) =>
             {
                 var zip = b.Add(new ZipWith<int, int, int>((i, i1) => i + i1));
@@ -243,6 +244,86 @@ namespace Akka.Streams.Tests.Dsl
                 return _;
             })), Keep.Right).To(Sink.Ignore<int>()).Run(materializer).Should().Be(NotUsed.Instance);
             done.Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void A_Graph_with_materialized_value_must_ignore_materialized_values_for_a_graph_with_no_materialized_values_exposed(bool autoFusing)
+        {
+            // The bug here was that the default behavior for "compose" in Module is Keep.left, but
+            // EmptyModule.compose broke this by always returning the other module intact, which means
+            // that the materialized value was that of the other module (which is inconsistent with Keep.left behavior).
+
+            var sink = Sink.Ignore<int>();
+
+            var g = RunnableGraph.FromGraph(GraphDsl.Create(b =>
+            {
+                var s = b.Add(sink);
+                var source = b.Add(Source.From(Enumerable.Range(1, 3)));
+                var flow = b.Add(Flow.Create<int>());
+
+                b.From(source).Via(flow).To(s);
+                return ClosedShape.Instance;
+            }));
+
+            var result = g.Run(CreateMaterializer(autoFusing));
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void A_Graph_with_materialized_value_must_ignore_materialized_values_for_a_graph_with_no_materialized_values_exposed_but_keep_side_effects(bool autoFusing)
+        {
+            // The bug here was that the default behavior for "compose" in Module is Keep.left, but
+            // EmptyModule.compose broke this by always returning the other module intact, which means
+            // that the materialized value was that of the other module (which is inconsistent with Keep.left behavior).
+
+            var sink = Sink.Ignore<int>().MapMaterializedValue(_=>
+            {
+                TestActor.Tell("side effect!");
+                return _;
+            });
+
+            var g = RunnableGraph.FromGraph(GraphDsl.Create(b =>
+            {
+                var s = b.Add(sink);
+                var source = b.Add(Source.From(Enumerable.Range(1, 3)));
+                var flow = b.Add(Flow.Create<int>());
+
+                b.From(source).Via(flow).To(s);
+                return ClosedShape.Instance;
+            }));
+
+            var result = g.Run(CreateMaterializer(autoFusing));
+
+            ExpectMsg("side effect!");
+        }
+
+        [Fact]
+        public void A_Graph_with_Identity_Flow_optimization_even_if_port_are_wired_in_an_arbitrary_higher_nesting_level()
+        {
+            var mat2 = Sys.Materializer(ActorMaterializerSettings.Create(Sys).WithAutoFusing(false));
+
+            var subFlow = GraphDsl.Create(b =>
+            {
+                var zip = b.Add(new Zip<string, string>());
+                var bc = b.Add(new Broadcast<string>(2));
+
+                b.From(bc.Out(0)).To(zip.In0);
+                b.From(bc.Out(1)).To(zip.In1);
+
+                return new FlowShape<string, Tuple<string, string>>(bc.In, zip.Out);
+            }).Named("NestedFlow");
+
+            var nest1 = Flow.Create<string>().Via(subFlow);
+            var nest2 = Flow.Create<string>().Via(nest1);
+            var nest3 = Flow.Create<string>().Via(nest2);
+            var nest4 = Flow.Create<string>().Via(nest3);
+
+            //fails
+            var matValue = Source.Single("").Via(nest4).To(Sink.Ignore<Tuple<string, string>>()).Run(mat2);
+            matValue.Should().Be(NotUsed.Instance);
         }
     }
 }

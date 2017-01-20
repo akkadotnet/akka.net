@@ -78,6 +78,7 @@
     <Compile Include="Dsl\ActorRefSourceSpec.cs" />
     <Compile Include="Dsl\AttributesSpec.cs" />
     <Compile Include="Dsl\BidiFlowSpec.cs" />
+    <Compile Include="Dsl\FlowAggregateAsyncSpec.cs" />
     <Compile Include="Dsl\FlowBatchSpec.cs" />
     <Compile Include="Dsl\FlowBatchWeightedSpec.cs" />
     <Compile Include="Dsl\FlowCollectSpec.cs" />
@@ -92,12 +93,13 @@
     <Compile Include="Dsl\FlowExpandSpec.cs" />
     <Compile Include="Dsl\FlowKillSwitchSpec.cs" />
     <Compile Include="Dsl\FlowMonitorSpec.cs" />
+    <Compile Include="Dsl\FlowOrElseSpec.cs" />
     <Compile Include="Dsl\FlowWhereSpec.cs" />
     <Compile Include="Dsl\FlowFlattenMergeSpec.cs" />
     <Compile Include="Dsl\FlowAggregateSpec.cs" />
     <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowFromTaskSpec.cs" />
-    <Compile Include="Dsl\FlowGraphCompileSpec.cs" />
+    <Compile Include="Dsl\GraphDslCompileSpec.cs" />
     <Compile Include="Dsl\FlowGroupBySpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />
     <Compile Include="Dsl\FlowGroupedWithinSpec.cs" />
@@ -141,7 +143,12 @@
     <Compile Include="Dsl\GraphUnzipSpec.cs" />
     <Compile Include="Dsl\GraphUnzipWithSpec.cs" />
     <Compile Include="Dsl\GraphZipSpec.cs" />
+    <Compile Include="Dsl\GraphZipNSpec.cs" />
+    <Compile Include="Dsl\GraphZipWithNSpec.cs" />
     <Compile Include="Dsl\GraphZipWithSpec.cs" />
+    <Compile Include="Dsl\HubSpec.cs" />
+    <Compile Include="Dsl\JsonFramingSpec.cs" />
+    <Compile Include="Dsl\LazySinkSpec.cs" />
     <Compile Include="Dsl\LiftExtensions.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSinkSpec.cs" />
@@ -166,6 +173,7 @@
     <Compile Include="Dsl\HeadSinkSpec.cs" />
     <Compile Include="Dsl\LastSinkSpec.cs" />
     <Compile Include="Dsl\ReverseArrowSpec.cs" />
+    <Compile Include="Dsl\RunnableGraphSpec.cs" />
     <Compile Include="Dsl\SeqSinkSpec.cs" />
     <Compile Include="Dsl\SinkForeachParallelSpec.cs" />
     <Compile Include="Dsl\SinkSpec.cs" />
@@ -181,6 +189,7 @@
     <Compile Include="Extra\FlowTimedSpec.cs" />
     <Compile Include="FusingSpec.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
+    <Compile Include="Implementation\Fusing\ChasingEventsSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterFailureModesSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterPortsSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterSpec.cs" />

@@ -9,13 +9,24 @@ using Akka.Event;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IAutoReceivedMessage : INoSerializationVerificationNeeded
     {
     }
 
-    public sealed class
-        Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="existenceConfirmed">TBD</param>
+        /// <param name="addressTerminated">TBD</param>
         public Terminated(IActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
             ActorRef = actorRef;
@@ -23,13 +34,25 @@ namespace Akka.Actor
             AddressTerminated = addressTerminated;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef ActorRef { get; private set; }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool AddressTerminated { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool ExistenceConfirmed { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Terminated>: " + ActorRef + " - ExistenceConfirmed=" + ExistenceConfirmed;
@@ -41,6 +64,10 @@ namespace Akka.Actor
     /// </summary>
     public sealed class Identify : IAutoReceivedMessage, INotInfluenceReceiveTimeout
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageId">TBD</param>
         public Identify(object messageId)
         {
             MessageId = messageId;
@@ -51,6 +78,10 @@ namespace Akka.Actor
         /// </summary>
         public object MessageId { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Identify>: " + MessageId;
@@ -62,6 +93,11 @@ namespace Akka.Actor
     /// </summary>
     public sealed class ActorIdentity
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageId">TBD</param>
+        /// <param name="subject">TBD</param>
         public ActorIdentity(object messageId, IActorRef subject)
         {
             MessageId = messageId;
@@ -79,6 +115,10 @@ namespace Akka.Actor
         /// <remarks>Will be <c>null</c> if sent an <see cref="ActorSelection"/> that could not be resolved.</remarks>
         public IActorRef Subject { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<ActorIdentity>: " + Subject + " - MessageId=" + MessageId;
@@ -97,6 +137,9 @@ namespace Akka.Actor
     {
         private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static PoisonPill Instance
         {
             get
@@ -105,6 +148,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<PoisonPill>";
@@ -124,6 +171,9 @@ namespace Akka.Actor
         private Kill() { }
 
         private static readonly Kill _instance = new Kill();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Kill Instance
         {
             get
@@ -132,6 +182,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Kill>";
@@ -152,13 +206,24 @@ namespace Akka.Actor
     /// </summary>
     internal class AddressTerminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
         public AddressTerminated(Address address)
         {
             Address = address;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address Address { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<AddressTerminated>: " + Address;

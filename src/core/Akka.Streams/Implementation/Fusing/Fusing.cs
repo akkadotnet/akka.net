@@ -20,14 +20,23 @@ using Transform = Akka.Streams.Implementation.StreamLayout.Transform;
 
 namespace Akka.Streams.Implementation.Fusing
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class Fusing
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly bool IsDebug = false;
 
         /// <summary>
         /// Fuse everything that is not forbidden via AsyncBoundary attribute.
         /// </summary>
-        /// <returns></returns>
+        /// <typeparam name="TShape">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="graph">TBD</param>
+        /// <returns>TBD</returns>
         public static Streams.Fusing.FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph)
             where TShape : Shape
         {
@@ -509,6 +518,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Figure out the dispatcher setting of a module.
         /// </summary>
+        /// <param name="module">TBD</param>
+        /// <returns>TBD</returns>
         internal static ActorAttributes.Dispatcher GetDispatcher(IModule module)
         {
             CopiedModule copied;
@@ -520,6 +531,11 @@ namespace Akka.Streams.Implementation.Fusing
             return module.Attributes.GetAttribute<ActorAttributes.Dispatcher>(null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="indent">TBD</param>
+        /// <param name="msg">TBD</param>
         internal static void Log(int indent, string msg) => Console.WriteLine("{0}{1}", string.Empty.PadLeft(indent*2), msg);
     }
 
@@ -583,8 +599,16 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         private readonly LinkedList<LinkedList<CopiedModule>> _materializedSources = new LinkedList<LinkedList<CopiedModule>>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void EnterMaterializationContext() => _materializedSources.AddFirst(new LinkedList<CopiedModule>());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public IImmutableList<CopiedModule> ExitMaterializationContext()
         {
             if (_materializedSources.Count == 0) throw new ArgumentException("ExitMaterializationContext with empty stack");
@@ -593,12 +617,21 @@ namespace Akka.Streams.Implementation.Fusing
             return x.ToImmutableList();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="module">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public void PushMaterializationSource(CopiedModule module)
         {
             if (_materializedSources.Count == 0) throw new ArgumentException("PushMaterializationSource without context");
             _materializedSources.First.Value.AddFirst(module);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public Streams.Fusing.StructuralInfo ToInfo()
         {
             return new Streams.Fusing.StructuralInfo(
@@ -609,6 +642,12 @@ namespace Akka.Streams.Implementation.Fusing
                 ImmutableHashSet.CreateRange(Modules));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldModule">TBD</param>
+        /// <param name="newModule">TBD</param>
+        /// <param name="localGroup">TBD</param>
         public void Replace(IModule oldModule, IModule newModule, ISet<IModule> localGroup)
         {
             Modules.Remove(oldModule);
@@ -647,6 +686,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// Register the outlets of the given Shape as sources for internal connections within imported 
         /// (and not dissolved) GraphModules. See also the comment in addModule where this is partially undone.
         /// </summary>
+        /// <param name="shape">TBD</param>
+        /// <param name="indent">TBD</param>
         public void RegisterInternals(Shape shape, int indent)
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"registerInternals({string.Join(",", shape.Outlets.Select(Hash))}");
@@ -675,6 +716,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Create and return a new grouping (i.e. an AsyncBoundary-delimited context)
         /// </summary>
+        /// <param name="indent">TBD</param>
+        /// <returns>TBD</returns>
         public ISet<IModule> CreateGroup(int indent)
         {
             var group = new HashSet<IModule>();
@@ -686,6 +729,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Add a module to the given group, performing normalization (i.e. giving it a unique port identity).
         /// </summary>
+        /// <param name="module">TBD</param>
+        /// <param name="group">TBD</param>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <param name="indent">TBD</param>
+        /// <param name="oldShape">TBD</param>
+        /// <returns>TBD</returns>
         public Atomic AddModule(IModule module, ISet<IModule> group, Attributes inheritedAttributes, int indent, Shape oldShape = null)
         {
             var copy = oldShape == null
@@ -747,6 +796,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Record a wiring between two copied ports, using (and reducing) the port mappings.
         /// </summary>
+        /// <param name="outPort">TBD</param>
+        /// <param name="inPort">TBD</param>
+        /// <param name="indent">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public void Wire(OutPort outPort, InPort inPort, int indent)
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"wiring {outPort} ({Hash(outPort)}) -> {inPort} ({Hash(inPort)})");
@@ -761,6 +814,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Replace all mappings for a given shape with its new (copied) form.
         /// </summary>
+        /// <param name="oldShape">TBD</param>
+        /// <param name="newShape">TBD</param>
+        /// <param name="indent">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public void Rewire(Shape oldShape, Shape newShape, int indent)
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"rewiring {PrintShape(oldShape)} -> {PrintShape(newShape)}");
@@ -791,11 +848,15 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Transform original into copied Inlets.
         /// </summary>
+        /// <param name="old">TBD</param>
+        /// <returns>TBD</returns>
         public ImmutableArray<Inlet> NewInlets(IEnumerable<Inlet> old) => old.Select(i => (Inlet)NewInputs[i].First.Value).ToImmutableArray();
 
         /// <summary>
         /// Transform original into copied Outlets.
         /// </summary>
+        /// <param name="old">TBD</param>
+        /// <returns>TBD</returns>
         public ImmutableArray<Outlet> NewOutlets(IEnumerable<Outlet> old) => old.Select(o => (Outlet)NewOutputs[o].First.Value).ToImmutableArray();
 
         private bool IsCopiedModuleWithGraphStageAndMaterializedValue(IModule module)
@@ -845,6 +906,9 @@ namespace Akka.Streams.Implementation.Fusing
                 : module;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal void Dump()
         {
             Console.WriteLine("StructuralInfo:");
@@ -854,6 +918,11 @@ namespace Akka.Streams.Implementation.Fusing
             NewInputs.ForEach(kvp => Console.WriteLine($"    {kvp.Key} ({Hash(kvp.Key)}) -> {string.Join(",", kvp.Value.Select(Hash))}"));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         internal string Hash(object obj) => obj.GetHashCode().ToString("x");
 
         private string PrintShape(Shape shape) =>

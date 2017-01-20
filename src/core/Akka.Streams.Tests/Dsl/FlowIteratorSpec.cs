@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
                 return x;
             });
             var p = Source.From(iterable).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c);
             var sub = c.ExpectSubscription();
             sub.Request(1);
@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_based_on_an_iterable_must_produce_OnError_when_Source_construction_throws()
         {
             var p = Source.From(new ThrowEnumerable()).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c);
             c.ExpectSubscriptionAndError().Message.Should().Be("no good iterator");
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_based_on_an_iterable_must_produce_OnError_when_MoveNext_throws()
         {
             var p = Source.From(new ThrowEnumerable(false)).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c);
             c.ExpectSubscriptionAndError().Message.Should().Be("no next");
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
@@ -148,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(false), Materializer);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -169,7 +169,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = CreateSource(0).RunWith(Sink.AsPublisher<int>(false), Materializer);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
 
                 p.Subscribe(c);
                 c.ExpectSubscriptionAndComplete();
@@ -183,8 +183,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(true), Materializer);
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<int>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<int>();
                 
                 p.Subscribe(c1);
                 p.Subscribe(c2);
@@ -213,8 +213,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(true), Materializer);
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<int>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<int>();
                 
                 p.Subscribe(c1);
                 var sub1 = c1.ExpectSubscription();
@@ -245,7 +245,7 @@ namespace Akka.Streams.Tests.Dsl
                 var p = CreateSource(3)
                     .Select(x => x*2)
                     .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -267,7 +267,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Where(x => x%2 == 0)
                     .Select(x => x*2)
                     .RunWith(Sink.AsPublisher<int>(false), Materializer);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -285,7 +285,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(false), Materializer);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();

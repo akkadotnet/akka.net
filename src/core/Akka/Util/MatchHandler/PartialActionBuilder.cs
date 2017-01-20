@@ -9,6 +9,9 @@ using System;
 
 namespace Akka.Tools.MatchHandler
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class PartialActionBuilder : IPartialActionBuilder
     {
         /// <summary>

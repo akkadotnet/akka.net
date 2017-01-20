@@ -517,12 +517,17 @@ namespace Akka.Actor
         public static Akka.Actor.DeployableDecider From(Akka.Actor.Directive defaultDirective, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Actor.Directive>> pairs) { }
         public static Akka.Actor.LocalOnlyDecider From(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
     }
-    public class DedicatedThreadScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider
+    [System.ObsoleteAttribute("Replaced with HashedWheelTimerScheduler")]
+    public class DedicatedThreadScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
     {
-        public DedicatedThreadScheduler(Akka.Actor.ActorSystem system) { }
+        [System.ObsoleteAttribute("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter lo" +
+            "g) instead.")]
+        public DedicatedThreadScheduler(Akka.Actor.ActorSystem sys) { }
+        public DedicatedThreadScheduler(Akka.Configuration.Config config, Akka.Event.ILoggingAdapter log) { }
         public override System.TimeSpan HighResMonotonicClock { get; }
         public override System.TimeSpan MonotonicClock { get; }
         protected override System.DateTimeOffset TimeNow { get; }
+        public void Dispose() { }
         protected override void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
@@ -586,6 +591,7 @@ namespace Akka.Actor
     }
     public class Deployer
     {
+        protected readonly Akka.Configuration.Config Default;
         public Deployer(Akka.Actor.Settings settings) { }
         public Akka.Actor.Deploy Lookup(Akka.Actor.ActorPath path) { }
         public Akka.Actor.Deploy Lookup(System.Collections.Generic.IEnumerable<string> path) { }
@@ -831,7 +837,11 @@ namespace Akka.Actor
     public class static Futures
     {
         public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
+        public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
+        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
     }
     public class static GracefulStopSupport
     {
@@ -843,6 +853,18 @@ namespace Akka.Actor
         public GuardianActor() { }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
+    }
+    public class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
+    {
+        public HashedWheelTimerScheduler(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
+        public override System.TimeSpan HighResMonotonicClock { get; }
+        public override System.TimeSpan MonotonicClock { get; }
+        protected override System.DateTimeOffset TimeNow { get; }
+        public void Dispose() { }
+        protected override void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
     }
     public interface IActionScheduler
     {
@@ -1262,6 +1284,7 @@ namespace Akka.Actor
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider, bool loggingEnabled = True) { }
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Akka.Actor.IDecider decider, bool loggingEnabled = True) { }
         public OneForOneStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
+        public OneForOneStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider, bool loggingEnabled = True) { }
         public OneForOneStrategy(Akka.Actor.IDecider decider) { }
         protected OneForOneStrategy() { }
         public override Akka.Actor.IDecider Decider { get; }
@@ -1470,7 +1493,9 @@ namespace Akka.Actor
     }
     public abstract class SchedulerBase : Akka.Actor.IActionScheduler, Akka.Actor.IAdvancedScheduler, Akka.Actor.IScheduler, Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
     {
-        protected SchedulerBase() { }
+        protected readonly Akka.Event.ILoggingAdapter Log;
+        protected readonly Akka.Configuration.Config SchedulerConfig;
+        protected SchedulerBase(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
         public abstract System.TimeSpan HighResMonotonicClock { get; }
         public abstract System.TimeSpan MonotonicClock { get; }
         protected abstract System.DateTimeOffset TimeNow { get; }
@@ -1480,6 +1505,10 @@ namespace Akka.Actor
         protected abstract void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable);
         protected static void ValidateDelay(System.TimeSpan delay, string parameterName) { }
         protected static void ValidateInterval(System.TimeSpan interval, string parameterName) { }
+    }
+    public sealed class SchedulerException : Akka.Actor.AkkaException
+    {
+        public SchedulerException(string message) { }
     }
     public class static SchedulerExtensions
     {
@@ -1550,6 +1579,7 @@ namespace Akka.Actor
         public string LogLevel { get; }
         public string ProviderClass { get; }
         public string SchedulerClass { get; }
+        public System.TimeSpan SchedulerShutdownTimeout { get; }
         public bool SerializeAllCreators { get; }
         public bool SerializeAllMessages { get; }
         public string StdoutLogLevel { get; }
@@ -1736,6 +1766,9 @@ namespace Akka.Actor.Dsl
         public void Receive<T>(System.Action<T, Akka.Actor.IActorContext> handler, System.Predicate<T> shouldHandle) { }
         public void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler) { }
         public void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler) { }
+        public void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
+        public void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        public void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
         protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
     }
     public class static ActExtensions
@@ -1761,6 +1794,9 @@ namespace Akka.Actor.Dsl
         void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler);
         void Receive<T>(System.Action<T, Akka.Actor.IActorContext> handler, System.Predicate<T> shouldHandle);
         void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler);
+        void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
+        void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null);
+        void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
         void UnbecomeStacked();
     }
 }
@@ -2017,7 +2053,7 @@ namespace Akka.Configuration
         public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
         [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__46))]
         public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
-        protected Akka.Configuration.Config Copy() { }
+        protected Akka.Configuration.Config Copy(Akka.Configuration.Config fallback = null) { }
         public virtual bool GetBoolean(string path, bool default = False) { }
         public virtual System.Collections.Generic.IList<bool> GetBooleanList(string path) { }
         public virtual System.Collections.Generic.IList<byte> GetByteList(string path) { }
@@ -2192,6 +2228,7 @@ namespace Akka.Configuration.Hocon
     public class HoconValue : Akka.Configuration.Hocon.IMightBeAHoconObject
     {
         public HoconValue() { }
+        public HoconValue(System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> values, bool adoptedFromFallback = True) { }
         public bool IsEmpty { get; }
         public System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> Values { get; }
         public void AppendValue(Akka.Configuration.Hocon.IHoconElement value) { }
@@ -2578,6 +2615,8 @@ namespace Akka.Dispatch.MessageQueues
     }
     public class UnboundedPriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue
     {
+        [System.ObsoleteAttribute("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initia" +
+            "lCapacity) instead.")]
         public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
@@ -4817,14 +4856,17 @@ namespace Akka.Util
         public override bool IsRight { get; }
         public TA Value { get; }
     }
-    public class ListPriorityQueue
+    public sealed class ListPriorityQueue
     {
+        [System.ObsoleteAttribute("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead")]
         public ListPriorityQueue(int initialCapacity) { }
+        public ListPriorityQueue(int initialCapacity, System.Func<object, int> priorityCalculator) { }
         public int Count() { }
         public Akka.Actor.Envelope Dequeue() { }
         public void Enqueue(Akka.Actor.Envelope item) { }
         public bool IsConsistent() { }
         public Akka.Actor.Envelope Peek() { }
+        [System.ObsoleteAttribute("Use the constructor to set the priority calculator instead.")]
         public void SetPriorityCalculator(System.Func<object, int> priorityCalculator) { }
         public override string ToString() { }
     }
@@ -4904,6 +4946,10 @@ namespace Akka.Util
         public override bool IsLeft { get; }
         public override bool IsRight { get; }
         public TB Value { get; }
+    }
+    public class static RuntimeDetector
+    {
+        public static readonly bool IsMono;
     }
     public class static StandardOutWriter
     {

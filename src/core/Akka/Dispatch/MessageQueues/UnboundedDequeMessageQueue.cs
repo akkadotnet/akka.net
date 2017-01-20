@@ -16,6 +16,9 @@ namespace Akka.Dispatch.MessageQueues
     /// </summary>
     public class UnboundedDequeMessageQueue : DequeWrapperMessageQueue, IUnboundedDequeBasedMessageQueueSemantics
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UnboundedDequeMessageQueue() : base(new UnboundedMessageQueue())
         {
         }
@@ -26,6 +29,11 @@ namespace Akka.Dispatch.MessageQueues
     /// </summary>
     public class BoundedDequeMessageQueue : DequeWrapperMessageQueue, IBoundedDequeBasedMessageQueueSemantics
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="boundedCapacity">TBD</param>
+        /// <param name="pushTimeOut">TBD</param>
         public BoundedDequeMessageQueue(int boundedCapacity, TimeSpan pushTimeOut)
             : base(new BoundedMessageQueue(boundedCapacity, pushTimeOut))
         {

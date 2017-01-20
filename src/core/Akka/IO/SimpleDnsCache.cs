@@ -12,27 +12,48 @@ using Akka.Util;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal interface IPeriodicCacheCleanup
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         void CleanUp();
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class SimpleDnsCache : DnsBase, IPeriodicCacheCleanup
     {
         private readonly AtomicReference<Cache> _cache;
         private readonly long _ticksBase;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public SimpleDnsCache()
         {
             _cache = new AtomicReference<Cache>(new Cache(new SortedSet<ExpiryEntry>(new ExpiryEntryComparer()), new Dictionary<string, CacheEntry>(), Clock));
             _ticksBase = DateTime.Now.Ticks;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override Dns.Resolved Cached(string name)
         {
             return _cache.Value.Get(name);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected virtual long Clock()
         {
             var now = DateTime.Now.Ticks;
@@ -41,6 +62,12 @@ namespace Akka.IO
                 : (now - _ticksBase) / 10000;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="r">TBD</param>
+        /// <param name="ttl">TBD</param>
+        /// <returns>TBD</returns>
         internal void Put(Dns.Resolved r, long ttl)
         {
             var c = _cache.Value;
@@ -48,6 +75,9 @@ namespace Akka.IO
                 Put(r, ttl);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void CleanUp()
         {
             var c = _cache.Value;

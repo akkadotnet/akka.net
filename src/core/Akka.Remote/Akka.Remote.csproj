@@ -110,6 +110,7 @@
     <Compile Include="Transport\AkkaIO\AddressConverters.cs" />
     <Compile Include="Transport\AkkaIO\AkkaIOTransport.cs" />
     <Compile Include="Transport\AkkaIO\ConnectionAssociation.cs" />
+    <Compile Include="IPExtensions.cs" />
     <Compile Include="Transport\AkkaIO\TransportListener.cs" />
     <Compile Include="Transport\AkkaIO\TransportManager.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />

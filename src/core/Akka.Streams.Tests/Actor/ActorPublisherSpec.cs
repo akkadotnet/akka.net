@@ -15,12 +15,15 @@ using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using ActorPublisher = Akka.Streams.Actors.ActorPublisher;
+using Cancel = Akka.Streams.Actors.Cancel;
 
 namespace Akka.Streams.Tests.Actor
 {
@@ -61,7 +64,7 @@ my-dispatcher1 {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var p = ActorPublisher.Create<string>(actorRef);
-            var s = this.CreateProbe<string>();
+            var s = this.CreateSubscriberProbe<string>();
 
             p.Subscribe(s);
             s.Request(2);
@@ -77,7 +80,7 @@ my-dispatcher1 {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var p = ActorPublisher.Create<string>(actorRef);
-            var s = this.CreateProbe<string>();
+            var s = this.CreateSubscriberProbe<string>();
             p.Subscribe(s);
             s.Request(2);
             actorRef.Tell(new Produce("elem-1"));
@@ -94,7 +97,7 @@ my-dispatcher1 {
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             actorRef.Tell(new Err("wrong"));
             s.ExpectSubscription();
@@ -106,7 +109,7 @@ my-dispatcher1 {
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscription();
             probe.Watch(actorRef);
@@ -120,7 +123,7 @@ my-dispatcher1 {
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscription();
             probe.Watch(actorRef);
@@ -135,7 +138,7 @@ my-dispatcher1 {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             actorRef.Tell(new Err("early err"));
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscriptionAndError().Message.Should().Be("early err");
         }
@@ -146,7 +149,7 @@ my-dispatcher1 {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var p = ActorPublisher.Create<string>(actorRef);
-            var s = this.CreateProbe<string>();
+            var s = this.CreateSubscriberProbe<string>();
             p.Subscribe(s);
             s.Request(2);
             actorRef.Tell(new Produce("elem-1"));
@@ -162,7 +165,7 @@ my-dispatcher1 {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var p = ActorPublisher.Create<string>(actorRef);
-            var s = this.CreateProbe<string>();
+            var s = this.CreateSubscriberProbe<string>();
             p.Subscribe(s);
             s.Request(3);
             probe.ExpectMsg<TotalDemand>().Elements.Should().Be(3);
@@ -181,7 +184,7 @@ my-dispatcher1 {
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var s = this.CreateProbe<string>();
+            var s = this.CreateSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.Request(3);
             actorRef.Tell(new Produce("elem-1"));
@@ -195,7 +198,7 @@ my-dispatcher1 {
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var s = this.CreateProbe<string>();
+            var s = this.CreateSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             var sub = s.ExpectSubscription();
             sub.Request(3);
@@ -213,7 +216,7 @@ my-dispatcher1 {
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var s = this.CreateProbe<string>();
+            var s = this.CreateSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             var sub = s.ExpectSubscription();
             sub.Request(3);
@@ -232,7 +235,7 @@ my-dispatcher1 {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             actorRef.Tell(Complete.Instance);
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscriptionAndComplete();
         }
@@ -242,12 +245,28 @@ my-dispatcher1 {
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscription();
-            var s2 = this.CreateManualProbe<string>();
+            var s2 = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s2);
-            s2.ExpectSubscriptionAndError().Should().BeOfType<IllegalStateException>();
+            s2.ExpectSubscriptionAndError()
+                .Should()
+                .BeOfType<IllegalStateException>()
+                .Which.Message.Should()
+                .Be($"ActorPublisher {ReactiveStreamsCompliance.SupportsOnlyASingleSubscriber}");
+        }
+
+        [Fact]
+        public void ActorPublisher_should_not_subscribe_the_same_subscriber_multiple_times()
+        {
+            var probe = CreateTestProbe();
+            var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
+            var s = this.CreateManualSubscriberProbe<string>();
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
+            s.ExpectSubscription();
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
+            s.ExpectError().Message.Should().Be(ReactiveStreamsCompliance.CanNotSubscribeTheSameSubscriberMultipleTimes);
         }
 
         [Fact]
@@ -255,7 +274,7 @@ my-dispatcher1 {
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscription();
             actorRef.Tell(PoisonPill.Instance);
@@ -368,7 +387,7 @@ my-dispatcher1 {
                 ExpectMsg("timed-out");
 
                 // now subscribers will already be rejected, while the actor could perform some clean-up
-                var sub = this.CreateManualProbe<int>();
+                var sub = this.CreateManualSubscriberProbe<int>();
                 pub.Subscribe(sub);
                 sub.ExpectSubscriptionAndError();
 
@@ -383,7 +402,7 @@ my-dispatcher1 {
         public void ActorPublisher_should_be_able_to_define_a_subscription_timeout_which_is_cancelled_by_the_first_incoming_Subscriber()
         {
             var timeout = TimeSpan.FromMilliseconds(500);
-            var sub = this.CreateManualProbe<int>();
+            var sub = this.CreateManualSubscriberProbe<int>();
 
             var pub = ActorPublisher.Create<int>(ActorOf(TimeoutingPublisher.Props(TestActor, timeout)));
 
@@ -398,7 +417,7 @@ my-dispatcher1 {
         public void ActorPublisher_should_use_dispatcher_from_materializer_settings()
         {
             var materializer = ActorMaterializer.Create(Sys, Sys.Materializer().Settings.WithDispatcher("my-dispatcher1"));
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             var actorRef = Source.ActorPublisher<string>(TestPublisher.Props(TestActor, useTestDispatcher: false))
                     .To(Sink.FromSubscriber(s))
                     .Run(materializer);
@@ -411,7 +430,7 @@ my-dispatcher1 {
         public void ActorPublisher_should_use_dispatcher_from_operation_attributes()
         {
             var materializer = Sys.Materializer();
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             var actorRef = Source.ActorPublisher<string>(TestPublisher.Props(TestActor, useTestDispatcher: false))
                 .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher1"))
                 .To(Sink.FromSubscriber(s))
@@ -425,7 +444,7 @@ my-dispatcher1 {
         public void ActorPublisher_should_use_dispatcher_from_props()
         {
             var materializer = Sys.Materializer();
-            var s = this.CreateManualProbe<string>();
+            var s = this.CreateManualSubscriberProbe<string>();
             var actorRef = Source.ActorPublisher<string>(TestPublisher.Props(TestActor, useTestDispatcher: false).WithDispatcher("my-dispatcher1"))
                 .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher2"))
                 .To(Sink.FromSubscriber(s))
@@ -434,9 +453,27 @@ my-dispatcher1 {
             actorRef.Tell(ThreadName.Instance);
             ExpectMsg<string>().Should().Contain("my-dispatcher1");
         }
+
+        [Fact]
+        public void ActorPublisher_should_handle_stash()
+        {
+            var probe = CreateTestProbe();
+            var actorRef = Sys.ActorOf(TestPublisherWithStash.Props(probe.Ref));
+            var p = new ActorPublisherImpl<string>(actorRef);
+            var s = this.CreateSubscriberProbe<string>();
+            p.Subscribe(s);
+            s.Request(2);
+            s.Request(3);
+            actorRef.Tell("unstash");
+            probe.ExpectMsg(new TotalDemand(5));
+            probe.ExpectMsg(new TotalDemand(5));
+            s.Request(4);
+            probe.ExpectMsg(new TotalDemand(9));
+            s.Cancel();
+        }
     }
 
-    internal class TestPublisher : ActorPublisher<string>
+    internal class TestPublisher : Actors.ActorPublisher<string>
     {
         public static Props Props(IActorRef probe, bool useTestDispatcher = true)
         {
@@ -466,7 +503,35 @@ my-dispatcher1 {
         }
     }
 
-    internal class Sender : ActorPublisher<int>
+    internal class TestPublisherWithStash : TestPublisher, IWithUnboundedStash
+    {
+        public TestPublisherWithStash(IActorRef probe) : base(probe)
+        {
+        }
+
+        public new static Props Props(IActorRef probe, bool useTestDispatcher = true)
+        {
+            var p = Akka.Actor.Props.Create(() => new TestPublisherWithStash(probe));
+            return useTestDispatcher ? p.WithDispatcher("akka.test.stream-dispatcher") : p;
+        }
+
+        protected override bool Receive(object message)
+        {
+            if ("unstash".Equals(message))
+            {
+                Stash.UnstashAll();
+                Context.Become(base.Receive);
+            }
+            else
+                Stash.Stash();
+
+            return true;
+        }
+        
+        public IStash Stash { get; set; }
+    }
+
+    internal class Sender : Actors.ActorPublisher<int>
     {
         public static Props Props { get; } = Props.Create<Sender>().WithDispatcher("akka.test.stream-dispatcher");
 
@@ -513,7 +578,7 @@ my-dispatcher1 {
         }
     }
 
-    internal class TimeoutingPublisher : ActorPublisher<int>
+    internal class TimeoutingPublisher : Actors.ActorPublisher<int>
     {
         public static Props Props(IActorRef probe, TimeSpan timeout) =>
                 Akka.Actor.Props.Create(() => new TimeoutingPublisher(probe, timeout))
@@ -571,6 +636,17 @@ my-dispatcher1 {
         {
             Elements = elements;
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj.GetType() == GetType() && Equals((TotalDemand) obj);
+        }
+
+        protected bool Equals(TotalDemand other) => Elements == other.Elements;
+
+        public override int GetHashCode() => Elements.GetHashCode();
     }
 
     internal class Produce

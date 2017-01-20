@@ -10,7 +10,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
-using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -109,7 +108,8 @@ namespace Akka.Streams.Tests.Implementation
 
             #endregion
 
-            public Inlet<int> In { get; }= new Inlet<int>("in");
+            public Inlet<int> In { get; } = new Inlet<int>("in");
+
             public Outlet<int> Out { get; } = new Outlet<int>("out");
 
             public PassThrough()
@@ -424,8 +424,8 @@ namespace Akka.Streams.Tests.Implementation
                 new GraphStage<FlowShape<int, int>>[] {new DoubleTerminateStage(TestActor), new PassThrough()},
                 interpreter =>
                 {
-                    interpreter.Complete(0);
-                    interpreter.Cancel(1);
+                    interpreter.Complete(interpreter.Connections[0]);
+                    interpreter.Cancel(interpreter.Connections[1]);
                     interpreter.Execute(2);
 
                     ExpectMsg("postStop2");

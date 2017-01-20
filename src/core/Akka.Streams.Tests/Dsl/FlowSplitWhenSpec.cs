@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
 
             public StreamPuppet(IPublisher<int> p, TestKitBase kit)
             {
-                _probe = TestSubscriber.CreateManualProbe<int>(kit);
+                _probe = kit.CreateManualSubscriberProbe<int>();
                 p.Subscribe(_probe);
                 _subscription = _probe.ExpectSubscription();
             }
@@ -73,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
                 source.SplitWhen(substreamCancelStrategy, i => i == splitWhen)
                     .Lift()
                     .RunWith(Sink.AsPublisher<Source<int, NotUsed>>(false), Materializer);
-            var masterSubscriber = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
+            var masterSubscriber = TestSubscriber.CreateManualSubscriberProbe<Source<int, NotUsed>>(this);
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = masterSubscriber.ExpectSubscription();
 
@@ -187,10 +187,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var inputs = TestPublisher.CreateProbe<int>(this);
+                var inputs = this.CreatePublisherProbe<int>();
 
-                var substream = TestSubscriber.CreateProbe<int>(this);
-                var masterStream = TestSubscriber.CreateProbe<NotUsed>(this);
+                var substream = this.CreateSubscriberProbe<int>();
+                var masterStream = this.CreateSubscriberProbe<NotUsed>();
 
                 Source.FromPublisher(inputs)
                     .SplitWhen(x => x == 2)
@@ -208,7 +208,7 @@ namespace Akka.Streams.Tests.Dsl
                 masterStream.Cancel();
                 inputs.ExpectCancellation();
 
-                var inputs2 = TestPublisher.CreateProbe<int>(this);
+                var inputs2 = this.CreatePublisherProbe<int>();
                 Source.FromPublisher(inputs2)
                     .SplitWhen(x => x == 2)
                     .Lift()
@@ -216,8 +216,8 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Cancelled<NotUsed>(), Materializer);
                 inputs2.ExpectCancellation();
 
-                var inputs3 = TestPublisher.CreateProbe<int>(this);
-                var masterStream3 = TestSubscriber.CreateProbe<Source<int, NotUsed>>(this);
+                var inputs3 = this.CreatePublisherProbe<int>();
+                var masterStream3 = this.CreateSubscriberProbe<Source<int, NotUsed>>();
 
                 Source.FromPublisher(inputs3)
                     .SplitWhen(x => x == 2)
@@ -233,7 +233,7 @@ namespace Akka.Streams.Tests.Dsl
                 masterStream3.Request(1);
                 inputs3.SendNext(2);
                 var src2 = masterStream3.ExpectNext();
-                var substream4 = TestSubscriber.CreateProbe<int>(this);
+                var substream4 = this.CreateSubscriberProbe<int>();
                 src2.RunWith(Sink.FromSubscriber(substream4), Materializer);
 
                 substream4.RequestNext(2);
@@ -278,7 +278,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
+                var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var ex = new TestException("test");
                 var publisher = Source.FromPublisher(publisherProbe).SplitWhen(i =>
                 {
@@ -287,7 +287,7 @@ namespace Akka.Streams.Tests.Dsl
                     return i % 3 == 0;
                 }).Lift().RunWith(Sink.AsPublisher<Source<int, NotUsed>>(false), Materializer);
 
-                var subscriber = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
+                var subscriber = this.CreateManualSubscriberProbe<Source<int, NotUsed>>();
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -396,8 +396,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var up = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
+                var up = this.CreateManualPublisherProbe<int>();
+                var down = this.CreateManualSubscriberProbe<Source<int, NotUsed>>();
 
                 var flowSubscriber =
                     Source.AsSubscriber<int>()

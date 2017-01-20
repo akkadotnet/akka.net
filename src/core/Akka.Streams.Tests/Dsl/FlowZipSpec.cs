@@ -25,7 +25,7 @@ namespace Akka.Streams.Tests.Dsl
 
         protected override TestSubscriber.Probe<Tuple<int, int>> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            var subscriber = TestSubscriber.CreateProbe<Tuple<int, int>>(this);
+            var subscriber = this.CreateSubscriberProbe<Tuple<int, int>>();
             Source.FromPublisher(p1)
                 .Zip(Source.FromPublisher(p2))
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestSubscriber.CreateManualProbe<Tuple<int, string>>(this);
+                var probe = this.CreateManualSubscriberProbe<Tuple<int, string>>();
                 Source.From(Enumerable.Range(1, 4))
                     .Zip(Source.From(new[] {"A", "B", "C", "D", "E", "F"}))
                     .RunWith(Sink.FromSubscriber(probe), Materializer);

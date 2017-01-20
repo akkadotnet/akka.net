@@ -49,16 +49,28 @@ namespace Akka.IO
      * discarded.
      *
      */
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class UdpManager : SelectionHandler.SelectorBasedManager
     {
         private readonly UdpExt _udp;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="udp">TBD</param>
         public UdpManager(UdpExt udp) 
             : base(udp.Setting, udp.Setting.NrOfSelectors)
         {
             _udp = udp;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="m">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object m)
         {
             return WorkerForCommandHandler(message =>

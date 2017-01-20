@@ -21,13 +21,14 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowSelectManySpec : ScriptedTest
     {
-        private readonly ActorMaterializerSettings settings;
-        private readonly ActorMaterializer materializer;
+        public ActorMaterializer Materializer { get; }
+
+        public ActorMaterializerSettings Settings { get; }
 
         public FlowSelectManySpec(ITestOutputHelper output) : base(output)
         {
-            settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(initialSize: 2, maxSize: 16);
-            materializer = Sys.Materializer();
+            Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(initialSize: 2, maxSize: 16);
+            Materializer = Sys.Materializer();
         }
 
         [Fact]
@@ -43,13 +44,13 @@ namespace Akka.Streams.Tests.Dsl
 
             var random = ThreadLocalRandom.Current.Next(1, 10);
             for (int i = 0; i < random; i++)
-                RunScript(script, settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
+                RunScript(script, Settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
         }
 
         [Fact]
         public void SelectMany_should_map_and_concat_grouping_with_slow_downstream()
         {
-            var subscriber = this.CreateManualProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
             var input = new[]
             {
                 new[] {1, 2, 3, 4, 5},
@@ -66,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                     return x;
                 })
-                .RunWith(Sink.FromSubscriber(subscriber), materializer);
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
 
             var subscription = subscriber.ExpectSubscription();
             subscription.Request(100);
@@ -89,7 +90,7 @@ namespace Akka.Streams.Tests.Dsl
                     else return new[] {x};
                 })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                .RunWith(this.SinkProbe<int>(), materializer)
+                .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(4).ExpectNext(1, 2, 4, 5)
                 .ExpectComplete();
         }

@@ -14,33 +14,67 @@ using Akka.IO;
 namespace Akka.Remote.Transport.AkkaIO
 {
     //Commands
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class Associate
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
         public Associate(Address remoteAddress)
         {
             RemoteAddress = remoteAddress;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address RemoteAddress { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class Listen
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="hostname">TBD</param>
+        /// <param name="port">TBD</param>
         public Listen(string hostname, int port)
         {
             Hostname = hostname;
             Port = port;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Hostname { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Port { get; private set; }
     }
 
     //TODO: Supervision. Stopping Strategy is probably the only option. Do we need to signal remoting?
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class TransportManager : UntypedActor, IWithUnboundedStash
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IStash Stash { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is Associate)

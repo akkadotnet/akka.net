@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private static readonly Func<StreamReader, Task> Close = reader =>
         {
-            reader.Close();
+            reader.Dispose();
             return Task.FromResult(NotUsed.Instance);
         };
 
@@ -100,7 +100,7 @@ namespace Akka.Streams.Tests.Dsl
                         return closePromise.Task;
                     }).RunWith(Sink.AsPublisher<string>(false), Materializer);
 
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -116,7 +116,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Cancel();
                 closePromiseCalled.Task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                resource.Close();
+                resource.Dispose();
                 closePromise.SetResult(NotUsed.Instance);
             }, Materializer);
         }
@@ -152,7 +152,7 @@ namespace Akka.Streams.Tests.Dsl
                         return closePromise.Task;
                     }).RunWith(Sink.AsPublisher<string>(false), Materializer);
 
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Cancel();
                 closePromiseCalled.Task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                resource.Close();
+                resource.Dispose();
                 closePromise.SetResult(NotUsed.Instance);
             }, Materializer);
         }
@@ -180,7 +180,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Close)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -209,7 +209,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Close)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -243,11 +243,11 @@ namespace Akka.Streams.Tests.Dsl
 
                 }, reader =>
                 {
-                    reader.Close();
+                    reader.Dispose();
                     return Task.FromResult(NotUsed.Instance);
                 })
                 .RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
 
                 var remaining = ManyLines;
                 Func<string> nextChunk = () =>
@@ -316,7 +316,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     throw testException;
                 }, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
 
                 c.ExpectSubscription();
@@ -332,10 +332,10 @@ namespace Akka.Streams.Tests.Dsl
                 var testException = new TestException("");
                 var p = Source.UnfoldResourceAsync(_open, Read, reader =>
                 {
-                    reader.Close();
+                    reader.Dispose();
                     throw testException;
                 }).RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
 
                 var sub = c.ExpectSubscription();

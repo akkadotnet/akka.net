@@ -32,9 +32,17 @@ namespace Akka.Streams.Actors
     /// </summary>
     public sealed class OneByOneRequestStrategy : IRequestStrategy
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly OneByOneRequestStrategy Instance = new OneByOneRequestStrategy();
         private OneByOneRequestStrategy() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remainingRequested">TBD</param>
+        /// <returns>TBD</returns>
         public int RequestDemand(int remainingRequested) => remainingRequested == 0 ? 1 : 0;
     }
 
@@ -43,9 +51,17 @@ namespace Akka.Streams.Actors
     /// </summary>
     public sealed class ZeroRequestStrategy : IRequestStrategy
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ZeroRequestStrategy Instance = new ZeroRequestStrategy();
         private ZeroRequestStrategy() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remainingRequested">TBD</param>
+        /// <returns>TBD</returns>
         public int RequestDemand(int remainingRequested) => 0;
     }
 
@@ -55,21 +71,41 @@ namespace Akka.Streams.Actors
     /// </summary>
     public sealed class WatermarkRequestStrategy : IRequestStrategy
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int HighWatermark;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int LowWatermark;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="highWatermark">TBD</param>
         public WatermarkRequestStrategy(int highWatermark)
         {
             HighWatermark = highWatermark;
             LowWatermark = Math.Max(1, highWatermark / 2);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="highWatermark">TBD</param>
+        /// <param name="lowWatermark">TBD</param>
         public WatermarkRequestStrategy(int highWatermark, int lowWatermark)
         {
             HighWatermark = highWatermark;
             LowWatermark = lowWatermark;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remainingRequested">TBD</param>
+        /// <returns>TBD</returns>
         public int RequestDemand(int remainingRequested)
         {
             return remainingRequested < LowWatermark ? HighWatermark - remainingRequested : 0;
@@ -84,8 +120,15 @@ namespace Akka.Streams.Actors
     /// </summary>
     public abstract class MaxInFlightRequestStrategy : IRequestStrategy
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int Max;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="max">TBD</param>
         protected MaxInFlightRequestStrategy(int max)
         {
             Max = max;
@@ -103,6 +146,11 @@ namespace Akka.Streams.Actors
         /// </summary>
         public virtual int BatchSize => 5;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remainingRequested">TBD</param>
+        /// <returns>TBD</returns>
         public int RequestDemand(int remainingRequested)
         {
             var batch = Math.Min(BatchSize, Max);

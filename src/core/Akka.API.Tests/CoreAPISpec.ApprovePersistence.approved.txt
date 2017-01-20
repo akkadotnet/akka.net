@@ -75,7 +75,7 @@ namespace Akka.Persistence
             public Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery IncrementedCopy() { }
             public override string ToString() { }
         }
-        public sealed class RedeliveryTick
+        public sealed class RedeliveryTick : Akka.Actor.INotInfluenceReceiveTimeout
         {
             public static readonly Akka.Persistence.AtLeastOnceDeliverySemantic.RedeliveryTick Instance;
             public override bool Equals(object obj) { }
@@ -467,7 +467,7 @@ namespace Akka.Persistence
         public void SaveSnapshot(object snapshot) { }
         protected override void Unhandled(object message) { }
     }
-    public sealed class ReadHighestSequenceNr : System.IEquatable<Akka.Persistence.ReadHighestSequenceNr>
+    public sealed class ReadHighestSequenceNr : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReadHighestSequenceNr>
     {
         public readonly long FromSequenceNr;
         public readonly string PersistenceId;

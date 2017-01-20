@@ -10,16 +10,29 @@ using Akka.Util;
 
 namespace Akka.Actor.Internal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IChildStats
     {
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ChildNameReserved : IChildStats
     {
         private static readonly ChildNameReserved _instance = new ChildNameReserved();
         private ChildNameReserved() {/* Intentionally left blank */}
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static ChildNameReserved Instance { get { return _instance; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "Name Reserved";
@@ -36,6 +49,12 @@ namespace Akka.Actor.Internal
         private uint _maxNrOfRetriesCount;
         private long _restartTimeWindowStartTicks;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="child">TBD</param>
+        /// <param name="maxNrOfRetriesCount">TBD</param>
+        /// <param name="restartTimeWindowStartTicks">TBD</param>
         public ChildRestartStats(IInternalActorRef child, uint maxNrOfRetriesCount = 0, long restartTimeWindowStartTicks = 0)
         {
             _child = child;
@@ -43,14 +62,32 @@ namespace Akka.Actor.Internal
             _restartTimeWindowStartTicks = restartTimeWindowStartTicks;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long Uid { get { return Child.Path.Uid; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IInternalActorRef Child { get { return _child; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public uint MaxNrOfRetriesCount { get { return _maxNrOfRetriesCount; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long RestartTimeWindowStartTicks { get { return _restartTimeWindowStartTicks; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="maxNrOfRetries">TBD</param>
+        /// <param name="withinTimeMilliseconds">TBD</param>
+        /// <returns>TBD</returns>
         public bool RequestRestartPermission(int maxNrOfRetries, int withinTimeMilliseconds)
         {
             if (maxNrOfRetries == 0) return false;

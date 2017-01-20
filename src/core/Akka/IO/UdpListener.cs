@@ -16,7 +16,10 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
-    // INTERNAL API
+    // INTERNAL API	
+    /// <summary>
+    /// TBD
+    /// </summary>
     class UdpListener : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly UdpExt _udp;
@@ -29,6 +32,13 @@ namespace Akka.IO
         
         private IActorRef _selector;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="udp">TBD</param>
+        /// <param name="channelRegistry">TBD</param>
+        /// <param name="bindCommander">TBD</param>
+        /// <param name="bind">TBD</param>
         public UdpListener(UdpExt udp, IChannelRegistry channelRegistry, IActorRef bindCommander, Udp.Bind bind)
         {
             _udp = udp;
@@ -69,15 +79,26 @@ namespace Akka.IO
             })();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override DatagramChannel Channel
         {
             get { return _channel; }
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override UdpExt Udp
         {
             get { return _udp; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var registration = message as ChannelRegistration;
@@ -158,6 +179,9 @@ namespace Akka.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             if (Channel.IsOpen())

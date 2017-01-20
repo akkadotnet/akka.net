@@ -16,17 +16,30 @@ namespace Akka.Actor
     /// </summary>
     public abstract class UntypedActor : ActorBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected sealed override bool Receive(object message)
         {
             OnReceive(message);
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         protected void RunTask(Action action)
         {
             ActorTaskScheduler.RunTask(action);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         protected void RunTask(Func<Task> action)
         {
             ActorTaskScheduler.RunTask(action);
@@ -39,6 +52,11 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         protected abstract void OnReceive(object message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="discardOld">TBD</param>
         [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         protected void Become(UntypedReceive receive, bool discardOld = true)
         {
@@ -69,6 +87,9 @@ namespace Akka.Actor
             Context.BecomeStacked(receive);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected static new IUntypedActorContext Context { get { return (IUntypedActorContext) ActorBase.Context; } }
     }
 }

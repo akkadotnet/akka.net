@@ -29,7 +29,7 @@ namespace Akka.Streams.Implementation.IO
     {
         #region internal classes
 
-        private sealed class ConnectionSourceStageLogic : TimerGraphStageLogic
+        private sealed class ConnectionSourceStageLogic : TimerGraphStageLogic, IOutHandler
         {
             private const string BindShutdownTimer = "BindTimer";
 
@@ -44,13 +44,17 @@ namespace Akka.Streams.Implementation.IO
                 _stage = stage;
                 _bindingPromise = bindingPromise;
 
-                SetHandler(_stage._out, onPull: () =>
-                {
-                    // Ignore if still binding
-                    _listener?.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
-                }, onDownstreamFinish: TryUnbind);
+                SetHandler(_stage._out, this);
             }
-            
+
+            public void OnPull()
+            {
+                // Ignore if still binding
+                _listener?.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
+            }
+
+            public void OnDownstreamFinish() => TryUnbind();
+
             private StreamTcp.IncomingConnection ConnectionFor(Tcp.Connected connected, IActorRef connection)
             {
                 _connectionFlowsAwaitingInitialization.IncrementAndGet();
@@ -107,10 +111,11 @@ namespace Akka.Streams.Implementation.IO
                         if (IsAvailable(_stage._out))
                             _listener.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
 
-                        var target = StageActorRef;
+                        var thisStage = StageActorRef;
                         _bindingPromise.TrySetResult(new StreamTcp.ServerBinding(bound.LocalAddress, () =>
                         {
-                            target.Tell(Tcp.Unbind.Instance, StageActorRef);
+                            // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
+                            thisStage.Tell(Tcp.Unbind.Instance, thisStage);
                             return _unbindPromise.Task;
                         }));
                     })
@@ -163,6 +168,16 @@ namespace Akka.Streams.Implementation.IO
         private readonly TimeSpan _bindShutdownTimeout;
         private readonly Outlet<StreamTcp.IncomingConnection> _out = new Outlet<StreamTcp.IncomingConnection>("IncomingConnections.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tcpManager">TBD</param>
+        /// <param name="endpoint">TBD</param>
+        /// <param name="backlog">TBD</param>
+        /// <param name="options">TBD</param>
+        /// <param name="halfClose">TBD</param>
+        /// <param name="idleTimeout">TBD</param>
+        /// <param name="bindShutdownTimeout">TBD</param>
         public ConnectionSourceStage(IActorRef tcpManager, EndPoint endpoint, int backlog,
             IImmutableList<Inet.SocketOption> options, bool halfClose, TimeSpan? idleTimeout,
             TimeSpan bindShutdownTimeout)
@@ -177,11 +192,22 @@ namespace Akka.Streams.Implementation.IO
             Shape = new SourceShape<StreamTcp.IncomingConnection>(_out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SourceShape<StreamTcp.IncomingConnection> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("ConnectionSource");
 
         // TODO: Timeout on bind
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<StreamTcp.ServerBinding>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var bindingPromise = new TaskCompletionSource<StreamTcp.ServerBinding>();
@@ -193,7 +219,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class IncomingConnectionStage : GraphStage<FlowShape<ByteString, ByteString>>
+    public class IncomingConnectionStage : GraphStage<FlowShape<ByteString, ByteString>>
     {
         private readonly IActorRef _connection;
         private readonly EndPoint _remoteAddress;
@@ -202,6 +228,12 @@ namespace Akka.Streams.Implementation.IO
         private readonly Inlet<ByteString> _bytesIn = new Inlet<ByteString>("IncomingTCP.in");
         private readonly Outlet<ByteString> _bytesOut = new Outlet<ByteString>("IncomingTCP.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="halfClose">TBD</param>
         public IncomingConnectionStage(IActorRef connection, EndPoint remoteAddress, bool halfClose)
         {
             _connection = connection;
@@ -210,10 +242,22 @@ namespace Akka.Streams.Implementation.IO
             Shape = new FlowShape<ByteString, ByteString>(_bytesIn, _bytesOut);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<ByteString, ByteString> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("IncomingConnection");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             if (_hasBeenCreated.Value)
@@ -223,6 +267,10 @@ namespace Akka.Streams.Implementation.IO
             return new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Inbound(_connection, _halfClose));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"TCP-from {_remoteAddress}";
     }
 
@@ -242,13 +290,29 @@ namespace Akka.Streams.Implementation.IO
             
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal interface ITcpRole
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             bool HalfClose { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal struct Outbound : ITcpRole
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="manager">TBD</param>
+            /// <param name="connectCmd">TBD</param>
+            /// <param name="localAddressPromise">TBD</param>
+            /// <param name="halfClose">TBD</param>
             public Outbound(IActorRef manager, Tcp.Connect connectCmd, TaskCompletionSource<EndPoint> localAddressPromise, bool halfClose)
             {
                 Manager = manager;
@@ -257,28 +321,57 @@ namespace Akka.Streams.Implementation.IO
                 HalfClose = halfClose;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Manager;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Tcp.Connect ConnectCmd;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly TaskCompletionSource<EndPoint> LocalAddressPromise;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool HalfClose { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal struct Inbound : ITcpRole
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="connection">TBD</param>
+            /// <param name="halfClose">TBD</param>
             public Inbound(IActorRef connection, bool halfClose)
             {
                 Connection = connection;
                 HalfClose = halfClose;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Connection;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool HalfClose { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class TcpStreamLogic : GraphStageLogic
         {
             private readonly ITcpRole _role;
@@ -287,6 +380,11 @@ namespace Akka.Streams.Implementation.IO
             private IActorRef _connection;
             private readonly OutHandler _readHandler;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shape">TBD</param>
+            /// <param name="role">TBD</param>
             public TcpStreamLogic(FlowShape<ByteString, ByteString> shape, ITcpRole role) : base(shape)
             {
                 _role = role;
@@ -342,6 +440,9 @@ namespace Akka.Streams.Implementation.IO
                     });
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override void PreStart()
             {
                 SetKeepGoing(true);
@@ -363,6 +464,9 @@ namespace Akka.Streams.Implementation.IO
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override void PostStop()
             {
                 if (_role is Outbound)
@@ -446,6 +550,15 @@ namespace Akka.Streams.Implementation.IO
         private readonly Inlet<ByteString> _bytesIn = new Inlet<ByteString>("IncomingTCP.in");
         private readonly Outlet<ByteString> _bytesOut = new Outlet<ByteString>("IncomingTCP.out");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tcpManager">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="options">TBD</param>
+        /// <param name="halfClose">TBD</param>
+        /// <param name="connectionTimeout">TBD</param>
         public OutgoingConnectionStage(IActorRef tcpManager, EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null)
         {
@@ -458,10 +571,21 @@ namespace Akka.Streams.Implementation.IO
             Shape  = new FlowShape<ByteString, ByteString>(_bytesIn, _bytesOut);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("OutgoingConnection");
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override FlowShape<ByteString, ByteString> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var localAddressPromise = new TaskCompletionSource<EndPoint>();
@@ -485,6 +609,10 @@ namespace Akka.Streams.Implementation.IO
             return new LogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>>(logic, outgoingConnectionPromise.Task);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"TCP-to {_remoteAddress}";
     }
 }

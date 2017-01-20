@@ -24,9 +24,6 @@ akka {
     }
     remote {
         helios.tcp {
-            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-		    applied-adapters = []
-		    transport-protocol = tcp
 		    port = 0
 		    hostname = localhost
         }
@@ -37,7 +34,6 @@ akka {
             using (var system = ActorSystem.Create("MyClient", config)) 
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
-                system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
                 chatClient.Tell(new ConnectRequest()
                 {
                     Username = "Roggan",
@@ -117,7 +113,12 @@ akka {
         {
             message.Username = this._nick;
             _server.Tell(message);
-        }     
+        }
+
+        public void Handle(Terminated message)
+        {
+            Console.Write("Server died");
+        }
     }
 }
 

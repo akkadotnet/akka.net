@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_Sink()
         {
-            var sub = TestSubscriber.CreateManualProbe<int>(this);
+            var sub = this.CreateManualSubscriberProbe<int>();
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.To(Streams.Dsl.Sink.FromSubscriber(sub))

@@ -40,6 +40,7 @@ namespace Akka.Dispatch
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             //if there is no listening actor asking,

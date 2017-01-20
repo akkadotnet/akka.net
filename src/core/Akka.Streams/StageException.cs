@@ -9,8 +9,15 @@ using System;
 
 namespace Akka.Streams
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class NoSuchElementException : Exception
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public NoSuchElementException(string message) : base(message)
         {
 

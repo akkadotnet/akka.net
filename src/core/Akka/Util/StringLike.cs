@@ -9,9 +9,19 @@ using System.Text.RegularExpressions;
 
 namespace Akka.Util
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class WildcardMatch
     {
         #region Public Methods
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="text">TBD</param>
+        /// <param name="pattern">TBD</param>
+        /// <param name="caseSensitive">TBD</param>
+        /// <returns>TBD</returns>
         public static bool Like(this string text,string pattern, bool caseSensitive = false)
         {
             pattern = pattern.Replace(".", @"\.");

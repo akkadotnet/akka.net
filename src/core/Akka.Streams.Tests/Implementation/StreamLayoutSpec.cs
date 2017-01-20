@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
@@ -36,12 +37,12 @@ namespace Akka.Streams.Tests.Implementation
             public override Shape Shape { get; }
             public override IModule ReplaceShape(Shape shape)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
             
             public override IModule CarbonCopy()
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override Attributes Attributes => Attributes.None;
@@ -137,7 +138,8 @@ namespace Akka.Streams.Tests.Implementation
         #endregion
 
         private const int TooDeepForStack = 5000;
-
+        // Seen tests run in 9-10 seconds, these test cases are heavy on the GC
+        private static readonly TimeSpan VeryPatient = TimeSpan.FromSeconds(20);
         private readonly IMaterializer _materializer;
 
         private static TestAtomicModule TestStage() => new TestAtomicModule(1, 1);
@@ -208,18 +210,18 @@ namespace Akka.Streams.Tests.Implementation
             sink123.IsSink.Should().Be(true);
             sink123.IsSource.Should().Be(false);
 
-            var runnable0123a = source0.Compose<object, object, NotUsed>(sink123, Keep.None).Wire(source0.OutPorts.First(), sink123.InPorts.First());
-            var runnable0123b = source012.Compose<object, object, NotUsed>(sink3, Keep.None).Wire(source012.OutPorts.First(), sink3.InPorts.First());
-            var runnable0123c = source0
+            var runnable0123A = source0.Compose<object, object, NotUsed>(sink123, Keep.None).Wire(source0.OutPorts.First(), sink123.InPorts.First());
+            source012.Compose<object, object, NotUsed>(sink3, Keep.None).Wire(source012.OutPorts.First(), sink3.InPorts.First());
+            source0
                 .Compose<object, object, NotUsed>(flow12, Keep.None).Wire(source0.OutPorts.First(), flow12.InPorts.First())
                 .Compose<object, object, NotUsed>(sink3, Keep.None).Wire(flow12.OutPorts.First(), sink3.InPorts.First());
 
-            runnable0123a.InPorts.Count.Should().Be(0);
-            runnable0123a.OutPorts.Count.Should().Be(0);
-            runnable0123a.IsRunnable.Should().Be(true);
-            runnable0123a.IsFlow.Should().Be(false);
-            runnable0123a.IsSink.Should().Be(false);
-            runnable0123a.IsSource.Should().Be(false);
+            runnable0123A.InPorts.Count.Should().Be(0);
+            runnable0123A.OutPorts.Count.Should().Be(0);
+            runnable0123A.IsRunnable.Should().Be(true);
+            runnable0123A.IsFlow.Should().Be(false);
+            runnable0123A.IsSink.Should().Be(false);
+            runnable0123A.IsSource.Should().Be(false);
         }
 
         [Fact]
@@ -256,7 +258,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = t.Item2.Result;
+            var result = t.Item2.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -271,7 +273,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
             var materialized = t.Item1;
-            var result = t.Item2.Result;
+            var result = t.Item2.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -286,7 +288,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = t.Item2.Result;
+            var result = t.Item2.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -302,7 +304,7 @@ namespace Akka.Streams.Tests.Implementation
             var m = g.ToMaterialized(Sink.Seq<int>(), Keep.Both);
             var t = m.Run(_materializer);
             var materialized = t.Item1;
-            var result = t.Item2.Result;
+            var result = t.Item2.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -317,7 +319,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
             var materialized = t.Item1;
-            var result = t.Item2.Result;
+            var result = t.Item2.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -332,7 +334,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = t.Item2.Result;
+            var result = t.Item2.AwaitResult(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);

@@ -53,7 +53,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source1 = Source.From(Enumerable.Range(0, 4));
                 var source2 = Source.From(Enumerable.Range(4, 6));
                 var source3 = Source.From(new List<int>());
-                var probe = TestSubscriber.CreateManualProbe<int>(this);
+                var probe = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -114,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
             var source5 = Source.Single(5);
             var source6 = Source.Empty<int>();
 
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
@@ -201,9 +201,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var up1 = TestPublisher.CreateManualProbe<int>(this);
-                var up2 = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<int>(this);
+                var up1 = this.CreateManualPublisherProbe<int>();
+                var up2 = this.CreateManualPublisherProbe<int>();
+                var down = this.CreateManualSubscriberProbe<int>();
 
                 var src1 = Source.AsSubscriber<int>();
                 var src2 = Source.AsSubscriber<int>();

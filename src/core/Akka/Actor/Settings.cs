@@ -38,7 +38,7 @@ namespace Akka.Actor
         /// <summary>
         /// Injects a system config at the top of the fallback chain
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">TBD</param>
         public void InjectTopLevelFallback(Config config)
         {
             _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
@@ -113,6 +113,7 @@ namespace Akka.Actor
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor");
 
             SchedulerClass = Config.GetString("akka.scheduler.implementation");
+            SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout");
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
@@ -271,6 +272,9 @@ namespace Akka.Actor
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool FsmDebugEvent { get; private set; }
 
         /// <summary>
@@ -282,6 +286,11 @@ namespace Akka.Actor
         /// Gets the scheduler implementation used by this system.
         /// </summary>
         public string SchedulerClass { get; private set; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan SchedulerShutdownTimeout { get; private set; }
 
         /// <summary>
         ///     Returns a <see cref="string" /> that represents this instance.

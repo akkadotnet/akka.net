@@ -31,6 +31,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.remote.retry-gate-closed-for = 1s #fast restart
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s")
             .WithFallback(ClusterSingletonManager.DefaultConfig())

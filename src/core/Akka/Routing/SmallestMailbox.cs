@@ -166,6 +166,11 @@ namespace Akka.Routing
             return new Router(new SmallestMailboxRoutingLogic());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return NrOfInstances;

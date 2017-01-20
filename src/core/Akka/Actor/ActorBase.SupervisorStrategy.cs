@@ -22,6 +22,10 @@ namespace Akka.Actor
             set { _supervisorStrategy = value; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected virtual SupervisorStrategy SupervisorStrategy()
         {
             return Actor.SupervisorStrategy.DefaultStrategy;

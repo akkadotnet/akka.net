@@ -29,36 +29,70 @@ using LengthFieldPrepender = Helios.Codecs.LengthFieldPrepender;
 
 namespace Akka.Remote.Transport.Helios
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal abstract class TransportMode { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class Tcp : TransportMode
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "tcp";
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class Udp : TransportMode
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "udp";
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class TcpTransportException : RemoteTransportException
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="cause">TBD</param>
         public TcpTransportException(string message, Exception cause = null) : base(message, cause)
         {
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class HeliosTransportSettings
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal readonly Config Config;
-        internal static bool IsMono = Type.GetType("Mono.Runtime") != null;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
         public HeliosTransportSettings(Config config)
         {
             Config = config;
@@ -96,8 +130,7 @@ namespace Akka.Remote.Transport.Helios
             var configHost = Config.GetString("hostname");
             var publicConfigHost = Config.GetString("public-hostname");
             DnsUseIpv6 = Config.GetBoolean("dns-use-ipv6");
-            EnforceIpFamily = string.IsNullOrEmpty(Config.GetString("enforce-ip-family")) ?
-                                                   IsMono : Config.GetBoolean("enforce-ip-family");
+            EnforceIpFamily = RuntimeDetector.IsMono || Config.GetBoolean("enforce-ip-family");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
             PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? Hostname : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
@@ -108,34 +141,79 @@ namespace Akka.Remote.Transport.Helios
             BackwardsCompatibilityModeEnabled = Config.GetBoolean("enable-backwards-compatibility", false);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransportMode TransportMode { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool EnableSsl { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan ConnectTimeout { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long? WriteBufferHighWaterMark { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long? WriteBufferLowWaterMark { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long? SendBufferSize { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long? ReceiveBufferSize { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MaxFrameSize { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Port { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Backlog { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool TcpNoDelay { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool TcpKeepAlive { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool TcpReuseAddr { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool DnsUseIpv6 { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool EnforceIpFamily { get; private set; }
 
         /// <summary>
@@ -149,10 +227,19 @@ namespace Akka.Remote.Transport.Helios
         /// </summary>
         public string PublicHostname { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int ServerSocketWorkerPoolSize { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int ClientSocketWorkerPoolSize { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool BackwardsCompatibilityModeEnabled { get; private set; }
 
 #region Internal methods
@@ -183,6 +270,11 @@ namespace Akka.Remote.Transport.Helios
         private readonly IEventLoopGroup _serverEventLoopGroup;
         private readonly IEventLoopGroup _clientEventLoopGroup;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="config">TBD</param>
         protected HeliosTransport(ActorSystem system, Config config)
         {
             Config = config;
@@ -193,6 +285,9 @@ namespace Akka.Remote.Transport.Helios
             _clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override string SchemeIdentifier
         {
             get
@@ -202,6 +297,9 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override long MaximumPayloadBytes
         {
             get
@@ -210,6 +308,9 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log;
 
 
@@ -218,11 +319,23 @@ namespace Akka.Remote.Transport.Helios
         /// maintains a list of all established connections, so we can close them easily
         /// </summary>
         internal readonly ConcurrentSet<IChannel> ConnectionGroup = new ConcurrentSet<IChannel>();
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected volatile Address LocalAddress;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected volatile IChannel ServerChannel;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected TaskCompletionSource<IAssociationEventListener> AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public HeliosTransportSettings Settings { get; private set; }
 
         private TransportType InternalTransport
@@ -283,6 +396,9 @@ namespace Akka.Remote.Transport.Helios
         /// <summary>
         /// Internal factory used for creating new outbound connection transports
         /// </summary>
+        /// <param name="remoteAddres">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <returns>TBD</returns>
         protected ClientBootstrap ClientFactory(Address remoteAddres)
         {
             if (InternalTransport == TransportType.Tcp)
@@ -315,6 +431,11 @@ namespace Akka.Remote.Transport.Helios
             throw new NotSupportedException("UDP is not supported");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remote">TBD</param>
+        /// <returns>TBD</returns>
         public override bool IsResponsibleFor(Address remote)
         {
             return true;
@@ -323,6 +444,7 @@ namespace Akka.Remote.Transport.Helios
         /// <summary>
         /// Internal factory used for creating inbound connection listeners
         /// </summary>
+        /// <exception cref="NotSupportedException">TBD</exception>
         protected ServerBootstrap ServerFactory
         {
             get
@@ -358,6 +480,12 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="listenAddress">TBD</param>
+        /// <exception cref="NotImplementedException">TBD</exception>
+        /// <returns>TBD</returns>
         protected async Task<IChannel> NewServer(EndPoint listenAddress)
         {
             if (InternalTransport == TransportType.Tcp)
@@ -369,6 +497,12 @@ namespace Akka.Remote.Transport.Helios
                 throw new NotImplementedException("Haven't implemented UDP transport at this time");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="Exception">TBD</exception>
+        /// <returns>TBD</returns>
         public override async Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
         {
             EndPoint listenAddress;
@@ -423,6 +557,11 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <returns>TBD</returns>
         public override async Task<AssociationHandle> Associate(Address remoteAddress)
         {
             if (!ServerChannel.IsOpen)
@@ -431,6 +570,10 @@ namespace Akka.Remote.Transport.Helios
             return await AssociateInternal(remoteAddress);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override async Task<bool> Shutdown()
         {
             try
@@ -460,10 +603,21 @@ namespace Akka.Remote.Transport.Helios
 
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract Task<AssociationHandle> AssociateInternal(Address remoteAddress);
 
-#region Static Members
+        #region Static Members
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static EndPoint AddressToSocketAddress(Address address)
         {
             if(address.Port == null) throw new ArgumentException($"address port must not be null: {address}");
@@ -481,8 +635,19 @@ namespace Akka.Remote.Transport.Helios
             return listenAddress;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly AtomicCounter UniqueIdCounter = new AtomicCounter(0);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="socketAddr">TBD</param>
+        /// <param name="schemeIdentifier">TBD</param>
+        /// <param name="systemName">TBD</param>
+        /// <param name="hostName">TBD</param>
+        /// <returns>TBD</returns>
         public static Address MapSocketToAddress(IPEndPoint socketAddr, string schemeIdentifier, string systemName, string hostName = null)
         {
             if (socketAddr == null) return null;
@@ -507,6 +672,11 @@ namespace Akka.Remote.Transport.Helios
             return hostName;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public static string SafeMapIPv6(IPAddress address)
         {
             if (address.AddressFamily == AddressFamily.InterNetworkV6)

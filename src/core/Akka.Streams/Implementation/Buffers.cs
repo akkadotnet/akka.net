@@ -13,37 +13,97 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal interface IBuffer<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         int Capacity { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         int Used { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsFull { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool IsEmpty { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         bool NonEmpty { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         void Enqueue(T element);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         T Dequeue();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         T Peek();
+        /// <summary>
+        /// TBD
+        /// </summary>
         void Clear();
+        /// <summary>
+        /// TBD
+        /// </summary>
         void DropHead();
+        /// <summary>
+        /// TBD
+        /// </summary>
         void DropTail();
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class Buffer
     {
         private const int FixedQueueSize = 128;
-        private const int FixedQueueMask = 127;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="size">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <returns>TBD</returns>
         public static IBuffer<T> Create<T>(int size, ActorMaterializerSettings settings) 
             => Create<T>(size, settings.MaxFixedBufferSize);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="size">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
         public static IBuffer<T> Create<T>(int size, IMaterializer materializer)
         {
             var m = materializer as ActorMaterializer;
-            return Create<T>(size, m != null ? m.Settings.MaxFixedBufferSize : 1000000000);
+            return Create<T>(size, m?.Settings.MaxFixedBufferSize ?? 1000000000);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="size">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <returns>TBD</returns>
         public static IBuffer<T> Create<T>(int size, int max)
         {
             if (size < FixedQueueSize || size < max)
@@ -53,6 +113,9 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class FixedSizeBuffer 
     {
         /// <summary>
@@ -64,6 +127,10 @@ namespace Akka.Streams.Implementation
         /// 
         /// Returns a specialized instance for power-of-two sized buffers.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="size">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static FixedSizeBuffer<T> Create<T>(int size)
         {
             if (size < 1)
@@ -74,40 +141,98 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal abstract class FixedSizeBuffer<T> : IBuffer<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected long ReadIndex;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected long WriteIndex;
 
         private readonly T[] _buffer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="capacity">TBD</param>
         protected FixedSizeBuffer(int capacity)
         {
             Capacity = capacity;
             _buffer = new T[capacity];
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Capacity { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Used => (int)(WriteIndex - ReadIndex);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsFull => Used == Capacity;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsEmpty => Used == 0;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool NonEmpty => Used != 0;
 
         // for the maintenance parameter see dropHead
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <param name="maintenance">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract int ToOffset(long index, bool maintenance);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void Enqueue(T element)
         {
             Put(WriteIndex, element, false);
             WriteIndex++;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <param name="element">TBD</param>
+        /// <param name="maintenance">TBD</param>
         public void Put(long index, T element, bool maintenance) => _buffer[ToOffset(index, maintenance)] = element;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <returns>TBD</returns>
         public T Get(long index) => _buffer[ToOffset(index, false)];
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public T Peek() => Get(ReadIndex);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public T Dequeue()
         {
             var result = Get(ReadIndex);
@@ -115,13 +240,19 @@ namespace Akka.Streams.Implementation
             return result;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Clear()
         {
             _buffer.Initialize();
             ReadIndex = 0;
             WriteIndex = 0;
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void DropHead()
         {
             // this is the only place where readIdx is advanced, so give ModuloFixedSizeBuffer
@@ -130,6 +261,9 @@ namespace Akka.Streams.Implementation
             ReadIndex++;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void DropTail()
         {
             WriteIndex--;
@@ -137,12 +271,26 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal class ModuloFixedSizeBuffer<T> : FixedSizeBuffer<T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="size">TBD</param>
         public ModuloFixedSizeBuffer(int size) : base(size)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <param name="maintenance">TBD</param>
+        /// <returns>TBD</returns>
         protected override int ToOffset(long index, bool maintenance)
         {
             if (maintenance && ReadIndex > int.MaxValue)
@@ -159,21 +307,36 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal class PowerOfTwoFixedSizeBuffer<T> : FixedSizeBuffer<T> 
     {
         private readonly int _mask;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="size">TBD</param>
         public PowerOfTwoFixedSizeBuffer(int size) : base(size)
         {
             _mask = Capacity - 1;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <param name="maintenance">TBD</param>
+        /// <returns>TBD</returns>
         protected override int ToOffset(long index, bool maintenance) => (int)index & _mask;
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal sealed class BoundedBuffer<T> : IBuffer<T>
     {
         #region internal classes
@@ -276,32 +439,72 @@ namespace Akka.Streams.Implementation
 
         private IBuffer<T> _q;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="capacity">TBD</param>
         public BoundedBuffer(int capacity)
         {
             Capacity = capacity;
             _q = new FixedQueue(this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Capacity { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Used => _q.Used;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsFull => _q.IsFull;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsEmpty => _q.IsEmpty;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool NonEmpty => _q.NonEmpty;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void Enqueue(T element) => _q.Enqueue(element);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public T Dequeue() => _q.Dequeue();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public T Peek() => _q.Peek();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Clear() => _q.Clear();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void DropHead() => _q.DropHead();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void DropTail() => _q.DropTail();
     }
 

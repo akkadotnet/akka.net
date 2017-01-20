@@ -26,6 +26,13 @@ namespace Akka.Streams.Implementation.IO
         private readonly FileInfo _f;
         private readonly FileMode _fileMode;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="f">TBD</param>
+        /// <param name="fileMode">TBD</param>
+        /// <param name="attributes">TBD</param>
+        /// <param name="shape">TBD</param>
         public FileSink(FileInfo f, FileMode fileMode, Attributes attributes, SinkShape<ByteString> shape) : base(shape)
         {
             _f = f;
@@ -35,20 +42,42 @@ namespace Akka.Streams.Implementation.IO
             Label = $"FileSink({f}, {fileMode})";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Attributes Attributes { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string Label { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new FileSink(_f, _fileMode, attributes, AmendShape(attributes));
-        
 
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
+        /// <returns>TBD</returns>
         protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
             => new FileSink(_f, _fileMode, Attributes, shape);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
         public override object Create(MaterializationContext context, out Task<IOResult> materializer)
         {
-            var mat = ActorMaterializer.Downcast(context.Materializer);
+            var mat = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
 
             var ioResultPromise = new TaskCompletionSource<IOResult>();
@@ -71,6 +100,13 @@ namespace Akka.Streams.Implementation.IO
         private readonly Func<Stream> _createOutput;
         private readonly bool _autoFlush;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="createOutput">TBD</param>
+        /// <param name="attributes">TBD</param>
+        /// <param name="shape">TBD</param>
+        /// <param name="autoFlush">TBD</param>
         public OutputStreamSink(Func<Stream> createOutput, Attributes attributes, SinkShape<ByteString> shape, bool autoFlush) : base(shape)
         {
             _createOutput = createOutput;
@@ -78,17 +114,36 @@ namespace Akka.Streams.Implementation.IO
             _autoFlush = autoFlush;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Attributes Attributes { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new OutputStreamSink(_createOutput, attributes, AmendShape(attributes), _autoFlush);
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
+        /// <returns>TBD</returns>
         protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
             => new OutputStreamSink(_createOutput, Attributes, shape, _autoFlush);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
         public override object Create(MaterializationContext context, out Task<IOResult> materializer)
         {
-            var mat = ActorMaterializer.Downcast(context.Materializer);
+            var mat = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
             var ioResultPromise = new TaskCompletionSource<IOResult>();
 

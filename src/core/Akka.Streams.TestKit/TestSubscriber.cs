@@ -486,12 +486,12 @@ namespace Akka.Streams.TestKit
             }
         }
 
-        public static ManualProbe<T> CreateManualProbe<T>(this TestKitBase testKit)
+        public static ManualProbe<T> CreateManualSubscriberProbe<T>(this TestKitBase testKit)
         {
             return new ManualProbe<T>(testKit);
         }
 
-        public static Probe<T> CreateProbe<T>(this TestKitBase testKit)
+        public static Probe<T> CreateSubscriberProbe<T>(this TestKitBase testKit)
         {
             return new Probe<T>(testKit);
         }

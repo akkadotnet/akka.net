@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -165,25 +166,27 @@ namespace Akka.Event
         {
             var loggerName = CreateLoggerName(loggerType);
             var logger = system.SystemActorOf(Props.Create(loggerType).WithDispatcher(system.Settings.LoggersDispatcher), loggerName);
-            var askTask = logger.Ask(new InitializeLogger(this));
+            var askTask = logger.Ask(new InitializeLogger(this), timeout);
 
-            if (!askTask.Wait(timeout))
+            object response = null;
+            try
+            {
+                response = askTask.Result;
+            }
+            catch (TaskCanceledException)
             {
                 Publish(new Warning(loggingBusName, GetType(),
-                    string.Format("Logger {0} [{2}] did not respond within {1} to InitializeLogger(bus)", loggerName, timeout, loggerType.FullName)));
+                     string.Format("Logger {0} [{2}] did not respond within {1} to InitializeLogger(bus)", loggerName, timeout, loggerType.FullName)));
             }
-            else
-            {
-                var response = askTask.Result;
-                if (!(response is LoggerInitialized))
-                {
-                    throw new LoggerInitializationException($"Logger {loggerName} [{loggerType.FullName}] did not respond with LoggerInitialized, sent instead {response}");
-                }
+                
+            if (!(response is LoggerInitialized))
+                throw new LoggerInitializationException($"Logger {loggerName} [{loggerType.FullName}] did not respond with LoggerInitialized, sent instead {response}");
+            
 
-                _loggers.Add(logger);
-                SubscribeLogLevelAndAbove(logLevel, logger);
-                Publish(new Debug(loggingBusName, GetType(), string.Format("Logger {0} [{1}] started", loggerName, loggerType.Name)));
-            }
+            _loggers.Add(logger);
+            SubscribeLogLevelAndAbove(logLevel, logger);
+            Publish(new Debug(loggingBusName, GetType(), $"Logger {loggerName} [{loggerType.Name}] started"));
+            
         }
 
         private string CreateLoggerName(Type actorClass)

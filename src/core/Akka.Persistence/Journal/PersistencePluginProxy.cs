@@ -13,15 +13,28 @@ using Akka.Event;
 
 namespace Akka.Persistence.Journal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class PersistencePluginProxy : ActorBase, IWithUnboundedStash
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class TargetLocation
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="address">TBD</param>
             public TargetLocation(Address address)
             {
                 Address = address;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address Address { get; private set; }
         }
 
@@ -31,6 +44,11 @@ namespace Akka.Persistence.Journal
             private InitTimeout() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="address">TBD</param>
         public static void SetTargetLocation(ActorSystem system, Address address)
         {
             var persistence = Persistence.Instance.Apply(system);
@@ -39,6 +57,10 @@ namespace Akka.Persistence.Journal
                 persistence.SnapshotStoreFor(null).Tell(new TargetLocation(address));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public static void Start(ActorSystem system)
         {
             var persistence = Persistence.Instance.Apply(system);
@@ -70,6 +92,10 @@ namespace Akka.Persistence.Journal
         private readonly Address _selfAddress;
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
         public PersistencePluginProxy(Config config)
         {
             _config = config;
@@ -90,8 +116,14 @@ namespace Akka.Persistence.Journal
             _selfAddress = ((ExtendedActorSystem) Context.System).Provider.DefaultAddress;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IStash Stash { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             if (_startTarget)
@@ -144,6 +176,11 @@ namespace Akka.Persistence.Journal
                         _pluginType.Qualifier));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return Init(message);
@@ -335,11 +372,20 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public class PersistencePluginProxyExtension : ExtensionIdProvider<PersistencePluginProxyExtension>, IExtension
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public PersistencePluginProxyExtension(ActorSystem system)
         {
             PersistencePluginProxy.Start(system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override PersistencePluginProxyExtension CreateExtension(ExtendedActorSystem system)
         {
             return new PersistencePluginProxyExtension(system);
