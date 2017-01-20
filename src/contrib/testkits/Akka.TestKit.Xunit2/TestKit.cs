@@ -112,12 +112,12 @@ namespace Akka.TestKit.Xunit2
             GC.SuppressFinalize(this);
         }
 
-        protected void InitializeLogger(ActorSystem sys)
+        protected void InitializeLogger(ActorSystem system)
         {
             if (Output != null)
             {
-                var system = (ExtendedActorSystem) Sys;
-                var logger = system.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
+                var extSystem = (ExtendedActorSystem)system;
+                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
                 logger.Tell(new InitializeLogger(system.EventStream));
             }
         }

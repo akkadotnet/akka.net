@@ -15,8 +15,14 @@ using Akka.Event;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Internals;
+using Helios.Logging;
 using Xunit;
 using Xunit.Abstractions;
+using Debug = Helios.Logging.Debug;
+using Error = Helios.Logging.Error;
+using Info = Helios.Logging.Info;
+using LogLevel = Helios.Logging.LogLevel;
+using Warning = Helios.Logging.Warning;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -24,10 +30,12 @@ namespace Akka.Remote.Tests.Transport
     {
         private static readonly Config TestConfig = ConfigurationFactory.ParseString(@"
             akka {
+                loglevel = DEBUG
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
 
                 # explicitly make use of helios configuration instead of dot-netty
                 remote.helios.tcp {
+                    log-transport = true
                     hostname = localhost
                     port = 11311
                 }
@@ -52,6 +60,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public void DotNetty_transport_can_communicate_with_Helios_transport()
         {
+            LoggingFactory.DefaultFactory = new XunitLoggingFactory(Output);
             var heliosConfig = ConfigurationFactory.ParseString(@"
                 akka {
                     loglevel = DEBUG
@@ -68,7 +77,7 @@ namespace Akka.Remote.Tests.Transport
 
             using (var heliosSystem = ActorSystem.Create("helios-system", heliosConfig))
             {
-                InitializeLogger(heliosSystem);
+                //InitializeLogger(heliosSystem);
                 heliosSystem.ActorOf(Props.Create<Echo>(), "echo");
                 Sys.ActorOf(Props.Create<Echo>(), "echo");
 
@@ -92,7 +101,9 @@ namespace Akka.Remote.Tests.Transport
                 ExpectMsg("hello back");
             }
         }
-        
+
+        #region helper classes
+
         private sealed class Echo : ReceiveActor
         {
             public Echo()
@@ -100,5 +111,47 @@ namespace Akka.Remote.Tests.Transport
                 ReceiveAny(msg => Sender.Tell(msg));
             }
         }
+
+        private sealed class XunitLogger : LoggingAdapter
+        {
+            private readonly ITestOutputHelper _output;
+
+            public XunitLogger(ITestOutputHelper output, string logSource, params LogLevel[] supportedLogLevels)
+                : base(logSource, supportedLogLevels)
+            {
+                _output = output;
+            }
+
+            protected override void DebugInternal(Debug message) => 
+                _output.WriteLine($"[DEBUG][{message.Timestamp}][{message.ThreadId}][{message.LogSource}] {message.Message}");
+
+            protected override void InfoInternal(Info message) =>
+                _output.WriteLine($"[INFO][{message.Timestamp}][{message.ThreadId}][{message.LogSource}] {message.Message}");
+
+            protected override void WarningInternal(Warning message) =>
+                _output.WriteLine(message.Cause != null 
+                    ? $"[WARNING][{message.Timestamp}][{message.ThreadId}][{message.LogSource}] {message.Message} Caused by: {message.Cause.Message} {message.Cause.StackTrace}"
+                    : $"[WARNING][{message.Timestamp}][{message.ThreadId}][{message.LogSource}] {message.Message}");
+
+            protected override void ErrorInternal(Error message) =>
+                _output.WriteLine($"[ERROR][{message.Timestamp}][{message.ThreadId}][{message.LogSource}] {message.Message} Caused by: {message.Cause.Message} {message.Cause.StackTrace}");
+        }
+
+        private sealed class XunitLoggingFactory : LoggingFactory
+        {
+            private readonly ITestOutputHelper _output;
+
+            public XunitLoggingFactory(ITestOutputHelper output)
+            {
+                _output = output;
+            }
+
+            protected override ILogger NewInstance(string name, params LogLevel[] supportedLogLevels)
+            {
+                return new XunitLogger(_output, name, LogLevel.Debug, LogLevel.Info, LogLevel.Warning, LogLevel.Error);
+            }
+        }
+
+        #endregion
     }
 }

@@ -42,7 +42,6 @@ namespace Akka.Remote.Transport.Helios
 #if !DEBUG
             LoggingFactory.DefaultFactory = new NoOpLoggerFactory();
 #endif
-
         }
 
         private void Init()

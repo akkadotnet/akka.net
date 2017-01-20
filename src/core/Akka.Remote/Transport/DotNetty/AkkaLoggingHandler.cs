@@ -13,8 +13,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Util;
 using DotNetty.Buffers;
-using DotNetty.Common.Internal.Logging;
-using DotNetty.Handlers.Logging;
 using DotNetty.Transport.Channels;
 using ILoggingAdapter = Akka.Event.ILoggingAdapter;
 

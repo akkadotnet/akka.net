@@ -201,7 +201,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to bind to {0}; shutting down Helios transport.", listenAddress);
+                Log.Error(ex, "Failed to bind to {0}; shutting down DotNetty transport.", listenAddress);
                 try
                 {
                     await Shutdown();
@@ -311,7 +311,7 @@ namespace Akka.Remote.Transport.DotNetty
                 var certificate = Settings.Ssl.Certificate;
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
-                channel.Pipeline.AddFirst("TlsHandler", new TlsHandler(stream => new SslStream(stream, true, (sender, cert, chain, errors) => true), new ClientTlsSettings(host)));
+                channel.Pipeline.AddFirst("TlsHandler", TlsHandler.Client(host, certificate));
             }
 
             SetInitialChannelPipeline(channel);
