@@ -24,6 +24,7 @@ namespace Akka.Remote.Transport.DotNetty
     internal abstract class TcpHandlers : CommonHandlers
     {
         private IHandleEventListener listener;
+        protected readonly ByteOrder Order;
         
         protected void NotifyListener(IHandleEvent msg)
         {
@@ -32,6 +33,7 @@ namespace Akka.Remote.Transport.DotNetty
         
         protected TcpHandlers(DotNettyTransport transport, ILoggingAdapter log) : base(transport, log)
         {
+            Order = transport.Settings.ByteOrder;
         }
         
         protected override void RegisterListener(IChannel channel, IHandleEventListener listener, object msg, IPEndPoint remoteAddress)
@@ -52,7 +54,7 @@ namespace Akka.Remote.Transport.DotNetty
         
         public override void ChannelRead(IChannelHandlerContext context, object message)
         {
-            var buf = ((IByteBuffer)message);
+            var buf = ((IByteBuffer)message).WithOrder(Order);
             if (buf.ReadableBytes > 0)
             {
                 // no need to copy the byte buffer contents; ByteString does that automatically
@@ -143,12 +145,14 @@ namespace Akka.Remote.Transport.DotNetty
     {
         private readonly IChannel _channel;
         private readonly DotNettyTransport _transport;
+        private readonly ByteOrder _order;
 
         public TcpAssociationHandle(Address localAddress, Address remoteAddress, DotNettyTransport transport, IChannel channel)
             : base(localAddress, remoteAddress)
         {
             _channel = channel;
             _transport = transport;
+            _order = transport.Settings.ByteOrder;
         }
 
         public override bool Write(ByteString payload)
@@ -167,7 +171,7 @@ namespace Akka.Remote.Transport.DotNetty
             //TODO: optimize DotNetty byte buffer usage 
             // (maybe custom IByteBuffer working directly on ByteString?)
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
-            return buffer;
+            return buffer.WithOrder(_order);
         }
 
         public override void Disassociate()

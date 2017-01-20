@@ -292,14 +292,14 @@ namespace Akka.Remote.Transport.DotNetty
 
             if (InternalTransport == TransportMode.Tcp)
             {
-                pipeline.AddLast("FrameDecoder", new LengthFieldBasedFrameDecoder((int)MaximumPayloadBytes, 0, 4, 0, 4));
+                pipeline.AddLast("FrameDecoder", new LengthFieldBasedFrameDecoder(Settings.ByteOrder, (int)MaximumPayloadBytes, 0, 4, 0, 4, true));
                 if (Settings.BackwardsCompatibilityModeEnabled)
                 {
                     pipeline.AddLast("FrameEncoder", new HeliosBackwardsCompatabilityLengthFramePrepender(4, false));
                 }
                 else
                 {
-                    pipeline.AddLast("FrameEncoder", new LengthFieldPrepender(4, 0, false));
+                    pipeline.AddLast("FrameEncoder", new LengthFieldPrepender(Settings.ByteOrder, 4, 0, false));
                 }
             }
         }
@@ -446,7 +446,7 @@ namespace Akka.Remote.Transport.DotNetty
         private readonly List<object> _temporaryOutput = new List<object>(2);
 
         public HeliosBackwardsCompatabilityLengthFramePrepender(int lengthFieldLength,
-            bool lengthFieldIncludesLengthFieldLength) : base(lengthFieldLength, lengthFieldIncludesLengthFieldLength)
+            bool lengthFieldIncludesLengthFieldLength) : base(ByteOrder.LittleEndian, lengthFieldLength, 0, lengthFieldIncludesLengthFieldLength)
         {
         }
 
