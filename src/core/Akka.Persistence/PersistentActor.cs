@@ -11,6 +11,7 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Tools.MatchHandler;
 
 namespace Akka.Persistence
@@ -644,6 +645,43 @@ namespace Akka.Persistence
             return newHandler;
         }
 
+        #endregion
+
+        #region CommandAsync
+        private Action<T> WrapAsyncHandler<T>(Action<T> asyncHandler)
+        {
+            return m => ActorTaskScheduler.RunTask(() => asyncHandler(m));
+        }
+
+        protected void CommandAsync<T>(Action<T> handler, Predicate<T> shouldHandle = null)
+        {
+            Command(WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        protected void CommandAsync<T>(Predicate<T> shouldHandle, Action<T> handler)
+        {
+            Command(shouldHandle, WrapAsyncHandler(handler));
+        }
+
+        protected void CommandAsync(Type messageType, Action<object> handler, Predicate<object> shouldHandle = null)
+        {
+            Command(messageType, WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        protected void CommandAsync(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
+        {
+            Command(messageType, shouldHandle, WrapAsyncHandler(handler));
+        }
+
+        protected void CommandAsync(Action<object> handler)
+        {
+            Command(WrapAsyncHandler(handler));
+        }
+
+        protected void CommandAnyAsync(Action<object> handler)
+        {
+            CommandAny(WrapAsyncHandler(handler));
+        }
         #endregion
     }
 }
