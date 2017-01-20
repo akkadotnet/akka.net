@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
+using Helios.Logging;
 
 namespace Akka.Remote.Transport.Helios
 {

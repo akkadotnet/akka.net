@@ -101,9 +101,7 @@ namespace Akka.TestKit
         }
 
         public static Config AkkaSpecConfig { get { return _akkaSpecConfig; } }
-
-
-
+        
         protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, Func<object, T> function)
         {
             MessageEnvelope envelope;

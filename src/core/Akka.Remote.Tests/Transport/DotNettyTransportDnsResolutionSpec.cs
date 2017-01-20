@@ -96,6 +96,9 @@ namespace Akka.Remote.Tests.Transport
             _inbound = ActorSystem.Create("Sys1", BuildConfig(inboundHostname, 0, inboundPublicHostname, useIpv6Dns, enforceIpFamily));
             _outbound = ActorSystem.Create("Sys2", BuildConfig(outboundHostname, 0, outboundPublicHostname, useIpv6Dns, enforceIpFamily));
 
+            //InitializeLogger(_inbound);
+            //InitializeLogger(_outbound);
+
             _inbound.ActorOf(Props.Create(() => new AssociationAcker()), "ack");
             _outbound.ActorOf(Props.Create(() => new AssociationAcker()), "ack");
 
@@ -129,9 +132,14 @@ namespace Akka.Remote.Tests.Transport
             return (ip.Address.Equals(IPAddress.Any) || ip.Address.Equals(IPAddress.IPv6Any));
         }
 
-        [Property()]
+        [Property]
+        //[Fact]
         public Property HeliosTransport_Should_Resolve_DNS(EndPoint inbound, EndPoint outbound, bool dnsIpv6, bool enforceIpFamily)
         {
+            //EndPoint inbound = new IPEndPoint(IPAddress.IPv6Loopback, 0);
+            //EndPoint outbound = new DnsEndPoint("localhost", 0);
+            //var dnsIpv6 = true;
+            //var enforceIpFamily = false;
             // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 8/22/2016)
             if (IsMono)
             {

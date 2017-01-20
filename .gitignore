@@ -161,7 +161,6 @@ publish/
 !**/packages/build/
 # If using the old MSBuild-Integrated Package Restore, uncomment this:
 !**/packages/repositories.config
-!akka-validcert.pfx
 
 # Windows Azure Build Output
 csx/
@@ -229,3 +228,6 @@ target/
 
 # API Approval received files
 **/Akka.API.Tests/*.received.txt
+
+# include self-signed test certificate for SSL Tests
+!src/core/Akka.Remote.Tests/Resources/akka-validcert.pfx

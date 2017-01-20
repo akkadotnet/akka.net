@@ -50,8 +50,7 @@ namespace Akka.Remote.Tests.Transport
                     password = """ + password + @"""
                 }");
         }
-
-        private readonly ITestOutputHelper _output;
+        
         private readonly X509Store _certificateStore;
 
         private ActorSystem sys2;
@@ -63,7 +62,7 @@ namespace Akka.Remote.Tests.Transport
         private void Setup(string certPath, string password)
         {
             sys2 = ActorSystem.Create("sys2", TestConfig(certPath, password));
-            AddTestLogging();
+            InitializeLogger(sys2);
 
             var echo = sys2.ActorOf(Props.Create<Echo>(), "echo");
 
@@ -77,7 +76,6 @@ namespace Akka.Remote.Tests.Transport
         // WARNING: YOU NEED TO RUN TEST IN ADMIN MODE IN ORDER TO ADD/REMOVE CERTIFICATES TO CERT STORE!
         public DotNettySslSupportSpec(ITestOutputHelper output) : base(TestConfig(ValidCertPath, Password), output)
         {
-            _output = output;
             _certificateStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
             InstallCertificates();
         }
@@ -106,17 +104,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         #region helper classes / methods
-
-        private void AddTestLogging()
-        {
-            if (_output != null)
-            {
-                var system = (ExtendedActorSystem)sys2;
-                var logger = system.SystemActorOf(Props.Create(() => new TestOutputLogger(_output)), "log-test");
-                logger.Tell(new InitializeLogger(system.EventStream));
-            }
-        }
-
+        
         private void InstallCertificates()
         {
             try

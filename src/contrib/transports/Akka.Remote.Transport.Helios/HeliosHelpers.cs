@@ -12,15 +12,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Google.ProtocolBuffers;
-using Helios;
-using Helios.Buffers;
 using Helios.Channels;
-using Helios.Exceptions;
-using Helios.Net;
-using Helios.Ops;
-using Helios.Serialization;
-using Helios.Topology;
 
 namespace Akka.Remote.Transport.Helios
 {

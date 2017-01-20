@@ -23,6 +23,8 @@ namespace Akka.TestKit.Xunit2
         private static readonly XunitAssertions _assertions=new XunitAssertions();
         private bool _isDisposed; //Automatically initialized to false;
 
+        protected readonly ITestOutputHelper Output;
+
         /// <summary>
         /// Create a new instance of the <see cref="TestKit"/> for xUnit class.
         /// If no <paramref name="system"/> is passed in, a new system 
@@ -33,7 +35,8 @@ namespace Akka.TestKit.Xunit2
         public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
             : base(_assertions, system)
         {
-            InitializeLogger(output);
+            Output = output;
+            InitializeLogger(Sys);
         }
 
         /// <summary>
@@ -46,7 +49,8 @@ namespace Akka.TestKit.Xunit2
         public TestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
             : base(_assertions, config, actorSystemName)
         {
-            InitializeLogger(output);
+            Output = output;
+            InitializeLogger(Sys);
         }
 
 
@@ -58,7 +62,8 @@ namespace Akka.TestKit.Xunit2
         /// <param name="output">TBD</param>
         public TestKit(string config, ITestOutputHelper output = null) : base(_assertions, ConfigurationFactory.ParseString(config))
         {
-            InitializeLogger(output);
+            Output = output;
+            InitializeLogger(Sys);
         }
 
         /// <summary>
@@ -107,12 +112,12 @@ namespace Akka.TestKit.Xunit2
             GC.SuppressFinalize(this);
         }
 
-        private void InitializeLogger(ITestOutputHelper output)
+        protected void InitializeLogger(ActorSystem sys)
         {
-            if (output != null)
+            if (Output != null)
             {
                 var system = (ExtendedActorSystem) Sys;
-                var logger = system.SystemActorOf(Props.Create(() => new TestOutputLogger(output)), "log-test");
+                var logger = system.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
                 logger.Tell(new InitializeLogger(system.EventStream));
             }
         }

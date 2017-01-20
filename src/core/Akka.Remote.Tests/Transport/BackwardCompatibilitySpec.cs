@@ -32,12 +32,10 @@ namespace Akka.Remote.Tests.Transport
                     port = 11311
                 }
             }");
-
-        private readonly ITestOutputHelper _output;
+        
 
         public BackwardCompatibilitySpec(ITestOutputHelper output) : base(TestConfig, output)
         {
-            _output = output;
         }
 
         [Fact]
@@ -70,35 +68,31 @@ namespace Akka.Remote.Tests.Transport
 
             using (var heliosSystem = ActorSystem.Create("helios-system", heliosConfig))
             {
-                AddTestLogging(heliosSystem);
+                InitializeLogger(heliosSystem);
                 heliosSystem.ActorOf(Props.Create<Echo>(), "echo");
+                Sys.ActorOf(Props.Create<Echo>(), "echo");
+
                 var heliosProvider = RARP.For(heliosSystem).Provider;
 
                 Assert.Equal(
                     "Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote.Transport.Helios", 
                     heliosProvider.RemoteSettings.Transports.First().TransportClass);
 
+                var backAddress = RARP.For(Sys).Provider.DefaultAddress;
                 var address = heliosProvider.DefaultAddress;
 
                 Assert.Equal(11223, address.Port.Value);
 
                 var echo = Sys.ActorSelection(new RootActorPath(address) / "user" / "echo");
-
                 echo.Tell("hello", TestActor);
                 ExpectMsg("hello");
+
+                var echoBack = heliosSystem.ActorSelection(new RootActorPath(backAddress) / "user" / "echo");
+                echoBack.Tell("hello back", TestActor);
+                ExpectMsg("hello back");
             }
         }
-
-        private void AddTestLogging(ActorSystem sys)
-        {
-            if (_output != null)
-            {
-                var system = (ExtendedActorSystem)sys;
-                var logger = system.SystemActorOf(Props.Create(() => new TestOutputLogger(_output)), "log-test");
-                logger.Tell(new InitializeLogger(system.EventStream));
-            }
-        }
-
+        
         private sealed class Echo : ReceiveActor
         {
             public Echo()
