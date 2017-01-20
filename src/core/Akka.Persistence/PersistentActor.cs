@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -648,37 +649,37 @@ namespace Akka.Persistence
         #endregion
 
         #region CommandAsync
-        private Action<T> WrapAsyncHandler<T>(Action<T> asyncHandler)
+        private Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
         {
             return m => ActorTaskScheduler.RunTask(() => asyncHandler(m));
         }
 
-        protected void CommandAsync<T>(Action<T> handler, Predicate<T> shouldHandle = null)
+        protected void CommandAsync<T>(Func<T, Task> handler, Predicate<T> shouldHandle = null)
         {
             Command(WrapAsyncHandler(handler), shouldHandle);
         }
 
-        protected void CommandAsync<T>(Predicate<T> shouldHandle, Action<T> handler)
+        protected void CommandAsync<T>(Predicate<T> shouldHandle, Func<T, Task> handler)
         {
             Command(shouldHandle, WrapAsyncHandler(handler));
         }
 
-        protected void CommandAsync(Type messageType, Action<object> handler, Predicate<object> shouldHandle = null)
+        protected void CommandAsync(Type messageType, Func<object, Task> handler, Predicate<object> shouldHandle = null)
         {
             Command(messageType, WrapAsyncHandler(handler), shouldHandle);
         }
 
-        protected void CommandAsync(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
+        protected void CommandAsync(Type messageType, Predicate<object> shouldHandle, Func<object, Task> handler)
         {
             Command(messageType, shouldHandle, WrapAsyncHandler(handler));
         }
 
-        protected void CommandAsync(Action<object> handler)
+        protected void CommandAsync(Func<object, Task> handler)
         {
             Command(WrapAsyncHandler(handler));
         }
 
-        protected void CommandAnyAsync(Action<object> handler)
+        protected void CommandAnyAsync(Func<object, Task> handler)
         {
             CommandAny(WrapAsyncHandler(handler));
         }
