@@ -66,6 +66,7 @@
     <Compile Include="NoImplicitSenderSpec.cs" />
     <Compile Include="TestActorRefTests\BossActor.cs" />
     <Compile Include="TestActorRefTests\FsmActor.cs" />
+    <Compile Include="TestActorRefTests\TestProbeSpec.cs" />
     <Compile Include="TestActorRefTests\WatchAndForwardActor.cs" />
     <Compile Include="TestActorRefTests\Logger.cs" />
     <Compile Include="TestActorRefTests\NestingActor.cs" />
