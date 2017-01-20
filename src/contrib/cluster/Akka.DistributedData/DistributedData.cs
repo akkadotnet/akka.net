@@ -4,6 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -29,9 +30,18 @@ namespace Akka.DistributedData
         /// </summary>
         public IActorRef Replicator { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static DistributedData Get(ActorSystem system) =>
             system.WithExtension<DistributedData, DistributedDataProvider>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public DistributedData(ExtendedActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(DefaultConfig());
@@ -49,14 +59,25 @@ namespace Akka.DistributedData
                 Replicator = system.ActorOf(Akka.DistributedData.Replicator.Props(_settings), name);
             }
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig() => 
             ConfigurationFactory.FromResource<DistributedData>("Akka.DistributedData.reference.conf");
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class DistributedDataProvider : ExtensionIdProvider<DistributedData>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override DistributedData CreateExtension(ExtendedActorSystem system) => new DistributedData(system);
     }
-
 }
