@@ -9,7 +9,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.Proto {
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal static partial class ContainerFormats {
+  public static partial class ContainerFormats {
   
     #region Extension registration
     public static void RegisterAllExtensions(pb::ExtensionRegistry registry) {
@@ -55,7 +55,7 @@ namespace Akka.Remote.Proto {
     
   }
   #region Enums
-  internal enum PatternType {
+  public enum PatternType {
     PARENT = 0,
     CHILD_NAME = 1,
     CHILD_PATTERN = 2,
@@ -65,7 +65,7 @@ namespace Akka.Remote.Proto {
   
   #region Messages
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class SelectionEnvelope : pb::GeneratedMessage<SelectionEnvelope, SelectionEnvelope.Builder> {
+  public sealed partial class SelectionEnvelope : pb::GeneratedMessage<SelectionEnvelope, SelectionEnvelope.Builder> {
     private SelectionEnvelope() { }
     private static readonly SelectionEnvelope defaultInstance = new SelectionEnvelope().MakeReadOnly();
     private static readonly string[] _selectionEnvelopeFieldNames = new string[] { "enclosedMessage", "messageManifest", "pattern", "serializerId" };
@@ -229,7 +229,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<SelectionEnvelope, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<SelectionEnvelope, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -498,7 +498,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class Selection : pb::GeneratedMessage<Selection, Selection.Builder> {
+  public sealed partial class Selection : pb::GeneratedMessage<Selection, Selection.Builder> {
     private Selection() { }
     private static readonly Selection defaultInstance = new Selection().MakeReadOnly();
     private static readonly string[] _selectionFieldNames = new string[] { "matcher", "type" };
@@ -623,7 +623,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<Selection, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<Selection, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }

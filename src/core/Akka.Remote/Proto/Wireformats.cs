@@ -9,7 +9,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.Proto {
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal static partial class WireFormats {
+  public static partial class WireFormats {
   
     #region Extension registration
     public static void RegisterAllExtensions(pb::ExtensionRegistry registry) {
@@ -136,7 +136,7 @@ namespace Akka.Remote.Proto {
     
   }
   #region Enums
-  internal enum CommandType {
+  public enum CommandType {
     ASSOCIATE = 1,
     DISASSOCIATE = 2,
     HEARTBEAT = 3,
@@ -148,7 +148,7 @@ namespace Akka.Remote.Proto {
   
   #region Messages
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class AckAndEnvelopeContainer : pb::GeneratedMessage<AckAndEnvelopeContainer, AckAndEnvelopeContainer.Builder> {
+  public sealed partial class AckAndEnvelopeContainer : pb::GeneratedMessage<AckAndEnvelopeContainer, AckAndEnvelopeContainer.Builder> {
     private AckAndEnvelopeContainer() { }
     private static readonly AckAndEnvelopeContainer defaultInstance = new AckAndEnvelopeContainer().MakeReadOnly();
     private static readonly string[] _ackAndEnvelopeContainerFieldNames = new string[] { "ack", "envelope" };
@@ -278,7 +278,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<AckAndEnvelopeContainer, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<AckAndEnvelopeContainer, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -517,7 +517,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class RemoteEnvelope : pb::GeneratedMessage<RemoteEnvelope, RemoteEnvelope.Builder> {
+  public sealed partial class RemoteEnvelope : pb::GeneratedMessage<RemoteEnvelope, RemoteEnvelope.Builder> {
     private RemoteEnvelope() { }
     private static readonly RemoteEnvelope defaultInstance = new RemoteEnvelope().MakeReadOnly();
     private static readonly string[] _remoteEnvelopeFieldNames = new string[] { "message", "recipient", "sender", "seq" };
@@ -681,7 +681,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<RemoteEnvelope, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<RemoteEnvelope, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -1001,7 +1001,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class AcknowledgementInfo : pb::GeneratedMessage<AcknowledgementInfo, AcknowledgementInfo.Builder> {
+  public sealed partial class AcknowledgementInfo : pb::GeneratedMessage<AcknowledgementInfo, AcknowledgementInfo.Builder> {
     private AcknowledgementInfo() { }
     private static readonly AcknowledgementInfo defaultInstance = new AcknowledgementInfo().MakeReadOnly();
     private static readonly string[] _acknowledgementInfoFieldNames = new string[] { "cumulativeAck", "nacks" };
@@ -1135,7 +1135,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<AcknowledgementInfo, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<AcknowledgementInfo, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -1342,7 +1342,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class ActorRefData : pb::GeneratedMessage<ActorRefData, ActorRefData.Builder> {
+  public sealed partial class ActorRefData : pb::GeneratedMessage<ActorRefData, ActorRefData.Builder> {
     private ActorRefData() { }
     private static readonly ActorRefData defaultInstance = new ActorRefData().MakeReadOnly();
     private static readonly string[] _actorRefDataFieldNames = new string[] { "path" };
@@ -1451,7 +1451,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<ActorRefData, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<ActorRefData, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -1614,7 +1614,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class SerializedMessage : pb::GeneratedMessage<SerializedMessage, SerializedMessage.Builder> {
+  public sealed partial class SerializedMessage : pb::GeneratedMessage<SerializedMessage, SerializedMessage.Builder> {
     private SerializedMessage() { }
     private static readonly SerializedMessage defaultInstance = new SerializedMessage().MakeReadOnly();
     private static readonly string[] _serializedMessageFieldNames = new string[] { "message", "messageManifest", "serializerId" };
@@ -1756,7 +1756,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<SerializedMessage, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<SerializedMessage, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -1974,7 +1974,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class DaemonMsgCreateData : pb::GeneratedMessage<DaemonMsgCreateData, DaemonMsgCreateData.Builder> {
+  public sealed partial class DaemonMsgCreateData : pb::GeneratedMessage<DaemonMsgCreateData, DaemonMsgCreateData.Builder> {
     private DaemonMsgCreateData() { }
     private static readonly DaemonMsgCreateData defaultInstance = new DaemonMsgCreateData().MakeReadOnly();
     private static readonly string[] _daemonMsgCreateDataFieldNames = new string[] { "deploy", "path", "props", "supervisor" };
@@ -2137,7 +2137,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<DaemonMsgCreateData, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<DaemonMsgCreateData, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -2456,7 +2456,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class PropsData : pb::GeneratedMessage<PropsData, PropsData.Builder> {
+  public sealed partial class PropsData : pb::GeneratedMessage<PropsData, PropsData.Builder> {
     private PropsData() { }
     private static readonly PropsData defaultInstance = new PropsData().MakeReadOnly();
     private static readonly string[] _propsDataFieldNames = new string[] { "args", "classes", "clazz", "deploy" };
@@ -2631,7 +2631,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<PropsData, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<PropsData, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -2924,7 +2924,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class DeployData : pb::GeneratedMessage<DeployData, DeployData.Builder> {
+  public sealed partial class DeployData : pb::GeneratedMessage<DeployData, DeployData.Builder> {
     private DeployData() { }
     private static readonly DeployData defaultInstance = new DeployData().MakeReadOnly();
     private static readonly string[] _deployDataFieldNames = new string[] { "config", "dispatcher", "path", "routerConfig", "scope" };
@@ -3097,7 +3097,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<DeployData, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<DeployData, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -3372,7 +3372,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class AkkaProtocolMessage : pb::GeneratedMessage<AkkaProtocolMessage, AkkaProtocolMessage.Builder> {
+  public sealed partial class AkkaProtocolMessage : pb::GeneratedMessage<AkkaProtocolMessage, AkkaProtocolMessage.Builder> {
     private AkkaProtocolMessage() { }
     private static readonly AkkaProtocolMessage defaultInstance = new AkkaProtocolMessage().MakeReadOnly();
     private static readonly string[] _akkaProtocolMessageFieldNames = new string[] { "instruction", "payload" };
@@ -3499,7 +3499,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<AkkaProtocolMessage, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<AkkaProtocolMessage, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -3714,7 +3714,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class AkkaControlMessage : pb::GeneratedMessage<AkkaControlMessage, AkkaControlMessage.Builder> {
+  public sealed partial class AkkaControlMessage : pb::GeneratedMessage<AkkaControlMessage, AkkaControlMessage.Builder> {
     private AkkaControlMessage() { }
     private static readonly AkkaControlMessage defaultInstance = new AkkaControlMessage().MakeReadOnly();
     private static readonly string[] _akkaControlMessageFieldNames = new string[] { "commandType", "handshakeInfo" };
@@ -3842,7 +3842,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<AkkaControlMessage, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<AkkaControlMessage, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -4064,7 +4064,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class AkkaHandshakeInfo : pb::GeneratedMessage<AkkaHandshakeInfo, AkkaHandshakeInfo.Builder> {
+  public sealed partial class AkkaHandshakeInfo : pb::GeneratedMessage<AkkaHandshakeInfo, AkkaHandshakeInfo.Builder> {
     private AkkaHandshakeInfo() { }
     private static readonly AkkaHandshakeInfo defaultInstance = new AkkaHandshakeInfo().MakeReadOnly();
     private static readonly string[] _akkaHandshakeInfoFieldNames = new string[] { "cookie", "origin", "uid" };
@@ -4208,7 +4208,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<AkkaHandshakeInfo, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<AkkaHandshakeInfo, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
@@ -4452,7 +4452,7 @@ namespace Akka.Remote.Proto {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  internal sealed partial class AddressData : pb::GeneratedMessage<AddressData, AddressData.Builder> {
+  public sealed partial class AddressData : pb::GeneratedMessage<AddressData, AddressData.Builder> {
     private AddressData() { }
     private static readonly AddressData defaultInstance = new AddressData().MakeReadOnly();
     private static readonly string[] _addressDataFieldNames = new string[] { "hostname", "port", "protocol", "system" };
@@ -4612,7 +4612,7 @@ namespace Akka.Remote.Proto {
     }
     
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    internal sealed partial class Builder : pb::GeneratedBuilder<AddressData, Builder> {
+    public sealed partial class Builder : pb::GeneratedBuilder<AddressData, Builder> {
       protected override Builder ThisBuilder {
         get { return this; }
       }
