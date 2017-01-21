@@ -11,11 +11,21 @@ using Xunit.Sdk;
 
 namespace Akka.TestKit.Xunit.Internals
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class AkkaEqualException : EqualException
     {
         private readonly string _format;
         private readonly object[] _args;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="expected">TBD</param>
+        /// <param name="actual">TBD</param>
+        /// <param name="format">TBD</param>
+        /// <param name="args">TBD</param>
         public AkkaEqualException(object expected, object actual, string format = "", params object[] args)
             : base(expected, actual)
         {
@@ -23,6 +33,14 @@ namespace Akka.TestKit.Xunit.Internals
             _args = args;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="expected">TBD</param>
+        /// <param name="actual">TBD</param>
+        /// <param name="skipPositionCheck">TBD</param>
+        /// <param name="format">TBD</param>
+        /// <param name="args">TBD</param>
         public AkkaEqualException(object expected, object actual, bool skipPositionCheck, string format = "",
             params object[] args)
             : base(expected, actual, skipPositionCheck)
@@ -31,11 +49,19 @@ namespace Akka.TestKit.Xunit.Internals
             _format = format;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected AkkaEqualException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override string Message
         {
             get
@@ -56,4 +82,3 @@ namespace Akka.TestKit.Xunit.Internals
         }
     }
 }
-
