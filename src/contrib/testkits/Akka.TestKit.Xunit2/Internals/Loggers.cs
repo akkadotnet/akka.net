@@ -11,8 +11,15 @@ using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit2.Internals
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class TestOutputLogger : ReceiveActor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="output">TBD</param>
         public TestOutputLogger(ITestOutputHelper output)
         {
             Receive<Debug>(e => output.WriteLine(e.ToString()));
