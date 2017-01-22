@@ -1,3 +1,23 @@
+#### 1.1.3 January 22 2017 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET v1.1.3 features some new libraries and an enormous number of bug fixes.
+
+**Akka.DistributedData Beta**
+First, we've introduced an alpha of a new module intended for use with Akka.Cluster: Akka.DistributedData. The goal of this library is to make it possible to concurrently read and write replicated copies of the same entity across different nodes in the cluster using conflict-free replicated data types, often referred to as "CRDTs." These replicas can eventually be merged together in a fully consistent manner and are excellent choices for applications that require a high level of availability and partition tolerance.
+
+The library is still a bit of a work in progress at the moment, but you are free to use it via the following command:
+
+```
+PS> Install-Package Akka.DistributedData -pre
+```
+
+**Akka.Serialization.Wire Deprecated; Replaced with Akka.Serialization.Hyperion**
+Wire recently changed its license to GPLv3, which is a poor fit for a technology like Akka.NET. Therefore, our default serializer beginning in Akka.NET 1.5 will be [Hyperion](https://github.com/akkadotnet/Hyperion) instead. You can see how to set it up here: http://getakka.net/docs/Serialization#how-to-setup-hyperion-as-default-serializer
+
+**Other bug fixes, performance improvements, and changes**
+You can [see the full list of changes in Akka.NET 1.1.3 here](https://github.com/akkadotnet/akka.net/milestone/12).
+
 #### 1.1.2 September 21 2016 ####
 **Maintenance release for Akka.NET v1.1**
 
