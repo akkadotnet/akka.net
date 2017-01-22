@@ -211,7 +211,7 @@ namespace Akka.Persistence.TestKit.Snapshot
                 && result.Snapshot.Snapshot.ToString() == "s-4");
         }
 
-        [Fact(Skip = "This is not yet supported by the snapshot stores")]
+        [Fact]
         public void SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number()
         {
             var md = Metadata[4];

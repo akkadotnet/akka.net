@@ -21,11 +21,20 @@ namespace Akka.Tools.MatchHandler
     {
         private readonly IReadOnlyList<object> _list;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="signature">TBD</param>
         public MatchBuilderSignature(IReadOnlyList<object> signature)
         {
             _list = signature;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(MatchBuilderSignature other)
         {
             if(ReferenceEquals(null, other)) return false;
@@ -33,6 +42,11 @@ namespace Akka.Tools.MatchHandler
             return ListsEqual(_list, other._list);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if(ReferenceEquals(null, obj)) return false;
@@ -56,6 +70,10 @@ namespace Akka.Tools.MatchHandler
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             if(_list == null) return 0;
@@ -69,6 +87,10 @@ namespace Akka.Tools.MatchHandler
             return hashCode;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "[" + String.Join(", ", _list.Select(o => o as Type != null ? ((Type)o).Name : o)) + "]";

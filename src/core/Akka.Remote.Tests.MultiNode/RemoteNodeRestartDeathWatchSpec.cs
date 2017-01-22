@@ -65,8 +65,8 @@ namespace Akka.Remote.Tests.MultiNode
                     .GetAwaiter()
                     .GetResult();
                 TestConductor.Shutdown(_specConfig.Second).GetAwaiter().GetResult();
-                ExpectTerminated(subject, TimeSpan.FromSeconds(20));
-                Within(TimeSpan.FromSeconds(10), () =>
+                ExpectTerminated(subject, TimeSpan.FromSeconds(15));
+                Within(TimeSpan.FromSeconds(5), () =>
                 {
                     // retry because the Subject actor might not be started yet
                     AwaitAssert(() =>

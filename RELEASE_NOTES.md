@@ -1,5 +1,164 @@
-#### 1.0.9 April 26 2016 ####
-Placeholder for next release
+#### 1.1.2 September 21 2016 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET 1.1.2 introduces some exciting developments for Akka.NET users.
+
+**Mono Support and Improved IPV4/6 Configuration**
+First, Akka.NET 1.1.2 is the first release of Akka.NET to be production-certified for Mono. We've made some changes to Akka.Remote, in particular, to design it to work within some of the confines of Mono 4.4.2. For instance, we now support the following HOCON configuration value for the default Helios TCP transport:
+
+```
+ helios.tcp {
+	  # Omitted for brevity
+      transport-protocol = tcp
+
+      port = 2552
+
+      hostname = ""
+
+	  public-hostname = ""
+
+	  dns-use-ipv6 = false
+	  enforce-ip-family = false
+}
+```
+
+`helios.tcp.enforce-ip-family` is a new setting added to the `helios.tcp` transport designed to allow Akka.Remote to function in environments that don't support IPV6. This includes Mono 4.4.2, Windows Azure WebApps, and possibly others. When this setting is turned on and `dns-use-ipv6 = false`, all sockets will be forced to use IPV4 only instead of dual mode. If this setting is turned on and `dns-use-ipv6 = true`, all sockets opened by the Helios transport will be forced to use IPV6 instead of dual-mode.
+
+Currently, as of Mono 4.4.2, this setting is turned on by default. Mono 4.6, when it's released, will allow dual-mode to work consistently again in the future.
+
+We run the entire Akka.NET test suite on Mono and all modules pass.
+
+**Akka.Cluster Downing Providers**
+We've added a new feature to Akka.Cluster known as a "downing provider" - this is a pluggable strategy that you can configure via HOCON to specify how nodes in your Akka.NET cluster may automatically mark unreachable nodes as down.
+
+Out of the box Akka.Cluster only provides the default "auto-down" strategy that's been included as part of Akka.Cluster in the past. However, you can now subclass the `Akka.Cluster.IDowningProvider` interface to implement your own strategies, which you can then load through HOCON:
+
+```
+# i.e.: akka.cluster.downing-provider-class = "Akka.Cluster.Tests.FailingDowningProvider, Akka.Cluster.Tests"
+akka.cluster.downing-provider-class = "Fully-qualified-type-name, Assembly"
+```
+
+**Other Fixes**
+We've also made significant improvements to the Akka.NET scheduler, more than doubling its performance and an significantly decreasing its memory allocation and garbage collection; updated Akka.Streams; fixed bugs in Akka.Cluster routers; and more. You [can read the full list of changes in 1.1.2 here](https://github.com/akkadotnet/akka.net/milestone/11).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 16 | 3913 | 1440 | ravengerUA |
+| 9 | 2323 | 467 | Aaron Stannard |
+| 9 | 12568 | 2865 | Marc Piechura |
+| 4 | 12 | 5 | Michael Kantarovsky |
+| 3 | 381 | 196 | Bartosz Sypytkowski |
+| 2 | 99 | 0 | rogeralsing |
+| 2 | 359 | 17 | Chris Constantin |
+| 2 | 29 | 6 | Denys Zhuravel |
+| 2 | 11 | 11 | Ismael Hamed |
+| 1 | 74 | 25 | mrrd |
+| 1 | 5 | 2 | Szymon Kulec |
+| 1 | 48 | 65 | alexpantyukhin |
+| 1 | 3 | 2 | Tamas Vajk |
+| 1 | 2 | 0 | Julien Adam |
+| 1 | 121 | 26 | andrey.leskov |
+| 1 | 1020 | 458 | Sean Gilliam |
+| 1 | 1 | 1 | Maciej Misztal |
+
+#### 1.1.1 July 15 2016 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET 1.1.1 addresses a number of bugs and issues reported by end users who made the upgrade from Akka.NET 1.0.* to Akka.NET 1.1. 
+
+**DNS improvements**
+The biggest set of fixes included in Akka.NET 1.1.1 deal with how the Helios transport treats IPV6 addresses and performs DNS resolution. In Akka.NET 1.0.* Helios only supported IPV4 addresses and would use that as the default for DNS. In Akka.NET 1.1 we upgraded to using Helios 2.1, which supports both IPV6 and IPV4, but *changed the default DNS resolution strategy to use IPV6.* This caused some breakages for users who were using the `public-hostname` setting inside Helios in combination with a `hostname` value that used an IPV4 address.
+
+This is now fixed - Akka.NET 1.1.1 uses Helios 2.1.2 which defaults back to an IPV4 DNS resolution strategy for both inbound and outbound connections. We've also fixed the way we encode and format IPV6 addresses into `ActorPath` and `Address` string representations (although we [still have an issue with parsing IPV6 from HOCON](https://github.com/akkadotnet/akka.net/issues/2187).)
+
+If you need to use IPV6 for DNS resolution, you can enable it by changing the following setting:
+
+`akka.remote.helios.tcp.dns-use-ipv6 = true`
+
+You can [see the full list of Akka.NET 1.1.1 changes here](https://github.com/akkadotnet/akka.net/milestone/9).
+
+#### 1.1.0 July 05 2016 ####
+**Feature Release for Akka.NET**
+
+In Akka.NET 1.1 we introduce the following major changes:
+
+* Akka.Cluster is no longer in beta; it is released as a fully stable module with a frozen API that is ready for production use.
+* Akka.Remote now has a new Helios 2.1 transport that is up to 5x faster than the previous implementation and with tremendously lower memory consumption.
+* The actor mailbox system has been replaced with the `MailboxType` system, which standardizes all mailbox implementations on a common core and instead allows for pluggable `IMessageQueue` implementations. This will make it easier to develop user-defined mailboxes and also has the added benefit of reducing all actor memory footprints by 34%.
+* The entire router system has been updated, including support for new "controller" actors that can be used to adjust a router's routing table in accordance to external events (i.e. a router that adjusts whom it routes to based on CPU utilization, which will be implemented in Akka.Cluster.Metrics).
+
+[Full list of Akka.NET 1.1 fixes and changes](https://github.com/akkadotnet/akka.net/milestone/6)
+
+**API Changes**
+There have been a couple of important API changes which will affect end-users upgrading from Akka.NET versions 1.0.*.
+
+First breaking change deals with the `PriorityMailbox` base class, used by developers who need to prioritize specific message types ahead of others.
+
+All user-defined instances of this type must now include the following constructor in order to work (using an example from Akka.NET itself:)
+
+```csharp
+public class IntPriorityMailbox : UnboundedPriorityMailbox
+{
+    protected override int PriorityGenerator(object message)
+    {
+        return message as int? ?? Int32.MaxValue;
+    }
+
+    public IntPriorityMailbox(Settings settings, Config config) : base(settings, config)
+    {
+    }
+}
+```
+
+There must be a `MyMailboxType(Settings settings, Config config)` constructor on all custom mailbox types going forward, or a `ConfigurationException` will be thrown when trying to instantiate an actor who uses the mailbox type.
+
+Second breaking change deals with Akka.Cluster itself. In the past you could access all manner of data from the `ClusterReadView` class (accessed via the `Cluster.ReadView` property) - such as the addresses of all other members, who the current leader was, and so forth.
+
+Going forward `ClusterReadView` is now marked as `internal`, but if you need access to any of this data you can access the `Cluster.State` property, which will return a [`CurrentClusterState`](http://api.getakka.net/docs/stable/html/CFFD0D89.htm) object. This contains most of the same information that was previously available on `ClusterReadView`.
+
+**Akka.Streams**
+Another major part of Akka.NET 1.1 is the introduction of [Akka.Streams](http://getakka.net/docs/streams/introduction), a powerful library with a Domain-Specific Language (DSL) that allows you to compose Akka.NET actors and workflows into streams of events and messages. 
+
+As of 1.1 Akka.Streams is now available as a beta module on NuGet.
+
+We highly recommend that you read the [Akka.Streams Quick Start Guide for Akka.NET](http://getakka.net/docs/streams/quickstart) as a place to get started.
+
+**Akka.Persistence.Query**
+A second beta module is also now available as part of Akka.NET 1.1, Akka.Persistence.Query - this module is built on top of Akka.Streams and Akka.Persistence and allows users to query ranges of information directly from their underlying Akka.Persistence stores for more powerful types of reads, aggregations, and more.
+
+Akka.Persistence.Query is available for all SQL implementations of Akka.Persistence and will be added to our other Akka.Persistence plugins shortly thereafter.
+
+**Thank you!**
+Thanks for all of your patience and support as we worked to deliver this to you - it's been a tremendous amount of work but we really appreciate the help of all of the bug reports, Gitter questions, StackOverflow questions, and testing that our users have done on Akka.NET and specifically, Akka.Cluster over the past two years. We couldn't have done this without you.
+
+23 contributors since release v1.0.8
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 133 | 38124 | 7835 | Silv3rcircl3 |
+| 112 | 25826 | 10493 | Chris Constantin |
+| 70 | 45449 | 11556 | Bartosz Sypytkowski |
+| 44 | 22804 | 13971 | ravengerUA |
+| 40 | 9811 | 6396 | Aaron Stannard |
+| 12 | 9539 | 6619 | Marc Piechura |
+| 6 | 1692 | 959 | Sean Gilliam |
+| 4 | 448 | 0 | alexpantyukhin |
+| 3 | 772 | 4 | maxim.salamatko |
+| 3 | 3 | 382 | Danthar |
+| 2 | 40 | 46 | Vagif Abilov |
+| 1 | 91 | 103 | rogeralsing |
+| 1 | 3 | 3 | Jeff Cyr |
+| 1 | 219 | 44 | Michael Kantarovsky |
+| 1 | 2 | 1 | Juergen Hoetzel |
+| 1 | 19 | 8 | tstojecki |
+| 1 | 187 | 2 | Bart de Boer |
+| 1 | 178 | 0 | Willem Meints |
+| 1 | 17 | 1 | Kamil Wojciechowski |
+| 1 | 120 | 7 | JeffCyr |
+| 1 | 11 | 7 | corneliutusnea |
+| 1 | 1 | 1 | Tamas Vajk |
+| 1 | 0 | 64 | annymsMthd |
+
 
 #### 1.0.8 April 26 2016 ####
 **Maintenance release for Akka.NET v1.0.7**

@@ -12,6 +12,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
+
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -586,7 +588,7 @@ namespace Akka.Remote.TestKit
 
         protected void InjectDeployments(ActorSystem system, RoleName role)
         {
-            var deployer = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
+            var deployer = system.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
             foreach (var str in _deployments(role))
             {
                 var deployString = _replacements.Values.Aggregate(str, (@base, r) =>
@@ -628,11 +630,15 @@ namespace Akka.Remote.TestKit
 
         protected ActorSystem StartNewSystem()
         {
+            var sb =
+                new StringBuilder("akka.remote.helios.tcp{").AppendLine()
+                    .AppendFormat("port={0}", _myAddress.Port)
+                    .AppendLine()
+                    .AppendFormat(@"hostname=""{0}""", _myAddress.Host)
+                    .AppendLine("}");
             var config =
                 ConfigurationFactory
-                .ParseString(String.Format(@"helios.tcp{port={0}\nhostname=""{1}""",
-                    _myAddress.Host,
-                    _myAddress.Port))
+                .ParseString(sb.ToString())
                 .WithFallback(Sys.Settings.Config);
 
             var system = ActorSystem.Create(Sys.Name, config);

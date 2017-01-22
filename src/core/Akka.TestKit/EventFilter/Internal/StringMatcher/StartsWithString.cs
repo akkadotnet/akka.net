@@ -16,20 +16,32 @@ namespace Akka.TestKit.Internal.StringMatcher
     {
         private readonly string _start;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="start">TBD</param>
         public StartsWithString(string start)
         {
             _start = start;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="s">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsMatch(string s)
         {
             return s.StartsWith(_start, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "starts with \"" + _start + "\"";
         }
     }
 }
-

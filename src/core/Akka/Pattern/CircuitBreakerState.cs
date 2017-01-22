@@ -20,37 +20,43 @@ namespace Akka.Pattern
     {
         private readonly CircuitBreaker _breaker;
 
-        public Open( CircuitBreaker breaker )
-            : base( breaker.CallTimeout, 0 )
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="breaker">TBD</param>
+        public Open(CircuitBreaker breaker)
+            : base(breaker.CallTimeout, 0)
         {
             _breaker = breaker;
         }
 
         /// <summary>
-        /// Fail-fast on any invocation
+        /// N/A
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="body">Implementation of the call that needs protected</param>
-        /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task<T> Invoke<T>( Func<Task<T>> body )
+        /// <typeparam name="T">N/A</typeparam>
+        /// <param name="body">N/A</param>
+        /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
+        /// <returns>N/A</returns>
+        public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            throw new OpenCircuitException( );
+            throw new OpenCircuitException();
         }
 
         /// <summary>
-        /// Implementation of invoke, which simply attempts the call
+        /// N/A
         /// </summary>
-        /// <param name="body">Implementation of the call that needs protected</param>
-        /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task Invoke( Func<Task> body )
+        /// <param name="body">N/A</param>
+        /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
+        /// <returns>N/A</returns>
+        public override Task Invoke(Func<Task> body)
         {
-            throw new OpenCircuitException( );
+            throw new OpenCircuitException();
         }
 
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
         /// </summary>
-        protected override void CallFails( )
+        protected override void CallFails()
         {
             //throw new NotImplementedException();
         }
@@ -58,7 +64,7 @@ namespace Akka.Pattern
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
         /// </summary>
-        protected override void CallSucceeds( )
+        protected override void CallSucceeds()
         {
             //throw new NotImplementedException();
         }
@@ -67,9 +73,9 @@ namespace Akka.Pattern
         /// On entering this state, schedule an attempted reset and store the entry time to
         /// calculate remaining time before attempted reset.
         /// </summary>
-        protected override void EnterInternal( )
+        protected override void EnterInternal()
         {
-            Task.Delay( _breaker.ResetTimeout ).ContinueWith( task => _breaker.AttemptReset( ) );
+            Task.Delay(_breaker.ResetTimeout).ContinueWith(task => _breaker.AttemptReset());
         }
     }
 
@@ -81,8 +87,12 @@ namespace Akka.Pattern
         private readonly CircuitBreaker _breaker;
         private readonly AtomicBoolean _lock;
 
-        public HalfOpen( CircuitBreaker breaker )
-            : base( breaker.CallTimeout, 0 )
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="breaker">TBD</param>
+        public HalfOpen(CircuitBreaker breaker)
+            : base(breaker.CallTimeout, 0)
         {
             _breaker = breaker;
             _lock = new AtomicBoolean();
@@ -92,16 +102,17 @@ namespace Akka.Pattern
         /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
         /// If the call succeeds, the breaker closes.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
+        /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task<T> Invoke<T>( Func<Task<T>> body )
+        public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            if ( !_lock.CompareAndSet( true, false) )
+            if (!_lock.CompareAndSet(true, false))
             {
-                throw new OpenCircuitException( );
+                throw new OpenCircuitException();
             }
-            return await CallThrough( body );
+            return await CallThrough(body);
         }
 
         /// <summary>
@@ -109,47 +120,48 @@ namespace Akka.Pattern
         /// If the call succeeds, the breaker closes.
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
+        /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task Invoke( Func<Task> body )
+        public override async Task Invoke(Func<Task> body)
         {
-            if ( !_lock.CompareAndSet( true, false ) )
+            if (!_lock.CompareAndSet(true, false))
             {
-                throw new OpenCircuitException( );
+                throw new OpenCircuitException();
             }
-            await CallThrough( body );
+            await CallThrough(body);
         }
 
         /// <summary>
         /// Reopen breaker on failed call.
         /// </summary>
-        protected override void CallFails( )
+        protected override void CallFails()
         {
-            _breaker.TripBreaker( this );
+            _breaker.TripBreaker(this);
         }
 
         /// <summary>
         /// Reset breaker on successful call.
         /// </summary>
-        protected override void CallSucceeds( )
+        protected override void CallSucceeds()
         {
-            _breaker.ResetBreaker( );
+            _breaker.ResetBreaker();
         }
 
         /// <summary>
         /// On entry, guard should be reset for that first call to get in
         /// </summary>
-        protected override void EnterInternal( )
+        protected override void EnterInternal()
         {
-            _lock.Value = true ;
+            _lock.Value = true;
         }
 
         /// <summary>
         /// Override for more descriptive toString
         /// </summary>
-        /// <returns></returns>
-        public override string ToString( )
+        /// <returns>TBD</returns>
+        public override string ToString()
         {
-            return string.Format( CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", ( _lock == true ) );
+            return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", (_lock == true));
         }
     }
 
@@ -160,8 +172,12 @@ namespace Akka.Pattern
     {
         private readonly CircuitBreaker _breaker;
 
-        public Closed( CircuitBreaker breaker )
-            : base( breaker.CallTimeout, 0 )
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="breaker">TBD</param>
+        public Closed(CircuitBreaker breaker)
+            : base(breaker.CallTimeout, 0)
         {
             _breaker = breaker;
         }
@@ -169,12 +185,12 @@ namespace Akka.Pattern
         /// <summary>
         /// Implementation of invoke, which simply attempts the call
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task<T> Invoke<T>( Func<Task<T>> body )
+        public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            return await CallThrough( body );
+            return await CallThrough(body);
         }
 
         /// <summary>
@@ -182,27 +198,27 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task Invoke( Func<Task> body )
+        public override async Task Invoke(Func<Task> body)
         {
-            await CallThrough( body );
+            await CallThrough(body);
         }
 
         /// <summary>
         /// On failed call, the failure count is incremented.  The count is checked against the configured maxFailures, and
         /// the breaker is tripped if we have reached maxFailures.
         /// </summary>
-        protected override void CallFails( )
+        protected override void CallFails()
         {
-            if ( IncrementAndGet( ) == _breaker.MaxFailures )
+            if (IncrementAndGet() == _breaker.MaxFailures)
             {
-                _breaker.TripBreaker( this );
+                _breaker.TripBreaker(this);
             }
         }
 
         /// <summary>
         /// On successful call, the failure count is reset to 0
         /// </summary>
-        protected override void CallSucceeds( )
+        protected override void CallSucceeds()
         {
             Reset();
         }
@@ -210,7 +226,7 @@ namespace Akka.Pattern
         /// <summary>
         /// On entry of this state, failure count is reset.
         /// </summary>
-        protected override void EnterInternal( )
+        protected override void EnterInternal()
         {
             Reset();
         }
@@ -218,10 +234,10 @@ namespace Akka.Pattern
         /// <summary>
         /// Override for more descriptive toString
         /// </summary>
-        /// <returns></returns>
-        public override string ToString( )
+        /// <returns>TBD</returns>
+        public override string ToString()
         {
-            return string.Format( "Closed with failure count = {0}", Current );
+            return string.Format("Closed with failure count = {0}", Current);
         }
     }
 }

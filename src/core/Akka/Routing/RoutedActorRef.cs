@@ -12,52 +12,58 @@ using Akka.Dispatch;
 
 namespace Akka.Routing
 {
-    public class RoutedActorRef : RepointableActorRef
+    /// <summary>
+    /// TBD
+    /// </summary>
+    internal class RoutedActorRef : RepointableActorRef
     {
-        private readonly ActorSystemImpl _system;
-        private readonly Props _routerProps;
-        private readonly MessageDispatcher _routerDispatcher;
-        private readonly Func<Mailbox> _createMailbox;
         private readonly Props _routeeProps;
-        private readonly IInternalActorRef _supervisor;
 
-        public RoutedActorRef(ActorSystemImpl system, Props routerProps, MessageDispatcher routerDispatcher,
-            Func<Mailbox> createMailbox, Props routeeProps, IInternalActorRef supervisor, ActorPath path)
-            : base(system, routerProps, routerDispatcher, createMailbox, supervisor, path)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RoutedActorRef"/> class.
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="routerProps">TBD</param>
+        /// <param name="routerDispatcher">TBD</param>
+        /// <param name="routerMailbox">TBD</param>
+        /// <param name="routeeProps">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="path">TBD</param>
+        public RoutedActorRef(
+            ActorSystemImpl system,
+            Props routerProps,
+            MessageDispatcher routerDispatcher,
+            MailboxType routerMailbox,
+            Props routeeProps,
+            IInternalActorRef supervisor,
+            ActorPath path)
+            : base(system, routerProps, routerDispatcher, routerMailbox, supervisor, path)
         {
-            _system = system;
-            _routerProps = routerProps;
-            _routerDispatcher = routerDispatcher;
-            _createMailbox = createMailbox;
             _routeeProps = routeeProps;
-            _supervisor = supervisor;
-            //TODO: Implement:
-            // // verify that a BalancingDispatcher is not used with a Router
-            // if (!(routerProps.RouterConfig is NoRouter) && routerDispatcher is BalancingDispatcher)
-            // {
-            //     throw new ConfigurationException("Configuration for " + this +
-            //                                 " is invalid - you can not use a 'BalancingDispatcher' as a Router's dispatcher, you can however use it for the routees.");
-            // }
-            // routerProps.RouterConfig.VerifyConfig(path);
+            routerProps.RouterConfig.VerifyConfig(path);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override ActorCell NewCell()
         {
-            var pool = _routerProps.RouterConfig as Pool;
+            var pool = Props.RouterConfig as Pool;
             ActorCell cell = null;
-            if(pool != null)
+            if (pool != null)
             {
-                if(pool.Resizer != null)
+                if (pool.Resizer != null)
                 {
-                    //if there is a resizer, use ResizablePoolCell
-                    cell = new ResizablePoolCell(_system, this, _routerProps, _routerDispatcher, _routeeProps, _supervisor, pool);
+                    cell = new ResizablePoolCell(System, this, Props, Dispatcher, _routeeProps, Supervisor, pool);
                 }
             }
-            if(cell == null)
-                cell = new RoutedActorCell(_system, this, _routerProps, _routerDispatcher, _routeeProps, _supervisor);
-            cell.Init(sendSupervise: false, createMailbox: _createMailbox);
+            if (cell == null)
+            {
+                cell = new RoutedActorCell(System, this, Props, Dispatcher, _routeeProps, Supervisor);
+            }
+            cell.Init(false, MailboxType);
             return cell;
         }
     }
 }
-

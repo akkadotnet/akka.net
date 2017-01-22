@@ -6,156 +6,173 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Google.ProtocolBuffers;
+using Helios.Buffers;
+using Helios.Channels;
 using Helios.Exceptions;
-using Helios.Net;
-using Helios.Topology;
+using Helios.Util;
 
 namespace Akka.Remote.Transport.Helios
 {
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    static class ChannelLocalActor
-    {
-        private static ConcurrentDictionary<IConnection, IHandleEventListener> _channelActors = new ConcurrentDictionary<IConnection, IHandleEventListener>();
-
-        public static void Set(IConnection channel, IHandleEventListener listener = null)
-        {
-            _channelActors.AddOrUpdate(channel, listener, (connection, eventListener) => listener);
-        }
-
-        public static void Remove(IConnection channel)
-        {
-            IHandleEventListener listener;
-            _channelActors.TryRemove(channel, out listener);
-        }
-
-        public static void Notify(IConnection channel, IHandleEvent msg)
-        {
-            IHandleEventListener listener;
-
-            if (_channelActors.TryGetValue(channel, out listener))
-            {
-                listener.Notify(msg);
-            }
-        }
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    /// </summary>
     abstract class TcpHandlers : CommonHandlers
     {
-        protected TcpHandlers(IConnection underlyingConnection)
-            : base(underlyingConnection)
+        private IHandleEventListener _listener;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="msg">TBD</param>
+        protected void NotifyListener(IHandleEvent msg)
+        {
+            _listener?.Notify(msg);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="log">TBD</param>
+        protected TcpHandlers(HeliosTransport wrappedTransport, ILoggingAdapter log) : base(wrappedTransport, log)
         {
         }
 
-        protected override void RegisterListener(IConnection channel, IHandleEventListener listener, NetworkData msg, INode remoteAddress)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="channel">TBD</param>
+        /// <param name="listener">TBD</param>
+        /// <param name="msg">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        protected override void RegisterListener(IChannel channel, IHandleEventListener listener, object msg, IPEndPoint remoteAddress)
         {
-            ChannelLocalActor.Set(channel, listener);
-            BindEvents(channel);
+            _listener = listener;
         }
 
-        protected override AssociationHandle CreateHandle(IConnection channel, Address localAddress, Address remoteAddress)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="channel">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <returns>TBD</returns>
+        protected override AssociationHandle CreateHandle(IChannel channel, Address localAddress, Address remoteAddress)
         {
             return new TcpAssociationHandle(localAddress, remoteAddress, WrappedTransport, channel);
         }
 
         /// <summary>
-        /// Fires whenever a Helios <see cref="IConnection"/> gets closed.
-        /// 
-        /// Two possible causes for this event handler to fire:
-        ///  * The other end of the connection has closed. We don't make any distinctions between graceful / unplanned shutdown.
-        ///  * This end of the connection experienced an error.
+        /// TBD
         /// </summary>
-        /// <param name="cause">An exception describing why the socket was closed.</param>
-        /// <param name="closedChannel">The handle to the socket channel that closed.</param>
-        protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
+        /// <param name="context">TBD</param>
+        public override void ChannelInactive(IChannelHandlerContext context)
         {
-            //if (cause != null)
-            //    ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Underlying transport closed."));
-
-            ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
-            ChannelLocalActor.Remove(closedChannel);
+            NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            base.ChannelInactive(context);
         }
 
         /// <summary>
-        /// Fires whenever a Helios <see cref="IConnection"/> received data from the network.
+        /// TBD
         /// </summary>
-        /// <param name="data">The message playload.</param>
-        /// <param name="responseChannel">
-        /// The channel responsible for sending the message.
-        /// Can be used to send replies back.
-        /// </param>
-        protected override void OnMessage(NetworkData data, IConnection responseChannel)
+        /// <param name="context">TBD</param>
+        /// <param name="message">TBD</param>
+        public override void ChannelRead(IChannelHandlerContext context, object message)
         {
-            if (data.Length > 0)
+            var buf = (IByteBuf)message;
+            if (buf.ReadableBytes > 0)
             {
-                ChannelLocalActor.Notify(responseChannel, new InboundPayload(FromData(data)));
+                // no need to copy the byte buffer contents; ByteString does that automatically
+                var bytes = ByteString.CopyFrom(buf.Array, buf.ArrayOffset + buf.ReaderIndex, buf.ReadableBytes);
+                NotifyListener(new InboundPayload(bytes));
             }
+
+            // decrease the reference count to 0 (releases buffer)
+            ReferenceCountUtil.SafeRelease(message);
         }
 
         /// <summary>
-        /// Fires whenever a Helios <see cref="IConnection"/> experienced a non-fatal error.
-        /// 
-        /// <remarks>The connection should still be open even after this event fires.</remarks>
+        /// TBD
         /// </summary>
-        /// <param name="ex">The execption that triggered this event.</param>
-        /// <param name="erroredChannel">The handle to the Helios channel that errored.</param>
-        protected override void OnException(Exception ex, IConnection erroredChannel)
+        /// <param name="context">TBD</param>
+        /// <param name="exception">TBD</param>
+        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            // Want to notify only for encoding exceptions
-            if(!(ex is HeliosConnectionException))
-                ChannelLocalActor.Notify(erroredChannel, new UnderlyingTransportError(ex, "Non-fatal network error occurred inside underlying transport"));
-        }
+            var se = exception as SocketException;
 
-        public override void Dispose()
-        {
+            if (se?.SocketErrorCode == SocketError.OperationAborted)
+            {
+                Log.Info("Socket read operation aborted. Connection is about to be closed. Channel [{0}->{1}](Id={2})",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
 
-            ChannelLocalActor.Remove(UnderlyingConnection);
-            base.Dispose();
+                NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
+            }
+            else if (se?.SocketErrorCode == SocketError.ConnectionReset)
+            {
+                Log.Warning("Connection was reset by the remote peer. Channel [{0}->{1}](Id={2})",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
+
+                NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
+            }
+            else
+            {
+                base.ExceptionCaught(context, exception);
+                NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            }
+
+            context.CloseAsync(); // close the channel
         }
     }
 
     /// <summary>
     /// TCP handlers for inbound connections
     /// </summary>
-    class TcpServerHandler : TcpHandlers
+    internal sealed class TcpServerHandler : TcpHandlers
     {
-        private Task<IAssociationEventListener> _associationListenerTask;
+        private readonly Task<IAssociationEventListener> _associationEventListener;
 
-        public TcpServerHandler(HeliosTransport wrappedTransport, Task<IAssociationEventListener> associationListenerTask, IConnection underlyingConnection)
-            : base(underlyingConnection)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="log">TBD</param>
+        /// <param name="associationEventListener">TBD</param>
+        public TcpServerHandler(HeliosTransport wrappedTransport, ILoggingAdapter log, Task<IAssociationEventListener> associationEventListener) : base(wrappedTransport, log)
         {
-            WrappedTransport = wrappedTransport;
-            _associationListenerTask = associationListenerTask;
+            _associationEventListener = associationEventListener;
         }
 
-        protected void InitInbound(IConnection connection, INode remoteSocketAddress, NetworkData msg)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        public override void ChannelActive(IChannelHandlerContext context)
         {
-            _associationListenerTask.ContinueWith(r =>
+            InitInbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
+            base.ChannelActive(context);
+        }
+
+        void InitInbound(IChannel channel, IPEndPoint socketAddress, object msg)
+        {
+            // disable automatic reads
+            channel.Configuration.AutoRead = false;
+
+            _associationEventListener.ContinueWith(r =>
             {
                 var listener = r.Result;
-                var remoteAddress = HeliosTransport.NodeToAddress(remoteSocketAddress, WrappedTransport.SchemeIdentifier,
+                var remoteAddress = HeliosTransport.MapSocketToAddress(socketAddress, WrappedTransport.SchemeIdentifier,
                     WrappedTransport.System.Name);
-
-                if (remoteAddress == null) throw new HeliosNodeException("Unknown inbound remote address type {0}", remoteSocketAddress);
                 AssociationHandle handle;
-                Init(connection, remoteSocketAddress, remoteAddress, msg, out handle);
+                Init(channel, socketAddress, remoteAddress, msg, out handle);
                 listener.Notify(new InboundAssociation(handle));
-
-            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.NotOnCanceled | TaskContinuationOptions.NotOnFaulted);
-        }
-
-        protected override void OnConnect(INode remoteAddress, IConnection responseChannel)
-        {
-            InitInbound(responseChannel, remoteAddress, NetworkData.Create(Node.Empty(), new byte[0], 0));
+            }, TaskContinuationOptions.OnlyOnRanToCompletion);
         }
     }
 
@@ -164,29 +181,42 @@ namespace Akka.Remote.Transport.Helios
     /// </summary>
     class TcpClientHandler : TcpHandlers
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly TaskCompletionSource<AssociationHandle> StatusPromise = new TaskCompletionSource<AssociationHandle>();
-
-        public TcpClientHandler(HeliosTransport heliosWrappedTransport, Address remoteAddress, IConnection underlyingConnection)
-            : base(underlyingConnection)
-        {
-            WrappedTransport = heliosWrappedTransport;
-            RemoteAddress = remoteAddress;
-        }
-
+        private readonly Address _remoteAddress;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Task<AssociationHandle> StatusFuture { get { return StatusPromise.Task; } }
 
-        protected Address RemoteAddress;
-
-        protected void InitOutbound(IConnection channel, INode remoteSocketAddress, NetworkData msg)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="log">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        public TcpClientHandler(HeliosTransport wrappedTransport, ILoggingAdapter log, Address remoteAddress) : base(wrappedTransport, log)
         {
-            AssociationHandle handle;
-            Init(channel, remoteSocketAddress, RemoteAddress, msg, out handle);
-            StatusPromise.SetResult(handle);
+            _remoteAddress = remoteAddress;
         }
 
-        protected override void OnConnect(INode remoteAddress, IConnection responseChannel)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        public override void ChannelActive(IChannelHandlerContext context)
         {
-            InitOutbound(responseChannel, remoteAddress, NetworkData.Create(Node.Empty(), new byte[0], 0));
+            InitOutbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
+            base.ChannelActive(context);
+        }
+
+        void InitOutbound(IChannel channel, IPEndPoint socketAddress, object msg)
+        {
+            AssociationHandle handle;
+            Init(channel, socketAddress, _remoteAddress, msg, out handle);
+            StatusPromise.TrySetResult(handle);
         }
     }
 
@@ -195,30 +225,44 @@ namespace Akka.Remote.Transport.Helios
     /// </summary>
     class TcpAssociationHandle : AssociationHandle
     {
-        private IConnection _channel;
+        private readonly IChannel _channel;
         private HeliosTransport _transport;
 
-        public TcpAssociationHandle(Address localAddress, Address remoteAddress, HeliosTransport transport, IConnection connection)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="transport">TBD</param>
+        /// <param name="connection">TBD</param>
+        public TcpAssociationHandle(Address localAddress, Address remoteAddress, HeliosTransport transport, IChannel connection)
             : base(localAddress, remoteAddress)
         {
             _channel = connection;
             _transport = transport;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Write(ByteString payload)
         {
-            if (_channel.IsOpen())
+            if (_channel.IsOpen && _channel.IsWritable)
             {
-                _channel.Send(HeliosHelpers.ToData(payload, RemoteAddress));
+                _channel.WriteAndFlushAsync(Unpooled.WrappedBuffer(payload.ToByteArray()));
                 return true;
             }
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Disassociate()
         {
-            if (!_channel.WasDisposed)
-                _channel.Close();
+            _channel.CloseAsync();
         }
     }
 
@@ -232,19 +276,52 @@ namespace Akka.Remote.Transport.Helios
     /// </summary>
     class HeliosTcpTransport : HeliosTransport
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="config">TBD</param>
         public HeliosTcpTransport(ActorSystem system, Config config)
             : base(system, config)
         {
         }
 
-        protected override Task<AssociationHandle> AssociateInternal(Address remoteAddress)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <exception cref="HeliosConnectionException">TBD</exception>
+        /// <returns>TBD</returns>
+        protected override async Task<AssociationHandle> AssociateInternal(Address remoteAddress)
         {
-            var client = NewClient(remoteAddress);
+            try
+            {
+                var clientBootstrap = ClientFactory(remoteAddress);
+                var socketAddress = AddressToSocketAddress(remoteAddress);
 
-            var socketAddress = client.RemoteHost;
-            client.Open();
+                var associate = await clientBootstrap.ConnectAsync(socketAddress);
 
-            return ((TcpClientHandler)client).StatusFuture;
+                var handler = (TcpClientHandler)associate.Pipeline.Last();
+                return await handler.StatusFuture;
+            }
+            catch (AggregateException e) when (e.InnerException is ConnectException)
+            {
+                var heliosException = (ConnectException)e.InnerException;
+                var socketException = heliosException.InnerException as SocketException;
+
+                if (socketException?.SocketErrorCode == SocketError.ConnectionRefused)
+                {
+                    throw new InvalidAssociationException(socketException.Message + " " + remoteAddress);
+                }
+
+                throw new InvalidAssociationException("Failed to associate with " + remoteAddress, e);
+            }
+            catch (AggregateException e) when (e.InnerException is ConnectTimeoutException)
+            {
+                var heliosException = (ConnectTimeoutException)e.InnerException;
+
+                throw new InvalidAssociationException(heliosException.Message);
+            }
         }
     }
 }

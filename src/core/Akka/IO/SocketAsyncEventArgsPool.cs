@@ -12,11 +12,19 @@ using System.Net.Sockets;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class SocketAsyncEventArgsPool
     {
         private readonly ConcurrentStack<SocketAsyncEventArgs> _pool;
         private readonly byte[] _buffer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="capacity">TBD</param>
+        /// <param name="select">TBD</param>
         public SocketAsyncEventArgsPool(int capacity, Action<SocketAsyncEventArgs> select)
         {
             _buffer = new byte[capacity*BufferSize];
@@ -30,11 +38,19 @@ namespace Akka.IO
             _pool = new ConcurrentStack<SocketAsyncEventArgs>(items);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int BufferSize
         {
             get { return 128; } // TODO: make configurable with good default
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="token">TBD</param>
+        /// <returns>TBD</returns>
         public SocketAsyncEventArgs Request(object token)
         {
             SocketAsyncEventArgs saea;
@@ -47,6 +63,10 @@ namespace Akka.IO
             throw new Exception(); //TODO: What do we do when pool is empty?
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="saea">TBD</param>
         public void Return(SocketAsyncEventArgs saea)
         {
             saea.UserToken = null;

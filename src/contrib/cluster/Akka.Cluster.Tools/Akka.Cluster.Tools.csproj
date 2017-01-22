@@ -69,6 +69,7 @@
     <Compile Include="PublishSubscribe\DistributedPubSubSettings.cs" />
     <Compile Include="PublishSubscribe\Internal\TopicMessages.cs" />
     <Compile Include="PublishSubscribe\Internal\Topics.cs" />
+    <Compile Include="PublishSubscribe\PerGroupingBuffer.cs" />
     <Compile Include="PublishSubscribe\Serialization\DistributedPubSubMessageSerializer.cs" />
     <Compile Include="PublishSubscribe\Serialization\Proto\DistributedPubSubMessages.cs" />
     <Compile Include="Singleton\ClusterSingletonManager.cs" />

@@ -22,8 +22,15 @@ namespace Akka.Actor
         /// </summary>
         public class Success : Status
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly object Status;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="status">TBD</param>
             public Success(object status)
             {
                 Status = status;
@@ -36,13 +43,24 @@ namespace Akka.Actor
         /// </summary>
         public class Failure : Status
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Exception Cause;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cause">TBD</param>
             public Failure(Exception cause)
             {
                 Cause = cause;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override string ToString()
             {
                 return "Failure: " + Cause.ToString();
@@ -63,6 +81,9 @@ namespace Akka.Actor
     [Obsolete()]
     public interface IActorLogging
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         ILoggingAdapter Log { get; }
     }
 
@@ -73,9 +94,8 @@ namespace Akka.Actor
     {
         /// <summary>Gets the context for this instance.</summary>
         /// <value>The context.</value>
-        /// <exception cref="System.NotSupportedException">
-        /// There is no active Context, this is most likely due to use of async
-        /// operations from within this actor.
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if there is no active Context. The most likely cause is due to use of async operations from within this actor.
         /// </exception>
         IActorContext ActorContext { get; }
     }
@@ -91,7 +111,9 @@ namespace Akka.Actor
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorBase" /> class.
         /// </summary>
-        /// <exception cref="System.Exception">Do not create actors using 'new', always create them using an ActorContext/System</exception>
+        /// <exception cref="ActorInitializationException">
+        /// This exception is thrown when an actor is created using <c>new</c>. Always create actors using an ActorContext/System.
+        /// </exception>
         protected ActorBase()
         {
             if (ActorCell.Current == null)
@@ -118,9 +140,8 @@ namespace Akka.Actor
         ///     Gets the context.
         /// </summary>
         /// <value>The context.</value>
-        /// <exception cref="System.NotSupportedException">
-        ///     There is no active ActorContext, this is most likely due to use of async
-        ///     operations from within this actor.
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if there is no active ActorContext. The most likely cause is due to use of async operations from within this actor.
         /// </exception>
         IActorContext IInternalActor.ActorContext
         {
@@ -133,9 +154,8 @@ namespace Akka.Actor
         ///     Gets the context.
         /// </summary>
         /// <value>The context.</value>
-        /// <exception cref="System.NotSupportedException">
-        ///     There is no active Context, this is most likely due to use of async
-        ///     operations from within this actor.
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if there is no active Context. The most likely cause is due to use of async operations from within this actor.
         /// </exception>
         protected static IActorContext Context
         {
@@ -150,6 +170,12 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         internal protected virtual bool AroundReceive(Receive receive, object message)
         {
             var wasHandled = receive(message);
@@ -164,6 +190,7 @@ namespace Akka.Actor
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <returns>TBD</returns>
         protected abstract bool Receive(object message);
 
         /// <summary>
@@ -178,6 +205,9 @@ namespace Akka.Actor
         /// to the actor's system's <see cref="EventStream"/>
         /// </summary>
         /// <param name="message">The unhandled message.</param>
+        /// <exception cref="DeathPactException">
+        /// This exception is thrown if the given <paramref name="message"/> is a <see cref="Terminated"/> message.
+        /// </exception>
         protected virtual void Unhandled(object message)
         {
             var terminatedMessage = message as Terminated;
@@ -188,7 +218,11 @@ namespace Akka.Actor
             Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="discardOld">TBD</param>
         [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         protected void Become(Receive receive, bool discardOld = true)
         {
@@ -227,17 +261,27 @@ namespace Akka.Actor
             Context.UnbecomeStacked();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
         protected void Unbecome()
         {
             UnbecomeStacked();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="self">TBD</param>
         internal void Clear(IActorRef self)
         {
             _clearedSelf = self;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal void Unclear()
         {
             _clearedSelf = null;

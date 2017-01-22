@@ -18,51 +18,96 @@ namespace Akka.Persistence.Serialization
     /// </summary>
     public sealed class Snapshot
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="data">TBD</param>
         public Snapshot(object data)
         {
             Data = data;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object Data { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         private bool Equals(Snapshot other)
         {
             return Equals(Data, other.Data);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Snapshot && Equals((Snapshot) obj);
+            return obj is Snapshot && Equals((Snapshot)obj);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return (Data != null ? Data.GetHashCode() : 0);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class SnapshotHeader
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="serializerId">TBD</param>
+        /// <param name="manifest">TBD</param>
         public SnapshotHeader(int serializerId, string manifest)
         {
             SerializerId = serializerId;
             Manifest = manifest;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int SerializerId { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Manifest { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class SnapshotSerializer : Serializer
     {
         private Information _transportInformation;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public SnapshotSerializer(ExtendedActorSystem system)
             : base(system)
         {
         }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Information TransportInformation
         {
             get
@@ -71,6 +116,9 @@ namespace Akka.Persistence.Serialization
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IncludeManifest
         {
             get { return false; }
@@ -80,6 +128,9 @@ namespace Akka.Persistence.Serialization
         /// Serializes a <see cref="Snapshot"/>. Delegates serialization of snapshot data to a matching
         /// <see cref="Serializer"/>
         /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is Snapshot) return SnapshotToBinary((obj as Snapshot).Data);
@@ -91,6 +142,9 @@ namespace Akka.Persistence.Serialization
         /// Deserializes a <see cref="Snapshot"/>. Delegates deserialization of snapshot data to a matching
         /// <see cref="Serializer"/>
         /// </summary>
+        /// <param name="bytes">TBD</param>
+        /// <param name="type">TBD</param>
+        /// <returns>TBD</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
             return new Snapshot(SnapshotFromBinary(bytes));
@@ -112,9 +166,10 @@ namespace Akka.Persistence.Serialization
             using (var headerOut = new MemoryStream())
             {
                 WriteInt(headerOut, serializer.Identifier);
-                if (serializer is SerializerWithStringManifest)
+                var serializerManifest = serializer as SerializerWithStringManifest;
+                if (serializerManifest != null)
                 {
-                    var manifest = ((SerializerWithStringManifest) serializer).Manifest(snapshot);
+                    var manifest = serializerManifest.Manifest(snapshot);
                     if (!string.IsNullOrEmpty(manifest))
                     {
                         var manifestBinary = Encoding.UTF8.GetBytes(manifest);
@@ -204,4 +259,3 @@ namespace Akka.Persistence.Serialization
         }
     }
 }
-

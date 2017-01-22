@@ -44,6 +44,7 @@ namespace ClusterSharding.Node
 
         public Customer()
         {
+            SetReceiveTimeout(TimeSpan.FromSeconds(60));
             Recover<ItemPurchased>(purchased => _purchasedItems.Add(purchased.ItemName));
 
             Command<PurchaseItem>(purchase =>

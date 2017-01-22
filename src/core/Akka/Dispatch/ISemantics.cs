@@ -11,7 +11,7 @@ using Akka.Actor;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// 
+    /// TBD
     /// </summary>
     public interface ISemantics
     {
@@ -39,7 +39,7 @@ namespace Akka.Dispatch
         /// <summary> 
         /// The enqueue time to wait until message is dropped to deadletters if the message queue is full 
         /// </summary>
-        TimeSpan PushTimeOut { get; set; }
+        TimeSpan PushTimeOut { get; }
     }
 
     /// <summary> 
@@ -58,6 +58,10 @@ namespace Akka.Dispatch
     /// </summary>
     public interface IDequeBasedMessageQueueSemantics : ISemantics
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
         void EnqueueFirst(Envelope envelope);
     }
 
@@ -73,7 +77,7 @@ namespace Akka.Dispatch
     /// Semantics for message queues that are Double-Ended and bounded
     /// </summary>
     public interface IBoundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
-        IUnboundedMessageQueueSemantics //TODO: make this Bounded once we have BoundedMessageQueues
+        IBoundedMessageQueueSemantics
     {
     }
 }

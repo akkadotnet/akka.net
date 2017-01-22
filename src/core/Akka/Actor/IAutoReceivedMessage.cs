@@ -9,13 +9,24 @@ using Akka.Event;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IAutoReceivedMessage : INoSerializationVerificationNeeded
     {
     }
 
-    public sealed class
-        Terminated : IAutoReceivedMessage, IPossiblyHarmful
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="existenceConfirmed">TBD</param>
+        /// <param name="addressTerminated">TBD</param>
         public Terminated(IActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
             ActorRef = actorRef;
@@ -23,47 +34,91 @@ namespace Akka.Actor
             AddressTerminated = addressTerminated;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef ActorRef { get; private set; }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool AddressTerminated { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool ExistenceConfirmed { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Terminated>: " + ActorRef + " - ExistenceConfirmed=" + ExistenceConfirmed;
         }
     }
 
-    //request to an actor ref, to get back the identity of the underlying actors
-    public sealed class Identify : IAutoReceivedMessage
+    /// <summary>
+    /// Request to an <see cref="ICanTell"/> to get back the identity of the underlying actors.
+    /// </summary>
+    public sealed class Identify : IAutoReceivedMessage, INotInfluenceReceiveTimeout
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageId">TBD</param>
         public Identify(object messageId)
         {
             MessageId = messageId;
         }
 
-        public object MessageId { get; private set; }
+        /// <summary>
+        /// A correlating ID used to distinguish multiple <see cref="Identify"/> requests to the same receiver.
+        /// </summary>
+        public object MessageId { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Identify>: " + MessageId;
         }
     }
 
-    //response to the Identity message, get identity by Sender
+    /// <summary>
+    /// Response to the <see cref="Identify"/> message, get identity by Sender
+    /// </summary>
     public sealed class ActorIdentity
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageId">TBD</param>
+        /// <param name="subject">TBD</param>
         public ActorIdentity(object messageId, IActorRef subject)
         {
             MessageId = messageId;
             Subject = subject;
         }
 
+        /// <summary>
+        /// The same correlating ID used in the original <see cref="Identify"/> message.
+        /// </summary>
         public object MessageId { get; private set; }
+
+        /// <summary>
+        /// A reference to the underyling actor.
+        /// </summary>
+        /// <remarks>Will be <c>null</c> if sent an <see cref="ActorSelection"/> that could not be resolved.</remarks>
         public IActorRef Subject { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<ActorIdentity>: " + Subject + " - MessageId=" + MessageId;
@@ -78,10 +133,13 @@ namespace Akka.Actor
     /// it processes the message, which gets handled using the normal supervisor mechanism, and
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class PoisonPill : IAutoReceivedMessage , IPossiblyHarmful
+    public sealed class PoisonPill : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static PoisonPill Instance
         {
             get
@@ -90,6 +148,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<PoisonPill>";
@@ -109,6 +171,9 @@ namespace Akka.Actor
         private Kill() { }
 
         private static readonly Kill _instance = new Kill();
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Kill Instance
         {
             get
@@ -117,6 +182,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Kill>";
@@ -135,15 +204,26 @@ namespace Akka.Actor
     /// The watcher <see cref="DeathWatch"/> subscribes to the <see cref="AddressTerminatedTopic"/> and translates this
     /// event to <see cref="Terminated"/>, which is sent to itself.
     /// </summary>
-    internal class AddressTerminated : IAutoReceivedMessage, IPossiblyHarmful
+    internal class AddressTerminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
         public AddressTerminated(Address address)
         {
             Address = address;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address Address { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<AddressTerminated>: " + Address;

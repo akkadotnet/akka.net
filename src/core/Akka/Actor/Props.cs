@@ -208,12 +208,14 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="type">The type of the actor to create.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
-        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if <see cref="Props"/> is not instantiated with an actor type.
+        /// </exception>
         public Props(Type type, object[] args)
             : this(defaultDeploy, type, args)
         {
             if (type == null)
-                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+                throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -224,12 +226,15 @@ namespace Akka.Actor
         /// </note>
         /// </summary>
         /// <param name="type">The type of the actor to create.</param>
-        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if <see cref="Props"/> is not instantiated with an actor type.
+        /// </exception>
+
         public Props(Type type)
             : this(defaultDeploy, type, noArgs)
         {
             if (type == null)
-                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+                throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -238,12 +243,15 @@ namespace Akka.Actor
         /// <param name="type">The type of the actor to create.</param>
         /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
-        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if <see cref="Props"/> is not instantiated with an actor type.
+        /// </exception>
+
         public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
             : this(defaultDeploy, type, args.ToArray())
         {
             if (type == null)
-                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+                throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
 
             SupervisorStrategy = supervisorStrategy;
         }
@@ -254,12 +262,15 @@ namespace Akka.Actor
         /// <param name="type">The type of the actor to create.</param>
         /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
-        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if <see cref="Props"/> is not instantiated with an actor type.
+        /// </exception>
+
         public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
             : this(defaultDeploy, type, args)
         {
             if (type == null)
-                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+                throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
 
             SupervisorStrategy = supervisorStrategy;
         }
@@ -270,12 +281,15 @@ namespace Akka.Actor
         /// <param name="deploy">The configuration used to deploy the actor.</param>
         /// <param name="type">The type of the actor to create.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
-        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if <see cref="Props"/> is not instantiated with an actor type.
+        /// </exception>
+
         public Props(Deploy deploy, Type type, IEnumerable<object> args)
             : this(deploy, type, args.ToArray())
         {
             if (type == null)
-                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+                throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -284,6 +298,7 @@ namespace Akka.Actor
         /// <param name="deploy">The configuration used to deploy the actor.</param>
         /// <param name="type">The type of the actor to create.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
+        /// <exception cref="ArgumentException">This exception is thrown if <paramref name="type"/> is an unknown actor producer.</exception>
         public Props(Deploy deploy, Type type, params object[] args)
         {
             Deploy = deploy;
@@ -439,7 +454,7 @@ namespace Akka.Actor
         public static Props Create(Type type, params object[] args)
         {
             if (type == null)
-                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+                throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
 
             return new Props(type, args);
         }
@@ -555,8 +570,11 @@ namespace Akka.Actor
         /// This method is only useful when called during actor creation by the ActorSystem.
         /// </remarks>
         /// </summary>
+        /// <exception cref="TypeLoadException">
+        /// This exception is thrown if there was an error creating an actor of type <see cref="Props.Type"/>
+        /// with the arguments from <see cref="Props.Arguments"/>.
+        /// </exception>
         /// <returns>The newly created actor</returns>
-        /// <exception cref="TypeLoadException"></exception>
         public virtual ActorBase NewActor()
         {
             var type = Type;
@@ -564,7 +582,7 @@ namespace Akka.Actor
             try {
                 return producer.Produce();
             } catch (Exception e) {
-                throw new TypeLoadException("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments) + ")", e);
+                throw new TypeLoadException($"Error while creating actor instance of type {type} with {arguments.Length} args: ({StringFormat.SafeJoin(",", arguments)})", e);
             }
         }
 
@@ -680,7 +698,7 @@ namespace Akka.Actor
             if (typeof(ActorBase).IsAssignableFrom(type)) {
                 return new ActivatorProducer(type, args);
             }
-            throw new ArgumentException(string.Format("Unknown actor producer [{0}]", type.FullName));
+            throw new ArgumentException($"Unknown actor producer [{type.FullName}]", nameof(type));
         }
 
         /// <summary>
@@ -708,8 +726,8 @@ namespace Akka.Actor
         /// <summary>
         /// N/A
         /// </summary>
+        /// <exception cref="InvalidOperationException">This exception is thrown automatically since the actor has been terminated.</exception>
         /// <returns>N/A</returns>
-        /// <exception cref="System.InvalidOperationException">This actor has been terminated</exception>
         public override ActorBase NewActor()
         {
             throw new InvalidOperationException("This actor has been terminated");

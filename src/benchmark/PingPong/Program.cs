@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util.Internal;
 
 namespace PingPong
 {
@@ -175,13 +176,15 @@ namespace PingPong
             var started = new Messages.Started();
             for(int i = 0; i < numberOfClients; i++)
             {
-                var destination = (LocalActorRef)system.ActorOf<Destination>("destination-" + i);
-                destination.Cell.Dispatcher.Throughput = factor;
+                var destination = (RepointableActorRef)system.ActorOf<Destination>("destination-" + i);
+                SpinWait.SpinUntil(() => destination.IsStarted);
+                destination.Underlying.AsInstanceOf<ActorCell>().Dispatcher.Throughput = factor;
 
                 var ts = new TaskCompletionSource<bool>();
                 tasks.Add(ts.Task);
-                var client = (LocalActorRef)system.ActorOf(new Props(typeof(TActor), null, destination, repeatsPerClient, ts), "client-" + i);
-                client.Cell.Dispatcher.Throughput = factor;
+                var client = (RepointableActorRef)system.ActorOf(new Props(typeof(TActor), null, destination, repeatsPerClient, ts), "client-" + i);
+                SpinWait.SpinUntil(() => client.IsStarted);
+                client.Underlying.AsInstanceOf<ActorCell>().Dispatcher.Throughput = factor;
                 clients.Add(client);
 
                 client.Tell(started, waitForStartsActor);

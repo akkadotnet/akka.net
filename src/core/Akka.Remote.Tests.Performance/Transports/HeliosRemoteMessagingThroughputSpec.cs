@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using Akka.Configuration;
-using Akka.Remote.Tests.Performance.Transports;
 
 namespace Akka.Remote.Tests.Performance.Transports
 {
@@ -28,7 +27,7 @@ namespace Akka.Remote.Tests.Performance.Transports
                     # Used to configure the number of I/O worker threads on server sockets
       server-socket-worker-pool {
         # Min number of threads to cap factor-based number to
-        pool-size-min = 1
+        pool-size-min = 2
 
         # The pool size factor is used to determine thread pool size
         # using the following formula: ceil(available processors * factor).
@@ -37,13 +36,13 @@ namespace Akka.Remote.Tests.Performance.Transports
         pool-size-factor = 1.0
 
         # Max number of threads to cap factor-based number to
-        pool-size-max = 1
+        pool-size-max = 2
       }
 
       # Used to configure the number of I/O worker threads on client sockets
       client-socket-worker-pool {
         # Min number of threads to cap factor-based number to
-        pool-size-min = 1
+        pool-size-min = 2
 
         # The pool size factor is used to determine thread pool size
         # using the following formula: ceil(available processors * factor).
@@ -52,7 +51,7 @@ namespace Akka.Remote.Tests.Performance.Transports
         pool-size-factor = 1.0
 
         # Max number of threads to cap factor-based number to
-        pool-size-max = 1
+        pool-size-max = 2
       }
                 }
               }

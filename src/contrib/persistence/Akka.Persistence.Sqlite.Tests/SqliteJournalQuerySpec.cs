@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Configuration;
-using Akka.Persistence.Sql.Common.TestKit;
+using Akka.Persistence.Sql.TestKit;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
@@ -33,6 +33,7 @@ namespace Akka.Persistence.Sqlite.Tests
                             class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
                             plugin-dispatcher = ""akka.actor.default-dispatcher""
                             table-name = event_journal
+                            metadata-table-name = journal_metadata
                             auto-initialize = on
                             connection-string = """ + connectionString + @"""
                         }

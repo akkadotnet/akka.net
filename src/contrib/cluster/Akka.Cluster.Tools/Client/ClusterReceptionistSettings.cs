@@ -11,14 +11,15 @@ using Akka.Configuration;
 
 namespace Akka.Cluster.Tools.Client
 {
-    [Serializable]
-    public sealed class ClusterReceptionistSettings
+    public sealed class ClusterReceptionistSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Create settings from the default configuration "akka.cluster.client.receptionist".
         /// </summary>
         public static ClusterReceptionistSettings Create(ActorSystem system)
         {
+            system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
+
             var config = system.Settings.Config.GetConfig("akka.cluster.client.receptionist");
             if (config == null)
                 throw new ArgumentException(string.Format("Actor system [{0}] doesn't have `akka.cluster.client.receptionist` config set up", system.Name));
@@ -31,7 +32,16 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public static ClusterReceptionistSettings Create(Config config)
         {
-            return new ClusterReceptionistSettings(config.GetString("role"), config.GetInt("number-of-contacts"), config.GetTimeSpan("response-tunnel-receive-timeout"));
+            var role = config.GetString("role");
+            if (string.IsNullOrEmpty(role)) role = null;
+
+            return new ClusterReceptionistSettings(
+                role,
+                config.GetInt("number-of-contacts"),
+                config.GetTimeSpan("response-tunnel-receive-timeout"),
+                config.GetTimeSpan("heartbeat-interval"),
+                config.GetTimeSpan("acceptable-heartbeat-pause"),
+                config.GetTimeSpan("failure-detection-interval"));
         }
 
         /// <summary>
@@ -49,11 +59,40 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public readonly TimeSpan ResponseTunnelReceiveTimeout;
 
-        public ClusterReceptionistSettings(string role, int numberOfContacts, TimeSpan responseTunnelReceiveTimeout)
+        /// <summary>
+        /// How often failure detection heartbeat messages should be received for each ClusterClient
+        /// </summary>
+        public readonly TimeSpan HeartbeatInterval;
+
+        /// <summary>
+        /// Number of potentially lost/delayed heartbeats that will be
+        /// accepted before considering it to be an anomaly.
+        /// The ClusterReceptionist is using the akka.remote.DeadlineFailureDetector, which
+        /// will trigger if there are no heartbeats within the duration
+        /// heartbeat-interval + acceptable-heartbeat-pause, i.e. 15 seconds with
+        /// the default settings.
+        /// </summary>
+        public readonly TimeSpan AcceptableHeartbeatPause;
+
+        /// <summary>
+        /// Failure detection checking interval for checking all ClusterClients
+        /// </summary>
+        public readonly TimeSpan FailureDetectionInterval;
+
+        public ClusterReceptionistSettings(
+            string role,
+            int numberOfContacts,
+            TimeSpan responseTunnelReceiveTimeout,
+            TimeSpan heartbeatInterval,
+            TimeSpan acceptableHeartbeatPause,
+            TimeSpan failureDetectionInterval)
         {
             Role = !string.IsNullOrEmpty(role) ? role : null;
             NumberOfContacts = numberOfContacts;
             ResponseTunnelReceiveTimeout = responseTunnelReceiveTimeout;
+            HeartbeatInterval = heartbeatInterval;
+            AcceptableHeartbeatPause = acceptableHeartbeatPause;
+            FailureDetectionInterval = failureDetectionInterval;
         }
 
         public ClusterReceptionistSettings WithRole(string role)
@@ -63,7 +102,7 @@ namespace Akka.Cluster.Tools.Client
 
         public ClusterReceptionistSettings WithoutRole()
         {
-            return Copy(role: null);
+            return Copy(role: "");
         }
 
         public ClusterReceptionistSettings WithNumberOfContacts(int numberOfContacts)
@@ -76,10 +115,29 @@ namespace Akka.Cluster.Tools.Client
             return Copy(responseTunnelReceiveTimeout: responseTunnelReceiveTimeout);
         }
 
-        private ClusterReceptionistSettings Copy(string role = null, int? numberOfContacts = null,
-            TimeSpan? responseTunnelReceiveTimeout = null)
+        public ClusterReceptionistSettings WithHeartbeat(TimeSpan heartbeatInterval, TimeSpan acceptableHeartbeatPause, TimeSpan failureDetectionInterval)
         {
-            return new ClusterReceptionistSettings(role ?? Role, numberOfContacts ?? NumberOfContacts, responseTunnelReceiveTimeout ?? ResponseTunnelReceiveTimeout);
+            return Copy(
+                heartbeatInterval: heartbeatInterval,
+                acceptableHeartbeatPause: acceptableHeartbeatPause,
+                failureDetectionInterval: failureDetectionInterval);
+        }
+
+        private ClusterReceptionistSettings Copy(
+            string role = null,
+            int? numberOfContacts = null,
+            TimeSpan? responseTunnelReceiveTimeout = null,
+            TimeSpan? heartbeatInterval = null,
+            TimeSpan? acceptableHeartbeatPause = null,
+            TimeSpan? failureDetectionInterval = null)
+        {
+            return new ClusterReceptionistSettings(
+                role ?? Role,
+                numberOfContacts ?? NumberOfContacts,
+                responseTunnelReceiveTimeout ?? ResponseTunnelReceiveTimeout,
+                heartbeatInterval ?? HeartbeatInterval,
+                acceptableHeartbeatPause ?? AcceptableHeartbeatPause,
+                failureDetectionInterval ?? FailureDetectionInterval);
         }
     }
 }

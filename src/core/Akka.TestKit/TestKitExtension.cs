@@ -9,7 +9,6 @@ using Akka.Actor;
 
 namespace Akka.TestKit
 {
-
     /// <summary>
     /// A extension to be used together with the TestKit.
     /// <example>
@@ -19,15 +18,24 @@ namespace Akka.TestKit
     /// </summary>
     public class TestKitExtension : ExtensionIdProvider<TestKitSettings>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override TestKitSettings CreateExtension(ExtendedActorSystem system)
         {
             return new TestKitSettings(system.Settings.Config);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static TestKitSettings For(ActorSystem system)
         {
             return system.GetExtension<TestKitSettings>();
         }
     }
 }
-

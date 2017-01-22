@@ -34,7 +34,7 @@ namespace Akka.Remote.Tests.Serialization
             : base(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote"" 
             akka.remote.helios.tcp {
-                hostname = localhost
+                hostname = 127.0.0.1
                 port = 0
             }        
         ")

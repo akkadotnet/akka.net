@@ -16,6 +16,9 @@ using Akka.Event;
 
 namespace Akka.Persistence.Snapshot
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class LocalSnapshotStore : SnapshotStore
     {
         private static readonly Regex FilenameRegex = new Regex(@"^snapshot-(.+)-(\d+)-(\d+)", RegexOptions.Compiled);
@@ -27,6 +30,9 @@ namespace Akka.Persistence.Snapshot
 
         private readonly Akka.Serialization.Serialization _serialization;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public LocalSnapshotStore()
         {
             var config = Context.System.Settings.Config.GetConfig("akka.persistence.snapshot-store.local");
@@ -42,6 +48,12 @@ namespace Akka.Persistence.Snapshot
 
         private ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <returns>TBD</returns>
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             //
@@ -55,6 +67,12 @@ namespace Akka.Persistence.Snapshot
             return RunWithStreamDispatcher(() => Load(metadata.GetEnumerator()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <param name="snapshot">TBD</param>
+        /// <returns>TBD</returns>
         protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
             _saving.Add(metadata);
@@ -65,6 +83,11 @@ namespace Akka.Persistence.Snapshot
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <returns>TBD</returns>
         protected override Task DeleteAsync(SnapshotMetadata metadata)
         {
             _saving.Remove(metadata);
@@ -81,6 +104,12 @@ namespace Akka.Persistence.Snapshot
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             foreach (var metadata in GetSnapshotMetadata(persistenceId, criteria))
@@ -89,6 +118,11 @@ namespace Akka.Persistence.Snapshot
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool ReceivePluginInternal(object message)
         {
             if (message is SaveSnapshotSuccess)
@@ -145,6 +179,11 @@ namespace Akka.Persistence.Snapshot
             return null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <param name="snapshot">TBD</param>
         protected virtual void Save(SnapshotMetadata metadata, object snapshot)
         {
             var tempFile = WithOutputStream(metadata, stream =>
@@ -165,6 +204,11 @@ namespace Akka.Persistence.Snapshot
             return snapshot;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="stream">TBD</param>
+        /// <param name="snapshot">TBD</param>
         protected void Serialize(Stream stream, Serialization.Snapshot snapshot)
         {
             var serializer = _serialization.FindSerializerFor(snapshot);
@@ -172,6 +216,12 @@ namespace Akka.Persistence.Snapshot
             stream.Write(bytes, 0, bytes.Length);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <param name="p">TBD</param>
+        /// <returns>TBD</returns>
         protected FileInfo WithOutputStream(SnapshotMetadata metadata, Action<Stream> p)
         {
             var tmpFile = GetSnapshotFileForWrite(metadata, ".tmp");
@@ -196,7 +246,6 @@ namespace Akka.Persistence.Snapshot
             try
             {
                 var result = p(stream);
-                stream.Close();
                 return result;
             }
             finally
@@ -242,6 +291,9 @@ namespace Akka.Persistence.Snapshot
             return null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             GetSnapshotDir();

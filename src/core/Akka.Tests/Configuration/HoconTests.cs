@@ -546,6 +546,55 @@ foo {
             config.GetInt("foo.bar.borkbork").ShouldBe(-1);
         }
 
+        [Fact(DisplayName = @"Scalar value should not be overriden by an object in fallback and vice versa")]
+        public void Scalar_value_should_not_be_overriden_by_an_object_in_fallback_and_vice_versa() {
+            var hocon1 = @"
+a {
+    b = 1
+}
+";
+            var hocon2 = @"
+a {
+    b {
+        c = 2
+    }
+}
+";
+
+            var config1 = ConfigurationFactory.ParseString(hocon1);
+            var config2 = ConfigurationFactory.ParseString(hocon2);
+
+            var config12 = config1.WithFallback(config2);
+            var config21 = config2.WithFallback(config1);
+
+            Assert.Equal(1, config12.GetInt("a.b"));
+            Assert.Equal(2, config21.GetInt("a.b.c"));
+        }
+
+        [Fact(DisplayName = "Config constructed from merging with fallback should not share state with origin")]
+        public void Config_constructed_from_merging_with_fallback_should_not_share_state_with_origin()
+        {
+            var hocon1 = @"
+a {
+    b = 1
+}
+";
+            var hocon2 = @"
+a {
+    c = 2
+}
+";
+
+            var config1 = ConfigurationFactory.ParseString(hocon1);
+            var config2 = ConfigurationFactory.ParseString(hocon2);
+
+            var config12 = config1.WithFallback(config2);
+
+            Assert.Equal(2, config12.GetInt("a.c"));
+            Assert.Equal(0, config1.GetInt("a.c"));
+            Assert.Equal(0, config2.GetInt("a.b"));
+        }
+
         [Fact]
         public void Can_parse_quoted_keys()
         {
@@ -556,6 +605,43 @@ a {
 ";
             var config = ConfigurationFactory.ParseString(hocon);
             config.GetInt("a.some quoted, key").ShouldBe(123);
+        }
+
+        [Fact]
+        public void Can_parse_quoted_keys_with_dots()
+        {
+            var hocon = @"
+a {
+   ""/abc/d.ev/*"": 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            config.GetConfig("a").Root.GetObject().GetKey("/abc/d.ev/*").GetInt().ShouldBe(123);
+        }
+
+        [Fact]
+        public void Get_config_supports_quoting()
+        {
+            var hocon = @"
+a {
+   ""/abc/d.ev/*"": 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            config.GetConfig("a").GetConfig(@"""/abc/d.ev/*""").ShouldNotBe(null);
+        }
+
+        [Fact]
+        public void Get_config_supports_quoting_combined_with_dotting()
+        {
+            var hocon = @"
+a {
+   ""/abc/d.ev/*"".d: 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            config.GetConfig(@"a.""/abc/d.ev/*""").ShouldNotBe(null);
+            config.GetConfig(@"a.""/abc/d.ev/*"".d").ShouldNotBe(null);
         }
 
         [Fact]
@@ -571,6 +657,21 @@ a {
             var enumerable = config2.AsEnumerable();
 
             enumerable.Select(kvp => kvp.Key).First().ShouldBe("some quoted, key");
+        }
+
+        [Fact]
+        public void Can_enumerate_quoted_keys_with_dots()
+        {
+            var hocon = @"
+a {
+   ""/abc/d.ev/*"": 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            var config2 = config.GetConfig("a");
+            var enumerable = config2.AsEnumerable();
+
+            enumerable.Select(kvp => kvp.Key).First().ShouldBe("/abc/d.ev/*");
         }
 
         [Fact]
@@ -712,6 +813,71 @@ y = ${x}
 
             Assert.Equal(123, config.GetInt("a.b.c.d.e.x"));
             Assert.Equal(123, config.GetInt("a.b.c.d.e.y"));
+        }
+
+        [Fact]
+        public void Can_parse_unquoted_ipv4()
+        {
+            var hocon = @"
+ip = 127.0.0.1
+";
+            Assert.Equal("127.0.0.1", ConfigurationFactory.ParseString(hocon).GetString("ip"));
+        }
+
+        [Fact]
+        public void Can_parse_quoted_ipv4()
+        {
+            var hocon = @"
+ip = ""127.0.0.1""
+";
+            Assert.Equal("127.0.0.1", ConfigurationFactory.ParseString(hocon).GetString("ip"));
+        }
+
+        [Fact(Skip = "Not allowed according to current HOCON spec")]
+        public void Can_parse_unquoted_ipv6()
+        {
+            var hocon = @"
+ip = ::1
+";
+            var res = ConfigurationFactory.ParseString(hocon).GetString("ip");
+            Assert.Equal("::1", res);
+        }
+
+        [Fact]
+        public void Can_parse_quoted_ipv6()
+        {
+            var hocon = @"
+ip = ""::1""
+";
+            var res = ConfigurationFactory.ParseString(hocon).GetString("ip");
+            Assert.Equal("::1", res);
+        }
+
+        [Fact]
+        public void Can_parse_non_abbreviated_timespan()
+        {
+            var hocon = "timespan = 10 seconds";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            Assert.Equal(10, res.TotalSeconds);
+        }
+
+        [Fact]
+        public void Can_parse_abbreviated_timespan() 
+        {
+            var hocon = "timespan = 10 s";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            Assert.Equal(10, res.TotalSeconds);
+        }
+
+        [Fact]
+        public void Can_parse_abbreviated_timespan2()
+        {
+            var hocon = "timespan = 0.05 s";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            Assert.Equal(50, res.TotalMilliseconds);
         }
     }
 }

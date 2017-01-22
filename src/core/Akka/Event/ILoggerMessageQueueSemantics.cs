@@ -8,6 +8,9 @@ using Akka.Dispatch;
 
 namespace Akka.Event
 {
+    /// <summary>
+    /// Semantics needed for loggers
+    /// </summary>
     public interface ILoggerMessageQueueSemantics : ISemantics
     {
     }

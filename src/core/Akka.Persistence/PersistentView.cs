@@ -21,18 +21,30 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class Update
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Update()
         {
             IsAwait = false;
             ReplayMax = long.MaxValue;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="isAwait">TBD</param>
         public Update(bool isAwait)
         {
             IsAwait = isAwait;
             ReplayMax = long.MaxValue;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="isAwait">TBD</param>
+        /// <param name="replayMax">TBD</param>
         [JsonConstructor]
         public Update(bool isAwait, long replayMax)
         {
@@ -53,14 +65,24 @@ namespace Akka.Persistence
         public long ReplayMax { get; private set; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class ScheduledUpdate
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="replayMax">TBD</param>
         public ScheduledUpdate(long replayMax)
         {
             ReplayMax = replayMax;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public long ReplayMax { get; private set; }
     }
 
@@ -86,6 +108,9 @@ namespace Akka.Persistence
     /// </summary>
     public abstract partial class PersistentView : ActorBase, ISnapshotter, IPersistentIdentity, IWithUnboundedStash, IPersistenceRecovery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly PersistenceExtension Extension;
         private readonly ILoggingAdapter _log;
 
@@ -98,6 +123,9 @@ namespace Akka.Persistence
         private IStash _internalStash;
         private ViewState _currentState;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected PersistentView()
         {
             LastSequenceNr = 0L;
@@ -108,15 +136,27 @@ namespace Akka.Persistence
             _log = Context.GetLogger();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string JournalPluginId { get; protected set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string SnapshotPluginId { get; protected set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Journal
         {
             get { return _journal ?? (_journal = Extension.JournalFor(JournalPluginId)); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef SnapshotStore
         {
             get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId)); }
@@ -139,6 +179,16 @@ namespace Akka.Persistence
         /// Gets the <see cref="ViewId"/>.
         /// </summary>
         public string SnapshotterId { get { return ViewId; } }
+
+        /// <summary>
+        /// Returns true if this persistent view is currently recovering.
+        /// </summary>
+        public bool IsRecovering { get { return _currentState.IsRecoveryRunning; } }
+
+        /// <summary>
+        /// Returns true if this persistent view has successfully finished recovery.
+        /// </summary>
+        public bool IsRecoveryFinished { get { return !IsRecovering; } }
 
         /// <summary>
         /// If true, the currently processed message was persisted - it sent from the <see cref="Journal"/>.
@@ -167,6 +217,9 @@ namespace Akka.Persistence
         /// </summary>
         public long LastSequenceNr { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IStash Stash { get; set; }
 
         /// <summary>
@@ -194,12 +247,12 @@ namespace Akka.Persistence
         /// The <see cref="PersistentView"/> will not stop or throw exception due to this.
         /// It will try again on next update.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="cause">TBD</param>
         protected virtual void OnReplayError(Exception cause)
         {
             if (_log.IsErrorEnabled)
                 _log.Error(cause, "Persistence view failure when replaying events for persistenceId [{0}]. " +
-                                  "Last known sequence number [{}]", PersistenceId, LastSequenceNr);
+                                  "Last known sequence number [{1}]", PersistenceId, LastSequenceNr);
         }
 
         private void ChangeState(ViewState state)
@@ -211,6 +264,9 @@ namespace Akka.Persistence
         /// Instructs the snapshot store to load the specified snapshot and send it via an
         /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
         /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
         public void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
             SnapshotStore.Tell(new LoadSnapshot(persistenceId, criteria, toSequenceNr));
@@ -222,6 +278,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the success or failure of this
         /// via an <see cref="SaveSnapshotSuccess"/> or <see cref="SaveSnapshotFailure"/> message.
         /// </summary>
+        /// <param name="snapshot">TBD</param>
         public void SaveSnapshot(object snapshot)
         {
             SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(SnapshotterId, SnapshotSequenceNr), snapshot));
@@ -233,6 +290,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
         /// via an <see cref="DeleteSnapshotSuccess"/> or <see cref="DeleteSnapshotFailure"/> message.
         /// </summary>
+        /// <param name="sequenceNr">TBD</param>
         public void DeleteSnapshot(long sequenceNr)
         {
             SnapshotStore.Tell(new DeleteSnapshot(new SnapshotMetadata(SnapshotterId, sequenceNr)));
@@ -244,6 +302,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
         /// via an <see cref="DeleteSnapshotsSuccess"/> or <see cref="DeleteSnapshotsFailure"/> message.
         /// </summary>
+        /// <param name="criteria">TBD</param>
         public void DeleteSnapshots(SnapshotSelectionCriteria criteria)
         {
             SnapshotStore.Tell(new DeleteSnapshots(SnapshotterId, criteria));

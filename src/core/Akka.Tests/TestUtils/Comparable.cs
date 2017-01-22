@@ -23,7 +23,7 @@ namespace Akka.Tests.TestUtils
 
         public override string ToString()
         {
-            var res = fastJSON.JSON.Instance.ToJSON(this);
+            var res = Newtonsoft.Json.JsonConvert.SerializeObject(this);
             return res;
         }
     }

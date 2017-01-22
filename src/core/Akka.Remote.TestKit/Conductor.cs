@@ -25,7 +25,7 @@ namespace Akka.Remote.TestKit
     /// The conductor is the one orchestrating the test: it governs the
     /// <see cref="Akka.Remote.TestKit.Controller"/>'s ports to which all
     /// Players connect, it issues commands to their
-    /// <see cref="Akka.Remote.TestKit.NetworkFailureInjector"/> and provides support
+    /// <see cref="FailureInjectorTransportAdapter"/> and provides support
     /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"/>.
     /// All of this is bundled inside the <see cref="TestConductor"/>
     /// </summary>
@@ -67,7 +67,7 @@ namespace Akka.Remote.TestKit
             if(_controller != null) throw new IllegalStateException("TestConductorServer was already started");
             _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort)),
                "controller");
-            //TODO: Need to review this async stuff
+
             var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
             await StartClient(name, node).ConfigureAwait(false);
             return node;

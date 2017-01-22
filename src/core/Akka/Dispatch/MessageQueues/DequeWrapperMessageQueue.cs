@@ -17,16 +17,21 @@ namespace Akka.Dispatch.MessageQueues
     /// </summary>
     public class DequeWrapperMessageQueue : IMessageQueue, IDequeBasedMessageQueueSemantics
     {
+        // doesn't need to be threadsafe - only called from within actor
         private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
-        private readonly IMessageQueue _messageQueue;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected readonly IMessageQueue MessageQueue;
         /// <summary>
         /// Takes another <see cref="IMessageQueue"/> as an argument - wraps <paramref name="messageQueue"/>
         /// in order to provide it with prepend (<see cref="EnqueueFirst"/>) semantics.
         /// </summary>
-        /// <param name="messageQueue"></param>
+        /// <param name="messageQueue">TBD</param>
         public DequeWrapperMessageQueue(IMessageQueue messageQueue)
         {
-            _messageQueue = messageQueue;
+            MessageQueue = messageQueue;
         }
 
         /// <summary>
@@ -43,16 +48,17 @@ namespace Akka.Dispatch.MessageQueues
         /// </summary>
         public int Count
         {
-            get { return _messageQueue.Count + _prependBuffer.Count; }
+            get { return MessageQueue.Count + _prependBuffer.Count; }
         }
 
         /// <summary>
-        /// Enqueue a message to the back of the <see cref="IMessageQueue"/>
+        /// TBD
         /// </summary>
-        /// <param name="envelope"></param>
-        public void Enqueue(Envelope envelope)
+        /// <param name="receiver">TBD</param>
+        /// <param name="envelope">TBD</param>
+        public void Enqueue(IActorRef receiver, Envelope envelope)
         {
-            _messageQueue.Enqueue(envelope);
+            MessageQueue.Enqueue(receiver, envelope);
         }
 
         /// <summary>
@@ -71,7 +77,21 @@ namespace Akka.Dispatch.MessageQueues
                 return true;
             }
 
-            return _messageQueue.TryDequeue(out envelope);
+            return MessageQueue.TryDequeue(out envelope);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="deadletters">TBD</param>
+        public void CleanUp(IActorRef owner, IMessageQueue deadletters)
+        {
+            Envelope msg;
+            while (TryDequeue(out msg))
+            {
+                deadletters.Enqueue(owner, msg);
+            }
         }
 
         /// <summary>

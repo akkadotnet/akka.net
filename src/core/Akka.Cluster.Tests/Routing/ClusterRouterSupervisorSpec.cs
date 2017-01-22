@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Cluster.Routing;
+using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
@@ -18,26 +19,10 @@ namespace Akka.Cluster.Tests.Routing
     {
         public ClusterRouterSupervisorSpec()
             : base(@"
-    akka{
-        actor{
-            provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            deployment {
-            /router1 {
-                    router = round-robin-pool
-                    nr-of-instances = 1
-                    cluster {
-                        enabled = on
-                        max-nr-of-instances-per-node = 1
-                        allow-local-routees = true
-                    }
-                }                
-            }
+                    akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                    akka.remote.helios.tcp.port = 0")
+        {
         }
-        
-        remote.helios.tcp.port = 0
-    }") { }
-
-        #region Killable actor
 
         class KillableActor : ReceiveActor
         {
@@ -53,54 +38,27 @@ namespace Akka.Cluster.Tests.Routing
             }
         }
 
-        class RestartableActor : ReceiveActor
-        {
-            private readonly IActorRef TestActor;
-
-            protected override void PostRestart(Exception reason)
-            {
-                base.PostRestart(reason);
-                TestActor.Tell("restarted");
-            }
-
-            public RestartableActor(IActorRef testActor)
-            {
-                TestActor = testActor;
-                Receive<string>(s => s == "go away", s =>
-                {
-                    throw new ArgumentException("Goodbye then!");
-                });
-            }
-        }
-
-        #endregion
-
-        #region Tests
-
         [Fact]
         public void Cluster_aware_routers_must_use_provided_supervisor_strategy()
         {
-            var router = Sys.ActorOf(new ClusterRouterPool(new RoundRobinPool(1, null, new OneForOneStrategy(
+            var escalator = new OneForOneStrategy(
                 exception =>
                 {
                     TestActor.Tell("supervised");
                     return Directive.Stop;
-                }), null), new ClusterRouterPoolSettings(1, true, null, 1)).Props(Props.Create(() => new KillableActor(TestActor))), "therouter");
+                });
+
+            var settings = new ClusterRouterPoolSettings(1, 1, true);
+
+            var router =
+                Sys.ActorOf(
+                    new ClusterRouterPool(new RoundRobinPool(1, null, escalator, Dispatchers.DefaultDispatcherId),
+                        settings)
+                        .Props(Props.Create(() => new KillableActor(TestActor))), "therouter");
 
             router.Tell("go away");
-            ExpectMsg("supervised", TimeSpan.FromSeconds(2));
+            ExpectMsg("supervised");
         }
-
-        [Fact]
-        public void Cluster_aware_routers_must_use_default_supervisor_strategy_when_none_specified()
-        {
-            var router = Sys.ActorOf(Props.Create(() => new RestartableActor(TestActor)).WithRouter(FromConfig.Instance), "router1");
-
-            router.Tell("go away");
-            ExpectMsg("restarted", TimeSpan.FromSeconds(2));
-        }
-
-        #endregion
     }
 }
 

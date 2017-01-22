@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Routing;
@@ -17,13 +18,14 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Google.ProtocolBuffers;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
-    
+
     public class RemotingSpec : AkkaSpec
     {
-        public RemotingSpec():base(GetConfig())
+        public RemotingSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
         {
             var c1 = ConfigurationFactory.ParseString(GetConfig());
             var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
@@ -78,10 +80,8 @@ namespace Akka.Remote.Tests
               actor.deployment {
                 /blub.remote = ""akka.test://remote-sys@localhost:12346""
                 /echo.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker1/child.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker1/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
-                /looker2/child.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker2/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
+                /looker/child.remote = ""akka.test://remote-sys@localhost:12346""
+                /looker/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
               }
             }";
         }
@@ -124,10 +124,8 @@ namespace Akka.Remote.Tests
 
               actor.deployment {
                 /blub.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker1/child.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker1/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
-                /looker2/child.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker2/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
+                /looker/child.remote = ""akka.test://remote-sys@localhost:12346""
+                /looker/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
               }
             }";
         }
@@ -148,22 +146,208 @@ namespace Akka.Remote.Tests
         #region Tests
 
 
-        [Fact()]
+        [Fact]
         public void Remoting_must_support_remote_lookups()
         {
             here.Tell("ping", TestActor);
             ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
         }
 
-        [Fact()]
+        [Fact]
         public async Task Remoting_must_support_Ask()
         {
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var msg = await here.Ask<Tuple<string,IActorRef>>("ping", TimeSpan.FromSeconds(1.5));
+            var msg = await here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5));
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
+        }
+
+        [Fact]
+        public void Remoting_must_not_send_remote_recreated_actor_with_same_name()
+        {
+            var echo = remoteSystem.ActorOf(Props.Create(() => new Echo1()), "otherEcho1");
+            echo.Tell(71);
+            ExpectMsg(71);
+            echo.Tell(PoisonPill.Instance);
+            ExpectMsg("postStop");
+            echo.Tell(72);
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
+
+            var echo2 = remoteSystem.ActorOf(Props.Create(() => new Echo1()), "otherEcho1");
+            echo2.Tell(73);
+            ExpectMsg(73);
+
+            // msg to old IActorRef (different UID) should not get through
+            echo2.Path.Uid.ShouldNotBe(echo.Path.Uid);
+            echo.Tell(74);
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
+
+            remoteSystem.ActorSelection("/user/otherEcho1").Tell(75);
+            ExpectMsg(75);
+
+            Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/otherEcho1").Tell(76);
+            ExpectMsg(76);
+        }
+
+        [Fact]
+        public void Remoting_must_lookup_actors_across_node_boundaries()
+        {
+            Action<IActorDsl> act = dsl =>
+            {
+                dsl.Receive<Tuple<Props, string>>((t, ctx) => ctx.Sender.Tell(ctx.ActorOf(t.Item1, t.Item2)));
+                dsl.Receive<string>((s, ctx) =>
+                {
+                    var sender = ctx.Sender;
+                    ctx.ActorSelection(s).ResolveOne(TimeSpan.FromSeconds(3)).PipeTo(sender);
+                });
+            };
+
+            var l = Sys.ActorOf(Props.Create(() => new Act(act)), "looker");
+
+            // child is configured to be deployed on remote-sys (remoteSystem)
+            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+            var child = ExpectMsg<IActorRef>();
+
+            // grandchild is condfigured to be deployed on RemotingSpec (Sys)
+            child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
+            var grandchild = ExpectMsg<IActorRef>();
+            grandchild.AsInstanceOf<IActorRefScope>().IsLocal.ShouldBeTrue();
+            grandchild.Tell(43);
+            ExpectMsg(43);
+            var myRef = Sys.ActorSelection("/user/looker/child/grandchild").ResolveOne(TimeSpan.FromSeconds(3)).Result;
+            (myRef is LocalActorRef).ShouldBeTrue(); // due to a difference in how ActorFor and ActorSelection are implemented, this will return a LocalActorRef
+            myRef.Tell(44);
+            ExpectMsg(44);
+            LastSender.ShouldBe(grandchild);
+            LastSender.ShouldBeSame(grandchild);
+            child.AsInstanceOf<RemoteActorRef>().Parent.ShouldBe(l);
+
+            var cRef = Sys.ActorSelection("/user/looker/child").ResolveOne(TimeSpan.FromSeconds(3)).Result;
+            cRef.ShouldBe(child);
+            l.Ask<IActorRef>("child/..", TimeSpan.FromSeconds(3)).Result.ShouldBe(l);
+            Sys.ActorSelection("/user/looker/child").Ask<ActorSelection>(new ActorSelReq(".."), TimeSpan.FromSeconds(3))
+                .ContinueWith(ts => ts.Result.ResolveOne(TimeSpan.FromSeconds(3))).Unwrap().Result.ShouldBe(l);
+
+            Watch(child);
+            child.Tell(PoisonPill.Instance);
+            ExpectMsg("postStop");
+            ExpectTerminated(child);
+            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+            var child2 = ExpectMsg<IActorRef>();
+            child2.Tell(45);
+            ExpectMsg(45);
+            // msg to old IActorRef (different uid) should not get through
+            child2.Path.Uid.ShouldNotBe(child.Path.Uid);
+            child.Tell(46);
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            Sys.ActorSelection("user/looker/child").Tell(47);
+            ExpectMsg(47);
+        }
+
+        [Fact]
+        public void Remoting_must_select_actors_across_node_boundaries()
+        {
+            Action<IActorDsl> act = dsl =>
+            {
+                dsl.Receive<Tuple<Props, string>>((t, ctx) => ctx.Sender.Tell(ctx.ActorOf(t.Item1, t.Item2)));
+                dsl.Receive<ActorSelReq>((req, ctx) => ctx.Sender.Tell(ctx.ActorSelection(req.S)));
+            };
+
+            var l = Sys.ActorOf(Props.Create(() => new Act(act)), "looker");
+            // child is configured to be deployed on remoteSystem
+            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+            var child = ExpectMsg<IActorRef>();
+            // grandchild is configured to be deployed on RemotingSpec (system)
+            child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
+            var grandchild = ExpectMsg<IActorRef>();
+            (grandchild as IActorRefScope).IsLocal.ShouldBeTrue();
+            grandchild.Tell(53);
+            ExpectMsg(53);
+            var myself = Sys.ActorSelection("user/looker/child/grandchild");
+            myself.Tell(54);
+            ExpectMsg(54);
+            LastSender.ShouldBe(grandchild);
+            LastSender.ShouldBeSame(grandchild);
+            myself.Tell(new Identify(myself));
+            var grandchild2 = ExpectMsg<ActorIdentity>().Subject;
+            grandchild2.ShouldBe(grandchild);
+            Sys.ActorSelection("user/looker/child").Tell(new Identify(null));
+            ExpectMsg<ActorIdentity>().Subject.ShouldBe(child);
+            l.Tell(new ActorSelReq("child/.."));
+            ExpectMsg<ActorSelection>().Tell(new Identify(null));
+            ExpectMsg<ActorIdentity>().Subject.ShouldBeSame(l);
+            Sys.ActorSelection("user/looker/child").Tell(new ActorSelReq(".."));
+            ExpectMsg<ActorSelection>().Tell(new Identify(null));
+            ExpectMsg<ActorIdentity>().Subject.ShouldBeSame(l);
+
+            grandchild.Tell(Tuple.Create(Props.Create<Echo1>(), "grandgrandchild"));
+            var grandgrandchild = ExpectMsg<IActorRef>();
+
+            Sys.ActorSelection("/user/looker/child").Tell(new Identify("idReq1"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq1")).Subject.ShouldBe(child);
+            //TODO see #1544
+            //Sys.ActorSelection(child.Path).Tell(new Identify("idReq2"));
+            //ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq2")).Subject.ShouldBe(child);
+            Sys.ActorSelection("/user/looker/*").Tell(new Identify("idReq3"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq3")).Subject.ShouldBe(child);
+
+            Sys.ActorSelection("/user/looker/child/grandchild").Tell(new Identify("idReq4"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq4")).Subject.ShouldBe(grandchild);
+            //TODO see #1544
+            //Sys.ActorSelection(child.Path / "grandchild").Tell(new Identify("idReq5"));
+            //ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq5")).Subject.ShouldBe(grandchild);
+            Sys.ActorSelection("/user/looker/*/grandchild").Tell(new Identify("idReq6"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq6")).Subject.ShouldBe(grandchild);
+            Sys.ActorSelection("/user/looker/child/*").Tell(new Identify("idReq7"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq7")).Subject.ShouldBe(grandchild);
+            //TODO see #1544
+            //Sys.ActorSelection(child.Path / "*").Tell(new Identify("idReq8"));
+            //ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq8")).Subject.ShouldBe(grandchild);
+
+            Sys.ActorSelection("/user/looker/child/grandchild/grandgrandchild").Tell(new Identify("idReq9"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq9")).Subject.ShouldBe(grandgrandchild);
+            //TODO see #1544
+            //Sys.ActorSelection(child.Path / "grandchild/grandgrandchild").Tell(new Identify("idReq10"));
+            //ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq10")).Subject.ShouldBe(grandgrandchild);
+            Sys.ActorSelection("/user/looker/child/*/grandgrandchild").Tell(new Identify("idReq11"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq11")).Subject.ShouldBe(grandgrandchild);
+            Sys.ActorSelection("/user/looker/child/*/*").Tell(new Identify("idReq12"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq12")).Subject.ShouldBe(grandgrandchild);
+            //TODO see #1544
+            //Sys.ActorSelection(child.Path / "*/grandgrandchild").Tell(new Identify("idReq13"));
+            //ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq13")).Subject.ShouldBe(grandgrandchild);
+
+            //ActorSelection doesn't support ToSerializationFormat directly
+            //var sel1 = Sys.ActorSelection("/user/looker/child/grandchild/grandgrandchild");
+            //Sys.ActorSelection(sel1.ToSerializationFormat()).Tell(new Identify("idReq18"));
+            //ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq18")).Subject.ShouldBe(grandgrandchild);
+
+            child.Tell(new Identify("idReq14"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq14")).Subject.ShouldBe(child);
+            Watch(child);
+            child.Tell(PoisonPill.Instance);
+            ExpectMsg("postStop");
+            ExpectMsg<Terminated>().ActorRef.ShouldBe(child);
+            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+            var child2 = ExpectMsg<IActorRef>();
+            child2.Tell(new Identify("idReq15"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq15")).Subject.ShouldBe(child2);
+            //TODO see #1544
+            //Sys.ActorSelection(child.Path).Tell("idReq16");
+            //ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq16")).Subject.ShouldBe(child2);
+            child.Tell(new Identify("idReq17"));
+            ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq17")).Subject.ShouldBe(null);
+
+            child2.Tell(55);
+            ExpectMsg(55);
+            // msg to old ActorRef (different uid) should not get through
+            child2.Path.Uid.ShouldNotBe(child.Path.Uid);
+            child.Tell(56);
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            Sys.ActorSelection("user/looker/child").Tell(57);
+            ExpectMsg(57);
         }
 
         [Fact]
@@ -176,11 +360,14 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_must_create_by_IndirectActorProducer()
         {
-            try {
+            try
+            {
                 Resolve.SetResolver(new TestResolver());
                 var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
-            } finally {
+            }
+            finally
+            {
                 Resolve.SetResolver(null);
             }
         }
@@ -188,13 +375,16 @@ namespace Akka.Remote.Tests
         [Fact()]
         public void Remoting_must_create_by_IndirectActorProducer_and_ping()
         {
-            try {
+            try
+            {
                 Resolve.SetResolver(new TestResolver());
                 var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
                 r.Tell("ping", TestActor);
                 ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
-            } finally {
+            }
+            finally
+            {
                 Resolve.SetResolver(null);
             }
         }
@@ -341,7 +531,7 @@ namespace Akka.Remote.Tests
 
         private Address Addr(ActorSystem system, string proto)
         {
-            return ((ExtendedActorSystem) system).Provider.GetExternalAddressFor(new Address(string.Format("akka.{0}", proto), "", "", 0));
+            return ((ExtendedActorSystem)system).Provider.GetExternalAddressFor(new Address(string.Format("akka.{0}", proto), "", "", 0));
         }
 
         private int Port(ActorSystem system, string proto)

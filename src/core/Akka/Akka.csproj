@@ -54,9 +54,9 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -88,7 +88,7 @@
     <Compile Include="Actor\Cancellation\CancelableExtensions.cs" />
     <Compile Include="Actor\Cancellation\Cancelable.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
-    <Compile Include="Actor\Cancellation\ICancellable.cs" />
+    <Compile Include="Actor\Cancellation\ICancelable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internal\InternalCurrentActorCellKeeper.cs" />
     <Compile Include="Actor\Internal\InternalSupportsTestFSMRef.cs" />
@@ -141,7 +141,9 @@
     <Compile Include="Actor\PipeToSupport.cs" />
     <Compile Include="Actor\Receive.cs" />
     <Compile Include="Actor\Scheduler\ITellScheduler.cs" />
+    <Compile Include="Actor\Scheduler\HashedWheelTimerScheduler.cs" />
     <Compile Include="Actor\Scheduler\SchedulerBase.cs" />
+    <Compile Include="Actor\Scheduler\SchedulerException.cs" />
     <Compile Include="Actor\Scheduler\SchedulerExtensions.cs" />
     <Compile Include="Actor\Scope.cs" />
     <Compile Include="Actor\Settings.cs" />
@@ -174,17 +176,14 @@
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
     <Compile Include="Dispatch\AbstractDispatcher.cs" />
     <Compile Include="Dispatch\ActorTaskScheduler.cs" />
-    <Compile Include="Dispatch\BoundedDequeBasedMailbox.cs" />
     <Compile Include="Dispatch\CachingConfig.cs" />
-    <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
-    <Compile Include="Dispatch\DequeBasedMailbox.cs" />
-    <Compile Include="Dispatch\DispatcherConfigurator.cs" />
-    <Compile Include="Dispatch\ForkJoinDispatcher.cs" />
-    <Compile Include="Dispatch\GenericMailbox.cs" />
+    <Compile Include="Dispatch\CurrentSynchronizationContextDispatcher.cs" />
+    <Compile Include="Dispatch\Dispatcher.cs" />
+    <Compile Include="Dispatch\ExecutorService.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\IDispatcherPrerequisites.cs" />
-    <Compile Include="Dispatch\MessageQueueMailbox.cs" />
+    <Compile Include="Dispatch\IRunnable.cs" />
     <Compile Include="Dispatch\MessageQueues\BlockingMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\BoundedMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\DequeWrapperMessageQueue.cs" />
@@ -204,13 +203,9 @@
     <Compile Include="Actor\UntypedReceive.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
     <Compile Include="Dispatch\MessageQueues\IMessageQueue.cs" />
-    <Compile Include="Dispatch\SingleThreadDispatcher.cs" />
+    <Compile Include="Dispatch\PinnedDispatcher.cs" />
     <Compile Include="Dispatch\SysMsg\ISystemMessage.cs" />
-    <Compile Include="Dispatch\TaskDispatcher.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
-    <Compile Include="Dispatch\UnboundedDequeBasedMailbox.cs" />
-    <Compile Include="Dispatch\UnboundedMailbox.cs" />
-    <Compile Include="Dispatch\UnboundedPriorityMailbox.cs" />
     <Compile Include="Event\ActorEventBus.cs" />
     <Compile Include="Event\AddressTerminatedTopic.cs" />
     <Compile Include="Event\BusLogging.cs" />
@@ -273,12 +268,16 @@
     <Compile Include="IO\TcpListener.cs" />
     <Compile Include="IO\TcpManager.cs" />
     <Compile Include="IO\TcpOutgoingConnection.cs" />
+    <Compile Include="NotUsed.cs" />
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\FastLazy.cs" />
+    <Compile Include="Util\Index.cs" />
     <Compile Include="Util\Internal\AtomicState.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
+    <Compile Include="Util\Internal\DictionaryExtensions.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
@@ -286,7 +285,9 @@
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
+    <Compile Include="Util\RuntimeDetector.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
+    <Compile Include="Util\Result.cs" />
     <Compile Include="Util\Reflection\TypeCache.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
@@ -296,7 +297,7 @@
     <Compile Include="Util\Internal\Extensions.cs" />
     <Compile Include="Dispatch\IRequiresMessageQueue.cs" />
     <Compile Include="Routing\SmallestMailbox.cs" />
-    <Compile Include="Routing\TailChoppingRoutingLogic.cs" />
+    <Compile Include="Routing\TailChopping.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
@@ -336,6 +337,7 @@
     <Compile Include="PatternMatch.cs" />
     <Compile Include="Util\Resolver.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
+    <Compile Include="Util\TokenBucket.cs" />
     <Compile Include="Util\Vector.cs" />
     <Compile Include="Util\WildcardTree.cs" />
     <Compile Include="Util\MatchHandler\Argument.cs" />
@@ -377,12 +379,11 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Akka.ExternalAnnotations.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

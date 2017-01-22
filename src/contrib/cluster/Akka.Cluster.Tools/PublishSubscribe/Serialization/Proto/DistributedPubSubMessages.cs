@@ -57,27 +57,30 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         static DistributedPubSubMessages()
         {
             byte[] descriptorData = global::System.Convert.FromBase64String(
-                "Ch9EaXN0cmlidXRlZFB1YlN1Yk1lc3NhZ2VzLnByb3RvImQKBlN0YXR1cxIh" +
-                "Cgh2ZXJzaW9ucxgBIAMoCzIPLlN0YXR1cy5WZXJzaW9uGjcKB1ZlcnNpb24S" +
-                "GQoHYWRkcmVzcxgBIAIoCzIILkFkZHJlc3MSEQoJdGltZXN0YW1wGAIgAigD" +
-                "Iq4BCgVEZWx0YRIeCgdidWNrZXRzGAEgAygLMg0uRGVsdGEuQnVja2V0GjIK" +
-                "BUVudHJ5EgsKA2tleRgBIAIoCRIPCgd2ZXJzaW9uGAIgAigDEgsKA3JlZhgD" +
-                "IAEoCRpRCgZCdWNrZXQSFwoFb3duZXIYASACKAsyCC5BZGRyZXNzEg8KB3Zl" +
-                "cnNpb24YAiACKAMSHQoHY29udGVudBgDIAMoCzIMLkRlbHRhLkVudHJ5IksK" +
-                "B0FkZHJlc3MSDgoGc3lzdGVtGAEgAigJEhAKCGhvc3RuYW1lGAIgAigJEgwK" +
-                "BHBvcnQYAyACKA0SEAoIcHJvdG9jb2wYBCABKAkiRgoEU2VuZBIMCgRwYXRo" +
-                "GAEgAigJEhUKDWxvY2FsQWZmaW5pdHkYAiACKAgSGQoHcGF5bG9hZBgDIAIo" +
-                "CzIILlBheWxvYWQiSAoJU2VuZFRvQWxsEgwKBHBhdGgYASACKAkSEgoKYWxs" +
-                "QnV0U2VsZhgCIAIoCBIZCgdwYXlsb2FkGAMgAigLMgguUGF5bG9hZCIzCgdQ" +
-                "dWJsaXNoEg0KBXRvcGljGAEgAigJEhkKB3BheWxvYWQYAyACKAsyCC5QYXls" +
-                "b2FkIlEKB1BheWxvYWQSFwoPZW5jbG9zZWRNZXNzYWdlGAEgAigMEhQKDHNl" +
-                "cmlhbGl6ZXJJZBgCIAIoBRIXCg9tZXNzYWdlTWFuaWZlc3QYBCABKAxCAkgB");
-            pbd::FileDescriptor.InternalDescriptorAssigner assigner = delegate (pbd::FileDescriptor root) {
+                "Ch9EaXN0cmlidXRlZFB1YlN1Yk1lc3NhZ2VzLnByb3RvInsKBlN0YXR1cxIh" +
+                "Cgh2ZXJzaW9ucxgBIAMoCzIPLlN0YXR1cy5WZXJzaW9uEhUKDXJlcGx5VG9T" +
+                "dGF0dXMYAiABKAgaNwoHVmVyc2lvbhIZCgdhZGRyZXNzGAEgAigLMgguQWRk" +
+                "cmVzcxIRCgl0aW1lc3RhbXAYAiACKAMirgEKBURlbHRhEh4KB2J1Y2tldHMY" +
+                "ASADKAsyDS5EZWx0YS5CdWNrZXQaMgoFRW50cnkSCwoDa2V5GAEgAigJEg8K" +
+                "B3ZlcnNpb24YAiACKAMSCwoDcmVmGAMgASgJGlEKBkJ1Y2tldBIXCgVvd25l" +
+                "chgBIAIoCzIILkFkZHJlc3MSDwoHdmVyc2lvbhgCIAIoAxIdCgdjb250ZW50" +
+                "GAMgAygLMgwuRGVsdGEuRW50cnkiSwoHQWRkcmVzcxIOCgZzeXN0ZW0YASAC" +
+                "KAkSEAoIaG9zdG5hbWUYAiACKAkSDAoEcG9ydBgDIAIoDRIQCghwcm90b2Nv" +
+                "bBgEIAEoCSJGCgRTZW5kEgwKBHBhdGgYASACKAkSFQoNbG9jYWxBZmZpbml0" +
+                "eRgCIAIoCBIZCgdwYXlsb2FkGAMgAigLMgguUGF5bG9hZCJICglTZW5kVG9B" +
+                "bGwSDAoEcGF0aBgBIAIoCRISCgphbGxCdXRTZWxmGAIgAigIEhkKB3BheWxv" +
+                "YWQYAyACKAsyCC5QYXlsb2FkIjMKB1B1Ymxpc2gSDQoFdG9waWMYASACKAkS" +
+                "GQoHcGF5bG9hZBgDIAIoCzIILlBheWxvYWQiUQoHUGF5bG9hZBIXCg9lbmNs" +
+                "b3NlZE1lc3NhZ2UYASACKAwSFAoMc2VyaWFsaXplcklkGAIgAigFEhcKD21l" +
+                "c3NhZ2VNYW5pZmVzdBgEIAEoDEIkCiBha2thLmNsdXN0ZXIucHVic3ViLnBy" +
+                "b3RvYnVmLm1zZ0gB");
+            pbd::FileDescriptor.InternalDescriptorAssigner assigner = delegate (pbd::FileDescriptor root)
+            {
                 descriptor = root;
                 internal__static_Status__Descriptor = Descriptor.MessageTypes[0];
                 internal__static_Status__FieldAccessorTable =
                     new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.PubSub.Serializers.Proto.Status, global::Akka.Cluster.PubSub.Serializers.Proto.Status.Builder>(internal__static_Status__Descriptor,
-                        new string[] { "Versions", });
+                        new string[] { "Versions", "ReplyToStatus", });
                 internal__static_Status_Version__Descriptor = internal__static_Status__Descriptor.NestedTypes[0];
                 internal__static_Status_Version__FieldAccessorTable =
                     new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version, global::Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder>(internal__static_Status_Version__Descriptor,
@@ -129,8 +132,8 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     {
         private Status() { }
         private static readonly Status defaultInstance = new Status().MakeReadOnly();
-        private static readonly string[] _statusFieldNames = new string[] { "versions" };
-        private static readonly uint[] _statusFieldTags = new uint[] { 10 };
+        private static readonly string[] _statusFieldNames = new string[] { "replyToStatus", "versions" };
+        private static readonly uint[] _statusFieldTags = new uint[] { 16, 10 };
         public static Status DefaultInstance
         {
             get { return defaultInstance; }
@@ -604,6 +607,18 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
             return versions_[index];
         }
 
+        public const int ReplyToStatusFieldNumber = 2;
+        private bool hasReplyToStatus;
+        private bool replyToStatus_;
+        public bool HasReplyToStatus
+        {
+            get { return hasReplyToStatus; }
+        }
+        public bool ReplyToStatus
+        {
+            get { return replyToStatus_; }
+        }
+
         public override bool IsInitialized
         {
             get
@@ -622,7 +637,11 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
             string[] field_names = _statusFieldNames;
             if (versions_.Count > 0)
             {
-                output.WriteMessageArray(1, field_names[0], versions_);
+                output.WriteMessageArray(1, field_names[1], versions_);
+            }
+            if (hasReplyToStatus)
+            {
+                output.WriteBool(2, field_names[0], ReplyToStatus);
             }
             UnknownFields.WriteTo(output);
         }
@@ -639,6 +658,10 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
                 foreach (global::Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version element in VersionsList)
                 {
                     size += pb::CodedOutputStream.ComputeMessageSize(1, element);
+                }
+                if (hasReplyToStatus)
+                {
+                    size += pb::CodedOutputStream.ComputeBoolSize(2, ReplyToStatus);
                 }
                 size += UnknownFields.SerializedSize;
                 memoizedSerializedSize = size;
@@ -803,6 +826,10 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
                 {
                     result.versions_.Add(other.versions_);
                 }
+                if (other.HasReplyToStatus)
+                {
+                    ReplyToStatus = other.ReplyToStatus;
+                }
                 this.MergeUnknownFields(other.UnknownFields);
                 return this;
             }
@@ -861,6 +888,11 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
                         case 10:
                             {
                                 input.ReadMessageArray(tag, field_name, result.versions_, global::Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.DefaultInstance, extensionRegistry);
+                                break;
+                            }
+                        case 16:
+                            {
+                                result.hasReplyToStatus = input.ReadBool(ref result.replyToStatus_);
                                 break;
                             }
                     }
@@ -924,6 +956,30 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
             {
                 PrepareBuilder();
                 result.versions_.Clear();
+                return this;
+            }
+
+            public bool HasReplyToStatus
+            {
+                get { return result.hasReplyToStatus; }
+            }
+            public bool ReplyToStatus
+            {
+                get { return result.ReplyToStatus; }
+                set { SetReplyToStatus(value); }
+            }
+            public Builder SetReplyToStatus(bool value)
+            {
+                PrepareBuilder();
+                result.hasReplyToStatus = true;
+                result.replyToStatus_ = value;
+                return this;
+            }
+            public Builder ClearReplyToStatus()
+            {
+                PrepareBuilder();
+                result.hasReplyToStatus = false;
+                result.replyToStatus_ = false;
                 return this;
             }
         }

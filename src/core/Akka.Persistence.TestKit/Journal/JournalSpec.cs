@@ -261,7 +261,7 @@ namespace Akka.Persistence.TestKit.Journal
             _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
-        [Fact(Skip = "This is not yet supported by the journals")]
+        [Fact]
         public void Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup()
         {
             Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
@@ -284,7 +284,7 @@ namespace Akka.Persistence.TestKit.Journal
             {
                 var evt = i == 7 ? (object) new NotSerializableEvent(false) : "b-" + i;
                 return new AtomicWrite(new Persistent(evt, i, Pid, sender: ActorRefs.NoSender, writerGuid: WriterGuid));
-            });
+            }).ToArray();
 
             var probe = CreateTestProbe();
             Journal.Tell(new WriteMessages(msgs, probe.Ref, ActorInstanceId));

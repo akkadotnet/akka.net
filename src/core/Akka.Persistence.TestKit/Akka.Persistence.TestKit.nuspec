@@ -13,7 +13,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>@copyright@</copyright>
-    <tags>@tags@ persistence eventsource teskit</tags>
+    <tags>@tags@ persistence eventsource testkit</tags>
     @dependencies@
     @references@
   </metadata>

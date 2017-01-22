@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Net;
 using Akka.Actor;
 using Akka.TestKit;
-using Helios.Topology;
 using Xunit;
 
 namespace Akka.Remote.TestKit.Tests

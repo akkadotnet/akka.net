@@ -15,10 +15,21 @@ namespace Akka.TestKit.Internal
     /// </summary>
     public class WarningFilter : EventFilterBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageMatcher">TBD</param>
+        /// <param name="sourceMatcher">TBD</param>
         public WarningFilter(IStringMatcher messageMatcher = null, IStringMatcher sourceMatcher = null)
             : base(messageMatcher, sourceMatcher)
         {
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
             var warning = evt as Warning;
@@ -29,7 +40,9 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string FilterDescriptiveName { get { return "Warning"; } }
     }
 }
-

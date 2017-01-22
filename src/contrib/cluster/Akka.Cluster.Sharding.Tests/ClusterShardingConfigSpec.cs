@@ -1,10 +1,17 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterShardingConfigSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Configuration;
 using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingConfigSpec : TestKit.Xunit2.TestKit
+    public class ClusterShardingConfigSpec : Akka.TestKit.Xunit2.TestKit
     {
         public ClusterShardingConfigSpec() : base(GetConfig())
         {

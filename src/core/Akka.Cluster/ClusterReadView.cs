@@ -20,8 +20,11 @@ namespace Akka.Cluster
     /// Read view of the cluster's state, updated via subscription of
     /// cluster events published on the <see cref="EventBus{TEvent,TClassifier,TSubscriber}"/>.
     /// </summary>
-    public class ClusterReadView : IDisposable
+    internal class ClusterReadView : IDisposable
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ClusterEvent.CurrentClusterState State { get { return _state; } }
 
         /// <summary>
@@ -29,9 +32,15 @@ namespace Akka.Cluster
         /// </summary>
         internal volatile ClusterEvent.CurrentClusterState _state;
 
-        public Reachability Reachability { get { return _reachability; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal Reachability Reachability { get { return _reachability; } }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal volatile Reachability _reachability;
 
         /// <summary>
@@ -44,15 +53,11 @@ namespace Akka.Cluster
         /// </summary>
         internal volatile ClusterEvent.CurrentInternalStats _latestStats;
 
-        public ImmutableHashSet<NodeMetrics> ClusterMetrics { get { return _clusterMetrics; } }
-
-        /// <summary>
-        /// Current cluster metrics, updated periodically via event bus.
-        /// </summary>
-        internal volatile ImmutableHashSet<NodeMetrics> _clusterMetrics;
-
         readonly Address _selfAddress;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address SelfAddress
         {
             get { return _selfAddress; }
@@ -62,13 +67,16 @@ namespace Akka.Cluster
 
         private readonly Cluster _cluster;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cluster">TBD</param>
         public ClusterReadView(Cluster cluster)
         {
             _cluster = cluster;
             _state = new ClusterEvent.CurrentClusterState();
             _reachability = Reachability.Empty;
             _latestStats = new ClusterEvent.CurrentInternalStats(new GossipStats(), new VectorClockStats());
-            _clusterMetrics = ImmutableHashSet.Create<NodeMetrics>();
             _selfAddress = cluster.SelfAddress;
 
             _eventBusListener =
@@ -144,10 +152,6 @@ namespace Akka.Cluster
                         {
                             readView._latestStats = stats;
                         })
-                        .With<ClusterEvent.ClusterMetricsChanged>(changed =>
-                        {
-                            readView._clusterMetrics = changed.NodeMetrics;
-                        })
                         .With<ClusterEvent.ClusterShuttingDown>(_ => { });
                 });
 
@@ -170,6 +174,9 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Member Self
         {
             get
@@ -265,12 +272,19 @@ namespace Akka.Cluster
         /// </summary>
         internal ImmutableHashSet<Address> SeenBy { get { return State.SeenBy; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="disposing">TBD</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)

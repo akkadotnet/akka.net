@@ -27,6 +27,10 @@ namespace Akka.Actor
         /// </summary>
         public abstract IInternalActorRef Guardian { get; }
 
+        /// <summary>
+        /// The <see cref="RootGuardianActorRef"/>, used as the lookup for <see cref="IActorRef"/> resolutions.
+        /// </summary>
+        public abstract IInternalActorRef LookupRoot { get; }
 
         /// <summary>
         /// Gets the top-level supervisor of all system-internal services like logging.
@@ -42,19 +46,30 @@ namespace Akka.Actor
         /// <summary>Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
         /// terminated.</summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IActorRef SystemActorOf(Props props, string name = null);
 
         /// <summary>Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
         /// terminated.</summary>
+        /// <typeparam name="TActor">TBD</typeparam>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
+
+        /// <summary>
+        /// Aggressively terminates an <see cref="ActorSystem"/> without waiting for the normal shutdown process to run as-is.
+        /// </summary>
+        public abstract void Abort();
 
         //TODO: Missing threadFactory, dynamicAccess, printTree
         //  /**
         //  * A ThreadFactory that can be used if the transport needs to create any Threads
         //  */
         //  def threadFactory: ThreadFactory
-  
+
         //  /**
         //  * ClassLoader wrapper which is used for reflective accesses internally. This is set
         //  * to use the context class loader, if one is set, or the class loader which
@@ -63,7 +78,7 @@ namespace Akka.Actor
         //  * creation.
         //  */
         //  def dynamicAccess: DynamicAccess
-  
+
         //  /**
         //  * For debugging: traverse actor hierarchy and make string representation.
         //  * Careful, this may OOM on large actor systems, and it is only meant for

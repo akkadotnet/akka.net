@@ -12,10 +12,24 @@ using Akka.Actor;
 
 namespace Akka.Persistence
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="receive">TBD</param>
+    /// <param name="message">TBD</param>
     internal delegate void StateReceive(Receive receive, object message);
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class EventsourcedState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="isRecoveryRunning">TBD</param>
+        /// <param name="stateReceive">TBD</param>
         public EventsourcedState(string name, bool isRecoveryRunning, StateReceive stateReceive)
         {
             Name = name;
@@ -23,16 +37,32 @@ namespace Akka.Persistence
             StateReceive = stateReceive;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Name { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsRecoveryRunning { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public StateReceive StateReceive { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return Name;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract partial class Eventsourced
     {
         /// <summary>
@@ -44,6 +74,10 @@ namespace Akka.Persistence
         /// <param name="maxReplays">Maximum number of messages to replay</param>
         private EventsourcedState RecoveryStarted(long maxReplays)
         {
+            // protect against snapshot stalling forever because journal overloaded and such
+            var timeout = Extension.JournalConfigFor(JournalPluginId).GetTimeSpan("recovery-event-timeout", null, false);
+            var timeoutCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(timeout, Self, new RecoveryTick(true), Self);
+
             Receive recoveryBehavior = message =>
             {
                 Receive receiveRecover = ReceiveRecover;
@@ -61,6 +95,7 @@ namespace Akka.Persistence
                 if (message is LoadSnapshotResult)
                 {
                     var res = (LoadSnapshotResult)message;
+                    timeoutCancelable.Cancel();
                     if (res.Snapshot != null)
                     {
                         var snapshot = res.Snapshot;
@@ -69,8 +104,21 @@ namespace Akka.Persistence
                         base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
                     }
 
-                    ChangeState(Recovering(recoveryBehavior));
+                    ChangeState(Recovering(recoveryBehavior, timeout));
                     Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
+                }
+                else if (message is RecoveryTick)
+                {
+                    try
+                    {
+                        OnRecoveryFailure(
+                            new RecoveryTimedOutException(
+                                $"Recovery timed out, didn't get snapshot within {timeout.TotalSeconds}s."));
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
                 }
                 else
                     StashInternally(message);
@@ -87,8 +135,13 @@ namespace Akka.Persistence
         /// 
         /// All incoming messages are stashed.
         /// </summary>
-        private EventsourcedState Recovering(Receive recoveryBehavior)
+        private EventsourcedState Recovering(Receive recoveryBehavior, TimeSpan timeout)
         {
+            // protect against event replay stalling forever because of journal overloaded and such
+            var timeoutCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, Self,
+                new RecoveryTick(false), Self);
+            var eventSeenInInterval = false;
+
             return new EventsourcedState("replay started", true, (receive, message) =>
             {
                 if (message is ReplayedMessage)
@@ -96,11 +149,13 @@ namespace Akka.Persistence
                     var m = (ReplayedMessage)message;
                     try
                     {
+                        eventSeenInInterval = true;
                         UpdateLastSequenceNr(m.Persistent);
                         base.AroundReceive(recoveryBehavior, m.Persistent);
                     }
                     catch (Exception cause)
                     {
+                        timeoutCancelable.Cancel();
                         try
                         {
                             OnRecoveryFailure(cause, m.Persistent.Payload);
@@ -114,6 +169,7 @@ namespace Akka.Persistence
                 else if (message is RecoverySuccess)
                 {
                     var m = (RecoverySuccess) message;
+                    timeoutCancelable.Cancel();
                     OnReplaySuccess();
                     ChangeState(ProcessingCommands());
                     _sequenceNr = m.HighestSequenceNr;
@@ -124,6 +180,7 @@ namespace Akka.Persistence
                 else if (message is ReplayMessagesFailure)
                 {
                     var failure = (ReplayMessagesFailure)message;
+                    timeoutCancelable.Cancel();
                     try
                     {
                         OnRecoveryFailure(failure.Cause, message: null);
@@ -131,6 +188,35 @@ namespace Akka.Persistence
                     finally
                     {
                         Context.Stop(Self);
+                    }
+                }
+                else if (message is RecoveryTick)
+                {
+                    var isSnapshotTick = ((RecoveryTick) message).Snapshot;
+                    if (!isSnapshotTick)
+                    {
+                        if (!eventSeenInInterval)
+                        {
+                            timeoutCancelable.Cancel();
+                            try
+                            {
+                                OnRecoveryFailure(
+                                    new RecoveryTimedOutException(
+                                        $"Recovery timed out, didn't get event within {timeout.TotalSeconds}s, highest sequence number seen {_sequenceNr}."));
+                            }
+                            finally
+                            {
+                                Context.Stop(Self);
+                            }
+                        }
+                        else
+                        {
+                            eventSeenInInterval = false;
+                        }
+                    }
+                    else
+                    {
+                        // snapshot tick, ignore
                     }
                 }
                 else
@@ -188,8 +274,7 @@ namespace Akka.Persistence
                 _eventBatch = new LinkedList<IPersistentEnvelope>();
             }
 
-            if (_journalBatch.Count > 0)
-                FlushJournalBatch();
+            FlushJournalBatch();
         }
 
         /// <summary>
@@ -304,24 +389,34 @@ namespace Akka.Persistence
             else if (message is WriteMessagesSuccessful)
             {
                 _isWriteInProgress = false;
-                if (_journalBatch.Count > 0)
-                    FlushJournalBatch();
+                FlushJournalBatch();
             }
             else if (message is WriteMessagesFailed)
             {
                 _isWriteInProgress = false;
                 // it will be stopped by the first WriteMessageFailure message
             }
+            else if (message is RecoveryTick)
+            {
+                // we may have one of these in the mailbox before the scheduled timeout
+                // is cancelled when recovery has completed, just consume it so the concrete actor never sees it
+            }
             else return false;
             return true;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class LinkedListExtensions
     {
         /// <summary>
         /// Removes first element from the list and returns it or returns default value if list was empty.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="self">TBD</param>
+        /// <returns>TBD</returns>
         internal static T Pop<T>(this LinkedList<T> self)
         {
             if (self.First != null)

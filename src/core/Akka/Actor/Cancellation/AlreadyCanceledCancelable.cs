@@ -18,15 +18,28 @@ namespace Akka.Actor
         private static readonly AlreadyCanceledCancelable _instance = new AlreadyCanceledCancelable();
 
         private AlreadyCanceledCancelable() { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Cancel()
         {
             //Intentionally left blank
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsCancellationRequested { get { return true; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static ICancelable Instance { get { return _instance; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public CancellationToken Token
         {
             get { return new CancellationToken(true); }
@@ -42,6 +55,10 @@ namespace Akka.Actor
             //Intentionally left blank            
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="throwOnFirstException">TBD</param>
         public void Cancel(bool throwOnFirstException)
         {
             //Intentionally left blank

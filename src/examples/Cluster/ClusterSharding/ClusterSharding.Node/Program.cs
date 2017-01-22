@@ -60,7 +60,7 @@ namespace ClusterSharding.Node
 
         private static void ProduceMessages(ActorSystem system, IActorRef shardRegion)
         {
-            var customers = new[] { "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", "Luke Skywalker", "Jar Jar Binks", "R2D2", "Han Solo", "Chewbacca", "Jabba" };
+            var customers = new[] { "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", "Luke Skywalker", "R2D2", "Han Solo", "Chewbacca", "Jabba" };
             var items = new[] { "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher", "Candies", "Cigars", "Chicken nuggets", "French fries" };
 
             system.Scheduler.Advanced.ScheduleRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3), () =>

@@ -25,6 +25,16 @@ namespace Akka.Remote
 
         private readonly Dictionary<IActorRef, Address> _readonlyToAddress = new Dictionary<IActorRef, Address>();
         private readonly Dictionary<IActorRef, Address> _writableToAddress = new Dictionary<IActorRef, Address>();
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <param name="endpoint">TBD</param>
+        /// <param name="uid">TBD</param>
+        /// <param name="refuseUid">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid, int? refuseUid)
         {
             EndpointManager.EndpointPolicy existing;
@@ -42,6 +52,11 @@ namespace Akka.Remote
             return endpoint;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="uid">TBD</param>
         public void RegisterWritableEndpointUid(Address remoteAddress, int uid)
         {
             EndpointManager.EndpointPolicy existing;
@@ -56,6 +71,38 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="refuseUid">TBD</param>
+        public void RegisterWritableEndpointRefuseUid(Address remoteAddress, int refuseUid)
+        {
+            EndpointManager.EndpointPolicy existing;
+            if (_addressToWritable.TryGetValue(remoteAddress, out existing))
+            {
+                var pass = existing as EndpointManager.Pass;
+                if (pass != null)
+                {
+                    _addressToWritable[remoteAddress] = new EndpointManager.Pass(pass.Endpoint, pass.Uid, refuseUid);
+                } else if (existing is EndpointManager.Gated)
+                {
+                    _addressToWritable[remoteAddress] = new EndpointManager.Gated(((EndpointManager.Gated)existing).TimeOfRelease, refuseUid);
+                }
+                else if (existing is EndpointManager.WasGated)
+                {
+                    _addressToWritable[remoteAddress] = new EndpointManager.WasGated(refuseUid);
+                }
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <param name="endpoint">TBD</param>
+        /// <param name="uid">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
         {
             _addressToReadonly[address] = Tuple.Create(endpoint, uid);
@@ -63,6 +110,10 @@ namespace Akka.Remote
             return endpoint;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="endpoint">TBD</param>
         public void UnregisterEndpoint(IActorRef endpoint)
         {
             if (IsWritable(endpoint))
@@ -87,6 +138,11 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="writer">TBD</param>
+        /// <returns>TBD</returns>
         public Address AddressForWriter(IActorRef writer)
         {
             // Needs to return null if the key is not in the dictionary, instead of throwing.
@@ -94,6 +150,11 @@ namespace Akka.Remote
             return _writableToAddress.TryGetValue(writer, out value) ? value : null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public Tuple<IActorRef, int> ReadOnlyEndpointFor(Address address)
         {
             Tuple<IActorRef, int> tmp;
@@ -104,16 +165,32 @@ namespace Akka.Remote
             return null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="endpoint">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsWritable(IActorRef endpoint)
         {
             return _writableToAddress.ContainsKey(endpoint);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="endpoint">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsReadOnly(IActorRef endpoint)
         {
             return _readonlyToAddress.ContainsKey(endpoint);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <param name="uid">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsQuarantined(Address address, int uid)
         {
             // timeOfRelease is only used for garbage collection. If an address is still probed, we should report the
@@ -122,6 +199,11 @@ namespace Akka.Remote
             return policy?.Uid == uid;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public int? RefuseUid(Address address)
         {
             // timeOfRelease is only used for garbage collection. If an address is still probed, we should report the
@@ -129,11 +211,20 @@ namespace Akka.Remote
             var policy = WritableEndpointWithPolicyFor(address);
             var q = policy as EndpointManager.Quarantined;
             var p = policy as EndpointManager.Pass;
+            var g = policy as EndpointManager.Gated;
+            var w = policy as EndpointManager.WasGated;
             if (q != null) return q.Uid;
             if (p != null) return p.RefuseUid;
+            if (g != null) return g.RefuseUid;
+            if (w != null) return w.RefuseUid;
             return null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public EndpointManager.EndpointPolicy WritableEndpointWithPolicyFor(Address address)
         {
             EndpointManager.EndpointPolicy tmp;
@@ -144,22 +235,55 @@ namespace Akka.Remote
             return null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public bool HasWriteableEndpointFor(Address address)
         {
             var policy = WritableEndpointWithPolicyFor(address);
-            return policy is EndpointManager.Pass;
+            return policy is EndpointManager.Pass || policy is EndpointManager.WasGated;
         }
 
         /// <summary>
         /// Marking an endpoint as failed means that we will not try to connect to the remote system within
         /// the gated period but it is ok for the remote system to try to connect with us (inbound-only.)
         /// </summary>
+        /// <param name="endpoint">TBD</param>
+        /// <param name="timeOfRelease">TBD</param>
         public void MarkAsFailed(IActorRef endpoint, Deadline timeOfRelease)
         {
             if (IsWritable(endpoint))
             {
-                _addressToWritable[_writableToAddress[endpoint]] = new EndpointManager.Gated(timeOfRelease);
-                _writableToAddress.Remove(endpoint);
+                var address = _writableToAddress[endpoint];
+                EndpointManager.EndpointPolicy policy;
+                if (_addressToWritable.TryGetValue(address, out policy))
+                {
+                    if (policy is EndpointManager.Quarantined)
+                    {
+                    } // don't overwrite Quarantined with Gated
+                    if (policy is EndpointManager.Pass)
+                    {
+                        _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease,
+                            policy.AsInstanceOf<EndpointManager.Pass>().RefuseUid);
+                        _writableToAddress.Remove(endpoint);
+                    }
+                    else if (policy is EndpointManager.WasGated)
+                    {
+                        _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease,
+                            policy.AsInstanceOf<EndpointManager.WasGated>().RefuseUid);
+                        _writableToAddress.Remove(endpoint);
+                    }
+                    else if (policy is EndpointManager.Gated)
+                    {
+                    } // already gated
+                }
+                else
+                {
+                    _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease, null);
+                    _writableToAddress.Remove(endpoint);
+                }
             }
             else if (IsReadOnly(endpoint))
             {
@@ -168,25 +292,53 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <param name="uid">TBD</param>
+        /// <param name="timeOfRelease">TBD</param>
         public void MarkAsQuarantined(Address address, int uid, Deadline timeOfRelease)
         {
             _addressToWritable[address] = new EndpointManager.Quarantined(uid, timeOfRelease);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
         public void RemovePolicy(Address address)
         {
             _addressToWritable.Remove(address);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IList<IActorRef> AllEndpoints
         {
             get { return _writableToAddress.Keys.Concat(_readonlyToAddress.Keys).ToList(); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Prune()
         {
-            _addressToWritable = _addressToWritable.Where(
-                x => PruneFilterFunction(x.Value)).ToDictionary(key => key.Key, value => value.Value);
+            _addressToWritable = _addressToWritable.Where(x => 
+            !(x.Value is EndpointManager.Quarantined 
+            && !((EndpointManager.Quarantined)x.Value).Deadline.HasTimeLeft)).Select(entry =>
+            {
+                var key = entry.Key;
+                var policy = entry.Value;
+                if (policy is EndpointManager.Gated)
+                {
+                    var gated = (EndpointManager.Gated) policy;
+                    if (gated.TimeOfRelease.HasTimeLeft) return entry;
+                    return new KeyValuePair<Address, EndpointManager.EndpointPolicy>(key,new EndpointManager.WasGated(gated.RefuseUid));
+                }
+                return entry;
+            }).ToDictionary(key => key.Key, value => value.Value);
         }
 
         /// <summary>

@@ -10,6 +10,9 @@ using System.Collections.Concurrent;
 
 namespace Akka.Util.Reflection
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class TypeCache
     {
         private static readonly ConcurrentDictionary<string, Type> TypeMap = new ConcurrentDictionary<string, Type>();
@@ -25,6 +28,7 @@ namespace Akka.Util.Reflection
         /// The assembly-qualified name of the type to get. See <see cref="P:System.Type.AssemblyQualifiedName"/>.
         /// If the type is in Akka.dll or in Mscorlib.dll, it is sufficient to supply the type name qualified by its namespace.
         /// </param>
+        /// <returns>TBD</returns>
         public static Type GetType(string typeName)
         {
             return TypeMap.GetOrAdd(typeName, GetTypeInternal);

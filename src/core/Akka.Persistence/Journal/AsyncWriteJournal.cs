@@ -15,9 +15,15 @@ using Akka.Pattern;
 
 namespace Akka.Persistence.Journal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class AsyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
         private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly bool CanPublish;
         private readonly CircuitBreaker _breaker;
         private readonly ReplayFilterMode _replayFilterMode;
@@ -29,6 +35,10 @@ namespace Akka.Persistence.Journal
 
         private long _resequencerCounter = 1L;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ArgumentException">TBD</exception>
         protected AsyncWriteJournal()
         {
             var extension = Persistence.Instance.Apply(Context.System);
@@ -71,8 +81,24 @@ namespace Akka.Persistence.Journal
             _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="recoveryCallback">TBD</param>
+        /// <returns>TBD</returns>
         public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="fromSequenceNr">TBD</param>
+        /// <returns>TBD</returns>
         public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
 
         /// <summary>
@@ -88,10 +114,10 @@ namespace Akka.Persistence.Journal
         /// 
         /// Each <see cref="AtomicWrite"/> message contains the single <see cref="Persistent"/>
         /// that corresponds to the event that was passed to the 
-        /// <see cref="PersistentActor.Persist{TEvent}(TEvent,Action{TEvent})"/> method of the
+        /// <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> method of the
         /// <see cref="PersistentActor" />, or it contains several <see cref="Persistent"/>
         /// that correspond to the events that were passed to the
-        /// <see cref="PersistentActor.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>
         /// method of the <see cref="PersistentActor"/>. All <see cref="Persistent"/> of the
         /// <see cref="AtomicWrite"/> must be written to the data store atomically, i.e. all or none must
         /// be stored. If the journal (data store) cannot support atomic writes of multiple
@@ -145,28 +171,45 @@ namespace Akka.Persistence.Journal
         /// 
         /// This call is protected with a circuit-breaker.
         /// </summary>
+        /// <param name="messages">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages);
 
         /// <summary>
         /// Asynchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
         /// bound.
         /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr);
 
         /// <summary>
         /// Allows plugin implementers to use <see cref="PipeToSupport.PipeTo{T}"/> <see cref="ActorBase.Self"/>
         /// and handle additional messages for implementing advanced features
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual bool ReceivePluginInternal(object message)
         {
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected sealed override bool Receive(object message)
         {
             return ReceiveWriteJournal(message) || ReceivePluginInternal(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected bool ReceiveWriteJournal(object message)
         {
             if (message is WriteMessages) HandleWriteMessages((WriteMessages)message);
@@ -282,7 +325,12 @@ namespace Akka.Persistence.Journal
                 }, _continuationOptions);
         }
 
-        private Exception TryUnwrapException(Exception e)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
+        /// <returns>TBD</returns>
+        protected Exception TryUnwrapException(Exception e)
         {
             var aggregateException = e as AggregateException;
             if (aggregateException != null)
@@ -389,8 +437,18 @@ namespace Akka.Persistence.Journal
                 }, _continuationOptions);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Desequenced
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="message">TBD</param>
+            /// <param name="sequenceNr">TBD</param>
+            /// <param name="target">TBD</param>
+            /// <param name="sender">TBD</param>
             public Desequenced(object message, long sequenceNr, IActorRef target, IActorRef sender)
             {
                 Message = message;
@@ -399,17 +457,37 @@ namespace Akka.Persistence.Journal
                 Sender = sender;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly object Message;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly long SequenceNr;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Target;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Sender;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Resequencer : ActorBase
         {
             private readonly IDictionary<long, Desequenced> _delayed = new Dictionary<long, Desequenced>();
             private long _delivered = 0L;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="message">TBD</param>
+            /// <returns>TBD</returns>
             protected override bool Receive(object message)
             {
                 Desequenced d;

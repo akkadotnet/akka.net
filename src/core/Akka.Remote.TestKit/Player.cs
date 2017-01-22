@@ -13,11 +13,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
+using Akka.Util.Internal;
 using Helios.Channels;
 
 namespace Akka.Remote.TestKit
@@ -118,7 +120,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void Enter(TimeSpan timeout, ImmutableList<string> names)
         {
-            _system.Log.Debug("entering barriers {0}", names.Aggregate((a,b) => a = ", " + b));
+            _system.Log.Debug("entering barriers {0}", names.Aggregate((a, b) => "(" + a + "," + b + ")"));
             var stop = Deadline.Now + timeout;
 
             foreach (var name in names)
@@ -134,7 +136,7 @@ namespace Akka.Remote.TestKit
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
                     // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
                     // of a failed operation
-                    _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Wait();
+                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Result;
                 }
                 catch (AggregateException)
                 {
@@ -400,7 +402,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (@event.StateData.RunningOp == null)
                         {
-                            _log.Warning("did not expect {1}", @event.FsmEvent);
+                            _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
                         else
                         {
@@ -445,7 +447,7 @@ namespace Akka.Remote.TestKit
                         ThrottleMode mode;
                         if (throttleMsg.RateMBit < 0.0f) mode = Unthrottled.Instance;
                         else if (throttleMsg.RateMBit == 0.0f) mode = Blackhole.Instance;
-                        else mode = new TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
+                        else mode = new Transport.TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
                         var cmdTask =
                             TestConductor.Get(Context.System)
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
@@ -463,10 +465,10 @@ namespace Akka.Remote.TestKit
                     }
                     if (@event.FsmEvent is DisconnectMsg)
                         return Stay(); //FIXME is this the right EC for the future below?
-                    // FIXME: Currently ignoring, needs support from Remoting
                     var terminateMsg = @event.FsmEvent as TerminateMsg;
                     if (terminateMsg != null)
                     {
+                        _log.Info("Received TerminateMsg - shutting down...");
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == false)
                         {
                             Context.System.Terminate();
@@ -474,9 +476,7 @@ namespace Akka.Remote.TestKit
                         }
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == true)
                         {
-                            //TODO: terminate more aggressively with Abort
-                            //Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
-                            Context.System.Terminate();
+                            Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
                             return Stay();
                         }
                         if (terminateMsg.ShutdownOrExit.IsRight)
@@ -507,7 +507,14 @@ namespace Akka.Remote.TestKit
             OnTermination(@event =>
             {
                 _log.Info("Terminating connection to multi-node test controller...");
-                if (@event.StateData.Channel != null) @event.StateData.Channel.CloseAsync().Wait();
+                if (@event.StateData.Channel != null)
+                {
+                    var disconnectTimeout = TimeSpan.FromSeconds(2); //todo: make into setting loaded from HOCON
+                    if (!@event.StateData.Channel.CloseAsync().Wait(disconnectTimeout))
+                    {
+                        _log.Warning("Failed to disconnect from conductor within {0}", disconnectTimeout);
+                    }
+                }
             });
 
             Initialize();            
@@ -617,6 +624,7 @@ namespace Akka.Remote.TestKit
             Task.Factory.StartNew(() =>
             {
                 RemoteConnection.Shutdown(context.Channel);
+                RemoteConnection.ReleaseAll(); // yep, let it run asynchronously.
             }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
             context.FireChannelInactive();
         }

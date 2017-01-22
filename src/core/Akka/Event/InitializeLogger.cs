@@ -10,24 +10,22 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// Message used to initialize a logger.
+    /// This class represents a message used to initialize a logger.
     /// </summary> 
     public class InitializeLogger : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="InitializeLogger" /> message.
         /// </summary>
-        /// <param name="loggingBus">The logging bus.</param>
+        /// <param name="loggingBus">The bus used by the logger to log events.</param>
         public InitializeLogger(LoggingBus loggingBus)
         {
             LoggingBus = loggingBus;
         }
 
         /// <summary>
-        /// Gets the logging bus instance.
+        /// The bus used by the logger to log events.
         /// </summary>
-        /// <value>The logging bus instance.</value>
         public LoggingBus LoggingBus { get; private set; }
     }
 }
-

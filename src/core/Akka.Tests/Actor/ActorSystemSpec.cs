@@ -8,6 +8,7 @@
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
+using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
 using System;
@@ -17,6 +18,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using FluentAssertions.Execution;
 
 namespace Akka.Tests.Actor
@@ -48,6 +50,51 @@ namespace Akka.Tests.Actor
                   {
                       XAssert.Throws<ArgumentException>(() => ActorSystem.Create(n));
                   });
+        }
+
+        /// <summary>
+        /// For additional info please check the original documentation.
+        /// http://doc.akka.io/docs/akka/2.4/scala/logging.html#Auxiliary_logging_options
+        /// akka {
+        ///     # Log the complete configuration at INFO level when the actor system is started.
+        ///     # This is useful when you are uncertain of what configuration is used.
+        ///     log-config-on-start = on
+        /// }
+        /// </summary>
+        [Fact]
+        public void Logs_config_on_start_with_info_level()
+        {
+            var config = ConfigurationFactory.ParseString("akka.log-config-on-start = on")
+                .WithFallback(DefaultConfig);
+
+            var system = new ActorSystemImpl(Guid.NewGuid().ToString(), config);
+            // Actor system should be started to attach the EventFilterFactory
+            system.Start();
+
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+
+            // Notice here we forcedly start actor system again to monitor how it processes
+            eventFilter.Info("{\r\n  akka : {\r\n    log-config-on-start : on\r\n  }\r\n}").ExpectOne(() => system.Start());
+
+            system.Terminate();
+        }
+
+        [Fact]
+        public void Does_not_log_config_on_start()
+        {
+            var config = ConfigurationFactory.ParseString("akka.log-config-on-start = off")
+                .WithFallback(DefaultConfig);
+
+            var system = new ActorSystemImpl(Guid.NewGuid().ToString(), config);
+            // Actor system should be started to attach the EventFilterFactory
+            system.Start();
+
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+
+            // Notice here we forcedly start actor system again to monitor how it processes
+            eventFilter.Info().Expect(0, () => system.Start());
+
+            system.Terminate();
         }
 
         [Fact]
@@ -135,7 +182,7 @@ namespace Akka.Tests.Actor
 
             actorSystem.Terminate().Wait(TimeSpan.FromSeconds(10));
             
-            var ex = Assert.Throws<Exception>(() => actorSystem.RegisterOnTermination(() => { }));
+            var ex = Assert.Throws<InvalidOperationException>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
         }
 
@@ -160,11 +207,14 @@ namespace Akka.Tests.Actor
             Assert.Equal(typeof(LocalActorRef), ExpectMsg<Type>());
         }
 
-        [Fact]
+        [Fact()]
         public void Reliable_deny_creation_of_actors_while_shutting_down()
         {
-            var sys = ActorSystem.Create("DenyCreationWhileShuttingDone");
-            Task.Delay(500).ContinueWith(_ => sys.Terminate());
+            var sys = ActorSystem.Create("DenyCreationWhileShuttingDown");
+            sys.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(100), () =>
+            {
+                sys.Terminate();
+            });
             var failing = false;
             var created = new HashSet<IActorRef>();
 
@@ -177,7 +227,7 @@ namespace Akka.Tests.Actor
                     created.Add(t);
 
                     if (created.Count % 1000 == 0)
-                        Thread.Sleep(200); // in case of unfair thread scheduling
+                        Thread.Sleep(50); // in case of unfair thread scheduling
                 }
                 catch (InvalidOperationException)
                 {
@@ -185,14 +235,15 @@ namespace Akka.Tests.Actor
                 }
 
                 
-                if (!failing && sys.Uptime.TotalSeconds >= 5)
+                if (!failing && sys.Uptime.TotalSeconds >= 10)
                     throw new AssertionFailedException(created.Last() + Environment.NewLine +
                                                        "System didn't terminate within 5 seconds");
             }
 
-            Assert.Empty(
-                created.Cast<ActorRefWithCell>()
-                    .Where(actor => !actor.IsTerminated && !(actor.Underlying is UnstartedCell)));
+            var nonTerminatedOrNonstartedActors = created.Cast<ActorRefWithCell>()
+                .Where(actor => !actor.IsTerminated && !(actor.Underlying is UnstartedCell)).ToList();
+            Assert.Equal(0, 
+                nonTerminatedOrNonstartedActors.Count);
         }
 
         #region Extensions tests
@@ -230,11 +281,11 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Setup_the_default_scheduler()
         {
-            Assert.True(Sys.Scheduler.GetType() == typeof(DedicatedThreadScheduler));
+            Assert.True(Sys.Scheduler.GetType() == typeof(HashedWheelTimerScheduler));
         }
 
         [Fact]
-        public void Support_using_a_customer_scheduler()
+        public void Support_using_a_custom_scheduler()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString(), DefaultConfig.WithFallback("akka.scheduler.implementation = \"Akka.Tests.Actor.TestScheduler, Akka.Tests\""));
             Assert.True(actorSystem.Scheduler.GetType() == typeof(TestScheduler));
@@ -348,7 +399,7 @@ namespace Akka.Tests.Actor
 
     public class TestScheduler : IScheduler
     {
-        public TestScheduler(ActorSystem system)
+        public TestScheduler(Config config, ILoggingAdapter log)
         {
 
         }
@@ -459,10 +510,15 @@ namespace Akka.Tests.Actor
             {
             }
 
-            public override void Schedule(Action run)
+            protected override void ExecuteTask(IRunnable run)
             {
-                Task.Run(run);
+                run.Run();
                 _latch.Ready(TimeSpan.FromSeconds(1));
+            }
+
+            protected override void Shutdown()
+            {
+                // do nothing
             }
 
             public override void Attach(ActorCell cell)

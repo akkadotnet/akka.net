@@ -10,12 +10,11 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents an EventBus where the Subscriber type is ActorRef.
+    /// This class represents an <see cref="EventBus{TEvent,TClassifier,TSubscriber}"/> where the subscriber type is an <see cref="IActorRef"/>.
     /// </summary>
-    /// <typeparam name="TEvent">The event type.</typeparam>
-    /// <typeparam name="TClassifier">The classifier type.</typeparam>
+    /// <typeparam name="TEvent">The type of event published to the bus.</typeparam>
+    /// <typeparam name="TClassifier">The type of classifier used to classify events.</typeparam>
     public abstract class ActorEventBus<TEvent, TClassifier> : EventBus<TEvent, TClassifier, IActorRef>
     {
     }
 }
-

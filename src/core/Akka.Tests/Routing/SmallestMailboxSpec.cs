@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Tests.Routing
 {
@@ -47,7 +48,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Smallest_mailbox_router_must_deliver_messages_to_idle_actor()
+        public void Smallest_mailbox_pool_must_deliver_messages_to_idle_actor()
         {
             var usedActors = new ConcurrentDictionary<int, string>();
             var router = Sys.ActorOf(new SmallestMailboxPool(3).Props(Props.Create(() => new SmallestMailboxActor(usedActors))));
@@ -55,39 +56,39 @@ namespace Akka.Tests.Routing
             var busy = new TestLatch(1);
             var received0 = new TestLatch(1);
             router.Tell(Tuple.Create(busy, received0));
-            received0.Ready(TestLatch.DefaultTimeout);
+            received0.Ready(TestKitSettings.DefaultTimeout);
 
             var received1 = new TestLatch(1);
             router.Tell(Tuple.Create(1, received1));
-            received1.Ready(TestLatch.DefaultTimeout);
+            received1.Ready(TestKitSettings.DefaultTimeout);
 
             var received2 = new TestLatch(1);
             router.Tell(Tuple.Create(2, received2));
-            received2.Ready(TestLatch.DefaultTimeout);
+            received2.Ready(TestKitSettings.DefaultTimeout);
 
             var received3 = new TestLatch(1);
             router.Tell(Tuple.Create(3, received3));
-            received3.Ready(TestLatch.DefaultTimeout);
+            received3.Ready(TestKitSettings.DefaultTimeout);
 
             busy.CountDown();
 
             var busyPath = usedActors[0];
-            Assert.NotEqual(busyPath, null);
+            busyPath.Should().NotBeNull();
 
-            Assert.Equal(usedActors.Count, 4);
             var path1 = usedActors[1];
             var path2 = usedActors[2];
             var path3 = usedActors[3];
 
-            Assert.NotEqual(path1, busyPath);
-            Assert.NotEqual(path2, busyPath);
-            Assert.NotEqual(path3, busyPath);
+            path1.Should().NotBeNull(busyPath);
+            path2.Should().NotBeNull(busyPath);
+            path3.Should().NotBeNull(busyPath);
         }
 
+        // Resolved https://github.com/akkadotnet/akka.net/issues/90
         [Fact]
-        public void SmallestMail_should_not_throw_IndexOutOfRangeException_when_counter_wraps_to_be_negative()
+        public void SmallestMailboxRoutingLogic_must_not_throw_IndexOutOfRangeException_when_counter_wraps_to_be_negative()
         {
-            var routees = new[] {Routee.NoRoutee, Routee.NoRoutee, Routee.NoRoutee};
+            var routees = new[] { Routee.NoRoutee, Routee.NoRoutee, Routee.NoRoutee };
             var routingLogic = new SmallestMailboxRoutingLogic(int.MaxValue - 5);
             for (var i = 0; i < 10; i++)
             {
@@ -96,4 +97,3 @@ namespace Akka.Tests.Routing
         }
     }
 }
-

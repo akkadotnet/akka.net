@@ -19,7 +19,13 @@ namespace Akka.TestKit
     /// to create new instances.
     /// </summary>
     public class TestProbe : TestKitBase, INoImplicitSender, IInternalActorRef
-    {      
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="assertions">TBD</param>
+        /// <param name="testProbeName">TBD</param>
         public TestProbe(ActorSystem system, ITestKitAssertions assertions, string testProbeName=null)
             : base(assertions, system, testProbeName)
         {
@@ -74,6 +80,12 @@ namespace Akka.TestKit
             Sender.Tell(message,TestActor);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <returns>TBD</returns>
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
         public override TestProbe CreateTestProbe(string name=null)
         {
@@ -140,15 +152,33 @@ namespace Akka.TestKit
             ((IInternalActorRef)TestActor).Suspend();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
-            ((IInternalActorRef)TestActor).SendSystemMessage(message, sender);
+            ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        public void SendSystemMessage(ISystemMessage message)
+        {
+            ((IInternalActorRef)TestActor).SendSystemMessage(message);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(object obj)
         {
             return TestActor.CompareTo(obj);
         }
     }
 }
-

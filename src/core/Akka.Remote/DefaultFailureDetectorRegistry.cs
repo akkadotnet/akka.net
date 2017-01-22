@@ -14,13 +14,13 @@ namespace Akka.Remote
     /// <summary>
     /// A lock-less, thread-safe implementation of <see cref="IFailureDetectorRegistry{T}"/>.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="T">TBD</typeparam>
     public class DefaultFailureDetectorRegistry<T> : IFailureDetectorRegistry<T>
     {
         /// <summary>
         /// Instantiates the DefaultFailureDetectorRegistry an uses a factory method for creating new instances
         /// </summary>
-        /// <param name="factory"></param>
+        /// <param name="factory">TBD</param>
         public DefaultFailureDetectorRegistry(Func<FailureDetector> factory)
         {
             _factory = factory;
@@ -44,16 +44,30 @@ namespace Akka.Remote
 
         #region IFailureDetectorRegistry<T> members
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="resource">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsAvailable(T resource)
         {
             return !ResourceToFailureDetector.ContainsKey(resource) || ResourceToFailureDetector[resource].IsAvailable;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="resource">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsMonitoring(T resource)
         {
             return ResourceToFailureDetector.ContainsKey(resource) && ResourceToFailureDetector[resource].IsMonitoring;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="resource">TBD</param>
         public void Heartbeat(T resource)
         {
             if (ResourceToFailureDetector.ContainsKey(resource))
@@ -83,6 +97,10 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="resource">TBD</param>
         public void Remove(T resource)
         {
             while (true)
@@ -98,6 +116,9 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Reset()
         {
             while (true)
@@ -116,6 +137,8 @@ namespace Akka.Remote
         /// <summary>
         /// Get the underlying <see cref="FailureDetector"/> for a resource.
         /// </summary>
+        /// <param name="resource">TBD</param>
+        /// <returns>TBD</returns>
         internal FailureDetector GetFailureDetector(T resource)
         {
             FailureDetector f;

@@ -33,6 +33,9 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public abstract class CDataConfigurationElement : ConfigurationElement
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected const string ContentPropertyName = "content";
 
         /// <summary>

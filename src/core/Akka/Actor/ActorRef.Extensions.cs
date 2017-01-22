@@ -17,6 +17,8 @@ namespace Akka.Actor
         ///     and don't receive a valid result in return, this method will indicate
         ///     whether or not the actor we received is valid.
         /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static bool IsNobody(this IActorRef actorRef)
         {
             return actorRef == null || actorRef is Nobody || actorRef is DeadLetterActorRef;

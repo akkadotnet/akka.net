@@ -8,10 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -29,9 +29,11 @@ namespace Akka.Remote
         /// URL-encodes an actor <see cref="Address"/>. Used when generating the names
         /// of some system remote actors.
         /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public static string Encode(Address address)
         {
-            return HttpUtility.UrlEncode(address.ToString(), Encoding.UTF8);
+            return WebUtility.UrlEncode(address.ToString());
         }
     }
 
@@ -56,16 +58,29 @@ namespace Akka.Remote
             _provider = provider;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <returns>TBD</returns>
         public Props ConfigureDispatcher(Props props)
         {
             return _provider.RemoteSettings.ConfigureDispatcher(props);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override RARP CreateExtension(ExtendedActorSystem system)
         {
             return new RARP(system.Provider.AsInstanceOf<RemoteActorRefProvider>());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public RemoteActorRefProvider Provider
         {
             get { return _provider; }
@@ -73,6 +88,11 @@ namespace Akka.Remote
 
         #region Static methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static RARP For(ActorSystem system)
         {
             return system.WithExtension<RARP, RARP>();
@@ -109,6 +129,11 @@ namespace Akka.Remote
         private IActorRef _transportSupervisor;
         private readonly EventPublisher _eventPublisher;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="provider">TBD</param>
         public Remoting(ExtendedActorSystem system, RemoteActorRefProvider provider)
             : base(system, provider)
         {
@@ -119,11 +144,17 @@ namespace Akka.Remote
 
         #region RemoteTransport overrides
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ISet<Address> Addresses
         {
             get { return _addresses; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Address DefaultAddress
         {
             get { return _defaultAddress; }
@@ -132,6 +163,10 @@ namespace Akka.Remote
         /// <summary>
         /// Start assumes that it cannot be followed by another Start() without having a Shutdown() first
         /// </summary>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="TaskCanceledException">TBD</exception>
+        /// <exception cref="TimeoutException">TBD</exception>
+        /// <exception cref="Exception">TBD</exception>
         public override void Start()
         {
             if (_endpointManager == null)
@@ -196,6 +231,10 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override Task Shutdown()
         {
             if (_endpointManager == null)
@@ -232,6 +271,13 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <exception cref="RemoteTransportException">TBD</exception>
         public override void Send(object message, IActorRef sender, RemoteActorRef recipient)
         {
             if (_endpointManager == null)
@@ -242,6 +288,12 @@ namespace Akka.Remote
             _endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender ?? ActorRefs.NoSender);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cmd">TBD</param>
+        /// <exception cref="RemoteTransportException">TBD</exception>
+        /// <returns>TBD</returns>
         public override Task<bool> ManagementCommand(object cmd)
         {
             if (_endpointManager == null)
@@ -260,11 +312,23 @@ namespace Akka.Remote
                     }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="remote">TBD</param>
+        /// <returns>TBD</returns>
         public override Address LocalAddressForRemote(Address remote)
         {
             return Remoting.LocalAddressForRemote(_transportMapping, remote);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <param name="uid">TBD</param>
+        /// <exception cref="RemoteTransportException">TBD</exception>
+        /// <returns>TBD</returns>
         public override void Quarantine(Address address, int? uid)
         {
             if (_endpointManager == null)
@@ -288,8 +352,18 @@ namespace Akka.Remote
 
         #region Static methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string EndpointManagerName = "endpointManager";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="transportMapping">TBD</param>
+        /// <param name="remote">TBD</param>
+        /// <exception cref="RemoteTransportException">TBD</exception>
+        /// <returns>TBD</returns>
         internal static Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
@@ -332,14 +406,25 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class RegisterTransportActor : INoSerializationVerificationNeeded
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
         public RegisterTransportActor(Props props, string name)
         {
             Props = props;
             Name = name;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Props Props { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Name { get; private set; }
     }
 
@@ -349,11 +434,18 @@ namespace Akka.Remote
     internal class TransportSupervisor : ReceiveActor
     {
         private readonly SupervisorStrategy _strategy = new OneForOneStrategy(exception => Directive.Restart);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return _strategy;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransportSupervisor()
         {
             Receive<RegisterTransportActor>(

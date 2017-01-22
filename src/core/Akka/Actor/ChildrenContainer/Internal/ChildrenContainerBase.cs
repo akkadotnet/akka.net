@@ -14,6 +14,9 @@ using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ChildrenContainerBase : IChildrenContainer
     {
         private class LazyReadOnlyCollection<T> : IReadOnlyCollection<T>
@@ -53,19 +56,58 @@ namespace Akka.Actor.Internal
 
         private readonly IImmutableDictionary<string, IChildStats> _children;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="children">TBD</param>
         protected ChildrenContainerBase(IImmutableDictionary<string, IChildStats> children)
         {
             _children = children;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual bool IsTerminating { get { return false; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual bool IsNormal { get { return true; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer Add(string name, ChildRestartStats stats);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer Remove(IActorRef child);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer Reserve(string name);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer ShallDie(IActorRef actor);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IChildrenContainer Unreserve(string name);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IReadOnlyCollection<IInternalActorRef> Children
         {
             get
@@ -79,6 +121,9 @@ namespace Akka.Actor.Internal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IReadOnlyCollection<ChildRestartStats> Stats
         {
             get
@@ -89,8 +134,17 @@ namespace Akka.Actor.Internal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<string, IChildStats> InternalChildren { get { return _children; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="stats">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryGetByName(string name, out IChildStats stats)
         {
             if (InternalChildren.TryGetValue(name, out stats)) return true;
@@ -98,6 +152,12 @@ namespace Akka.Actor.Internal
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="childRestartStats">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
             IChildStats stats;
@@ -115,12 +175,23 @@ namespace Akka.Actor.Internal
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <returns>TBD</returns>
         public bool Contains(IActorRef actor)
         {
             ChildRestartStats stats;
             return TryGetByRef(actor, out stats);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sb">TBD</param>
+        /// <param name="kvp">TBD</param>
+        /// <param name="index">TBD</param>
         protected void ChildStatsAppender(StringBuilder sb, KeyValuePair<string, IChildStats> kvp, int index)
         {
             sb.Append('<');

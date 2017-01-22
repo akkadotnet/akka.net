@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -15,6 +16,7 @@ using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Tests
 {
@@ -79,7 +81,7 @@ namespace Akka.Cluster.Tests
 
         private static ClusterHeartbeatSenderState EmptyState(UniqueAddress selfUniqueAddress)
         {
-            return new ClusterHeartbeatSenderState(new HeartbeatNodeRing(selfUniqueAddress, new[] { selfUniqueAddress }, 3),
+            return new ClusterHeartbeatSenderState(new HeartbeatNodeRing(selfUniqueAddress, ImmutableHashSet.Create(selfUniqueAddress), ImmutableHashSet<UniqueAddress>.Empty, 3),
                 ImmutableHashSet.Create<UniqueAddress>(), new DefaultFailureDetectorRegistry<Address>(() => new FailureDetectorStub()));
         }
 
@@ -91,49 +93,69 @@ namespace Akka.Cluster.Tests
                     .AsInstanceOf<FailureDetectorStub>();
         }
 
-        #region Tests
-
         [Fact]
         public void ClusterHeartbeatSenderState_must_return_empty_active_set_when_no_nodes()
         {
-            _emptyState.ActiveReceivers.IsEmpty.ShouldBeTrue();
+            _emptyState
+                .ActiveReceivers.IsEmpty.Should().BeTrue();
         }
 
         [Fact]
         public void ClusterHeartbeatSenderState_must_init_with_empty()
         {
-            _emptyState.Init(ImmutableHashSet.Create<UniqueAddress>()).ActiveReceivers.IsEmpty.ShouldBeTrue();
+            _emptyState.Init(ImmutableHashSet<UniqueAddress>.Empty, ImmutableHashSet<UniqueAddress>.Empty)
+                .ActiveReceivers.IsEmpty.Should().BeTrue();
         }
 
         [Fact]
         public void ClusterHeartbeatSenderState_must_init_with_self()
         {
-            _emptyState.Init(ImmutableHashSet.Create<UniqueAddress>(aa, bb, cc)).ActiveReceivers.ShouldBe(ImmutableHashSet.Create<UniqueAddress>(bb, cc));
+            _emptyState.Init(ImmutableHashSet.Create(aa, bb, cc), ImmutableHashSet<UniqueAddress>.Empty)
+                .ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc));
         }
 
         [Fact]
         public void ClusterHeartbeatSenderState_must_init_without_self()
         {
-            _emptyState.Init(ImmutableHashSet.Create<UniqueAddress>(bb, cc)).ActiveReceivers.ShouldBe(ImmutableHashSet.Create<UniqueAddress>(bb, cc));
+            _emptyState.Init(ImmutableHashSet.Create(bb, cc), ImmutableHashSet<UniqueAddress>.Empty)
+                .ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc));
         }
 
         [Fact]
-        public void ClusterHeartbeatSenderState_must_use_add_members()
+        public void ClusterHeartbeatSenderState_must_use_added_members()
         {
-            _emptyState.AddMember(bb).AddMember(cc).ActiveReceivers.ShouldBe(ImmutableHashSet.Create<UniqueAddress>(bb, cc));
+            _emptyState.AddMember(bb).AddMember(cc)
+                .ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc));
+        }
+
+        [Fact]
+        public void ClusterHeartbeatSenderState_must_use_added_members_also_when_unreachable()
+        {
+            _emptyState.AddMember(bb).AddMember(cc).UnreachableMember(bb)
+                .ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc));
         }
 
         [Fact]
         public void ClusterHeartbeatSenderState_must_not_use_removed_members()
         {
-            _emptyState.AddMember(bb).AddMember(cc).RemoveMember(bb).ActiveReceivers.ShouldBe(ImmutableHashSet.Create<UniqueAddress>(cc));
+            _emptyState.AddMember(bb).AddMember(cc).RemoveMember(bb)
+                .ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(cc));
         }
 
         [Fact]
         public void ClusterHeartbeatSenderState_must_use_specified_number_of_members()
         {
             // they are sorted by the hash (UID) of the UniqueAddress
-            _emptyState.AddMember(cc).AddMember(dd).AddMember(bb).AddMember(ee).ActiveReceivers.ShouldBe(ImmutableHashSet.Create<UniqueAddress>(bb,cc,dd));
+            _emptyState.AddMember(cc).AddMember(dd).AddMember(bb).AddMember(ee)
+                .ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc, dd));
+        }
+
+        [Fact]
+        public void ClusterHeartbeatSenderState_must_use_specified_number_of_members_unreachable()
+        {
+            // they are sorted by the hash (UID) of the UniqueAddress
+            _emptyState.AddMember(cc).AddMember(dd).AddMember(bb).AddMember(ee).UnreachableMember(cc)
+                .ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc, dd, ee));
         }
 
         [Fact]
@@ -141,10 +163,10 @@ namespace Akka.Cluster.Tests
         {
             var s1 = _emptyState.AddMember(bb).AddMember(cc).AddMember(dd);
             var s2 = s1.HeartbeatRsp(bb).HeartbeatRsp(cc).HeartbeatRsp(dd).HeartbeatRsp(ee);
-            s2.FailureDetector.IsMonitoring(bb.Address).ShouldBeTrue();
-            s2.FailureDetector.IsMonitoring(cc.Address).ShouldBeTrue();
-            s2.FailureDetector.IsMonitoring(dd.Address).ShouldBeTrue();
-            s2.FailureDetector.IsMonitoring(ee.Address).ShouldBeFalse("Never added (ee) to active set, so we should not be monitoring it even if we did receive HeartbeatRsp from it");
+            s2.FailureDetector.IsMonitoring(bb.Address).Should().BeTrue();
+            s2.FailureDetector.IsMonitoring(cc.Address).Should().BeTrue();
+            s2.FailureDetector.IsMonitoring(dd.Address).Should().BeTrue();
+            s2.FailureDetector.IsMonitoring(ee.Address).Should().BeFalse("Never added (ee) to active set, so we should not be monitoring it even if we did receive HeartbeatRsp from it");
         }
 
         [Fact]
@@ -153,8 +175,8 @@ namespace Akka.Cluster.Tests
             var s1 = _emptyState.AddMember(cc).AddMember(dd).AddMember(ee);
             var s2 = s1.HeartbeatRsp(cc).HeartbeatRsp(dd).HeartbeatRsp(ee);
             Fd(s2, ee).MarkNodeAsUnavailable();
-            s2.FailureDetector.IsAvailable(ee.Address).ShouldBeFalse();
-            s2.AddMember(bb).ActiveReceivers.ShouldBe(ImmutableHashSet.Create(bb,cc,dd,ee));
+            s2.FailureDetector.IsAvailable(ee.Address).Should().BeFalse();
+            s2.AddMember(bb).ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc, dd, ee));
         }
 
         [Fact]
@@ -165,10 +187,10 @@ namespace Akka.Cluster.Tests
             Fd(s2,dd).MarkNodeAsUnavailable();
             Fd(s2,ee).MarkNodeAsUnavailable();
             var s3 = s2.AddMember(bb);
-            s3.ActiveReceivers.ShouldBe(ImmutableHashSet.Create(bb,cc,dd,ee));
+            s3.ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc, dd, ee));
             var s4 = s3.HeartbeatRsp(cc).HeartbeatRsp(dd).HeartbeatRsp(ee);
-            s4.ActiveReceivers.ShouldBe(ImmutableHashSet.Create(bb,cc,dd));
-            s4.FailureDetector.IsMonitoring(ee.Address).ShouldBeFalse();
+            s4.ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc, dd));
+            s4.FailureDetector.IsMonitoring(ee.Address).Should().BeFalse();
         }
 
         [Fact]
@@ -179,19 +201,18 @@ namespace Akka.Cluster.Tests
             Fd(s2, cc).MarkNodeAsUnavailable();
             Fd(s2, ee).MarkNodeAsUnavailable();
             var s3 = s2.AddMember(bb).HeartbeatRsp(bb);
-            s3.ActiveReceivers.ShouldBe(ImmutableHashSet.Create(bb,cc,dd,ee));
+            s3.ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, cc, dd, ee));
             var s4 = s3.RemoveMember(cc).RemoveMember(ee);
-            s4.ActiveReceivers.ShouldBe(ImmutableHashSet.Create(bb,dd));
-            s4.FailureDetector.IsMonitoring(cc.Address).ShouldBeFalse();
-            s4.FailureDetector.IsMonitoring(ee.Address).ShouldBeFalse();
+            s4.ActiveReceivers.Should().BeEquivalentTo(ImmutableHashSet.Create(bb, dd));
+            s4.FailureDetector.IsMonitoring(cc.Address).Should().BeFalse();
+            s4.FailureDetector.IsMonitoring(ee.Address).Should().BeFalse();
         }
 
         [Fact]
         public void ClusterHeartbeatSenderState_must_behave_correctly_for_random_operations()
         {
             var rnd = ThreadLocalRandom.Current;
-            var nodes =
-                Enumerable.Range(1, rnd.Next(10, 200))
+            var nodes = Enumerable.Range(1, rnd.Next(10, 200))
                     .Select(n => new UniqueAddress(new Address("akka.tcp", "sys", "n" + n, 2552), n))
                     .ToList();
             Func<UniqueAddress> rndNode = () => nodes[rnd.Next(0, nodes.Count)];
@@ -210,30 +231,30 @@ namespace Akka.Cluster.Tests
                     switch (operation)
                     {
                         case Add:
-                            if (node != selfUniqueAddress && !state.Ring.NodeRing.Contains(node))
+                            if (node != selfUniqueAddress && !state.Ring.Nodes.Contains(node))
                             {
-                                var oldUnreachable = state.Unreachable;
+                                var oldUnreachable = state.OldReceiversNowUnreachable;
                                 state = state.AddMember(node);
                                 //keep unreachable
-                                (oldUnreachable.Except(state.ActiveReceivers)).ShouldBe(ImmutableHashSet.Create<UniqueAddress>());
-                                state.FailureDetector.IsMonitoring(node.Address).ShouldBeFalse();
-                                state.FailureDetector.IsAvailable(node.Address).ShouldBeTrue();
+                                oldUnreachable.Except(state.ActiveReceivers).Should().BeEquivalentTo(ImmutableHashSet<UniqueAddress>.Empty);
+                                state.FailureDetector.IsMonitoring(node.Address).Should().BeFalse();
+                                state.FailureDetector.IsAvailable(node.Address).Should().BeTrue();
                             }
                             break;
                         case Remove:
-                            if (node != selfUniqueAddress && state.Ring.NodeRing.Contains(node))
+                            if (node != selfUniqueAddress && state.Ring.Nodes.Contains(node))
                             {
-                                var oldUnreachable = state.Unreachable;
+                                var oldUnreachable = state.OldReceiversNowUnreachable;
                                 state = state.RemoveMember(node);
                                 // keep unreachable, unless it was the removed
-                                if(oldUnreachable.Contains(node))
-                                    oldUnreachable.Except(state.ActiveReceivers).ShouldBe(ImmutableHashSet.Create(node));
+                                if (oldUnreachable.Contains(node))
+                                    oldUnreachable.Except(state.ActiveReceivers).Should().BeEquivalentTo(ImmutableHashSet.Create(node));
                                 else
-                                    (oldUnreachable.Except(state.ActiveReceivers)).ShouldBe(ImmutableHashSet.Create<UniqueAddress>());
+                                    oldUnreachable.Except(state.ActiveReceivers).Should().BeEquivalentTo(ImmutableHashSet<UniqueAddress>.Empty);
 
-                                state.FailureDetector.IsMonitoring(node.Address).ShouldBeFalse();
-                                state.FailureDetector.IsAvailable(node.Address).ShouldBeTrue();
-                                Assert.False(state.ActiveReceivers.Any(x => x == node));
+                                state.FailureDetector.IsMonitoring(node.Address).Should().BeFalse();
+                                state.FailureDetector.IsAvailable(node.Address).Should().BeTrue();
+                                state.ActiveReceivers.Should().NotContain(node);
                             }
                             break;
                         case Unreachable:
@@ -241,27 +262,30 @@ namespace Akka.Cluster.Tests
                             {
                                 state.FailureDetector.Heartbeat(node.Address); //make sure the FD is created
                                 Fd(state, node).MarkNodeAsUnavailable();
-                                state.FailureDetector.IsMonitoring(node.Address).ShouldBeTrue();
-                                state.FailureDetector.IsAvailable(node.Address).ShouldBeFalse();
+                                state.FailureDetector.IsMonitoring(node.Address).Should().BeTrue();
+                                state.FailureDetector.IsAvailable(node.Address).Should().BeFalse();
+                                state = state.UnreachableMember(node);
                             }
                             break;
                         case HeartbeatRsp:
-                            if (node != selfUniqueAddress && state.Ring.NodeRing.Contains(node))
+                            if (node != selfUniqueAddress && state.Ring.Nodes.Contains(node))
                             {
-                                var oldUnreachable = state.Unreachable;
+                                var oldUnreachable = state.OldReceiversNowUnreachable;
                                 var oldReceivers = state.ActiveReceivers;
                                 var oldRingReceivers = state.Ring.MyReceivers.Value;
                                 state = state.HeartbeatRsp(node);
 
-                                if(oldUnreachable.Contains(node))
-                                    Assert.False(state.Unreachable.Contains(node));
-                                if(oldUnreachable.Contains(node) && !oldRingReceivers.Contains(node))
-                                    state.FailureDetector.IsMonitoring(node.Address).ShouldBeFalse();
-                                if(oldRingReceivers.Contains(node))
-                                    state.FailureDetector.IsMonitoring(node.Address).ShouldBeTrue();
+                                if (oldUnreachable.Contains(node))
+                                    state.OldReceiversNowUnreachable.Should().NotContain(node);
 
-                                state.Ring.MyReceivers.Value.ShouldBe(oldRingReceivers);
-                                state.FailureDetector.IsAvailable(node.Address).ShouldBeTrue();
+                                if (oldUnreachable.Contains(node) && !oldRingReceivers.Contains(node))
+                                    state.FailureDetector.IsMonitoring(node.Address).Should().BeFalse();
+
+                                if (oldRingReceivers.Contains(node))
+                                    state.FailureDetector.IsMonitoring(node.Address).Should().BeTrue();
+
+                                state.Ring.MyReceivers.Value.Should().BeEquivalentTo(oldRingReceivers);
+                                state.FailureDetector.IsAvailable(node.Address).Should().BeTrue();
                             }
                             break;
                     }
@@ -269,15 +293,13 @@ namespace Akka.Cluster.Tests
                 catch (Exception)
                 {
                     Debug.WriteLine("Failure context: i = {0}, node = {1}, op={2}, unreachable={3}, ringReceivers={4}, ringNodes={5}", i, node, operation, 
-                        string.Join(",",state.Unreachable), 
+                        string.Join(",",state.OldReceiversNowUnreachable), 
                         string.Join(",", state.Ring.MyReceivers.Value), 
-                        string.Join(",", state.Ring.NodeRing));
+                        string.Join(",", state.Ring.Nodes));
                     throw;
                 }
             }
         }
-
-        #endregion
     }
 }
 

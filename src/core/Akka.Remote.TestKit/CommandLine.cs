@@ -26,7 +26,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public class CommandLine
     {
-        private readonly static Lazy<StringDictionary> Values = new Lazy<StringDictionary>(() =>
+        private static readonly Lazy<StringDictionary> Values = new Lazy<StringDictionary>(() =>
         {
             var dictionary = new StringDictionary();
             foreach (var arg in Environment.GetCommandLineArgs())

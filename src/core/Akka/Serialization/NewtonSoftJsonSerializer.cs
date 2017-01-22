@@ -28,7 +28,13 @@ namespace Akka.Serialization
         private readonly JsonSerializerSettings _settings;
         private readonly JsonSerializer _serializer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public JsonSerializerSettings Settings { get { return _settings; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object Serializer { get { return _serializer; } }
 
         /// <summary>
@@ -41,7 +47,7 @@ namespace Akka.Serialization
             _settings = new JsonSerializerSettings
             {
                 PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-                Converters = new List<JsonConverter> { new SurrogateConverter(this),new DiscriminatedUnionConverter()},
+                Converters = new List<JsonConverter> { new SurrogateConverter(this), new DiscriminatedUnionConverter() },
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
                 MissingMemberHandling = MissingMemberHandling.Ignore,
@@ -54,8 +60,17 @@ namespace Akka.Serialization
             _serializer = JsonSerializer.Create(_settings);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class AkkaContractResolver : DefaultContractResolver
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
+            /// <param name="memberSerialization">TBD</param>
+            /// <returns>TBD</returns>
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
             {
                 var prop = base.CreateProperty(member, memberSerialization);
@@ -115,7 +130,7 @@ namespace Akka.Serialization
             return TranslateSurrogate(res, this, type);
         }
 
-        private static object TranslateSurrogate(object deserializedValue,NewtonSoftJsonSerializer parent,Type type)
+        private static object TranslateSurrogate(object deserializedValue, NewtonSoftJsonSerializer parent, Type type)
         {
             var j = deserializedValue as JObject;
             if (j != null)
@@ -154,9 +169,16 @@ namespace Akka.Serialization
             throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class SurrogateConverter : JsonConverter
         {
             private readonly NewtonSoftJsonSerializer _parent;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="parent">TBD</param>
             public SurrogateConverter(NewtonSoftJsonSerializer parent)
             {
                 _parent = parent;
@@ -168,13 +190,13 @@ namespace Akka.Serialization
             /// <returns><c>true</c> if this instance can convert the specified object type; otherwise, <c>false</c>.</returns>
             public override bool CanConvert(Type objectType)
             {
-                if (objectType == typeof (int) || objectType == typeof (float) || objectType == typeof (decimal))
+                if (objectType == typeof(int) || objectType == typeof(float) || objectType == typeof(decimal))
                     return true;
 
-                if (typeof (ISurrogated).IsAssignableFrom(objectType))
+                if (typeof(ISurrogated).IsAssignableFrom(objectType))
                     return true;
 
-                if (objectType == typeof (object))
+                if (objectType == typeof(object))
                     return true;
 
                 return false;
@@ -196,7 +218,7 @@ namespace Akka.Serialization
 
 
 
-            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer,Type objecType)
+            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer, Type objecType)
             {
                 var surrogate = serializer.Deserialize(reader);
                 return TranslateSurrogate(surrogate, _parent, objecType);
@@ -231,12 +253,12 @@ namespace Akka.Serialization
                         serializer.Serialize(writer, value);
                     }
                 }
-            }           
+            }
 
             private object GetString(object value)
             {
                 if (value is int)
-                    return "I" + ((int) value).ToString(NumberFormatInfo.InvariantInfo);
+                    return "I" + ((int)value).ToString(NumberFormatInfo.InvariantInfo);
                 if (value is float)
                     return "F" + ((float)value).ToString(NumberFormatInfo.InvariantInfo);
                 if (value is decimal)

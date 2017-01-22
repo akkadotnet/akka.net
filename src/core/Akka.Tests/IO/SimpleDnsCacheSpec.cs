@@ -35,7 +35,7 @@ namespace Akka.Tests.IO
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var cacheEntry = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntry("127.0.0.1").AddressList);
+            var cacheEntry = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntryAsync("127.0.0.1").Result.AddressList);
             cache.Put(cacheEntry, 5000);
 
             cache.Cached("test.local").ShouldBe(cacheEntry);
@@ -51,7 +51,7 @@ namespace Akka.Tests.IO
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var cacheEntry = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntry("127.0.0.1").AddressList);
+            var cacheEntry = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntryAsync("127.0.0.1").Result.AddressList);
             cache.Put(cacheEntry, 5000);
 
             cache.Cached("test.local").ShouldBe(cacheEntry);
@@ -72,8 +72,8 @@ namespace Akka.Tests.IO
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var cacheEntryOne = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntry("127.0.0.1").AddressList);
-            var cacheEntryTwo = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntry("127.0.0.1").AddressList);
+            var cacheEntryOne = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntryAsync("127.0.0.1").Result.AddressList);
+            var cacheEntryTwo = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntryAsync("127.0.0.1").Result.AddressList);
             long ttl = 500;
             cache.Put(cacheEntryOne, ttl);
             cache.Cached("test.local").ShouldBe(cacheEntryOne);

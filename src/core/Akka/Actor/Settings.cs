@@ -38,7 +38,7 @@ namespace Akka.Actor
         /// <summary>
         /// Injects a system config at the top of the fallback chain
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">TBD</param>
         public void InjectTopLevelFallback(Config config)
         {
             _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
@@ -50,10 +50,13 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="config">The configuration.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the 'akka.actor.provider' configuration item is not a valid type name or a valid actor ref provider.
+        /// </exception>
         public Settings(ActorSystem system, Config config)
         {
             _userConfig = config;
-            _fallbackConfig = ConfigurationFactory.Default();            
+            _fallbackConfig = ConfigurationFactory.Default();
             RebuildConfig();
 
             System = system;
@@ -62,9 +65,9 @@ namespace Akka.Actor
             ProviderClass = Config.GetString("akka.actor.provider");
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
-                throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid type name : '{0}'", ProviderClass));
+                throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
-                throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid actor ref provider: '{0}'", ProviderClass));
+                throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
@@ -78,7 +81,7 @@ namespace Akka.Actor
             LogLevel = Config.GetString("akka.loglevel");
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel");
             Loggers = Config.GetStringList("akka.loggers");
-
+            LoggersDispatcher = Config.GetString("akka.loggers-dispatcher");
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout");
 
             //handled
@@ -110,6 +113,7 @@ namespace Akka.Actor
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor");
 
             SchedulerClass = Config.GetString("akka.scheduler.implementation");
+            SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout");
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
@@ -197,6 +201,12 @@ namespace Akka.Actor
         public IList<string> Loggers { get; private set; }
 
         /// <summary>
+        ///     Gets the default loggers dispatcher.
+        /// </summary>
+        /// <value>The loggers dispatcher.</value>
+        public string LoggersDispatcher { get; private set; }
+
+        /// <summary>
         ///     Gets the logger start timeout.
         /// </summary>
         /// <value>The logger start timeout.</value>
@@ -262,6 +272,9 @@ namespace Akka.Actor
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool FsmDebugEvent { get; private set; }
 
         /// <summary>
@@ -273,6 +286,11 @@ namespace Akka.Actor
         /// Gets the scheduler implementation used by this system.
         /// </summary>
         public string SchedulerClass { get; private set; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan SchedulerShutdownTimeout { get; private set; }
 
         /// <summary>
         ///     Returns a <see cref="string" /> that represents this instance.

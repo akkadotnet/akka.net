@@ -198,11 +198,11 @@ namespace Akka.Remote.Tests
             get { return AddressUidExtension.Uid(_remoteSystem); }
         }
 
-        private IActorRef CreateRemoteActor(Props props, string name)
+        private IInternalActorRef CreateRemoteActor(Props props, string name)
         {
             _remoteSystem.ActorOf(props, name);
             Sys.ActorSelection(new RootActorPath(_remoteAddress) / "user" / name).Tell(new Identify(name), TestActor);
-            return ExpectMsg<ActorIdentity>().Subject;
+            return ExpectMsg<ActorIdentity>().Subject.AsInstanceOf<IInternalActorRef>();
         }
 
         [Fact]
@@ -213,8 +213,8 @@ namespace Akka.Remote.Tests
             //TODO: Better way to write this?
             var monitorB = CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[]{TestActor}), "monitor1");
 
-            var a1 = Sys.ActorOf(Props.Create<MyActor>(), "a1");
-            var a2 = Sys.ActorOf(Props.Create<MyActor>(), "a2");
+            var a1 = Sys.ActorOf(Props.Create<MyActor>(), "a1").AsInstanceOf<IInternalActorRef>();
+            var a2 = Sys.ActorOf(Props.Create<MyActor>(), "a2").AsInstanceOf<IInternalActorRef>();
             var b1 = CreateRemoteActor(Props.Create<MyActor>(), "b1");
             var b2 = CreateRemoteActor(Props.Create<MyActor>(), "b2");
 
@@ -222,9 +222,8 @@ namespace Akka.Remote.Tests
             monitorA.Tell(new RemoteWatcher.WatchRemote(b2, a1));
             monitorA.Tell(new RemoteWatcher.WatchRemote(b2, a2));
             monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
-            // for each watchee the RemoteWatcher also adds its own watch: 5 = 3 + 2
             // (a1->b1), (a1->b2), (a2->b2)
-            ExpectMsg(RemoteWatcher.Stats.Counts(5, 1));
+            ExpectMsg(RemoteWatcher.Stats.Counts(3, 1));
             ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
             ExpectMsg<RemoteWatcher.Heartbeat>();
@@ -240,7 +239,7 @@ namespace Akka.Remote.Tests
             monitorA.Tell(new RemoteWatcher.UnwatchRemote(b1, a1));
             // still (a1->b2) and (a2->b2) left
             monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
-            ExpectMsg(RemoteWatcher.Stats.Counts(3, 1));
+            ExpectMsg(RemoteWatcher.Stats.Counts(2, 1));
             ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
             ExpectMsg<RemoteWatcher.Heartbeat>();
@@ -249,7 +248,7 @@ namespace Akka.Remote.Tests
             monitorA.Tell(new RemoteWatcher.UnwatchRemote(b2, a2));
             // still (a1->b2) left
             monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
-            ExpectMsg(RemoteWatcher.Stats.Counts(2, 1));
+            ExpectMsg(RemoteWatcher.Stats.Counts(1, 1));
             ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
             ExpectMsg<RemoteWatcher.Heartbeat>();
@@ -280,7 +279,7 @@ namespace Akka.Remote.Tests
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor4");
             var monitorB = CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[] { TestActor }), "monitor4");
 
-            var a = Sys.ActorOf(Props.Create<MyActor>(), "a4");
+            var a = Sys.ActorOf(Props.Create<MyActor>(), "a4").AsInstanceOf<IInternalActorRef>();
             var b = CreateRemoteActor(Props.Create<MyActor>(), "b4");
 
             monitorA.Tell(new RemoteWatcher.WatchRemote(b, a));
@@ -323,7 +322,7 @@ namespace Akka.Remote.Tests
             var monitorA = Sys.ActorOf(new Props(new Deploy(), typeof(TestRemoteWatcher), new object[] {heartbeatExpectedResponseAfter}), "monitor5");
             var monitorB = CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[] { TestActor }), "monitor5");
 
-            var a = Sys.ActorOf(Props.Create<MyActor>(), "a5");
+            var a = Sys.ActorOf(Props.Create<MyActor>(), "a5").AsInstanceOf<IInternalActorRef>();
             var b = CreateRemoteActor(Props.Create<MyActor>(), "b5");
 
             monitorA.Tell(new RemoteWatcher.WatchRemote(b, a));
@@ -362,7 +361,7 @@ namespace Akka.Remote.Tests
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor6");
             var monitorB = CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[] { TestActor }), "monitor6");
 
-            var a = Sys.ActorOf(Props.Create<MyActor>(), "a6");
+            var a = Sys.ActorOf(Props.Create<MyActor>(), "a6").AsInstanceOf<IInternalActorRef>();
             var b = CreateRemoteActor(Props.Create<MyActor>(), "b6");
 
             monitorA.Tell(new RemoteWatcher.WatchRemote(b, a));

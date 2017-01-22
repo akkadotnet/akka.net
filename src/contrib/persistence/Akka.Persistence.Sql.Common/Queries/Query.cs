@@ -11,6 +11,7 @@ using Akka.Actor;
 
 namespace Akka.Persistence.Sql.Common.Queries
 {
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public interface IQueryReply { }
 
     /// <summary>
@@ -24,6 +25,7 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// partition id of the persistent actor.
     /// </summary>
     [Serializable]
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class Query: IEquatable<Query>
     {
         public readonly object QueryId;
@@ -72,6 +74,7 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// when the query execution has been completed and result is returned.
     /// </summary>
     [Serializable]
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class QueryResponse : IQueryReply, IEquatable<QueryResponse>
     {
         public readonly object QueryId;
@@ -114,6 +117,7 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// Message send back from SQL-based journal, when <see cref="Query"/> has been successfully responded.
     /// </summary>
     [Serializable]
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class QuerySuccess : IQueryReply, IEquatable<QuerySuccess>
     {
         public readonly object QueryId;
@@ -150,6 +154,7 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// Message send back from SQL-based journal to <see cref="Query"/> sender, when the query execution has failed.
     /// </summary>
     [Serializable]
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class QueryFailure : IQueryReply, IEquatable<QueryFailure>
     {
         /// <summary>

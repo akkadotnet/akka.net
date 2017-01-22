@@ -24,7 +24,7 @@ namespace Akka.NodeTestRunner
         /// If it takes longer than this value for the <see cref="Sink"/> to get back to us
         /// about a particular test passing or failing, throw loudly.
         /// </summary>
-        private static readonly TimeSpan MaxProcessWaitTimeout = TimeSpan.FromMinutes(1.5);
+        private static readonly TimeSpan MaxProcessWaitTimeout = TimeSpan.FromMinutes(5);
         private static IActorRef _logger;
 
         static int Main(string[] args)
@@ -44,8 +44,7 @@ namespace Akka.NodeTestRunner
             system.Tcp().Tell(new Tcp.Connect(listenEndpoint), tcpClient);
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
-
-            using (var controller = new XunitFrontController(assemblyFileName))
+            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyFileName))
             {
                 /* need to pass in just the assembly name to Discovery, not the full path
                  * i.e. "Akka.Cluster.Tests.MultiNode.dll"

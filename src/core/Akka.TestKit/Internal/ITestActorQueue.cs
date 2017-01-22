@@ -12,6 +12,7 @@ namespace Akka.TestKit.Internal
     /// <summary>
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public interface ITestActorQueueProducer<in T>
     {
         /// <summary>Adds the specified item to the queue.</summary>
@@ -22,13 +23,13 @@ namespace Akka.TestKit.Internal
     /// <summary>
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public interface ITestActorQueue<T> : ITestActorQueueProducer<T>
     {
         /// <summary>
         /// Get all messages.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         IEnumerable<T> GetAll();
     }
 }
-

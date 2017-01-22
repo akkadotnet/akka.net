@@ -218,6 +218,7 @@ FakesAssemblies/
 resetdev.bat
 /src/packages/repositories.config
 /src/.nuget
+/src/.nuget/NuGet.exe
 
 # FAKE build folder
 .fake/

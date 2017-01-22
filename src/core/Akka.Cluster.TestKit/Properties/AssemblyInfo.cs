@@ -23,5 +23,7 @@ using System.Runtime.InteropServices;
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
+[assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
+
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("b32850d2-e9cb-4638-83a4-164907595e56")]

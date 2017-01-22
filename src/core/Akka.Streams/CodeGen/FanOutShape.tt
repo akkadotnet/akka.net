@@ -1,0 +1,76 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+// --- auto generated: <#= System.DateTime.UtcNow.ToString() #> --- //
+//-----------------------------------------------------------------------
+// <copyright file="FanOutShape.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
+using System.Linq;
+<# var count = 10; #>
+
+namespace Akka.Streams
+{
+<# for (int i = 2; i < count; i++) {
+    var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "T" + x));
+#>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+<# for (int t = 0; t < i; t++) {  #>
+    /// <typeparam name="T<#= t #>">TBD</typeparam>
+<# } #>
+    public class FanOutShape<TIn, <#= typeParams #>> : FanOutShape<TIn>
+    {
+<# for (int t = 0; t < i; t++) {  #>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Outlet<T<#= t #>> Out<#= t #>;
+<# } #>
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="init">TBD</param>
+        public FanOutShape(IInit init) : base(init)
+        {
+<# for (int t = 0; t < i; t++) {  #>
+            Out<#= t #> = NewOutlet<T<#= t #>>("out<#= t #>");
+<# } #>
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        public FanOutShape(string name) : this(new InitName(name)) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inlet">TBD</param>
+<# for (int t = 0; t < i; t++) {  #>
+        /// <param name="out<#= t #>">TBD</param>
+<# } #>
+        public FanOutShape(Inlet<TIn> inlet, <#= string.Join(", ", Enumerable.Range(0, i).Select(x => string.Format("Outlet<T{0}> out{0}", x))) #>) 
+            : this(new InitPorts(inlet, new Outlet[] { <#= string.Join(", ", Enumerable.Range(0, i).Select(x => "out"+x)) #> })) { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="init">TBD</param>
+        /// <returns>TBD</returns>
+        protected override FanOutShape<TIn> Construct(IInit init)
+        {
+            return new FanOutShape<TIn, <#= typeParams #>>(init);
+        }
+    }
+<# } #>
+}

@@ -22,11 +22,17 @@ namespace Akka.Configuration.Hocon
         private int _index;
         private readonly Stack<int> _indexStack = new Stack<int>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Push()
         {
             _indexStack.Push(_index);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Pop()
         {
             _index = _indexStack.Pop();
@@ -201,10 +207,8 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Retrieves the next token from the string.
         /// </summary>
+        /// <exception cref="FormatException">This exception is thrown if an unknown token or escape code is encountered.</exception>
         /// <returns>The next token contained in the string.</returns>
-        /// <exception cref="System.FormatException">
-        /// This exception is thrown when an unknown token is encountered.
-        /// </exception>
         public Token PullNext()
         {
             PullWhitespaceAndComments();
@@ -450,11 +454,19 @@ namespace Akka.Configuration.Hocon
             return (!EoF && !IsWhitespace() && !IsStartOfComment() && !NotInUnquotedKey.Contains(Peek()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsWhitespace()
         {
             return char.IsWhiteSpace(Peek());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsWhitespaceOrComment()
         {
             return IsWhitespace() || IsStartOfComment();
@@ -480,6 +492,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Retrieves a quoted <see cref="TokenType.LiteralValue"/> token from the tokenizer's current position.
         /// </summary>
+        /// <exception cref="FormatException">This exception is thrown if an unknown escape code is encountered.</exception>
         /// <returns>A <see cref="TokenType.LiteralValue"/> token from the tokenizer's current position.</returns>
         public Token PullQuotedText()
         {
@@ -504,6 +517,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Retrieves a quoted <see cref="TokenType.Key"/> token from the tokenizer's current position.
         /// </summary>
+        /// <exception cref="FormatException">This exception is thrown if an unknown escape code is encountered.</exception>
         /// <returns>A <see cref="TokenType.Key"/> token from the tokenizer's current position.</returns>
         public Token PullQuotedKey()
         {
@@ -525,6 +539,11 @@ namespace Akka.Configuration.Hocon
             return Token.Key(sb.ToString());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="FormatException">This exception is thrown if an unknown escape code is encountered.</exception>
+        /// <returns>TBD</returns>
         public Token PullInclude()
         {
             Take("include".Length);
@@ -561,10 +580,14 @@ namespace Akka.Configuration.Hocon
                     int j = Convert.ToInt32(hex, 16);
                     return ((char) j).ToString(CultureInfo.InvariantCulture);
                 default:
-                    throw new NotSupportedException(string.Format("Unknown escape code: {0}", escaped));
+                    throw new FormatException($"Unknown escape code: {escaped}");
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsStartOfComment()
         {
             return (Matches("#", "//"));
@@ -574,9 +597,9 @@ namespace Akka.Configuration.Hocon
         /// Retrieves a value token from the tokenizer's current position.
         /// </summary>
         /// <returns>A value token from the tokenizer's current position.</returns>
-        /// <exception cref="System.FormatException">
-        /// Expected value: Null literal, Array, Quoted Text, Unquoted Text,
-        ///     Triple quoted Text, Object or End of array
+        /// <exception cref="FormatException">
+        /// This exception is thrown if an unknown token is encountered. Expected values include the following:
+        /// Null literal, Array, Quoted Text, Unquoted Text, Triple quoted Text, Object or End of array.
         /// </exception>
         public Token PullValue()
         {
@@ -625,6 +648,11 @@ namespace Akka.Configuration.Hocon
             return Matches("${");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="FormatException">This exception is thrown if an unknown escape code is encountered.</exception>
+        /// <returns>TBD</returns>
         public bool IsInclude()
         {
             Push();
@@ -726,11 +754,10 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Retrieves the current token as a string literal token.
         /// </summary>
-        /// <returns>A token that contains the string literal value.</returns>
-        /// <exception cref="System.FormatException">
-        /// This exception is thrown when the tokenizer cannot find
-        /// a string literal value from the current token.
+        /// <exception cref="FormatException">
+        /// This exception is thrown if the tokenizer cannot find a string literal value from the current token.
         /// </exception>
+        /// <returns>A token that contains the string literal value.</returns>
         public Token PullSimpleValue()
         {
             if (IsSpaceOrTab())

@@ -19,7 +19,7 @@ cd __SOURCE_DIRECTORY__
 
 let product = "Akka.NET"
 let authors = [ "Akka.NET Team" ]
-let copyright = "Copyright © 2013-2016 Akka.NET Team"
+let copyright = "Copyright © 2013-2017 Akka.NET Team"
 let company = "Akka.NET Team"
 let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
@@ -116,12 +116,6 @@ Target "Build" <| fun _ ->
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 
-Target "BuildMono" <| fun _ ->
-
-    !!"src/Akka.sln"
-    |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
-    |> ignore
-
 //--------------------------------------------------------------------------------
 // Build the docs
 Target "Docs" <| fun _ ->
@@ -157,7 +151,7 @@ Target "AzureDocsDeploy" (fun _ ->
             pushToAzure docDir azureUrl "stable" azureKey 3
             pushToAzure docDir azureUrl release.NugetVersion azureKey 3
     if(not canPush) then
-        printfn "Missing required paraments to push docs to Azure. Run build HelpDocs to find out!"
+        printfn "Missing required parameters to push docs to Azure. Run build HelpDocs to find out!"
             
 )
 
@@ -215,17 +209,23 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Remote"
       "core/Akka.Remote.TestKit"
       "core/Akka.Cluster"
+      "core/Akka.Cluster.TestKit"
       "core/Akka.MultiNodeTestRunner"
       "core/Akka.Persistence"
       "core/Akka.Persistence.FSharp"
       "core/Akka.Persistence.TestKit"
+      "core/Akka.Persistence.Query"
+      "core/Akka.Streams"
+      "core/Akka.Streams.TestKit"
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.TestKit"
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
       "contrib/serializers/Akka.Serialization.Wire" 
+      "contrib/serializers/Akka.Serialization.Hyperion"
       "contrib/cluster/Akka.Cluster.Tools"
       "contrib/cluster/Akka.Cluster.Sharding"
+      "contrib/cluster/Akka.DistributedData"
       ]
     |> List.iter copyOutput
 
@@ -238,6 +238,19 @@ Target "BuildRelease" DoNothing
 //--------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------
+// Filter out assemblies which can't run on Linux, Mono, .NET Core, etc...
+
+open Fake.EnvironmentHelper
+let filterPlatformSpecificAssemblies (assembly:string) =
+    match assembly with
+    | assembly when (assembly.Contains("Sqlite") && isMono) -> false
+    | assembly when (assembly.Contains(".API") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Remote.TestKit.Tests") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Persistence.TestKit.Tests") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Streams.Tests.TCK") && isMono) -> false
+    | _ -> true
+
+//--------------------------------------------------------------------------------
 // Clean test output
 
 Target "CleanTests" <| fun _ ->
@@ -247,34 +260,39 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll"
+    let xunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/*.Tests.dll" -- 
+                                 // Akka.Streams.Tests is referencing Akka.Streams.TestKit.Tests
+                                 "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll" --
+                                 // Akka.Streams.Tests.Performance is referencing Akka.Streams.Tests and Akka.Streams.TestKit.Tests
+                                 "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll")
+
+    let nunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/Akka.Streams.Tests.TCK.dll")
+
+    // Debug output
+    xunitTestAssemblies |> Seq.iter (printfn "Executing: %s")
 
     mkdir testOutput
    
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/FAKE/xunit.runner.console*/tools"
+    let nunitToolPath = findToolInSubPath "nunit3-console.exe" "src/packages/FAKE/NUnit.ConsoleRunner/tools"
+
     printfn "Using XUnit runner: %s" xunitToolPath
     let runSingleAssembly assembly =
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
         xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
+            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; NoAppDomain = true; ForceTeamCity = true; }) 
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
-
-Target "RunTestsMono" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
-
-    mkdir testOutput
-
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
-    let runSingleAssembly assembly =
+    
+    let runNunitSingleAssembly assembly = 
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
-        xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
-            (Seq.singleton assembly)
-
-    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
+        NUnit3
+             (fun p -> { p with ToolPath = nunitToolPath; WorkingDir = testOutput; TeamCity = true;})
+             (Seq.singleton assembly)
+        
+    printfn "Using NUnit runner: %s" nunitToolPath
+    nunitTestAssemblies |> Seq.iter (runNunitSingleAssembly)
 
 
 (* Debug helper for troubleshooting an issue we had when we were running multi-node tests multiple times *)
@@ -287,13 +305,12 @@ Target "PrintMultiNodeTests" <| fun _ ->
 
 
 Target "MultiNodeTests" <| fun _ ->
-    let testSearchPath =
-        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
-        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
-
     mkdir testOutput
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
-    let multiNodeTestAssemblies = !! testSearchPath
+    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "bin" @@ "core" @@ "Akka.MultiNodeTestRunner*")
+    let multiNodeTestAssemblies = !! "src/**/bin/Release/Akka.Remote.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll"
+
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
     let runMultiNodeSpec assembly =
@@ -303,7 +320,7 @@ Target "MultiNodeTests" <| fun _ ->
                 |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
                 |> append (sprintf "-Dmultinode.output-directory=\"%s\"" testOutput)
-                |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
+                |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                 |> toText
 
         let result = ExecProcess(fun info -> 
@@ -324,16 +341,24 @@ Target "NBench" <| fun _ ->
 
     mkdir perfOutput
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" "src/packges/NBench.Runner*"
-    let nbenchTestAssemblies = !! testSearchPath
+    let nbenchTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! testSearchPath)
     printfn "Using NBench.Runner: %s" nbenchTestPath
 
     let runNBench assembly =
         let spec = getBuildParam "spec"
+        let teamcityStr = (getBuildParam "teamcity")
+        let enableTeamCity = 
+            match teamcityStr with
+            | null -> false
+            | "" -> false
+            | _ -> bool.Parse teamcityStr
 
         let args = new StringBuilder()
                 |> append assembly
                 |> append (sprintf "output-directory=\"%s\"" perfOutput)
                 |> append (sprintf "concurrent=\"%b\"" true)
+                |> append (sprintf "trace=\"%b\"" true)
+                |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
                 |> toText
 
         let result = ExecProcess(fun info -> 
@@ -360,22 +385,32 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
+        | "Akka.Cluster.TestKit" -> ["Akka.Remote.TestKit", release.NugetVersion; "Akka.Cluster", release.NugetVersion]
         | "Akka.Cluster.Sharding" -> ["Akka.Cluster.Tools", preReleaseVersion; "Akka.Persistence", preReleaseVersion]
-        | "Akka.Cluster.Tools" -> ["Akka.Cluster", preReleaseVersion]
+        | "Akka.Cluster.Tools" -> ["Akka.Cluster", release.NugetVersion]
+        | "Akka.MultiNodeTestRunner" -> [] // all binaries for the multinodetest runner have to be included locally
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
+        | "Akka.Persistence.Query" -> ["Akka.Persistence", preReleaseVersion; "Akka.Streams", preReleaseVersion]
+        | "Akka.Persistence.Query.Sql" -> ["Akka.Persistence.Query", preReleaseVersion; "Akka.Persistence.Sql.Common", preReleaseVersion]
+        | "Akka.Persistence.Sql.TestKit" -> ["Akka.Persistence.Query.Sql", preReleaseVersion; "Akka.Persistence.TestKit", preReleaseVersion; "Akka.Streams.TestKit", preReleaseVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | "Akka.DI.TestKit" -> ["Akka.DI.Core", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
+        | "Akka.Remote.TestKit" -> ["Akka.Remote", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion;]
+        | "Akka.Streams" -> ["Akka", release.NugetVersion]
+        | "Akka.Streams.TestKit" -> ["Akka.Streams", preReleaseVersion; "Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
     // used to add -pre suffix to pre-release packages
     let getProjectVersion project =
       match project with
-      | "Akka.Cluster" -> preReleaseVersion
-      | cluster when cluster.StartsWith("Akka.Cluster.") -> preReleaseVersion
-      | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | "Akka.Serialization.Wire" -> preReleaseVersion
+      | "Akka.Serialization.Hyperion" -> preReleaseVersion
+      | cluster when (cluster.StartsWith("Akka.Cluster.") && not (cluster.EndsWith("TestKit"))) -> preReleaseVersion
+      | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
+      | streams when streams.StartsWith("Akka.Streams") -> preReleaseVersion
+      | "Akka.DistributedData" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
@@ -397,6 +432,24 @@ let createNugetPackages _ =
             not (directoryExists dir)
         runWithRetries del 3 |> ignore
 
+    let getReleaseFiles project releaseDir =
+        match project with
+        | "Akka.MultiNodeTestRunner" -> // because the MNTR is an exe, all of its dlls have to be available in the same working directory when it executes
+            !! (releaseDir @@ "*.dll")
+            ++ (releaseDir @@ "*.exe")
+            ++ (releaseDir @@ "*.pdb")
+            ++ (releaseDir @@ "*.xml")
+        | _ ->
+            !! (releaseDir @@ project + ".dll")
+            ++ (releaseDir @@ project + ".exe")
+            ++ (releaseDir @@ project + ".pdb")
+            ++ (releaseDir @@ project + ".xml")
+
+    let getExternalPackages project packagesFile =
+        match project with
+        | "Akka.MultiNodeTestRunner" -> [] // because the MNTR is an exe, all of its dlls have to be available in the same working directory when it executes
+        | _ -> if (fileExists packagesFile) then (getDependencies packagesFile) else []
+
     ensureDirectory nugetDir
     for nuspec in !! "src/**/*.nuspec" do
         printfn "Creating nuget packages for %s" nuspec
@@ -408,7 +461,7 @@ let createNugetPackages _ =
         let projectFile = (!! (projectDir @@ project + ".*sproj")) |> Seq.head
         let releaseDir = projectDir @@ @"bin\Release"
         let packages = projectDir @@ "packages.config"
-        let packageDependencies = if (fileExists packages) then (getDependencies packages) else []
+        let packageDependencies = getExternalPackages project packages
         let dependencies = packageDependencies @ getAkkaDependency project
         let releaseVersion = getProjectVersion project
 
@@ -432,10 +485,7 @@ let createNugetPackages _ =
 
         // Copy dll, pdb and xml to libdir = workingDir/lib/net45/
         ensureDirectory libDir
-        !! (releaseDir @@ project + ".dll")
-        ++ (releaseDir @@ project + ".pdb")
-        ++ (releaseDir @@ project + ".xml")
-        ++ (releaseDir @@ project + ".ExternalAnnotations.xml")
+        getReleaseFiles project releaseDir
         |> CopyFiles libDir
 
         // Copy all src-files (.cs and .fs files) to workingDir/src

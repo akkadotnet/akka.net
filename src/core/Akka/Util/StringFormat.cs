@@ -9,6 +9,9 @@ using System.Collections.Generic;
 
 namespace Akka.Util
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class StringFormat
     {
         /// <summary>
@@ -18,6 +21,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="separator">The separator.</param>
         /// <param name="args">The arguments.</param>
+        /// <returns>TBD</returns>
         public static string SafeJoin(string separator, params object[] args)
         {
             return string.Join(separator, ConvertValues(args));

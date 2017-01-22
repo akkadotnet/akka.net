@@ -27,6 +27,8 @@ namespace Akka.TestKit.Tests
         public void Delivers_message_when_scheduled_time_reached()
         {
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1)));
+            _testReceiveActor.AskAndWait<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
+
             Scheduler.Advance(TimeSpan.FromSeconds(1));
             ExpectMsg<ScheduleOnceMessage>();
         }
@@ -35,6 +37,8 @@ namespace Akka.TestKit.Tests
         public void Does_not_deliver_message_prematurely()
         {
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1)));
+            _testReceiveActor.AskAndWait<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
+
             Scheduler.Advance(TimeSpan.FromMilliseconds(999));
             ExpectNoMsg(TimeSpan.FromMilliseconds(20));
         }
@@ -44,6 +48,8 @@ namespace Akka.TestKit.Tests
         {
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 1));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 2));
+            _testReceiveActor.AskAndWait<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
+
             Scheduler.Advance(TimeSpan.FromSeconds(1));
             var firstId = ExpectMsg<ScheduleOnceMessage>().Id;
             var secondId = ExpectMsg<ScheduleOnceMessage>().Id;
@@ -55,7 +61,8 @@ namespace Akka.TestKit.Tests
         public void Keeps_delivering_rescheduled_message()
         {
             _testReceiveActor.Tell(new RescheduleMessage(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)));
-            
+            _testReceiveActor.AskAndWait<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
+
             for (int i = 0; i < 500; i ++)
             {
                 Scheduler.Advance(TimeSpan.FromSeconds(5));
@@ -67,6 +74,8 @@ namespace Akka.TestKit.Tests
         public void Uses_initial_delay_to_schedule_first_rescheduled_message()
         {
             _testReceiveActor.Tell(new RescheduleMessage(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5)));
+            _testReceiveActor.AskAndWait<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
+
             Scheduler.Advance(TimeSpan.FromSeconds(1));
             ExpectMsg<RescheduleMessage>();
         }
@@ -75,6 +84,8 @@ namespace Akka.TestKit.Tests
         public void Doesnt_reschedule_cancelled()
         {
             _testReceiveActor.Tell(new CancelableMessage(TimeSpan.FromSeconds(1)));
+            _testReceiveActor.AskAndWait<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
+
             Scheduler.Advance(TimeSpan.FromSeconds(1));
             ExpectMsg<CancelableMessage>();
             _testReceiveActor.Tell(new CancelMessage());
@@ -89,6 +100,8 @@ namespace Akka.TestKit.Tests
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 1));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(2), 2));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(3), 3));
+            _testReceiveActor.AskAndWait<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
+
             Scheduler.AdvanceTo(Scheduler.Now.AddSeconds(2));
             var firstId = ExpectMsg<ScheduleOnceMessage>().Id;
             var secondId = ExpectMsg<ScheduleOnceMessage>().Id;

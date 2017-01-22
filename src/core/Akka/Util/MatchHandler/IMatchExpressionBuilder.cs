@@ -9,9 +9,22 @@ using System.Collections.Generic;
 
 namespace Akka.Tools.MatchHandler
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IMatchExpressionBuilder
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeHandlers">TBD</param>
+        /// <returns>TBD</returns>
         MatchExpressionBuilderResult BuildLambdaExpression(IReadOnlyList<TypeHandler> typeHandlers);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="arguments">TBD</param>
+        /// <returns>TBD</returns>
         object[] CreateArgumentValuesArray(IReadOnlyList<Argument> arguments);
     }
 }

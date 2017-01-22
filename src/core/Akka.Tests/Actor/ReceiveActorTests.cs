@@ -230,7 +230,10 @@ namespace Akka.Tests.Actor
             public ReceiveAnyActor()
             {
                 Receive<int>(i => Sender.Tell("int:" + i, Self));
-                ReceiveAny(o => Sender.Tell("any:" + o, Self));
+                ReceiveAny(o =>
+                {
+                    Sender.Tell("any:" + o, Self);
+                });
             }
         }
 

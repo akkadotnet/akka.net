@@ -6,144 +6,91 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka;
 using Akka.Persistence;
 using Akka.Actor;
 
 namespace PersistenceBenchmark
 {
-    public abstract class PerformanceTestActorBase : PersistentActor
+    public sealed class Init
     {
-        private readonly string _persistenceId;
+        public static readonly Init Instance = new Init();
+        private Init() { }
+    }
 
-        protected long FailAt { get; set; }
+    public sealed class Finish
+    {
+        public static readonly Finish Instance = new Finish();
+        private Finish() { }
+    }
+    public sealed class Done
+    {
+        public static readonly Done Instance = new Done();
+        private Done() { }
+    }
+    public sealed class Finished
+    {
+        public readonly long State;
 
-        protected PerformanceTestActorBase(string persistenceId)
+        public Finished(long state)
         {
-            _persistenceId = persistenceId;
-        }
-
-        public sealed override string PersistenceId { get { return _persistenceId; } }
-
-        protected sealed override bool ReceiveRecover(object message)
-        {
-            if (LastSequenceNr % 1000 == 0) ;
-
-            return true;
-        }
-
-        protected bool ControlBehavior(object message)
-        {
-            var sender = Sender;
-            if (message is StopMeasure) DeferAsync(StopMeasure.Instance, _ => sender.Tell(StopMeasure.Instance));
-            else if (message is FailAt) FailAt = ((FailAt)message).SequenceNr;
-            else return false;
-            return true;
+            State = state;
         }
     }
 
-    public sealed class CommandsourcedPersistentActor : PerformanceTestActorBase
+    public sealed class Store
     {
-        public CommandsourcedPersistentActor(string persistenceId) : base(persistenceId)
+        public readonly int Value;
+
+        public Store(int value)
         {
+            Value = value;
+        }
+    }
+
+    public sealed class Stored
+    {
+        public readonly int Value;
+
+        public Stored(int value)
+        {
+            Value = value;
+        }
+    }
+
+    public class PerformanceTestActor : PersistentActor
+    {
+        private long state = 0L;
+        public PerformanceTestActor(string persistenceId)
+        {
+            PersistenceId = persistenceId;
         }
 
-        protected override bool ReceiveCommand(object message)
-        {
-            if (!ControlBehavior(message))
+        public sealed override string PersistenceId { get; }
+
+        protected override bool ReceiveRecover(object message) => message.Match()
+            .With<Stored>(s => state += s.Value)
+            .WasHandled;
+
+        protected override bool ReceiveCommand(object message) => message.Match()
+            .With<Store>(store =>
             {
-                PersistAsync(message, e =>
+                Persist(new Stored(store.Value), s =>
                 {
-                    if (LastSequenceNr % 1000 == 0) ;
-                    if (LastSequenceNr == FailAt) throw new PerformanceTestException("boom");
+                    state += s.Value;
                 });
-            }
-            return true;
-        }
-    }
-
-    public sealed class EventsourcedPersistentActor : PerformanceTestActorBase
-    {
-        public EventsourcedPersistentActor(string persistenceId) : base(persistenceId)
-        {
-        }
-
-        protected override bool ReceiveCommand(object message)
-        {
-            if (!ControlBehavior(message))
+            })
+            .With<Init>(_ =>
             {
-                Persist(message, e =>
+                var sender = Sender;
+                Persist(new Stored(0), s =>
                 {
-                    if (LastSequenceNr % 1000 == 0) ;
-                    if (LastSequenceNr == FailAt) throw new PerformanceTestException("boom");
+                    state += s.Value;
+                    sender.Tell(Done.Instance);
                 });
-            }
-            return true;
-        }
+            })
+            .With<Finish>(_ => Sender.Tell(new Finished(state)))
+            .WasHandled;
     }
 
-    public sealed class MixedPersistentActor : PerformanceTestActorBase
-    {
-        private int counter = 0;
-        public MixedPersistentActor(string persistenceId) : base(persistenceId)
-        {
-        }
-
-        private void Handler(object message)
-        {
-            if (LastSequenceNr % 1000 == 0) ;
-            if (LastSequenceNr == FailAt) throw new PerformanceTestException("boom");
-        }
-
-        protected override bool ReceiveCommand(object message)
-        {
-            if (!ControlBehavior(message))
-            {
-                counter++;
-                if (counter % 10 == 0) Persist(message, Handler);
-                else PersistAsync(message, Handler);
-            }
-            return true;
-        }
-    }
-
-    public sealed class StashingEventsourcedPersistentActor : PerformanceTestActorBase
-    {
-        public StashingEventsourcedPersistentActor(string persistenceId) : base(persistenceId)
-        {
-        }
-
-        private object PrintProgress(object message)
-        {
-            if (LastSequenceNr % 1000 == 0) Console.Write(".");
-            return message;
-        }
-
-        private bool ProcessC(object message)
-        {
-            PrintProgress(message);
-            if (object.Equals("c", message))
-            {
-                var context = Context;
-                Persist("c", _ => context.UnbecomeStacked());
-                Stash.UnstashAll();
-            }
-            else Stash.Stash();
-            return true;
-        }
-
-        protected override bool ReceiveCommand(object message)
-        {
-            PrintProgress(message);
-            if (!ControlBehavior(message))
-            {
-                var context = Context;
-                if (object.Equals("a", message))
-                    Persist("a", _ => context.BecomeStacked(ProcessC));
-                else if (object.Equals("b", message))
-                    Persist("b", s => { });
-                else return false;
-            }
-            return true;
-        }
-    }
 }

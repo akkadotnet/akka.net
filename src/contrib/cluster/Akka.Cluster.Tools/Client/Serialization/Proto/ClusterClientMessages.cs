@@ -13,412 +13,338 @@ using pb = global::Google.ProtocolBuffers;
 using pbc = global::Google.ProtocolBuffers.Collections;
 using pbd = global::Google.ProtocolBuffers.Descriptors;
 using scg = global::System.Collections.Generic;
-[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-public static partial class ClusterClientMessages
-{
-
+namespace Akka.Cluster.Client.Serializers.Proto {
+  
+  [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+  internal static partial class ClusterClientMessages {
+  
     #region Extension registration
-    public static void RegisterAllExtensions(pb::ExtensionRegistry registry)
-    {
+    public static void RegisterAllExtensions(pb::ExtensionRegistry registry) {
     }
     #endregion
     #region Static variables
     internal static pbd::MessageDescriptor internal__static_Contacts__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Contacts, global::Contacts.Builder> internal__static_Contacts__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Client.Serializers.Proto.Contacts, global::Akka.Cluster.Client.Serializers.Proto.Contacts.Builder> internal__static_Contacts__FieldAccessorTable;
     #endregion
     #region Descriptor
-    public static pbd::FileDescriptor Descriptor
-    {
-        get { return descriptor; }
+    public static pbd::FileDescriptor Descriptor {
+      get { return descriptor; }
     }
     private static pbd::FileDescriptor descriptor;
-
-    static ClusterClientMessages()
-    {
-        byte[] descriptorData = global::System.Convert.FromBase64String(
-            "ChtDbHVzdGVyQ2xpZW50TWVzc2FnZXMucHJvdG8iIQoIQ29udGFjdHMSFQoN" +
-            "Y29udGFjdFBvaW50cxgBIAMoCUIkCiBha2thLmNsdXN0ZXIuY2xpZW50LnBy" +
-            "b3RvYnVmLm1zZ0gB");
-        pbd::FileDescriptor.InternalDescriptorAssigner assigner = delegate (pbd::FileDescriptor root) {
-            descriptor = root;
-            internal__static_Contacts__Descriptor = Descriptor.MessageTypes[0];
-            internal__static_Contacts__FieldAccessorTable =
-                new pb::FieldAccess.FieldAccessorTable<global::Contacts, global::Contacts.Builder>(internal__static_Contacts__Descriptor,
-                    new string[] { "ContactPoints", });
-            return null;
-        };
-        pbd::FileDescriptor.InternalBuildGeneratedFileFrom(descriptorData,
-            new pbd::FileDescriptor[] {
-            }, assigner);
+    
+    static ClusterClientMessages() {
+      byte[] descriptorData = global::System.Convert.FromBase64String(
+          "ChtDbHVzdGVyQ2xpZW50TWVzc2FnZXMucHJvdG8iIQoIQ29udGFjdHMSFQoN" + 
+          "Y29udGFjdFBvaW50cxgBIAMoCUIkCiBha2thLmNsdXN0ZXIuY2xpZW50LnBy" + 
+          "b3RvYnVmLm1zZ0gB");
+      pbd::FileDescriptor.InternalDescriptorAssigner assigner = delegate(pbd::FileDescriptor root) {
+        descriptor = root;
+        internal__static_Contacts__Descriptor = Descriptor.MessageTypes[0];
+        internal__static_Contacts__FieldAccessorTable = 
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Client.Serializers.Proto.Contacts, global::Akka.Cluster.Client.Serializers.Proto.Contacts.Builder>(internal__static_Contacts__Descriptor,
+                new string[] { "ContactPoints", });
+        return null;
+      };
+      pbd::FileDescriptor.InternalBuildGeneratedFileFrom(descriptorData,
+          new pbd::FileDescriptor[] {
+          }, assigner);
     }
     #endregion
-
-}
-#region Messages
-[global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-public sealed partial class Contacts : pb::GeneratedMessage<Contacts, Contacts.Builder>
-{
+    
+  }
+  #region Messages
+  [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+  internal sealed partial class Contacts : pb::GeneratedMessage<Contacts, Contacts.Builder> {
     private Contacts() { }
     private static readonly Contacts defaultInstance = new Contacts().MakeReadOnly();
     private static readonly string[] _contactsFieldNames = new string[] { "contactPoints" };
     private static readonly uint[] _contactsFieldTags = new uint[] { 10 };
-    public static Contacts DefaultInstance
-    {
-        get { return defaultInstance; }
+    public static Contacts DefaultInstance {
+      get { return defaultInstance; }
     }
-
-    public override Contacts DefaultInstanceForType
-    {
-        get { return DefaultInstance; }
+    
+    public override Contacts DefaultInstanceForType {
+      get { return DefaultInstance; }
     }
-
-    protected override Contacts ThisMessage
-    {
-        get { return this; }
+    
+    protected override Contacts ThisMessage {
+      get { return this; }
     }
-
-    public static pbd::MessageDescriptor Descriptor
-    {
-        get { return global::ClusterClientMessages.internal__static_Contacts__Descriptor; }
+    
+    public static pbd::MessageDescriptor Descriptor {
+      get { return global::Akka.Cluster.Client.Serializers.Proto.ClusterClientMessages.internal__static_Contacts__Descriptor; }
     }
-
-    protected override pb::FieldAccess.FieldAccessorTable<Contacts, Contacts.Builder> InternalFieldAccessors
-    {
-        get { return global::ClusterClientMessages.internal__static_Contacts__FieldAccessorTable; }
+    
+    protected override pb::FieldAccess.FieldAccessorTable<Contacts, Contacts.Builder> InternalFieldAccessors {
+      get { return global::Akka.Cluster.Client.Serializers.Proto.ClusterClientMessages.internal__static_Contacts__FieldAccessorTable; }
     }
-
+    
     public const int ContactPointsFieldNumber = 1;
     private pbc::PopsicleList<string> contactPoints_ = new pbc::PopsicleList<string>();
-    public scg::IList<string> ContactPointsList
-    {
-        get { return pbc::Lists.AsReadOnly(contactPoints_); }
+    public scg::IList<string> ContactPointsList {
+      get { return pbc::Lists.AsReadOnly(contactPoints_); }
     }
-    public int ContactPointsCount
-    {
-        get { return contactPoints_.Count; }
+    public int ContactPointsCount {
+      get { return contactPoints_.Count; }
     }
-    public string GetContactPoints(int index)
-    {
-        return contactPoints_[index];
+    public string GetContactPoints(int index) {
+      return contactPoints_[index];
     }
-
-    public override bool IsInitialized
-    {
-        get
-        {
-            return true;
-        }
+    
+    public override bool IsInitialized {
+      get {
+        return true;
+      }
     }
-
-    public override void WriteTo(pb::ICodedOutputStream output)
-    {
-        int size = SerializedSize;
-        string[] field_names = _contactsFieldNames;
-        if (contactPoints_.Count > 0)
-        {
-            output.WriteStringArray(1, field_names[0], contactPoints_);
-        }
-        UnknownFields.WriteTo(output);
+    
+    public override void WriteTo(pb::ICodedOutputStream output) {
+      int size = SerializedSize;
+      string[] field_names = _contactsFieldNames;
+      if (contactPoints_.Count > 0) {
+        output.WriteStringArray(1, field_names[0], contactPoints_);
+      }
+      UnknownFields.WriteTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
-    public override int SerializedSize
-    {
-        get
+    public override int SerializedSize {
+      get {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+        
+        size = 0;
         {
-            int size = memoizedSerializedSize;
-            if (size != -1) return size;
-
-            size = 0;
-            {
-                int dataSize = 0;
-                foreach (string element in ContactPointsList)
-                {
-                    dataSize += pb::CodedOutputStream.ComputeStringSizeNoTag(element);
-                }
-                size += dataSize;
-                size += 1 * contactPoints_.Count;
-            }
-            size += UnknownFields.SerializedSize;
-            memoizedSerializedSize = size;
-            return size;
+          int dataSize = 0;
+          foreach (string element in ContactPointsList) {
+            dataSize += pb::CodedOutputStream.ComputeStringSizeNoTag(element);
+          }
+          size += dataSize;
+          size += 1 * contactPoints_.Count;
         }
+        size += UnknownFields.SerializedSize;
+        memoizedSerializedSize = size;
+        return size;
+      }
     }
-
-    public static Contacts ParseFrom(pb::ByteString data)
-    {
-        return ((Builder)CreateBuilder().MergeFrom(data)).BuildParsed();
+    
+    public static Contacts ParseFrom(pb::ByteString data) {
+      return ((Builder) CreateBuilder().MergeFrom(data)).BuildParsed();
     }
-    public static Contacts ParseFrom(pb::ByteString data, pb::ExtensionRegistry extensionRegistry)
-    {
-        return ((Builder)CreateBuilder().MergeFrom(data, extensionRegistry)).BuildParsed();
+    public static Contacts ParseFrom(pb::ByteString data, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(data, extensionRegistry)).BuildParsed();
     }
-    public static Contacts ParseFrom(byte[] data)
-    {
-        return ((Builder)CreateBuilder().MergeFrom(data)).BuildParsed();
+    public static Contacts ParseFrom(byte[] data) {
+      return ((Builder) CreateBuilder().MergeFrom(data)).BuildParsed();
     }
-    public static Contacts ParseFrom(byte[] data, pb::ExtensionRegistry extensionRegistry)
-    {
-        return ((Builder)CreateBuilder().MergeFrom(data, extensionRegistry)).BuildParsed();
+    public static Contacts ParseFrom(byte[] data, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(data, extensionRegistry)).BuildParsed();
     }
-    public static Contacts ParseFrom(global::System.IO.Stream input)
-    {
-        return ((Builder)CreateBuilder().MergeFrom(input)).BuildParsed();
+    public static Contacts ParseFrom(global::System.IO.Stream input) {
+      return ((Builder) CreateBuilder().MergeFrom(input)).BuildParsed();
     }
-    public static Contacts ParseFrom(global::System.IO.Stream input, pb::ExtensionRegistry extensionRegistry)
-    {
-        return ((Builder)CreateBuilder().MergeFrom(input, extensionRegistry)).BuildParsed();
+    public static Contacts ParseFrom(global::System.IO.Stream input, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(input, extensionRegistry)).BuildParsed();
     }
-    public static Contacts ParseDelimitedFrom(global::System.IO.Stream input)
-    {
-        return CreateBuilder().MergeDelimitedFrom(input).BuildParsed();
+    public static Contacts ParseDelimitedFrom(global::System.IO.Stream input) {
+      return CreateBuilder().MergeDelimitedFrom(input).BuildParsed();
     }
-    public static Contacts ParseDelimitedFrom(global::System.IO.Stream input, pb::ExtensionRegistry extensionRegistry)
-    {
-        return CreateBuilder().MergeDelimitedFrom(input, extensionRegistry).BuildParsed();
+    public static Contacts ParseDelimitedFrom(global::System.IO.Stream input, pb::ExtensionRegistry extensionRegistry) {
+      return CreateBuilder().MergeDelimitedFrom(input, extensionRegistry).BuildParsed();
     }
-    public static Contacts ParseFrom(pb::ICodedInputStream input)
-    {
-        return ((Builder)CreateBuilder().MergeFrom(input)).BuildParsed();
+    public static Contacts ParseFrom(pb::ICodedInputStream input) {
+      return ((Builder) CreateBuilder().MergeFrom(input)).BuildParsed();
     }
-    public static Contacts ParseFrom(pb::ICodedInputStream input, pb::ExtensionRegistry extensionRegistry)
-    {
-        return ((Builder)CreateBuilder().MergeFrom(input, extensionRegistry)).BuildParsed();
+    public static Contacts ParseFrom(pb::ICodedInputStream input, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(input, extensionRegistry)).BuildParsed();
     }
-    private Contacts MakeReadOnly()
-    {
-        contactPoints_.MakeReadOnly();
-        return this;
+    private Contacts MakeReadOnly() {
+      contactPoints_.MakeReadOnly();
+      return this;
     }
-
+    
     public static Builder CreateBuilder() { return new Builder(); }
     public override Builder ToBuilder() { return CreateBuilder(this); }
     public override Builder CreateBuilderForType() { return new Builder(); }
-    public static Builder CreateBuilder(Contacts prototype)
-    {
-        return new Builder(prototype);
+    public static Builder CreateBuilder(Contacts prototype) {
+      return new Builder(prototype);
     }
-
+    
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public sealed partial class Builder : pb::GeneratedBuilder<Contacts, Builder>
-    {
-        protected override Builder ThisBuilder
-        {
-            get { return this; }
+    internal sealed partial class Builder : pb::GeneratedBuilder<Contacts, Builder> {
+      protected override Builder ThisBuilder {
+        get { return this; }
+      }
+      public Builder() {
+        result = DefaultInstance;
+        resultIsReadOnly = true;
+      }
+      internal Builder(Contacts cloneFrom) {
+        result = cloneFrom;
+        resultIsReadOnly = true;
+      }
+      
+      private bool resultIsReadOnly;
+      private Contacts result;
+      
+      private Contacts PrepareBuilder() {
+        if (resultIsReadOnly) {
+          Contacts original = result;
+          result = new Contacts();
+          resultIsReadOnly = false;
+          MergeFrom(original);
         }
-        public Builder()
-        {
-            result = DefaultInstance;
-            resultIsReadOnly = true;
+        return result;
+      }
+      
+      public override bool IsInitialized {
+        get { return result.IsInitialized; }
+      }
+      
+      protected override Contacts MessageBeingBuilt {
+        get { return PrepareBuilder(); }
+      }
+      
+      public override Builder Clear() {
+        result = DefaultInstance;
+        resultIsReadOnly = true;
+        return this;
+      }
+      
+      public override Builder Clone() {
+        if (resultIsReadOnly) {
+          return new Builder(result);
+        } else {
+          return new Builder().MergeFrom(result);
         }
-        internal Builder(Contacts cloneFrom)
-        {
-            result = cloneFrom;
-            resultIsReadOnly = true;
+      }
+      
+      public override pbd::MessageDescriptor DescriptorForType {
+        get { return global::Akka.Cluster.Client.Serializers.Proto.Contacts.Descriptor; }
+      }
+      
+      public override Contacts DefaultInstanceForType {
+        get { return global::Akka.Cluster.Client.Serializers.Proto.Contacts.DefaultInstance; }
+      }
+      
+      public override Contacts BuildPartial() {
+        if (resultIsReadOnly) {
+          return result;
         }
-
-        private bool resultIsReadOnly;
-        private Contacts result;
-
-        private Contacts PrepareBuilder()
-        {
-            if (resultIsReadOnly)
-            {
-                Contacts original = result;
-                result = new Contacts();
-                resultIsReadOnly = false;
-                MergeFrom(original);
+        resultIsReadOnly = true;
+        return result.MakeReadOnly();
+      }
+      
+      public override Builder MergeFrom(pb::IMessage other) {
+        if (other is Contacts) {
+          return MergeFrom((Contacts) other);
+        } else {
+          base.MergeFrom(other);
+          return this;
+        }
+      }
+      
+      public override Builder MergeFrom(Contacts other) {
+        if (other == global::Akka.Cluster.Client.Serializers.Proto.Contacts.DefaultInstance) return this;
+        PrepareBuilder();
+        if (other.contactPoints_.Count != 0) {
+          result.contactPoints_.Add(other.contactPoints_);
+        }
+        this.MergeUnknownFields(other.UnknownFields);
+        return this;
+      }
+      
+      public override Builder MergeFrom(pb::ICodedInputStream input) {
+        return MergeFrom(input, pb::ExtensionRegistry.Empty);
+      }
+      
+      public override Builder MergeFrom(pb::ICodedInputStream input, pb::ExtensionRegistry extensionRegistry) {
+        PrepareBuilder();
+        pb::UnknownFieldSet.Builder unknownFields = null;
+        uint tag;
+        string field_name;
+        while (input.ReadTag(out tag, out field_name)) {
+          if(tag == 0 && field_name != null) {
+            int field_ordinal = global::System.Array.BinarySearch(_contactsFieldNames, field_name, global::System.StringComparer.Ordinal);
+            if(field_ordinal >= 0)
+              tag = _contactsFieldTags[field_ordinal];
+            else {
+              if (unknownFields == null) {
+                unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
+              }
+              ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
+              continue;
             }
-            return result;
-        }
-
-        public override bool IsInitialized
-        {
-            get { return result.IsInitialized; }
-        }
-
-        protected override Contacts MessageBeingBuilt
-        {
-            get { return PrepareBuilder(); }
-        }
-
-        public override Builder Clear()
-        {
-            result = DefaultInstance;
-            resultIsReadOnly = true;
-            return this;
-        }
-
-        public override Builder Clone()
-        {
-            if (resultIsReadOnly)
-            {
-                return new Builder(result);
+          }
+          switch (tag) {
+            case 0: {
+              throw pb::InvalidProtocolBufferException.InvalidTag();
             }
-            else
-            {
-                return new Builder().MergeFrom(result);
-            }
-        }
-
-        public override pbd::MessageDescriptor DescriptorForType
-        {
-            get { return global::Contacts.Descriptor; }
-        }
-
-        public override Contacts DefaultInstanceForType
-        {
-            get { return global::Contacts.DefaultInstance; }
-        }
-
-        public override Contacts BuildPartial()
-        {
-            if (resultIsReadOnly)
-            {
-                return result;
-            }
-            resultIsReadOnly = true;
-            return result.MakeReadOnly();
-        }
-
-        public override Builder MergeFrom(pb::IMessage other)
-        {
-            if (other is Contacts)
-            {
-                return MergeFrom((Contacts)other);
-            }
-            else
-            {
-                base.MergeFrom(other);
+            default: {
+              if (pb::WireFormat.IsEndGroupTag(tag)) {
+                if (unknownFields != null) {
+                  this.UnknownFields = unknownFields.Build();
+                }
                 return this;
+              }
+              if (unknownFields == null) {
+                unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
+              }
+              ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
+              break;
             }
-        }
-
-        public override Builder MergeFrom(Contacts other)
-        {
-            if (other == global::Contacts.DefaultInstance) return this;
-            PrepareBuilder();
-            if (other.contactPoints_.Count != 0)
-            {
-                result.contactPoints_.Add(other.contactPoints_);
+            case 10: {
+              input.ReadStringArray(tag, field_name, result.contactPoints_);
+              break;
             }
-            this.MergeUnknownFields(other.UnknownFields);
-            return this;
+          }
         }
-
-        public override Builder MergeFrom(pb::ICodedInputStream input)
-        {
-            return MergeFrom(input, pb::ExtensionRegistry.Empty);
+        
+        if (unknownFields != null) {
+          this.UnknownFields = unknownFields.Build();
         }
-
-        public override Builder MergeFrom(pb::ICodedInputStream input, pb::ExtensionRegistry extensionRegistry)
-        {
-            PrepareBuilder();
-            pb::UnknownFieldSet.Builder unknownFields = null;
-            uint tag;
-            string field_name;
-            while (input.ReadTag(out tag, out field_name))
-            {
-                if (tag == 0 && field_name != null)
-                {
-                    int field_ordinal = global::System.Array.BinarySearch(_contactsFieldNames, field_name, global::System.StringComparer.Ordinal);
-                    if (field_ordinal >= 0)
-                        tag = _contactsFieldTags[field_ordinal];
-                    else
-                    {
-                        if (unknownFields == null)
-                        {
-                            unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
-                        }
-                        ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
-                        continue;
-                    }
-                }
-                switch (tag)
-                {
-                    case 0:
-                        {
-                            throw pb::InvalidProtocolBufferException.InvalidTag();
-                        }
-                    default:
-                        {
-                            if (pb::WireFormat.IsEndGroupTag(tag))
-                            {
-                                if (unknownFields != null)
-                                {
-                                    this.UnknownFields = unknownFields.Build();
-                                }
-                                return this;
-                            }
-                            if (unknownFields == null)
-                            {
-                                unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
-                            }
-                            ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
-                            break;
-                        }
-                    case 10:
-                        {
-                            input.ReadStringArray(tag, field_name, result.contactPoints_);
-                            break;
-                        }
-                }
-            }
-
-            if (unknownFields != null)
-            {
-                this.UnknownFields = unknownFields.Build();
-            }
-            return this;
-        }
-
-
-        public pbc::IPopsicleList<string> ContactPointsList
-        {
-            get { return PrepareBuilder().contactPoints_; }
-        }
-        public int ContactPointsCount
-        {
-            get { return result.ContactPointsCount; }
-        }
-        public string GetContactPoints(int index)
-        {
-            return result.GetContactPoints(index);
-        }
-        public Builder SetContactPoints(int index, string value)
-        {
-            pb::ThrowHelper.ThrowIfNull(value, "value");
-            PrepareBuilder();
-            result.contactPoints_[index] = value;
-            return this;
-        }
-        public Builder AddContactPoints(string value)
-        {
-            pb::ThrowHelper.ThrowIfNull(value, "value");
-            PrepareBuilder();
-            result.contactPoints_.Add(value);
-            return this;
-        }
-        public Builder AddRangeContactPoints(scg::IEnumerable<string> values)
-        {
-            PrepareBuilder();
-            result.contactPoints_.Add(values);
-            return this;
-        }
-        public Builder ClearContactPoints()
-        {
-            PrepareBuilder();
-            result.contactPoints_.Clear();
-            return this;
-        }
+        return this;
+      }
+      
+      
+      public pbc::IPopsicleList<string> ContactPointsList {
+        get { return PrepareBuilder().contactPoints_; }
+      }
+      public int ContactPointsCount {
+        get { return result.ContactPointsCount; }
+      }
+      public string GetContactPoints(int index) {
+        return result.GetContactPoints(index);
+      }
+      public Builder SetContactPoints(int index, string value) {
+        pb::ThrowHelper.ThrowIfNull(value, "value");
+        PrepareBuilder();
+        result.contactPoints_[index] = value;
+        return this;
+      }
+      public Builder AddContactPoints(string value) {
+        pb::ThrowHelper.ThrowIfNull(value, "value");
+        PrepareBuilder();
+        result.contactPoints_.Add(value);
+        return this;
+      }
+      public Builder AddRangeContactPoints(scg::IEnumerable<string> values) {
+        PrepareBuilder();
+        result.contactPoints_.Add(values);
+        return this;
+      }
+      public Builder ClearContactPoints() {
+        PrepareBuilder();
+        result.contactPoints_.Clear();
+        return this;
+      }
     }
-    static Contacts()
-    {
-        object.ReferenceEquals(global::ClusterClientMessages.Descriptor, null);
+    static Contacts() {
+      object.ReferenceEquals(global::Akka.Cluster.Client.Serializers.Proto.ClusterClientMessages.Descriptor, null);
     }
+  }
+  
+  #endregion
+  
 }
-
-#endregion
-
 
 #endregion Designer generated code

@@ -14,7 +14,9 @@ using Akka.Tools.MatchHandler;
 
 namespace Akka.Actor
 {
-
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ReceiveActor : UntypedActor, IInitializableActor
     {
         private bool _shouldUnhandle = true;
@@ -22,6 +24,9 @@ namespace Akka.Actor
         private PartialAction<object> _partialReceive = _ => false;
         private bool _hasBeenInitialized;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ReceiveActor()
         {
             PrepareConfigureMessageHandlers();
@@ -57,9 +62,14 @@ namespace Akka.Actor
             _matchHandlerBuilders.Push(new MatchBuilder(CachedMatchCompiler<object>.Instance));
         }
 
-        //Seal the method so that implementors cannot use it. They should only use Receive and Become
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected sealed override void OnReceive(object message)
         {
+            //Seal the method so that implementors cannot use it. They should only use Receive and Become
+
             ExecutePartialMessageHandler(message, _partialReceive);
         }
 
@@ -93,6 +103,11 @@ namespace Akka.Actor
             base.BecomeStacked(m => ExecutePartialMessageHandler(m, newHandler));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="configure">TBD</param>
+        /// <param name="discardOld">TBD</param>
         [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         protected void Become(Action configure, bool discardOld = true)
         {
@@ -110,6 +125,11 @@ namespace Akka.Actor
             return newHandler;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="handler">TBD</param>
         [Obsolete("Use ReceiveAsync instead. This method will be removed in future versions")]
         protected void Receive<T>(Func<T, Task> handler)
         {
@@ -205,13 +225,14 @@ namespace Akka.Actor
         /// <summary>
         /// Registers a handler for incoming messages of the specified type <typeparamref name="T"/>.
         /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
-        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already. 
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
         /// <typeparam name="T">The type of the message</typeparam>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive<T>(Action<T> handler, Predicate<T> shouldHandle = null)
         {
             EnsureMayConfigureMessageHandlers();
@@ -228,6 +249,7 @@ namespace Akka.Actor
         /// <typeparam name="T">The type of the message</typeparam>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
             Receive<T>(handler, shouldHandle);
@@ -244,6 +266,7 @@ namespace Akka.Actor
         /// <param name="messageType">The type of the message</param>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified <paramref name="messageType"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive(Type messageType, Action<object> handler, Predicate<object> shouldHandle = null)
         {
             EnsureMayConfigureMessageHandlers();
@@ -261,14 +284,11 @@ namespace Akka.Actor
         /// <param name="messageType">The type of the message</param>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified <paramref name="messageType"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
         {
             Receive(messageType, handler, shouldHandle);
         }
-
-
-
-
 
         /// <summary>
         /// Registers a handler for incoming messages of the specified type <typeparamref name="T"/>.
@@ -282,6 +302,7 @@ namespace Akka.Actor
         /// <param name="handler">The message handler that is invoked for incoming messages of the 
         /// specified type <typeparamref name="T"/>. It should return <c>true</c>if it handled/matched 
         /// the message; <c>false</c> otherwise.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureMessageHandlers();
@@ -300,15 +321,12 @@ namespace Akka.Actor
         /// <param name="handler">The message handler that is invoked for incoming messages of the 
         /// specified type <paramref name="messageType"/>. It should return <c>true</c>if it handled/matched 
         /// the message; <c>false</c> otherwise.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive(Type messageType, Func<object, bool> handler)
         {
             EnsureMayConfigureMessageHandlers();
             _matchHandlerBuilders.Peek().Match(messageType, handler);
         }
-
-
-
-
 
         /// <summary>
         /// Registers a handler for incoming messages of any type.
@@ -317,12 +335,11 @@ namespace Akka.Actor
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
         /// <param name="handler">The message handler that is invoked for all</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void ReceiveAny(Action<object> handler)
         {
             EnsureMayConfigureMessageHandlers();
             _matchHandlerBuilders.Peek().MatchAny(handler);
         }
-
     }
 }
-

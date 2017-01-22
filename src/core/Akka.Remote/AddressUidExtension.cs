@@ -15,6 +15,11 @@ namespace Akka.Remote
     /// </summary>
     public class AddressUidExtension : ExtensionIdProvider<AddressUid>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override AddressUid CreateExtension(ExtendedActorSystem system)
         {
             return new AddressUid();
@@ -22,6 +27,11 @@ namespace Akka.Remote
 
         #region Static methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static int Uid(ActorSystem system)
         {
             return system.WithExtension<AddressUid, AddressUidExtension>().Uid;
@@ -38,6 +48,9 @@ namespace Akka.Remote
     /// </summary>
     public class AddressUid : IExtension
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int Uid = ThreadLocalRandom.Current.Next();
     }
 }

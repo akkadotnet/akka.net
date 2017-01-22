@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Cluster
@@ -22,18 +23,33 @@ namespace Akka.Cluster
     /// The implementation is split into two classes AutoDown and AutoDownBase to be
     /// able to unit test the logic without running cluster.
     /// </summary>
-    public class AutoDown : AutoDownBase
+    internal class AutoDown : AutoDownBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="autoDownUnreachableAfter">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(TimeSpan autoDownUnreachableAfter)
         {
             return new Props(typeof(AutoDown), new object[]{autoDownUnreachableAfter});
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class UnreachableTimeout
         {
             readonly UniqueAddress _node;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public UniqueAddress Node { get { return _node; } }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="node">TBD</param>
             public UnreachableTimeout(UniqueAddress node)
             {
                 _node = node;
@@ -44,33 +60,54 @@ namespace Akka.Cluster
 
         readonly Cluster _cluster;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="autoDownUnreachableAfter">TBD</param>
         public AutoDown(TimeSpan autoDownUnreachableAfter) : base(autoDownUnreachableAfter)
         {
             _cluster = Cluster.Get(Context.System);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Address SelfAddress
         {
             get { return _cluster.SelfAddress; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IScheduler Scheduler
         {
             get { return _cluster.Scheduler; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             _cluster.Subscribe(Self,new []{ typeof(ClusterEvent.IClusterDomainEvent)});
             base.PreStart();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             _cluster.Unsubscribe(Self);
             base.PostStop();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
         public override void Down(Address node)
         {
             if(!_leader) throw new InvalidOperationException("Must be leader to down node");
@@ -80,7 +117,10 @@ namespace Akka.Cluster
 
     }
 
-    public abstract class AutoDownBase : UntypedActor
+    /// <summary>
+    /// TBD
+    /// </summary>
+    internal abstract class AutoDownBase : UntypedActor
     {
         readonly ImmutableHashSet<MemberStatus> _skipMemberStatus =
             Gossip.ConvergenceSkipUnreachableWithMemberStatus;
@@ -88,26 +128,50 @@ namespace Akka.Cluster
         ImmutableDictionary<UniqueAddress, ICancelable> _scheduledUnreachable =
             ImmutableDictionary.Create<UniqueAddress, ICancelable>();
         ImmutableHashSet<UniqueAddress> _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected bool _leader = false;
 
         readonly TimeSpan _autoDownUnreachableAfter;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="autoDownUnreachableAfter">TBD</param>
         protected AutoDownBase(TimeSpan autoDownUnreachableAfter)
         {
             _autoDownUnreachableAfter = autoDownUnreachableAfter;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             foreach (var tokenSource in _scheduledUnreachable.Values) tokenSource.Cancel();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract Address SelfAddress { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public abstract IScheduler Scheduler { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
         public abstract void Down(Address node);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             var state = message as ClusterEvent.CurrentClusterState;
@@ -204,6 +268,43 @@ namespace Akka.Cluster
         }
 
         public ILoggingAdapter Log { get; private set; }
+    }
+
+    /// <summary>
+    /// Used when no custom provider is configured and 'auto-down-unreachable-after' is enabled.
+    /// </summary>
+    internal sealed class AutoDowning : IDowningProvider
+    {
+        private readonly ClusterSettings _clusterSettings;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        public AutoDowning(ActorSystem system)
+        {
+            _clusterSettings = Cluster.Get(system).Settings;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan DownRemovalMargin => _clusterSettings.DownRemovalMargin;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        public Props DowningActorProps
+        {
+            get
+            {
+                if (_clusterSettings.AutoDownUnreachableAfter.HasValue)
+                    return AutoDown.Props(_clusterSettings.AutoDownUnreachableAfter.Value);
+                else 
+                    throw new ConfigurationException("AutoDowning downing provider selected but 'akka.cluster.auto-down-unreachable-after' not set");
+            }
+        }
     }
 }
 

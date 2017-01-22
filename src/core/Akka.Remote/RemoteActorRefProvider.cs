@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
@@ -26,6 +27,12 @@ namespace Akka.Remote
     {
         private readonly ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="systemName">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="eventStream">TBD</param>
         public RemoteActorRefProvider(string systemName, Settings settings, EventStream eventStream)
         {
             settings.InjectTopLevelFallback(RemoteConfigFactory.Default());
@@ -51,45 +58,97 @@ namespace Akka.Remote
         {
             var internals =
                 new Internals(new Remoting(_system, this), _system.Serialization,
-                    new RemoteSystemDaemon(_system, RootPath/"remote", SystemGuardian, _remotingTerminator, _log));
+                    new RemoteSystemDaemon(_system, RootPath / "remote", RootGuardian, _remotingTerminator, _log));
             _local.RegisterExtraName("remote", internals.RemoteDaemon);
             return internals;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IInternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public RemoteTransport Transport { get { return RemoteInternals.Transport; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal RemoteSettings RemoteSettings { get; private set; }
 
         /* these are only available after Init() is called */
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorPath RootPath
         {
             get { return _local.RootPath; }
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IInternalActorRef RootGuardian { get { return _local.RootGuardian; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public LocalActorRef Guardian { get { return _local.Guardian; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public LocalActorRef SystemGuardian { get { return _local.SystemGuardian; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IInternalActorRef TempContainer { get { return _local.TempContainer; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef DeadLetters { get { return _local.DeadLetters; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Deployer Deployer { get; protected set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Settings Settings { get { return _local.Settings; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Task TerminationTask { get { return _local.TerminationTask; } }
         private IInternalActorRef InternalDeadLetters { get { return (IInternalActorRef)_local.DeadLetters; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public ActorPath TempPath()
         {
             return _local.TempPath();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="path">TBD</param>
         public void RegisterTempActor(IInternalActorRef actorRef, ActorPath path)
         {
             _local.RegisterTempActor(actorRef, path);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
         public void UnregisterTempActor(ActorPath path)
         {
             _local.UnregisterTempActor(path);
@@ -97,8 +156,16 @@ namespace Akka.Remote
 
         private volatile IActorRef _remotingTerminator;
         private volatile IActorRef _remoteWatcher;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal IActorRef RemoteWatcher => _remoteWatcher;
         private volatile IActorRef _remoteDeploymentWatcher;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public virtual void Init(ActorSystemImpl system)
         {
             _system = system;
@@ -117,23 +184,38 @@ namespace Akka.Remote
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
             return system.SystemActorOf(RemoteSettings.ConfigureDispatcher(
-                RemoteWatcher.Props(
+                Akka.Remote.RemoteWatcher.Props(
                     failureDetector,
                     RemoteSettings.WatchHeartBeatInterval,
                     RemoteSettings.WatchUnreachableReaperInterval,
                     RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual IActorRef CreateRemoteDeploymentWatcher(ActorSystemImpl system)
         {
             return system.SystemActorOf(RemoteSettings.ConfigureDispatcher(Props.Create<RemoteDeploymentWatcher>()),
                 "remote-deployment-watcher");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         protected DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)
         {
             return new DefaultFailureDetectorRegistry<Address>(() =>
@@ -141,6 +223,20 @@ namespace Akka.Remote
                 RemoteSettings.WatchFailureDetectorConfig, _system));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <param name="systemService">TBD</param>
+        /// <param name="deploy">TBD</param>
+        /// <param name="lookupDeploy">TBD</param>
+        /// <param name="async">TBD</param>
+        /// <exception cref="ActorInitializationException">TBD</exception>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <returns>TBD</returns>
         public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             if (systemService) return LocalActorOf(system, props, supervisor, path, true, deploy, lookupDeploy, async);
@@ -254,6 +350,11 @@ namespace Akka.Remote
             return address == _local.RootPath.Address || address == RootPath.Address || Transport.Addresses.Any(a => a == address);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef RootGuardianAt(Address address)
         {
             if (HasAddress(address))
@@ -281,6 +382,9 @@ namespace Akka.Remote
         /// 
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <returns>TBD</returns>
         internal IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
             ActorPath actorPath;
@@ -288,13 +392,24 @@ namespace Akka.Remote
             {
                 //the actor's local address was already included in the ActorPath
                 if (HasAddress(actorPath.Address))
-                    return (IInternalActorRef)ResolveActorRef(actorPath);
-                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.Elements, ActorRefs.Nobody, Props.None, Deploy.None);
+                {
+                    // HACK: needed to make ActorSelections work
+                    if (actorPath.ToStringWithoutAddress().Equals("/"))
+                        return RootGuardian;
+                    return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
+                }
+                    
+                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, ActorRefs.Nobody, Props.None, Deploy.None);
             }
             _log.Debug("resolve of unknown path [{0}] failed", path);
             return InternalDeadLetters;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef ResolveActorRef(string path)
         {
             if (path == String.Empty)
@@ -309,43 +424,38 @@ namespace Akka.Remote
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef ResolveActorRef(ActorPath actorPath)
         {
             if (HasAddress(actorPath.Address))
             {
-                var elements = actorPath.Elements;
-                if (elements.Head() == "remote")
-                {
-                    if (actorPath.ToStringWithoutAddress() == "/remote")
-                    {
-                        return RemoteDaemon;
-                    }
-                    //skip ""/"remote", 
-                    var parts = elements.Drop(1);
-                    return RemoteDaemon.GetChild(parts);
-                }
-                if (elements.Head() == "temp")
-                {
-                    //skip ""/"temp", 
-                    var parts = elements.Drop(1);
-                    return TempContainer.GetChild(parts);
-                }
-                //standard
-                var rootGuardian = RootGuardian;
-                if (actorPath.ToStringWithoutAddress() == "/")
-                {
-                    return rootGuardian;
-                }
-                return rootGuardian.GetChild(elements);
+                return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
             }
-            return new RemoteActorRef(Transport,
-                Transport.LocalAddressForRemote(actorPath.Address),
-                actorPath,
-                ActorRefs.Nobody,
-                Props.None,
-                Deploy.None);
+            try
+            {
+                return new RemoteActorRef(Transport,
+                    Transport.LocalAddressForRemote(actorPath.Address),
+                    actorPath, 
+                    ActorRefs.Nobody,
+                    Props.None,
+                    Deploy.None);
+            }
+            catch (Exception ex)
+            {
+                _log.Warning("Error while resolving address [{0}] due to [{1}]", actorPath.Address, ex.Message);
+                return new EmptyLocalActorRef(this, RootPath, _local.EventStream);
+            }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <returns>TBD</returns>
         public Address GetExternalAddressFor(Address address)
         {
             if (HasAddress(address)) { return _local.RootPath.Address; }
@@ -363,6 +473,13 @@ namespace Akka.Remote
             return null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="deploy">TBD</param>
+        /// <param name="supervisor">TBD</param>
         public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, IInternalActorRef supervisor)
         {
             _log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
@@ -383,19 +500,6 @@ namespace Akka.Remote
             Transport.Quarantine(address, uid);
         }
 
-        /// <summary>
-        ///     Afters the send system message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void AfterSendSystemMessage(ISystemMessage message)
-        {
-            message.Match()
-                .With<RemoteWatcher.Rewatch>(rew => _remoteWatcher.Tell(new RemoteWatcher.RewatchRemote(rew.Watchee, rew.Watcher)))
-                .With<Watch>(m => _remoteWatcher.Tell(new RemoteWatcher.WatchRemote(m.Watchee, m.Watcher)))
-                .With<Unwatch>(m => _remoteWatcher.Tell(new RemoteWatcher.UnwatchRemote(m.Watchee, m.Watcher)));
-
-        }
-
 
         #region Internals
 
@@ -405,6 +509,12 @@ namespace Akka.Remote
         /// </summary>
         class Internals : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="transport">TBD</param>
+            /// <param name="serialization">TBD</param>
+            /// <param name="remoteDaemon">TBD</param>
             public Internals(RemoteTransport transport, Akka.Serialization.Serialization serialization, IInternalActorRef remoteDaemon)
             {
                 Transport = transport;
@@ -412,10 +522,19 @@ namespace Akka.Remote
                 RemoteDaemon = remoteDaemon;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public RemoteTransport Transport { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Akka.Serialization.Serialization Serialization { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IInternalActorRef RemoteDaemon { get; private set; }
         }
 
@@ -428,10 +547,25 @@ namespace Akka.Remote
         /// </summary>
         enum TerminatorState
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             Uninitialized,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Idle,
+            /// <summary>
+            /// TBD
+            /// </summary>
             WaitDaemonShutdown,
+            /// <summary>
+            /// TBD
+            /// </summary>
             WaitTransportShutdown,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Finished
         }
 
@@ -439,7 +573,7 @@ namespace Akka.Remote
         /// Responsible for shutting down the <see cref="RemoteDaemon"/> and all transports
         /// when the <see cref="ActorSystem"/> is being shutdown.
         /// </summary>
-        private class RemotingTerminator : FSM<TerminatorState, Internals>
+        private class RemotingTerminator : FSM<TerminatorState, Internals>, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
         {
             private readonly IActorRef _systemGuardian;
             private readonly ILoggingAdapter _log;
@@ -542,7 +676,7 @@ namespace Akka.Remote
                 }
                 else if (deadLetter?.Message is EndpointManager.Send)
                 {
-                    var deadSend = (EndpointManager.Send) deadLetter.Message;
+                    var deadSend = (EndpointManager.Send)deadLetter.Message;
                     if (deadSend.Seq == null)
                     {
                         base.TellInternal(deadSend.Message, deadSend.SenderOption ?? ActorRefs.NoSender);
@@ -551,7 +685,7 @@ namespace Akka.Remote
                 else
                 {
                     base.TellInternal(message, sender);
-                }               
+                }
             }
         }
     }

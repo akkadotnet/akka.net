@@ -10,17 +10,17 @@ using System;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents an Error log event.
+    /// This class represents a Error log event.
     /// </summary>
     public class Error : LogEvent
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Error" /> class.
         /// </summary>
-        /// <param name="cause">The cause.</param>
-        /// <param name="logSource">The log source.</param>
-        /// <param name="logClass">The log class.</param>
-        /// <param name="message">The message.</param>
+        /// <param name="cause">The exception that caused the log event.</param>
+        /// <param name="logSource">The source that generated the log event.</param>
+        /// <param name="logClass">The type of logger used to log the event.</param>
+        /// <param name="message">The message that is being logged.</param>
         public Error(Exception cause, string logSource, Type logClass, object message)
         {
             Cause = cause;
@@ -30,21 +30,23 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Gets the cause of the error.
+        /// The exception that caused the log event.
         /// </summary>
-        /// <value>The cause.</value>
         public Exception Cause { get; private set; }
 
+        /// <summary>
+        /// Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
+        /// </summary>
+        /// <returns>The <see cref="Akka.Event.LogLevel" /> used to classify this event.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.ErrorLevel;
         }
 
         /// <summary>
-        /// Modifies the <see cref="LogEvent"/> printable error stream to also include
-        /// the details of the <see cref="Cause"/> object itself.
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
             var cause = Cause;
@@ -56,4 +58,3 @@ namespace Akka.Event
         }
     }
 }
-

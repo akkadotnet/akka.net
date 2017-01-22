@@ -56,18 +56,15 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Retrieves a list of elements associated with this element.
+        /// N/A
         /// </summary>
-        /// <returns>
-        /// A list of elements associated with this element.
-        /// </returns>
-        /// <exception cref="System.NotImplementedException">
-        /// This element is a string literal. It is not an array.
-        /// Therefore this method will throw an exception.
+        /// <returns>N/A</returns>
+        /// <exception cref="NotImplementedException">
+        /// This exception is thrown automatically since this element is a string literal and not an array.
         /// </exception>
         public IList<HoconValue> GetArray()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This element is a string literal and not an array.");
         }
 
         /// <summary>
@@ -80,4 +77,3 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
-

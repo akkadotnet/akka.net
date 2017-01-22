@@ -17,12 +17,30 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal struct PluginHolder
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Ref;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly EventAdapters Adapters;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Config Config;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ref">TBD</param>
+        /// <param name="adapters">TBD</param>
+        /// <param name="config">TBD</param>
         public PluginHolder(IActorRef @ref, EventAdapters adapters, Config config)
         {
             Ref = @ref;
@@ -31,6 +49,9 @@ namespace Akka.Persistence
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class PersistenceExtension : IExtension
     {
         private const string NoSnapshotStorePluginId = "akka.persistence.no-snapshot-store";
@@ -49,6 +70,11 @@ namespace Akka.Persistence
         private const string JournalFallbackConfigPath = "akka.persistence.journal-plugin-fallback";
         private const string SnapshotStoreFallbackConfigPath = "akka.persistence.snapshot-store-plugin-fallback";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <exception cref="NullReferenceException">TBD</exception>
         public PersistenceExtension(ExtendedActorSystem system)
         {
             _system = system;
@@ -82,7 +108,7 @@ namespace Akka.Persistence
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy");
                 var configuratorType = Type.GetType(configuratorTypeName);
-                return ((IStashOverflowStrategyConfigurator) configuratorType).Create(_system.Settings.Config);
+                return ((IStashOverflowStrategyConfigurator) Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
             });
 
             Settings = new PersistenceSettings(_system, _config);
@@ -102,13 +128,24 @@ namespace Akka.Persistence
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IStashOverflowStrategy DefaultInternalStashOverflowStrategy
         {
             get { return _defaultInternalStashOverflowStrategy.Value; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public PersistenceSettings Settings { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <returns>TBD</returns>
         public string PersistenceId(IActorRef actor)
         {
             return actor.Path.ToStringWithoutAddress();
@@ -119,6 +156,8 @@ namespace Akka.Persistence
         /// If no adapters are registered for a given journal the EventAdapters object will simply return the identity adapter for each 
         /// class, otherwise the most specific adapter matching a given class will be returned.
         /// </summary>
+        /// <param name="journalPluginId">TBD</param>
+        /// <returns>TBD</returns>
         public EventAdapters AdaptersFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
@@ -129,6 +168,8 @@ namespace Akka.Persistence
         /// <summary>
         /// Looks up <see cref="EventAdapters"/> by journal plugin's ActorRef.
         /// </summary>
+        /// <param name="journalPluginActor">TBD</param>
+        /// <returns>TBD</returns>
         internal EventAdapters AdaptersFor(IActorRef journalPluginActor)
         {
             var extension = _pluginExtensionIds.Values
@@ -142,6 +183,8 @@ namespace Akka.Persistence
         /// When empty, looks in `akka.persistence.journal.plugin` to find the configuration entry path.
         /// When configured, uses <paramref name="journalPluginId"/> as absolute path to the journal configuration entry.
         /// </summary>
+        /// <param name="journalPluginId">TBD</param>
+        /// <returns>TBD</returns>
         internal Config JournalConfigFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
@@ -151,6 +194,9 @@ namespace Akka.Persistence
         /// <summary>
         /// Looks up the plugin config by plugin's ActorRef.
         /// </summary>
+        /// <param name="journalPluginActor">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         internal Config ConfigFor(IActorRef journalPluginActor)
         {
             var extension = _pluginExtensionIds.Values
@@ -167,6 +213,8 @@ namespace Akka.Persistence
         /// When configured, uses <paramref name="journalPluginId"/> as absolute path to the journal configuration entry.
         /// Configuration entry must contain few required fields, such as `class`. See `persistence.conf`.
         /// </summary>
+        /// <param name="journalPluginId">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef JournalFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
@@ -180,6 +228,8 @@ namespace Akka.Persistence
         /// When configured, uses <paramref name="snapshotPluginId"/> as absolute path to the snapshot store configuration entry.
         /// Configuration entry must contain few required fields, such as `class`. See `persistence.conf`.
         /// </summary>
+        /// <param name="snapshotPluginId">TBD</param>
+        /// <returns>TBD</returns>
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
             var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;
@@ -238,13 +288,25 @@ namespace Akka.Persistence
     /// </summary>
     public class Persistence : ExtensionIdProvider<PersistenceExtension>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Persistence Instance = new Persistence();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override PersistenceExtension CreateExtension(ExtendedActorSystem system)
         {
             return new PersistenceExtension(system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<Persistence>("Akka.Persistence.persistence.conf");
@@ -256,9 +318,19 @@ namespace Akka.Persistence
     /// </summary>
     public class PersistenceSettings : Settings
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ViewSettings View { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class ViewSettings
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="config">TBD</param>
             public ViewSettings(Config config)
             {
                 AutoUpdate = config.GetBoolean("view.auto-update");
@@ -267,14 +339,36 @@ namespace Akka.Persistence
                 AutoUpdateReplayMax = repMax < 0 ? long.MaxValue : repMax;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool AutoUpdate { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TimeSpan AutoUpdateInterval { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long AutoUpdateReplayMax { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class AtLeastOnceDeliverySettings
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="redeliverInterval">TBD</param>
+            /// <param name="redeliveryBurstLimit">TBD</param>
+            /// <param name="warnAfterNumberOfUnconfirmedAttempts">TBD</param>
+            /// <param name="maxUnconfirmedMessages">TBD</param>
             public AtLeastOnceDeliverySettings(TimeSpan redeliverInterval, int redeliveryBurstLimit,
                 int warnAfterNumberOfUnconfirmedAttempts, int maxUnconfirmedMessages)
             {
@@ -284,6 +378,10 @@ namespace Akka.Persistence
                 MaxUnconfirmedMessages = maxUnconfirmedMessages;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="config">TBD</param>
             public AtLeastOnceDeliverySettings(Config config)
             {
                 RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval");
@@ -319,21 +417,41 @@ namespace Akka.Persistence
             public int RedeliveryBurstLimit { get; private set; }
 
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="redeliverInterval">TBD</param>
+            /// <returns>TBD</returns>
             public AtLeastOnceDeliverySettings WithRedeliverInterval(TimeSpan redeliverInterval)
             {
                 return Copy(redeliverInterval);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="maxUnconfirmedMessages">TBD</param>
+            /// <returns>TBD</returns>
             public AtLeastOnceDeliverySettings WithMaxUnconfirmedMessages(int maxUnconfirmedMessages)
             {
                 return Copy(null, null, null, maxUnconfirmedMessages);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="redeliveryBurstLimit">TBD</param>
+            /// <returns>TBD</returns>
             public AtLeastOnceDeliverySettings WithRedeliveryBurstLimit(int redeliveryBurstLimit)
             {
                 return Copy(null, redeliveryBurstLimit);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="unconfirmedAttemptsToWarn">TBD</param>
+            /// <returns>TBD</returns>
             public AtLeastOnceDeliverySettings WithUnconfirmedAttemptsToWarn(int unconfirmedAttemptsToWarn)
             {
                 return Copy(null, null, unconfirmedAttemptsToWarn);
@@ -348,19 +466,40 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public InternalSettings Internal { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class InternalSettings
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="config">TBD</param>
             public InternalSettings(Config config)
             {
                 PublishPluginCommands = config.HasPath("publish-plugin-commands") && config.GetBoolean("publish-plugin-commands");
                 PublishConfirmations = config.HasPath("publish-confirmations") && config.GetBoolean("publish-confirmations");
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool PublishPluginCommands { get; private set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool PublishConfirmations { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="config">TBD</param>
         public PersistenceSettings(ActorSystem system, Config config)
             : base(system, config)
         {
@@ -370,6 +509,9 @@ namespace Akka.Persistence
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IPersistenceRecovery
     {
         /// <summary>
@@ -382,6 +524,9 @@ namespace Akka.Persistence
         Recovery Recovery { get; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IPersistenceStash : IWithUnboundedStash
     {
         /// <summary>
@@ -389,6 +534,21 @@ namespace Akka.Persistence
         /// failed to stash when the internal Stash capacity exceeded.
         /// </summary>
         IStashOverflowStrategy InternalStashOverflowStrategy { get; }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public interface IJournalPlugin
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        string JournalPath { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        Config DefaultConfig { get; }
     }
 }
 

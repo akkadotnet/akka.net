@@ -6,89 +6,76 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.Tests.Routing
 {
     public class BroadcastSpec : AkkaSpec
     {
-        public new class TestActor : UntypedActor
+        private class BroadcastTarget : ReceiveActor
         {
-            protected override void OnReceive(object message)
-            {
+            private readonly AtomicCounter _counter;
+            private readonly TestLatch _doneLatch;
 
-            }
-        }
-
-        public class BroadcastTarget : UntypedActor
-        {
-            private AtomicCounter _counter;
-            private TestLatch _latch;
-            public BroadcastTarget(TestLatch latch, AtomicCounter counter)
+            public BroadcastTarget(TestLatch doneLatch, AtomicCounter counter)
             {
-                _latch = latch;
+                _doneLatch = doneLatch;
                 _counter = counter;
-            }
-            protected override void OnReceive(object message)
-            {
-                if (message is string)
-                {
-                    var s = (string)message;
-                    if (s == "end")
-                    {
-                        _latch.CountDown();
-                    }
-                }
-                if (message is int)
-                {
-                    var i = (int)message;
-                    _counter.GetAndAdd(i);
-                }
+
+                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<int>(msg => _counter.AddAndGet(msg));
             }
         }
-        
+
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Tell()
         {
             var doneLatch = new TestLatch(2);
+
             var counter1 = new AtomicCounter(0);
-            var counter2 = new AtomicCounter(0);
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
+
+            var counter2 = new AtomicCounter(0);
             var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
 
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
+            var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };
+            var routedActor = Sys.ActorOf(new BroadcastGroup(paths).Props());
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(TimeSpan.FromSeconds(1));
+            doneLatch.Ready(RemainingOrDefault);
 
-            counter1.Current.ShouldBe(1);
-            counter2.Current.ShouldBe(1);
+            counter1.Current.Should().Be(1);
+            counter2.Current.Should().Be(1);
         }
 
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Ask()
         {
             var doneLatch = new TestLatch(2);
+
             var counter1 = new AtomicCounter(0);
-            var counter2 = new AtomicCounter(0);
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
+
+            var counter2 = new AtomicCounter(0);
             var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
 
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
+            var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };
+            var routedActor = Sys.ActorOf(new BroadcastGroup(paths).Props());
             routedActor.Ask(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(TimeSpan.FromSeconds(1));
+            doneLatch.Ready(RemainingOrDefault);
 
-            counter1.Current.ShouldBe(1);
-            counter2.Current.ShouldBe(1);
+            counter1.Current.Should().Be(1);
+            counter2.Current.Should().Be(1);
         }
     }
 }
-

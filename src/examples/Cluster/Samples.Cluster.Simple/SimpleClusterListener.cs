@@ -53,6 +53,10 @@ namespace Samples.Cluster.Simple
             {
                 //IGNORE                
             }
+            else if (message is ClusterEvent.CurrentClusterState)
+            {
+                
+            }
             else
             {
                 Unhandled(message);

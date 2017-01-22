@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Persistence
 {
@@ -26,16 +27,31 @@ namespace Akka.Persistence
     /// </summary>
     public interface IJournalResponse : IJournalMessage { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class DeleteMessagesSuccess : IJournalResponse, IEquatable<DeleteMessagesSuccess>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="toSequenceNr">TBD</param>
         public DeleteMessagesSuccess(long toSequenceNr)
         {
             ToSequenceNr = toSequenceNr;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long ToSequenceNr;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(DeleteMessagesSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -44,16 +60,29 @@ namespace Akka.Persistence
             return ToSequenceNr == other.ToSequenceNr;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteMessagesSuccess);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return ToSequenceNr.GetHashCode();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("DeleteMessagesSuccess<toSequenceNr: {0}>", ToSequenceNr);
@@ -66,6 +95,12 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class DeleteMessagesFailure : IJournalResponse, IEquatable<DeleteMessagesFailure>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public DeleteMessagesFailure(Exception cause, long toSequenceNr)
         {
             if (cause == null)
@@ -75,9 +110,20 @@ namespace Akka.Persistence
             ToSequenceNr = toSequenceNr;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Exception Cause;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long ToSequenceNr;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(DeleteMessagesFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -86,11 +132,20 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause) && ToSequenceNr == other.ToSequenceNr;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteMessagesFailure);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -99,6 +154,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("DeleteMessagesFailure<cause: {0}, toSequenceNr: {1}>", Cause, ToSequenceNr);
@@ -111,6 +170,13 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class DeleteMessagesTo : IJournalRequest, IEquatable<DeleteMessagesTo>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="persistentActor">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public DeleteMessagesTo(string persistenceId, long toSequenceNr, IActorRef persistentActor)
         {
             if (string.IsNullOrEmpty(persistenceId)) throw new ArgumentNullException("persistenceId", "DeleteMessagesTo requires persistence id to be provided");
@@ -120,10 +186,24 @@ namespace Akka.Persistence
             PersistentActor = persistentActor;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string PersistenceId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long ToSequenceNr;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef PersistentActor;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(DeleteMessagesTo other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -134,11 +214,20 @@ namespace Akka.Persistence
                    Equals(PersistentActor, other.PersistentActor);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteMessagesTo);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -150,15 +239,28 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("DeleteMessagesTo<pid: {0}, seqNr: {1}, persistentActor: {2}>", PersistenceId, ToSequenceNr, PersistentActor);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class WriteMessages : IJournalRequest, IEquatable<WriteMessages>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messages">TBD</param>
+        /// <param name="persistentActor">TBD</param>
+        /// <param name="actorInstanceId">TBD</param>
         public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor,
             int actorInstanceId)
         {
@@ -167,10 +269,24 @@ namespace Akka.Persistence
             ActorInstanceId = actorInstanceId;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IEnumerable<IPersistentEnvelope> Messages;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef PersistentActor;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int ActorInstanceId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(WriteMessages other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -181,11 +297,20 @@ namespace Akka.Persistence
                    && Equals(Messages, other.Messages);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as WriteMessages);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -197,6 +322,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("WriteMessages<actorInstanceId: {0}, actor: {1}>", ActorInstanceId, PersistentActor);
@@ -210,10 +339,18 @@ namespace Akka.Persistence
     [Serializable]
     public class WriteMessagesSuccessful : IJournalResponse, IEquatable<WriteMessagesSuccessful>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly WriteMessagesSuccessful Instance = new WriteMessagesSuccessful();
 
         private WriteMessagesSuccessful() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(WriteMessagesSuccessful other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -221,11 +358,20 @@ namespace Akka.Persistence
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as WriteMessagesSuccessful);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "WriteMessagesSuccessful<>";
@@ -239,6 +385,11 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class WriteMessagesFailed : IJournalResponse, IEquatable<WriteMessagesFailed>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public WriteMessagesFailed(Exception cause)
         {
             if (cause == null)
@@ -247,8 +398,16 @@ namespace Akka.Persistence
             Cause = cause;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Exception Cause;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(WriteMessagesFailed other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -257,16 +416,29 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as WriteMessagesFailed);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return (Cause != null ? Cause.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("WriteMessagesFailed<cause: {0}>", Cause);
@@ -280,6 +452,11 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class WriteMessageSuccess : IJournalResponse, IEquatable<WriteMessageSuccess>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistent">TBD</param>
+        /// <param name="actorInstanceId">TBD</param>
         public WriteMessageSuccess(IPersistentRepresentation persistent, int actorInstanceId)
         {
             Persistent = persistent;
@@ -290,8 +467,16 @@ namespace Akka.Persistence
         /// Successfully written message.
         /// </summary>
         public readonly IPersistentRepresentation Persistent;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int ActorInstanceId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(WriteMessageSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -301,11 +486,20 @@ namespace Akka.Persistence
                    && Equals(Persistent, other.Persistent);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as WriteMessageSuccess);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -314,6 +508,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("WriteMessageSuccess<actorInstanceId: {0}, message: {1}>", ActorInstanceId, Persistent);
@@ -328,6 +526,13 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class WriteMessageRejected : IJournalResponse, IEquatable<WriteMessageRejected>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistent">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <param name="actorInstanceId">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public WriteMessageRejected(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
         {
             if (cause == null)
@@ -348,8 +553,16 @@ namespace Akka.Persistence
         /// </summary>
         public readonly Exception Cause;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int ActorInstanceId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(WriteMessageRejected other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -360,11 +573,20 @@ namespace Akka.Persistence
                    && Equals(Cause, other.Cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as WriteMessageRejected);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -376,6 +598,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("WriteMessageRejected<actorInstanceId: {0}, message: {1}, cause: {2}>", ActorInstanceId, Persistent, Cause);
@@ -389,6 +615,13 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class WriteMessageFailure : IJournalResponse, IEquatable<WriteMessageFailure>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistent">TBD</param>
+        /// <param name="cause">TBD</param>
+        /// <param name="actorInstanceId">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
         {
             if (cause == null)
@@ -409,8 +642,16 @@ namespace Akka.Persistence
         /// </summary>
         public readonly Exception Cause;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int ActorInstanceId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(WriteMessageFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -421,11 +662,20 @@ namespace Akka.Persistence
                    && Equals(Cause, other.Cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as WriteMessageFailure);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -437,6 +687,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("WriteMessageFailure<actorInstanceId: {0}, message: {1}, cause: {2}>", ActorInstanceId, Persistent, Cause);
@@ -449,6 +703,11 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class LoopMessageSuccess : IJournalResponse, IEquatable<LoopMessageSuccess>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="actorInstanceId">TBD</param>
         public LoopMessageSuccess(object message, int actorInstanceId)
         {
             Message = message;
@@ -459,8 +718,16 @@ namespace Akka.Persistence
         /// A looped message.
         /// </summary>
         public readonly object Message;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int ActorInstanceId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(LoopMessageSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -470,11 +737,20 @@ namespace Akka.Persistence
                    && Equals(Message, other.Message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as LoopMessageSuccess);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -483,6 +759,10 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("LoopMessageSuccess<actorInstanceId: {0}, message: {1}>", ActorInstanceId, Message);
@@ -495,6 +775,14 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class ReplayMessages : IJournalRequest, IEquatable<ReplayMessages>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="persistentActor">TBD</param>
         public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
             IActorRef persistentActor)
         {
@@ -530,6 +818,11 @@ namespace Akka.Persistence
         /// </summary>
         public readonly IActorRef PersistentActor;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(ReplayMessages other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -542,11 +835,20 @@ namespace Akka.Persistence
                    && Equals(Max, other.Max);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as ReplayMessages);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -565,15 +867,27 @@ namespace Akka.Persistence
     /// Reply message to a <see cref="ReplayMessages"/> request. A separate reply is sent to the requestor for each replayed message.
     /// </summary>
     [Serializable]
-    public sealed class ReplayedMessage : IJournalResponse, IEquatable<ReplayedMessage>
+    public sealed class ReplayedMessage : IJournalResponse, IEquatable<ReplayedMessage>, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistent">TBD</param>
         public ReplayedMessage(IPersistentRepresentation persistent)
         {
             Persistent = persistent;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IPersistentRepresentation Persistent;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(ReplayedMessage other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -582,16 +896,29 @@ namespace Akka.Persistence
             return Equals(Persistent, other.Persistent);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as ReplayedMessage);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return (Persistent != null ? Persistent.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("ReplayedMessage<message: {0}>", Persistent);
@@ -606,15 +933,27 @@ namespace Akka.Persistence
     /// Note that the replay might have been limited to a lower sequence number.
     /// </summary>
     [Serializable]
-    public class RecoverySuccess : IJournalResponse, IEquatable<RecoverySuccess>
+    public class RecoverySuccess : IJournalResponse, IEquatable<RecoverySuccess>, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="highestSequenceNr">TBD</param>
         public RecoverySuccess(long highestSequenceNr)
         {
             HighestSequenceNr = highestSequenceNr;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long HighestSequenceNr;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(RecoverySuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -623,25 +962,46 @@ namespace Akka.Persistence
             return Equals(HighestSequenceNr, other.HighestSequenceNr);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as RecoverySuccess);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return HighestSequenceNr.GetHashCode();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("RecoverySuccess<highestSequenceNr: {0}>", HighestSequenceNr);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
-    public sealed class ReplayMessagesFailure : IJournalResponse, IEquatable<ReplayMessagesFailure>
+    public sealed class ReplayMessagesFailure : IJournalResponse, IEquatable<ReplayMessagesFailure>, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public ReplayMessagesFailure(Exception cause)
         {
             if (cause == null)
@@ -650,8 +1010,16 @@ namespace Akka.Persistence
             Cause = cause;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Exception Cause;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(ReplayMessagesFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -660,25 +1028,47 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as ReplayMessagesFailure);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return Cause.GetHashCode();
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("ReplayMessagesFailure<cause: {0}>", Cause);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
-    public sealed class ReadHighestSequenceNr : IEquatable<ReadHighestSequenceNr>
+    public sealed class ReadHighestSequenceNr : IJournalRequest, IEquatable<ReadHighestSequenceNr>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="persistentActor">TBD</param>
         public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, IActorRef persistentActor)
         {
             FromSequenceNr = fromSequenceNr;
@@ -686,12 +1076,26 @@ namespace Akka.Persistence
             PersistentActor = persistentActor;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long FromSequenceNr;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string PersistenceId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef PersistentActor;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(ReadHighestSequenceNr other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -702,11 +1106,20 @@ namespace Akka.Persistence
                    && Equals(PersistentActor, other.PersistentActor);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as ReadHighestSequenceNr);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -718,23 +1131,42 @@ namespace Akka.Persistence
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("ReadHighestSequenceNr<pid: {0}, fromSeqNr: {1}, actor: {2}>", PersistenceId, FromSequenceNr, PersistentActor);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class ReadHighestSequenceNrSuccess : IEquatable<ReadHighestSequenceNrSuccess>, IComparable<ReadHighestSequenceNrSuccess>
     {
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="highestSequenceNr">TBD</param>
         public ReadHighestSequenceNrSuccess(long highestSequenceNr)
         {
             HighestSequenceNr = highestSequenceNr;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long HighestSequenceNr;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(ReadHighestSequenceNrSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -743,31 +1175,57 @@ namespace Akka.Persistence
             return HighestSequenceNr == other.HighestSequenceNr;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(ReadHighestSequenceNrSuccess other)
         {
             if (other == null) return 1;
             return other.HighestSequenceNr.CompareTo(HighestSequenceNr);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as ReadHighestSequenceNrSuccess);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return HighestSequenceNr.GetHashCode();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("ReadHighestSequenceNrSuccess<nr: {0}>", HighestSequenceNr);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class ReadHighestSequenceNrFailure : IEquatable<ReadHighestSequenceNrFailure>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public ReadHighestSequenceNrFailure(Exception cause)
         {
             if (cause == null)
@@ -776,8 +1234,16 @@ namespace Akka.Persistence
             Cause = cause;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Exception Cause;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(ReadHighestSequenceNrFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -786,16 +1252,29 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as ReadHighestSequenceNrFailure);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return Cause.GetHashCode();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return string.Format("ReadHighestSequenceNrFailure<cause: {0}>", Cause);
