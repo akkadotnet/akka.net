@@ -18,6 +18,32 @@ Wire recently changed its license to GPLv3, which is a poor fit for a technology
 **Other bug fixes, performance improvements, and changes**
 You can [see the full list of changes in Akka.NET 1.1.3 here](https://github.com/akkadotnet/akka.net/milestone/12).
 
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 19 | 878 | 228 | Aaron Stannard |
+| 10 | 41654 | 3428 | Sean Gilliam |
+| 5 | 11983 | 4543 | Marc Piechura |
+| 4 | 37 | 33 | Arjen Smits |
+| 4 | 12742 | 300 | Bartosz Sypytkowski |
+| 3 | 144 | 74 | Max |
+| 2 | 99 | 8 | ZigMeowNyan |
+| 2 | 7 | 7 | zbynek001 |
+| 2 | 4 | 2 | Andrey Leskov |
+| 2 | 225 | 767 | Alex Valuyskiy |
+| 2 | 212 | 8 | Gordey Doronin |
+| 1 | 8 | 499 | Sean Farrow |
+| 1 | 5 | 5 | tomanekt |
+| 1 | 4 | 2 | Andrew Young |
+| 1 | 3 | 2 | boriskreminskimoldev |
+| 1 | 28 | 3 | Roman Eisendle |
+| 1 | 24 | 36 | Maxim Salamatko |
+| 1 | 2 | 2 | Jeff |
+| 1 | 190 | 38 | Sergey |
+| 1 | 15 | 9 | voltcode |
+| 1 | 12 | 2 | Alexander Pantyukhin |
+| 1 | 107 | 0 | Mikhail Kantarovskiy |
+| 1 | 101 | 0 | derrickcrowne |
+
 #### 1.1.2 September 21 2016 ####
 **Maintenance release for Akka.NET v1.1**
 
