@@ -147,15 +147,7 @@ namespace Akka.Remote.Transport.DotNetty
             var dns = listenAddress as DnsEndPoint;
             if (dns != null)
             {
-                if (!Settings.EnforceIpFamily)
-                {
-                    listenAddress = await ResolveNameAsync(dns);
-                }
-                else
-                {
-                    var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
-                    listenAddress = await ResolveNameAsync(dns, addressFamily);
-                }
+                listenAddress = await DnsToIPEndpoint(dns);
             }
             
             return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
@@ -279,6 +271,21 @@ namespace Akka.Remote.Transport.DotNetty
             return client;
         }
 
+        protected async Task<IPEndPoint> DnsToIPEndpoint(DnsEndPoint dns)
+        {
+            IPEndPoint endpoint;
+            if (!Settings.EnforceIpFamily)
+            {
+                endpoint = await ResolveNameAsync(dns);
+            }
+            else
+            {
+                var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+                endpoint = await ResolveNameAsync(dns, addressFamily);
+            }
+            return endpoint;
+        }
+
         #region private methods 
 
         private void SetInitialChannelPipeline(IChannel channel)
@@ -371,7 +378,9 @@ namespace Akka.Remote.Transport.DotNetty
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address)
         {
             var resolved = await Dns.GetHostEntryAsync(address.Host);
-            return new IPEndPoint(resolved.AddressList[0], address.Port);
+            //NOTE: for some reason while Helios takes first element from resolved address list
+            // on the DotNetty side we need to take the last one in order to be compatible
+            return new IPEndPoint(resolved.AddressList[resolved.AddressList.Length - 1], address.Port);
         }
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)

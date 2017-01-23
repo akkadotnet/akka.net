@@ -186,39 +186,55 @@ namespace Akka.Remote.Transport.DotNetty
         {
         }
 
-        protected override Task<AssociationHandle> AssociateInternal(Address remoteAddress)
+        protected override async Task<AssociationHandle> AssociateInternal(Address remoteAddress)
         {
-            var clientBootstrap = ClientFactory(remoteAddress);
-            var socketAddress = AddressToSocketAddress(remoteAddress);
-            var ipEndPoint = socketAddress as IPEndPoint;
-            if (ipEndPoint != null && ipEndPoint.Address.Equals(IPAddress.Any))
+            try
+            {
+                var clientBootstrap = ClientFactory(remoteAddress);
+                var socketAddress = AddressToSocketAddress(remoteAddress);
+                socketAddress = await MapEndpointAsync(socketAddress);
+                var associate = await clientBootstrap.ConnectAsync(socketAddress);
+                var handler = (TcpClientHandler)associate.Pipeline.Last();
+                return await handler.StatusFuture;
+            }
+            catch (AggregateException e) when (e.InnerException is ConnectException)
+            {
+                var cause = (ConnectException)e.InnerException;
+                var socketException = cause?.InnerException as SocketException;
+
+                if (socketException?.SocketErrorCode == SocketError.ConnectionRefused)
+                {
+                    throw new InvalidAssociationException(socketException.Message + " " + remoteAddress);
+                }
+
+                throw new InvalidAssociationException("Failed to associate with " + remoteAddress, e);
+            }
+            catch (AggregateException e) when (e.InnerException is ConnectTimeoutException)
+            {
+                var cause = (ConnectTimeoutException)e.InnerException;
+
+                throw new InvalidAssociationException(cause.Message);
+            }
+        }
+
+        private async Task<IPEndPoint> MapEndpointAsync(EndPoint socketAddress)
+        {
+            IPEndPoint ipEndPoint;
+
+            var dns = socketAddress as DnsEndPoint;
+            if (dns != null)
+                ipEndPoint = await DnsToIPEndpoint(dns);
+            else
+                ipEndPoint = (IPEndPoint) socketAddress;
+
+            if (ipEndPoint.Address.Equals(IPAddress.Any) || ipEndPoint.Address.Equals(IPAddress.IPv6Any))
             {
                 // client hack
-                socketAddress = ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6
+                return ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6
                     ? new IPEndPoint(IPAddress.IPv6Loopback, ipEndPoint.Port)
                     : new IPEndPoint(IPAddress.Loopback, ipEndPoint.Port);
             }
-            var associate = clientBootstrap.ConnectAsync(socketAddress).ContinueWith(tr =>
-            {
-                //FIXME: connection refused
-                var channel = tr.Result;
-                var handler = (TcpClientHandler)channel.Pipeline.Last();
-                return handler.StatusFuture;
-            }).Unwrap().ContinueWith(r =>
-            {
-                if (r.IsCanceled)
-                    throw new ConnectException("Connection was cancelled", new OperationCanceledException());
-                if (r.IsFaulted)
-                {
-                    var ex = r.Exception;
-                    throw new ConnectException($"Association failed", ex);
-                }
-
-                var ah = r.Result;
-                return ah;
-            });
-            
-            return associate;
+            return ipEndPoint;
         }
     }
 

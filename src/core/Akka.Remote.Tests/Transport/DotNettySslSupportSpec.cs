@@ -8,13 +8,9 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2.Internals;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -50,8 +46,6 @@ namespace Akka.Remote.Tests.Transport
                     password = """ + password + @"""
                 }");
         }
-        
-        private readonly X509Store _certificateStore;
 
         private ActorSystem sys2;
         private Address address1;
@@ -76,8 +70,6 @@ namespace Akka.Remote.Tests.Transport
         // WARNING: YOU NEED TO RUN TEST IN ADMIN MODE IN ORDER TO ADD/REMOVE CERTIFICATES TO CERT STORE!
         public DotNettySslSupportSpec(ITestOutputHelper output) : base(TestConfig(ValidCertPath, Password), output)
         {
-            _certificateStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
-            InstallCertificates();
         }
         
         [Fact]
@@ -105,33 +97,6 @@ namespace Akka.Remote.Tests.Transport
 
         #region helper classes / methods
         
-        private void InstallCertificates()
-        {
-            try
-            {
-                _certificateStore.Open(OpenFlags.ReadWrite | OpenFlags.OpenExistingOnly);
-                var cert = new X509Certificate2(ValidCertPath, Password);
-                _certificateStore.Add(cert);
-            }
-            finally
-            {
-                _certificateStore.Close();
-            }
-        }
-
-        private void RemoveCertificates()
-        {
-            try
-            {
-                _certificateStore.Open(OpenFlags.ReadWrite | OpenFlags.OpenExistingOnly);
-                var cert = new X509Certificate2(ValidCertPath, Password);
-                _certificateStore.Remove(cert);
-            }
-            finally
-            {
-                _certificateStore.Close();
-            }
-        }
 
         protected override void Dispose(bool disposing)
         {
@@ -139,7 +104,6 @@ namespace Akka.Remote.Tests.Transport
             if (disposing)
             {
                 Shutdown(sys2, TimeSpan.FromSeconds(3));
-                RemoveCertificates();
             }
         }
 

@@ -30,13 +30,11 @@ namespace Akka.Remote.Tests.Transport
     {
         private static readonly Config TestConfig = ConfigurationFactory.ParseString(@"
             akka {
-                loglevel = DEBUG
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
 
                 # explicitly make use of helios configuration instead of dot-netty
                 remote.helios.tcp {
-                    log-transport = true
-                    hostname = localhost
+                    hostname = ""localhost""
                     port = 11311
                 }
             }");
@@ -63,13 +61,12 @@ namespace Akka.Remote.Tests.Transport
             LoggingFactory.DefaultFactory = new XunitLoggingFactory(Output);
             var heliosConfig = ConfigurationFactory.ParseString(@"
                 akka {
-                    loglevel = DEBUG
                     actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
 
                     remote {
                         enabled-transports = [""akka.remote.helios.tcp""]
                         helios.tcp {
-                            hostname = localhost
+                            hostname = ""localhost""
                             port = 11223
                         }
                     }
@@ -77,28 +74,22 @@ namespace Akka.Remote.Tests.Transport
 
             using (var heliosSystem = ActorSystem.Create("helios-system", heliosConfig))
             {
-                //InitializeLogger(heliosSystem);
+                InitializeLogger(heliosSystem);
                 heliosSystem.ActorOf(Props.Create<Echo>(), "echo");
-                Sys.ActorOf(Props.Create<Echo>(), "echo");
 
                 var heliosProvider = RARP.For(heliosSystem).Provider;
 
                 Assert.Equal(
                     "Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote.Transport.Helios", 
                     heliosProvider.RemoteSettings.Transports.First().TransportClass);
-
-                var backAddress = RARP.For(Sys).Provider.DefaultAddress;
+                
                 var address = heliosProvider.DefaultAddress;
 
                 Assert.Equal(11223, address.Port.Value);
-
+                
                 var echo = Sys.ActorSelection(new RootActorPath(address) / "user" / "echo");
                 echo.Tell("hello", TestActor);
                 ExpectMsg("hello");
-
-                var echoBack = heliosSystem.ActorSelection(new RootActorPath(backAddress) / "user" / "echo");
-                echoBack.Tell("hello back", TestActor);
-                ExpectMsg("hello back");
             }
         }
 
