@@ -12,21 +12,71 @@ using Akka.Configuration;
 
 namespace Akka.Cluster.Sharding
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public class TunningParameters
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan CoordinatorFailureBackoff;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan RetryInterval;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int BufferSize;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan HandOffTimeout;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan ShardStartTimeout;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan ShardFailureBackoff;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan EntityRestartBackoff;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan RebalanceInterval;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int SnapshotAfter;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int LeastShardAllocationRebalanceThreshold;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int LeastShardAllocationMaxSimultaneousRebalance;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="coordinatorFailureBackoff">TBD</param>
+        /// <param name="retryInterval">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="handOffTimeout">TBD</param>
+        /// <param name="shardStartTimeout">TBD</param>
+        /// <param name="shardFailureBackoff">TBD</param>
+        /// <param name="entityRestartBackoff">TBD</param>
+        /// <param name="rebalanceInterval">TBD</param>
+        /// <param name="snapshotAfter">TBD</param>
+        /// <param name="leastShardAllocationRebalanceThreshold">TBD</param>
+        /// <param name="leastShardAllocationMaxSimultaneousRebalance">TBD</param>
         public TunningParameters(
             TimeSpan coordinatorFailureBackoff,
             TimeSpan retryInterval,
@@ -54,6 +104,9 @@ namespace Akka.Cluster.Sharding
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class ClusterShardingSettings : INoSerializationVerificationNeeded
     {
@@ -83,13 +136,21 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly string SnapshotPluginId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TunningParameters TunningParameters;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ClusterSingletonManagerSettings CoordinatorSingletonSettings;
 
         /// <summary>
         /// Create settings from the default configuration `akka.cluster.sharding`.
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterShardingSettings Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.cluster.sharding");
@@ -98,6 +159,12 @@ namespace Akka.Cluster.Sharding
             return Create(config, system.Settings.Config.GetConfig(coordinatorSingletonPath));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="singletonConfig">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterShardingSettings Create(Config config, Config singletonConfig)
         {
             var tuningParameters = new TunningParameters(
@@ -126,6 +193,15 @@ namespace Akka.Cluster.Sharding
                 coordinatorSingletonSettings: coordinatorSingletonSettings);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <param name="rememberEntities">TBD</param>
+        /// <param name="journalPluginId">TBD</param>
+        /// <param name="snapshotPluginId">TBD</param>
+        /// <param name="tunningParameters">TBD</param>
+        /// <param name="coordinatorSingletonSettings">TBD</param>
         public ClusterShardingSettings(
             string role,
             bool rememberEntities,
@@ -142,6 +218,11 @@ namespace Akka.Cluster.Sharding
             CoordinatorSingletonSettings = coordinatorSingletonSettings;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterShardingSettings WithRole(string role)
         {
             return new ClusterShardingSettings(
@@ -153,21 +234,42 @@ namespace Akka.Cluster.Sharding
                 coordinatorSingletonSettings: CoordinatorSingletonSettings);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="rememberEntities">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterShardingSettings WithRememberEntities(bool rememberEntities)
         {
             return Copy(rememberEntities: rememberEntities);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="journalPluginId">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterShardingSettings WithJournalPluginId(string journalPluginId)
         {
             return Copy(journalPluginId: journalPluginId ?? string.Empty);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="snapshotPluginId">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterShardingSettings WithSnapshotPluginId(string snapshotPluginId)
         {
             return Copy(snapshotPluginId: snapshotPluginId ?? string.Empty);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tunningParameters">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public ClusterShardingSettings WithTuningParameters(TunningParameters tunningParameters)
         {
             if (tunningParameters == null)
@@ -176,6 +278,11 @@ namespace Akka.Cluster.Sharding
             return Copy(tunningParameters: tunningParameters);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterShardingSettings WithCoordinatorSingletonSettings(ClusterSingletonManagerSettings coordinatorSingletonSettings)
         {
             if (coordinatorSingletonSettings == null)
