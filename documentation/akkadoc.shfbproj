@@ -64,6 +64,8 @@
       <DocumentationSource sourceFile="..\src\contrib\persistence\Akka.Persistence.Sql.Common\bin\Release\Akka.Persistence.Sql.Common.xml" />
       <DocumentationSource sourceFile="..\src\contrib\persistence\Akka.Persistence.Sqlite\bin\Release\Akka.Persistence.Sqlite.dll" />
       <DocumentationSource sourceFile="..\src\contrib\persistence\Akka.Persistence.Sqlite\bin\Release\Akka.Persistence.Sqlite.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\serializers\Akka.Serialization.Hyperion\bin\Release\Akka.Serialization.Hyperion.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\serializers\Akka.Serialization.Hyperion\bin\Release\Akka.Serialization.Hyperion.xml" />
       <DocumentationSource sourceFile="..\src\contrib\serializers\Akka.Serialization.Wire\bin\Release\Akka.Serialization.Wire.dll" />
       <DocumentationSource sourceFile="..\src\contrib\serializers\Akka.Serialization.Wire\bin\Release\Akka.Serialization.Wire.xml" />
       <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\Akka.TestKit.Xunit.dll" />
