@@ -15,24 +15,42 @@ using Akka.TestKit.Internal.StringMatcher;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public partial class EventFilterFactory
     {
         private readonly IReadOnlyList<EventFilterBase> _filters;
         private readonly TestKitBase _testkit;
         private readonly ActorSystem _system;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testkit">TBD</param>
         public EventFilterFactory(TestKitBase testkit)
         {
             _testkit = testkit;
             _system = _testkit.Sys;
         }
         
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testkit">TBD</param>
+        /// <param name="system">TBD</param>
         public EventFilterFactory(TestKitBase testkit, ActorSystem system)
         {
             _testkit = testkit;
             _system = system;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testkit">TBD</param>
+        /// <param name="actorSystem">TBD</param>
+        /// <param name="filters">TBD</param>
         public EventFilterFactory(TestKitBase testkit, ActorSystem actorSystem, IReadOnlyList<EventFilterBase> filters)
             : this(testkit, actorSystem)
         {
@@ -150,7 +168,7 @@ namespace Akka.TestKit
         ///  which the predicate function returns <c>true</c>.
         /// </summary>
         /// <param name="predicate">This function must return <c>true</c> for events that should be filtered.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public IEventFilterApplier Custom(Predicate<LogEvent> predicate)
         {
             var filter = new CustomEventFilter(predicate);
@@ -162,8 +180,9 @@ namespace Akka.TestKit
         /// Create a custom event filter. The filter will affect those events for
         ///  which the predicate function returns <c>true</c>.
         /// </summary>
+        /// <typeparam name="TLogEvent">TBD</typeparam>
         /// <param name="predicate">This function must return <c>true</c> for events that should be filtered.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public IEventFilterApplier Custom<TLogEvent>(Predicate<TLogEvent> predicate) where TLogEvent : LogEvent
         {
             var filter = new CustomEventFilter(logEvent => logEvent is TLogEvent && predicate((TLogEvent)logEvent));
@@ -176,6 +195,13 @@ namespace Akka.TestKit
         ///  <see cref="Warning(string,string,string,string)"/> or <see cref="Error(string,string,string,string)"/>
         /// directly.
         /// </summary>
+        /// <param name="logLevel">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="start">TBD</param>
+        /// <param name="contains">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
+        /// <returns>TBD</returns>
         public IEventFilterApplier ForLogLevel(LogLevel logLevel, string message = null, string start = null, string contains = null, string source = null)
         {
             switch(logLevel)
@@ -192,12 +218,18 @@ namespace Akka.TestKit
                     throw new ArgumentOutOfRangeException("logLevel", string.Format("Unknown {1} value: {0}", logLevel, typeof(LogLevel).Name));
             }
         }
+
         /// <summary>
         /// Creates a filter given the specified <paramref name="logLevel"/>.
         /// This is the same as calling <see cref="Debug(Regex,string)"/>, <see cref="Info(Regex,string)"/>
         ///  <see cref="Warning(Regex,string)"/> or <see cref="Error(Regex,string)"/>
         /// directly.
         /// </summary>
+        /// <param name="logLevel">TBD</param>
+        /// <param name="pattern">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
+        /// <returns>TBD</returns>
         public IEventFilterApplier ForLogLevel(LogLevel logLevel, Regex pattern, string source = null)
         {
             switch(logLevel)
@@ -218,7 +250,7 @@ namespace Akka.TestKit
         /// <summary>
         /// Creates a filter that catches dead letters
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public IEventFilterApplier DeadLetter()
         {
             var filter = new DeadLettersFilter(null, null);
@@ -228,17 +260,21 @@ namespace Akka.TestKit
         /// <summary>
         /// Creates a filter that catches dead letters of the specified type and, optionally from the specified source.
         /// </summary>
-        /// <returns></returns>
+        /// <typeparam name="TMessage">TBD</typeparam>
+        /// <param name="source">TBD</param>
+        /// <returns>TBD</returns>
         public IEventFilterApplier DeadLetter<TMessage>(string source = null)
         {
             return DeadLetter(deadLetter => deadLetter.Message is TMessage, source);
         }
 
-
         /// <summary>
         /// Creates a filter that catches dead letters of the specified type and matches the predicate, and optionally from the specified source.
         /// </summary>
-        /// <returns></returns>
+        /// <typeparam name="TMessage">TBD</typeparam>
+        /// <param name="isMatch">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <returns>TBD</returns>
         public IEventFilterApplier DeadLetter<TMessage>(Func<TMessage, bool> isMatch, string source = null)
         {
             return DeadLetter(deadLetter => deadLetter.Message is TMessage && isMatch((TMessage)deadLetter.Message), source);
@@ -247,7 +283,9 @@ namespace Akka.TestKit
         /// <summary>
         /// Creates a filter that catches dead letters of the specified type and, optionally from the specified source.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="type">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <returns>TBD</returns>
         public IEventFilterApplier DeadLetter(Type type, string source = null)
         {
             return DeadLetter(deadLetter => type.IsInstanceOfType(deadLetter.Message), source);
@@ -256,7 +294,10 @@ namespace Akka.TestKit
         /// <summary>
         /// Creates a filter that catches dead letters of the specified type and matches the predicate, and optionally from the specified source.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="type">TBD</param>
+        /// <param name="isMatch">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <returns>TBD</returns>
         public IEventFilterApplier DeadLetter(Type type, Func<object, bool> isMatch, string source = null)
         {
             return DeadLetter(deadLetter => type.IsInstanceOfType(deadLetter.Message) && isMatch(deadLetter.Message), source);
@@ -269,6 +310,13 @@ namespace Akka.TestKit
             return CreateApplier(filter, _system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="start">TBD</param>
+        /// <param name="contains">TBD</param>
+        /// <returns>TBD</returns>
         protected static IStringMatcher CreateMessageMatcher(string message, string start, string contains)
         {
             if(message != null) return new EqualsString(message);
@@ -277,6 +325,12 @@ namespace Akka.TestKit
             return MatchesAll.Instance;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="filter">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         protected IEventFilterApplier CreateApplier(EventFilterBase filter, ActorSystem system)
         {
             EventFilterBase[] allFilters;   //This will contain _filters + filter
@@ -297,7 +351,5 @@ namespace Akka.TestKit
             }
             return new InternalEventFilterApplier(_testkit, system, allFilters);
         }
-
     }
 }
-

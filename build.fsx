@@ -222,8 +222,10 @@ Target "CopyOutput" <| fun _ ->
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
       "contrib/serializers/Akka.Serialization.Wire" 
+      "contrib/serializers/Akka.Serialization.Hyperion"
       "contrib/cluster/Akka.Cluster.Tools"
       "contrib/cluster/Akka.Cluster.Sharding"
+      "contrib/cluster/Akka.DistributedData"
       ]
     |> List.iter copyOutput
 
@@ -404,6 +406,7 @@ module Nuget =
     let getProjectVersion project =
       match project with
       | "Akka.Serialization.Wire" -> preReleaseVersion
+      | "Akka.Serialization.Hyperion" -> preReleaseVersion
       | cluster when (cluster.StartsWith("Akka.Cluster.") && not (cluster.EndsWith("TestKit"))) -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | streams when streams.StartsWith("Akka.Streams") -> preReleaseVersion

@@ -10,6 +10,9 @@ using System;
 namespace Akka.TestKit
 {
     // ReSharper disable once InconsistentNaming
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IEventFilterApplier
     {
         /// <summary>
@@ -141,8 +144,8 @@ namespace Akka.TestKit
         /// </code>
         /// </example>
         /// </summary>
+        /// <returns>TBD</returns>
         IUnmutableFilter Mute();
-
 
         /// <summary>
         /// Let's you chain more filters together. Similar to Akka JVM's filterEvents
@@ -150,4 +153,3 @@ namespace Akka.TestKit
         EventFilterFactory And { get; }
     }
 }
-

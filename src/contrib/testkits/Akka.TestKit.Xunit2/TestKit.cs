@@ -29,6 +29,7 @@ namespace Akka.TestKit.Xunit2
         /// with <see cref="DefaultConfig"/> will be created.
         /// </summary>
         /// <param name="system">Optional: The actor system.</param>
+        /// <param name="output">TBD</param>
         public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
             : base(_assertions, system)
         {
@@ -41,6 +42,7 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="actorSystemName">Optional: the name of the system. Default: "test"</param>
+        /// <param name="output">TBD</param>
         public TestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
             : base(_assertions, config, actorSystemName)
         {
@@ -53,14 +55,24 @@ namespace Akka.TestKit.Xunit2
         /// A new system with the specified configuration will be created.
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
+        /// <param name="output">TBD</param>
         public TestKit(string config, ITestOutputHelper output = null) : base(_assertions, ConfigurationFactory.ParseString(config))
         {
             InitializeLogger(output);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public new static Config DefaultConfig { get { return TestKitBase.DefaultConfig; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public new static Config FullDebugConfig { get { return TestKitBase.FullDebugConfig; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected static XunitAssertions Assertions { get { return _assertions; } }
 
 
@@ -135,4 +147,3 @@ namespace Akka.TestKit.Xunit2
         }
     }
 }
-

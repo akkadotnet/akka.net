@@ -18,18 +18,39 @@ namespace Akka.DistributedData
     [Serializable]
     public sealed class Flag : IReplicatedData<Flag>, IEquatable<Flag>, IComparable<Flag>, IComparable, IReplicatedDataSerialization
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Flag False = new Flag(false);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Flag True = new Flag(true);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool Enabled { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Flag(): this(false) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="enabled">TBD</param>
         public Flag(bool enabled)
         {
             Enabled = enabled;
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(Flag other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -38,21 +59,70 @@ namespace Akka.DistributedData
             return Enabled == other.Enabled;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj) => obj is Flag && Equals((Flag) obj);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode() => Enabled.GetHashCode();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(object obj) => obj is Flag ? CompareTo((Flag) obj) : 1;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(Flag other) => other == null ? 1 : Enabled.CompareTo(other.Enabled);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => Enabled.ToString();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public IReplicatedData Merge(IReplicatedData other) => Merge((Flag) other);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public Flag Merge(Flag other) => other.Enabled ? other : this;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public Flag SwitchOn() => Enabled ? this : new Flag(true);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="flag">TBD</param>
+        /// <returns>TBD</returns>
         public static implicit operator bool(Flag flag) => flag.Enabled;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class FlagKey : Key<Flag>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
         public FlagKey(string id) : base(id) { }
     }
 }

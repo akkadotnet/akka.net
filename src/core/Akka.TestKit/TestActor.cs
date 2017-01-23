@@ -9,17 +9,29 @@ using Akka.Actor;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class TestActor
     {
         /// <summary>
         /// A delegate that returns <c>true</c> if the <paramref name="message"/> should be ignored.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public delegate bool Ignore(object message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static AutoPilot NoAutoPilot { get { return TestKit.NoAutoPilot.Instance; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static AutoPilot KeepRunning { get { return TestKit.KeepRunning.Instance; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static NullMessageEnvelope NullMessage { get { return NullMessageEnvelope.Instance; } }
 
 
@@ -32,8 +44,15 @@ namespace Akka.TestKit
         {
             private readonly Ignore _ignore;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="ignore">TBD</param>
             public SetIgnore(Ignore ignore) { _ignore = ignore; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Ignore Ignore { get { return _ignore; } }
         }
 
@@ -46,8 +65,15 @@ namespace Akka.TestKit
         {
             private readonly IActorRef _actorToWatch;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="actorToWatch">TBD</param>
             public Watch(IActorRef actorToWatch) { _actorToWatch = actorToWatch; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Actor { get { return _actorToWatch; } }
         }
 
@@ -59,8 +85,15 @@ namespace Akka.TestKit
         {
             private readonly IActorRef _actorToUnwatch;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="actorToUnwatch">TBD</param>
             public Unwatch(IActorRef actorToUnwatch) { _actorToUnwatch = actorToUnwatch; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Actor { get { return _actorToUnwatch; } }
         }
 
@@ -74,10 +107,16 @@ namespace Akka.TestKit
         {
             private readonly AutoPilot _autoPilot;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="autoPilot">TBD</param>
             public SetAutoPilot(AutoPilot autoPilot) { _autoPilot = autoPilot; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public AutoPilot AutoPilot { get { return _autoPilot; } }
         }
     }
 }
-

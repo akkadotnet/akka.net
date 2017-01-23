@@ -24,6 +24,16 @@ namespace Akka
         {
             return new Case(target);
         }
+
+        /// <summary>
+        /// Matches the specified target and return a result of target processing.
+        /// </summary>
+        /// <param name="target">The target.</param>
+        /// <returns>Case.</returns>
+        public static Case<T> Match<T>(this object target)
+        {
+            return new Case<T>(target);
+        }
     }
 
     /// <summary>
@@ -135,5 +145,93 @@ namespace Akka
             public bool WasHandled { get { return true; } }
         }
     }
+
+    /// <summary>
+    /// Class Case with returning result.
+    /// </summary>
+    /// <typeparam name="T">The type of return value</typeparam>
+    public class Case<T> : IMatchResult
+    {
+        /// <summary>
+        /// The _message
+        /// </summary>
+        private readonly object _message;
+        /// <summary>
+        /// The _handled
+        /// </summary>
+        private bool _handled;
+
+        /// <summary>
+        /// The final result of execution
+        /// </summary>
+        private T _result;
+
+        /// <summary>
+        /// Gets a value indicating whether [was handled].
+        /// </summary>
+        /// <value><c>true</c> if [was handled]; otherwise, <c>false</c>.</value>
+        public bool WasHandled { get { return _handled; } }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Case"/> class.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public Case(object message)
+        {
+            _message = message;
+        }
+
+        /// <summary>
+        /// Withes the specified action.
+        /// </summary>
+        /// <typeparam name="TMessage">The type of the t message.</typeparam>
+        /// <param name="function">The function.</param>
+        /// <returns>Case.</returns>
+        public Case<T> With<TMessage>(Func<T> function)
+        {
+            if (!_handled && _message is TMessage)
+            {
+                _result = function();
+                _handled = true;
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// Withes the specified action.
+        /// </summary>
+        /// <typeparam name="TMessage">The type of the t message.</typeparam>
+        /// <param name="function">The action.</param>
+        /// <returns>Case.</returns>
+        public Case<T> With<TMessage>(Func<TMessage, T> function)
+        {
+            if (!_handled && _message is TMessage)
+            {
+                _result = function((TMessage)_message);
+                _handled = true;
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// Defaults the specified action.
+        /// </summary>
+        /// <param name="function">The default function.</param>
+        /// <returns>The result of the matching</returns>
+        public T ResultOrDefault(Func<object, T> function)
+        {
+            if (!_handled)
+            {
+                _result = function(_message);
+                _handled = true;
+            }
+
+            return _result;
+        }
+    }
+
+
 }
 
