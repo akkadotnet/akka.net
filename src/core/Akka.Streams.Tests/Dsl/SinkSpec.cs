@@ -172,7 +172,15 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Sink_must_suitably_override_attribute_handling_methods() => Sink.First<int>().WithAttributes(new Attributes()).Named("");
+        public void A_Sink_must_suitably_override_attribute_handling_methods()
+        {
+            var s = Sink.First<int>().Async().AddAttributes(Attributes.None).Named("name");
+
+            s.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("name");
+            s.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+                .Should()
+                .Be(Attributes.AsyncBoundary.Instance);
+        }
 
         [Fact]
         public void A_Sink_must_support_contramap()

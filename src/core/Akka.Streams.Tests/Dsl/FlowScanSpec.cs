@@ -130,5 +130,27 @@ namespace Akka.Streams.Tests.Dsl
                 .ToStrict(TimeSpan.FromSeconds(1))
                 .ShouldAllBeEquivalentTo(new[] {0, 1, 4, 9, 16});
         }
+        
+        [Fact]
+        public void A_Scan_must_scan_normally_for_empty_source()
+        {
+            Source.Empty<int>()
+                .Scan(0, (i, i1) => i + i1)
+                .RunWith(this.SinkProbe<int>(), Materializer)
+                .Request(2)
+                .ExpectNext(0)
+                .ExpectComplete();
+        }
+
+        [Fact]
+        public void A_Scan_must_fail_when_upstream_failed()
+        {
+            var cause = new TestException("");
+            Source.Failed<int>(cause)
+                .Scan(0, (i, i1) => i + i1)
+                .RunWith(this.SinkProbe<int>(), Materializer)
+                .Request(2)
+                .ExpectError().Should().Be(cause);
+        }
     }
 }

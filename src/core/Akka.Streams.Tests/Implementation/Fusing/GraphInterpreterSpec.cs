@@ -254,8 +254,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 source2.OnNext(2);
                 lastEvents()
                     .Should()
-                    .Equal(new RequestOne(source1), new RequestOne(source2),
-                        new OnNext(sink1, new Tuple<int, int>(1, 2)), new OnNext(sink2, new Tuple<int, int>(1, 2)));
+                    .Equal(new OnNext(sink1, new Tuple<int, int>(1, 2)), new RequestOne(source1),
+                        new RequestOne(source2), new OnNext(sink2, new Tuple<int, int>(1, 2)));
             });
         }
 
@@ -443,10 +443,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 sink.RequestOne(eventLimit: 0);
                 source.OnComplete(eventLimit: 3);
-                lastEvents().Should().BeEquivalentTo(new OnNext(sink, "C"));
 
-                sink.RequestOne();
-                lastEvents().Should().BeEquivalentTo(new OnComplete(sink));
+                // OnComplete arrives early due to push chasing
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, "C"), new OnComplete(sink));
             });
         }
     }

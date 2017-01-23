@@ -16,7 +16,10 @@ namespace Akka.Streams.Implementation
 {
     using State = Byte;
 
-    internal abstract class InputBunch
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public abstract class InputBunch
     {
         #region internal classes
 
@@ -36,8 +39,17 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TransferState AllOfMarkedInputs;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TransferState AnyOfMarkedInputs;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly SubReceive SubReceive;
 
         private readonly int _inputCount;
@@ -54,6 +66,12 @@ namespace Akka.Streams.Implementation
         private int _preferredId;
         private int _lastDequeuedId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inputCount">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="pump">TBD</param>
         protected InputBunch(int inputCount, int bufferSize, IPump pump)
         {
             _inputCount = inputCount;
@@ -104,10 +122,21 @@ namespace Akka.Streams.Implementation
                 .WasHandled);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected int LastDequeuedId => _lastDequeuedId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsAllCompleted => _inputCount == _completedCounter;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public TransferState InputsAvailableFor(int id)
         {
             return new LambdaTransferState(
@@ -115,6 +144,11 @@ namespace Akka.Streams.Implementation
                 isReady: () => _markedPending > 0);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public TransferState InputsOrCompleteAvailableFor(int id)
         {
             return new LambdaTransferState(
@@ -122,6 +156,9 @@ namespace Akka.Streams.Implementation
                 isReady: () => IsPending(id) || IsDepleted(id));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Cancel()
         {
             if (!_allCancelled)
@@ -132,6 +169,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="input">TBD</param>
         public void Cancel(int input)
         {
             if (!IsCancelled(input))
@@ -142,12 +183,28 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <param name="cause">TBD</param>
         public abstract void OnError(int id, Exception cause);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="input">TBD</param>
         public virtual void OnDepleted(int input) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public virtual void OnCompleteWhenNoInput() { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="input">TBD</param>
         public void MarkInput(int input)
         {
             if (!IsMarked(input))
@@ -162,6 +219,10 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="input">TBD</param>
         public void UnmarkInput(int input)
         {
             if (IsMarked(input))
@@ -176,18 +237,29 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void MarkAllInputs()
         {
             for (var i = 0; i < _inputCount; i++)
                 MarkInput(i);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void UnmarkAllInputs()
         {
             for (var i = 0; i < _inputCount; i++)
                 UnmarkInput(i);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         public int IdToDequeue()
         {
             var id = _preferredId;
@@ -203,6 +275,12 @@ namespace Akka.Streams.Implementation
             return id;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public object Dequeue(int id)
         {
             if (IsDepleted(id))
@@ -232,14 +310,28 @@ namespace Akka.Streams.Implementation
             return element;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public object DequeueAndYield() => DequeueAndYield(IdToDequeue());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         public object DequeueAndYield(int id)
         {
             _preferredId = (id + 1) % _inputCount;
             return Dequeue(id);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="preferred">TBD</param>
+        /// <returns>TBD</returns>
         public object DequeuePreferring(int preferred)
         {
             _preferredId = preferred;
@@ -259,10 +351,20 @@ namespace Akka.Streams.Implementation
             _states[index] = (State)(on ? (_states[index] | flag) : (_states[index] & ~flag));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsCancelled(int index) => HasState(index, FanIn.Cancelled);
 
         private void Cancelled(int index, bool on) => SetState(index, FanIn.Cancelled, on);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsCompleted(int index) => HasState(index, FanIn.Completed);
 
         private void RegisterCompleted(int index)
@@ -271,10 +373,20 @@ namespace Akka.Streams.Implementation
             SetState(index, FanIn.Completed, true);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsDepleted(int index) => HasState(index, FanIn.Depleted);
 
         private void Depleted(int index, bool on) => SetState(index, FanIn.Depleted, on);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="index">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsPending(int index) => HasState(index, FanIn.Pending);
 
         private void Pending(int index, bool on) => SetState(index, FanIn.Pending, on);
@@ -284,14 +396,31 @@ namespace Akka.Streams.Implementation
         private void Marked(int index, bool on) => SetState(index, FanIn.Marked, on);
     }
 
-    internal static class FanIn
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public static class FanIn
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public struct OnError : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Id;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Exception Cause;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="id">TBD</param>
+            /// <param name="cause">TBD</param>
             public OnError(int id, Exception cause)
             {
                 Id = id;
@@ -299,23 +428,47 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public struct OnComplete : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Id;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="id">TBD</param>
             public OnComplete(int id)
             {
                 Id = id;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public struct OnNext : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Id;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly object Element;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="id">TBD</param>
+            /// <param name="element">TBD</param>
             public OnNext(int id, object element)
             {
                 Id = id;
@@ -323,12 +476,27 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public struct OnSubscribe : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int Id;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ISubscription Subscription;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="id">TBD</param>
+            /// <param name="subscription">TBD</param>
+            /// <returns>TBD</returns>
             public OnSubscribe(int id, ISubscription subscription)
             {
                 Id = id;
@@ -336,42 +504,84 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const State Marked = 1;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const State Pending = 2;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const State Depleted = 4;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const State Completed = 8;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const State Cancelled = 16;
     }
 
-    internal abstract class FanIn<T> : ActorBase, IPump
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    public abstract class FanIn<T> : ActorBase, IPump
     {
         #region Internal classes
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public struct SubInput : ISubscriber<T>
         {
             private readonly IActorRef _impl;
             private readonly int _id;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="impl">TBD</param>
+            /// <param name="id">TBD</param>
             public SubInput(IActorRef impl, int id)
             {
                 _impl = impl;
                 _id = id;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="subscription">TBD</param>
             public void OnSubscribe(ISubscription subscription)
             {
                 ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
                 _impl.Tell(new FanIn.OnSubscribe(_id, subscription));
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cause">TBD</param>
             public void OnError(Exception cause)
             {
                 ReactiveStreamsCompliance.RequireNonNullException(cause);
                 _impl.Tell(new FanIn.OnError(_id, cause));
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void OnComplete() => _impl.Tell(new FanIn.OnComplete(_id));
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="element">TBD</param>
             public void OnNext(T element)
             {
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
@@ -395,11 +605,30 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly ActorMaterializerSettings Settings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly int InputCount;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly SimpleOutputs PrimaryOutputs;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly InputBunch InputBunch;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="inputCount">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         protected FanIn(ActorMaterializerSettings settings, int inputCount)
         {
             Settings = settings;
@@ -414,8 +643,15 @@ namespace Akka.Streams.Implementation
         #region Actor impl
 
         private ILoggingAdapter _log;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         protected void Fail(Exception cause)
         {
             if (Settings.IsDebugLogging)
@@ -426,6 +662,9 @@ namespace Akka.Streams.Implementation
             Pump();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             InputBunch.Cancel();
@@ -433,12 +672,23 @@ namespace Akka.Streams.Implementation
             base.PostStop();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         protected override void PostRestart(Exception reason)
         {
             base.PostRestart(reason);
             throw new IllegalStateException("This actor cannot be restarted");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
             => InputBunch.SubReceive.CurrentReceive(message) || PrimaryOutputs.SubReceive.CurrentReceive(message);
 
@@ -446,25 +696,60 @@ namespace Akka.Streams.Implementation
 
         #region Pump implementation
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransferState TransferState { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Action CurrentAction { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsPumpFinished => TransferState.IsCompleted;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="waitForUpstream">TBD</param>
+        /// <param name="andThen">TBD</param>
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
             => Pumps.InitialPhase(this, waitForUpstream, andThen);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="waitForUpstream">TBD</param>
         public void WaitForUpstream(int waitForUpstream) => Pumps.WaitForUpstream(this, waitForUpstream);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void GotUpstreamSubscription() => Pumps.GotUpstreamSubscription(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="phase">TBD</param>
         public void NextPhase(TransferPhase phase) => Pumps.NextPhase(this, phase);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Pump() => Pumps.Pump(this);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
         public void PumpFailed(Exception e) => Fail(e);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void PumpFinished()
         {
             InputBunch.Cancel();

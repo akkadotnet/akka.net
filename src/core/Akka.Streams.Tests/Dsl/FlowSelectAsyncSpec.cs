@@ -23,7 +23,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using static Akka.Util.RuntimeDetector;
 
 // ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
@@ -66,11 +65,17 @@ namespace Akka.Streams.Tests.Dsl
         {
             var c = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 50))
-                .SelectAsync(4, i => Task.Run(()=>
+                .SelectAsync(4, i =>
                 {
-                    Thread.Sleep(ThreadLocalRandom.Current.Next(1, 10));
-                    return i;
-                }))
+                    if (i%3 == 0)
+                        return Task.FromResult(i);
+
+                    return Task.Run(() =>
+                    {
+                        Thread.Sleep(ThreadLocalRandom.Current.Next(1, 10));
+                        return i;
+                    });
+                })
                 .RunWith(Sink.FromSubscriber(c), Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(1000);
@@ -131,7 +136,38 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_signal_error_from_MapAsync()
+        public void A_Flow_with_SelectAsync_must_signal_task_failure_asap()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var latch = CreateTestLatch();
+                var done = Source.From(Enumerable.Range(1, 5))
+                    .Select(n =>
+                    {
+                        if (n != 1)
+                            // slow upstream should not block the error
+                            latch.Ready(TimeSpan.FromSeconds(10));
+
+                        return n;
+                    })
+                    .SelectAsync(4, n =>
+                    {
+                        if (n == 1) 
+                        {
+                            var c = new TaskCompletionSource<int>();
+                            c.SetException(new Exception("err1"));
+                            return c.Task;
+                        }
+                        return Task.FromResult(n);
+                    }).RunWith(Sink.Ignore<int>(), Materializer);
+
+                done.Invoking(d => d.Wait(RemainingOrDefault)).ShouldThrow<Exception>().WithMessage("err1");
+                latch.CountDown();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Flow_with_SelectAsync_must_signal_error_from_SelectAsync()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -222,9 +258,8 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.ShouldAllBeEquivalentTo(new[] {1, 2});
+                
+                t.AwaitResult().ShouldAllBeEquivalentTo(new[] {1, 2});
             }, Materializer);
         }
 
@@ -300,18 +335,13 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
-            // TODO: 9/14/2016: Mono 4.4.2 blows up the XUnit test runner upon calling Thread.Interrupt below (@Aaronontheweb) 
-            // SEE: https://github.com/xunit/xunit/issues/979
-            if (IsMono) 
-                return; 
-
             this.AssertAllStagesStopped(() =>
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
                 var queue = new BlockingQueue<Tuple<TaskCompletionSource<int>, long>>();
-
-                var timer = new Thread(() =>
+                var cancellation = new CancellationTokenSource();
+                Task.Run(() =>
                 {
                     var delay = 500; // 50000 nanoseconds
                     var count = 0;
@@ -320,7 +350,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         try
                         {
-                            var t = queue.Take(CancellationToken.None);
+                            var t = queue.Take(cancellation.Token);
                             var promise = t.Item1;
                             var enqueued = t.Item2;
                             var wakeup = enqueued + delay;
@@ -334,9 +364,7 @@ namespace Akka.Streams.Tests.Dsl
                             cont = false;
                         }
                     }
-                });
-
-                timer.Start();
+                }, cancellation.Token);
 
                 Func<Task<int>> deferred = () =>
                 {
@@ -356,12 +384,11 @@ namespace Akka.Streams.Tests.Dsl
                         .SelectAsync(parallelism, _ => deferred())
                         .RunAggregate(0, (c, _) => c + 1, Materializer);
 
-                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                    task.Result.Should().Be(n);
+                    task.AwaitResult().Should().Be(n);
                 }
                 finally
                 {
-                    timer.Interrupt();
+                    cancellation.Cancel(false);
                 }
             }, Materializer);
         }

@@ -11,13 +11,27 @@ using System.Reflection.Emit;
 
 namespace Akka.Tools.MatchHandler
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class LambdaExpressionCompiler : ILambdaExpressionCompiler
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="expression">TBD</param>
+        /// <returns>TBD</returns>
         public Delegate Compile(LambdaExpression expression)
         {
             return expression.Compile();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="expression">TBD</param>
+        /// <param name="method"></param>
+        /// <returns>TBD</returns>
         public void CompileToMethod(LambdaExpression expression, MethodBuilder method)
         {
             expression.CompileToMethod(method);

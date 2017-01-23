@@ -20,13 +20,33 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence.Fsm
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TState">TBD</typeparam>
+    /// <typeparam name="TData">TBD</typeparam>
+    /// <typeparam name="TEvent">TBD</typeparam>
     public abstract class PersistentFSMBase<TState, TData, TEvent> : PersistentActor, IListeners
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="fsmEvent">TBD</param>
+        /// <param name="state">TBD</param>
+        /// <returns>TBD</returns>
         public delegate State StateFunction(
             FSMBase.Event<TData> fsmEvent, State state = null);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialState">TBD</param>
+        /// <param name="nextState">TBD</param>
         public delegate void TransitionHandler(TState initialState, TState nextState);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly ListenerSupport _listener = new ListenerSupport();
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
@@ -52,9 +72,11 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         ///     FSM state data and current timeout handling
         /// </summary>
-        /// a
         protected State _currentState;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected long _generation;
         private StateFunction _handleEvent;
         private State _nextState;
@@ -64,6 +86,9 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         private Action<FSMBase.StopEvent<TState, TData>> _terminateEvent = @event => { };
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ICancelable _timeoutFuture;
 
         /// <summary>
@@ -71,6 +96,9 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         protected bool DebugEvent;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected PersistentFSMBase()
         {
             if (this is ILoggingFSM)
@@ -137,8 +165,14 @@ namespace Akka.Persistence.Fsm
             set { _handleEvent = value; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsStateTimerActive { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ListenerSupport Listeners
         {
             get { return _listener; }
@@ -208,6 +242,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         ///     Produce change descriptor to stop this FSM actor with <see cref="FSMBase.Reason" /> <see cref="FSMBase.Normal" />
         /// </summary>
+        /// <returns>TBD</returns>
         public State Stop()
         {
             return Stop(new FSMBase.Normal());
@@ -216,11 +251,19 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         ///     Produce change descriptor to stop this FSM actor with the specified <see cref="FSMBase.Reason" />.
         /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <returns>TBD</returns>
         public State Stop(FSMBase.Reason reason)
         {
             return Stop(reason, _currentState.StateData);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="stateData">TBD</param>
+        /// <returns>TBD</returns>
         public State Stop(FSMBase.Reason reason, TData stateData)
         {
             return Stay().Using(stateData).WithStopReason(reason);
@@ -274,6 +317,8 @@ namespace Akka.Persistence.Fsm
         ///     unless the timer does not exist, has previously been cancelled, or
         ///     if it was a single-shot timer whose message was already received.
         /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsTimerActive(string name)
         {
             return _timers.ContainsKey(name);
@@ -283,6 +328,8 @@ namespace Akka.Persistence.Fsm
         ///     Set the state timeout explicitly. This method can be safely used from
         ///     within a state handler.
         /// </summary>
+        /// <param name="state">TBD</param>
+        /// <param name="timeout">TBD</param>
         public void SetStateTimeout(TState state, TimeSpan? timeout)
         {
             if (!_stateTimeouts.ContainsKey(state))
@@ -295,6 +342,7 @@ namespace Akka.Persistence.Fsm
         ///     Set handler which is called upon each state transition, i.e. not when
         ///     staying in the same state.
         /// </summary>
+        /// <param name="transitionHandler">TBD</param>
         public void OnTransition(TransitionHandler transitionHandler)
         {
             _transitionEvent.Add(transitionHandler);
@@ -304,6 +352,7 @@ namespace Akka.Persistence.Fsm
         ///     Set the handler which is called upon termination of this FSM actor. Calling this
         ///     method again will overwrite the previous contents.
         /// </summary>
+        /// <param name="terminationHandler">TBD</param>
         public void OnTermination(Action<FSMBase.StopEvent<TState, TData>> terminationHandler)
         {
             _terminateEvent = terminationHandler;
@@ -313,7 +362,7 @@ namespace Akka.Persistence.Fsm
         ///     Set handler which is called upon reception of unhandled FSM messages. Calling
         ///     this method again will overwrite the previous contents.
         /// </summary>
-        /// <param name="stateFunction"></param>
+        /// <param name="stateFunction">TBD</param>
         public void WhenUnhandled(StateFunction stateFunction)
         {
             HandleEvent = OrElse(stateFunction, HandleEventDefault);
@@ -341,6 +390,11 @@ namespace Akka.Persistence.Fsm
                 throw new IllegalStateException("You must call StartWith before calling Initialize.");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="func">TBD</param>
+        /// <returns>TBD</returns>
         public TransformHelper Transform(StateFunction func)
         {
             return new TransformHelper(func);
@@ -390,6 +444,12 @@ namespace Akka.Persistence.Fsm
             return chained;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="any">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <returns>TBD</returns>
         protected void ProcessMsg(object any, object source)
         {
             var fsmEvent = new FSMBase.Event<TData>(any, _currentState.StateData);
@@ -436,6 +496,10 @@ namespace Akka.Persistence.Fsm
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="upcomingState">TBD</param>
         protected virtual void ApplyState(State upcomingState)
         {
             if (upcomingState.StopReason == null)
@@ -491,6 +555,11 @@ namespace Akka.Persistence.Fsm
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool ReceiveCommand(object message)
         {
             var match = message.Match()
@@ -555,6 +624,10 @@ namespace Akka.Persistence.Fsm
             return match.WasHandled;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="upcomingState">TBD</param>
         protected void Terminate(State upcomingState)
         {
             if (_currentState.StopReason == null)
@@ -594,7 +667,7 @@ namespace Akka.Persistence.Fsm
         ///     By default, <see cref="Failure" /> is logged at error level and other
         ///     reason types are not logged. It is possible to override this behavior.
         /// </summary>
-        /// <param name="reason"></param>
+        /// <param name="reason">TBD</param>
         protected virtual void LogTermination(FSMBase.Reason reason)
         {
             reason.Match()
@@ -611,15 +684,30 @@ namespace Akka.Persistence.Fsm
                 });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class TransformHelper
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="func">TBD</param>
             public TransformHelper(StateFunction func)
             {
                 Func = func;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public StateFunction Func { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="andThen">TBD</param>
+            /// <returns>TBD</returns>
             public StateFunction Using(Func<State, State> andThen)
             {
                 StateFunction continuedDelegate = (@event, state) => andThen.Invoke(Func.Invoke(@event, state));
@@ -627,16 +715,30 @@ namespace Akka.Persistence.Fsm
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class StateChangeEvent : IMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="state">TBD</param>
+            /// <param name="timeOut">TBD</param>
             public StateChangeEvent(TState state, TimeSpan? timeOut)
             {
                 State = state;
                 TimeOut = timeOut;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TState State { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TimeSpan? TimeOut { get; private set; }
         }
 
@@ -653,16 +755,29 @@ namespace Akka.Persistence.Fsm
          * INTERNAL API - used for ensuring that state changes occur on-time
          */
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class TimeoutMarker
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="generation">TBD</param>
             public TimeoutMarker(long generation)
             {
                 Generation = generation;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long Generation { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [DebuggerDisplay("Timer {Name,nq}, message: {Message")]
         public class Timer : INoSerializationVerificationNeeded
         {
@@ -671,6 +786,15 @@ namespace Akka.Persistence.Fsm
 
             private readonly IScheduler _scheduler;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="name">TBD</param>
+            /// <param name="message">TBD</param>
+            /// <param name="repeat">TBD</param>
+            /// <param name="generation">TBD</param>
+            /// <param name="context">TBD</param>
+            /// <param name="debugLog">TBD</param>
             public Timer(string name, object message, bool repeat, int generation, IActorContext context,
                 ILoggingAdapter debugLog)
             {
@@ -685,16 +809,36 @@ namespace Akka.Persistence.Fsm
                 _ref = new Cancelable(scheduler);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Name { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Message { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool Repeat { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int Generation { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorContext Context { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="actor">TBD</param>
+            /// <param name="timeout">TBD</param>
             public void Schedule(IActorRef actor, TimeSpan timeout)
             {
                 var name = Name;
@@ -715,6 +859,9 @@ namespace Akka.Persistence.Fsm
                 else _scheduler.Advanced.ScheduleOnce(timeout, send, _ref);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void Cancel()
             {
                 if (!_ref.IsCancellationRequested)
@@ -729,17 +876,34 @@ namespace Akka.Persistence.Fsm
         ///     the state data, possibly custom timeout, stop reason, and replies accumulated while
         ///     processing the last message.
         /// </summary>
+        /// <typeparam name="TS">TBD</typeparam>
+        /// <typeparam name="TD">TBD</typeparam>
+        /// <typeparam name="TE">TBD</typeparam>
         [Obsolete("This was left for backward compatibility. Use type parameterless class instead. Can be removed in future releases.")]
         public class State<TS, TD, TE>
             where TS : TState where TD : TData where TE : TEvent
         {
             private State _state;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="state">TBD</param>
             public State(State state)
             {
                 _state = state;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="stateName">TBD</param>
+            /// <param name="stateData">TBD</param>
+            /// <param name="timeout">TBD</param>
+            /// <param name="stopReason">TBD</param>
+            /// <param name="replies">TBD</param>
+            /// <param name="domainEvents">TBD</param>
+            /// <param name="afterTransitionDo">TBD</param>
             public State(
                 TState stateName,
                 TData stateData,
@@ -756,6 +920,7 @@ namespace Akka.Persistence.Fsm
             /// Converts original object to wrapper
             /// </summary>
             /// <param name="state">The original object</param>
+            /// <returns>TBD</returns>
             public static implicit operator State(State<TS, TD, TE> state)
             {
                 return state._state;
@@ -766,11 +931,15 @@ namespace Akka.Persistence.Fsm
             /// Converts original object to wrapper
             /// </summary>
             /// <param name="state">The original object</param>
+            /// <returns>TBD</returns>
             public static implicit operator State<TS, TD, TE>(State state)
             {
                 return new State<TS, TD, TE>(state);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Action<TData> AfterTransitionHandler
             {
                 get
@@ -780,6 +949,9 @@ namespace Akka.Persistence.Fsm
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ILinearSeq<TEvent> DomainEvents
             {
                 get
@@ -789,6 +961,9 @@ namespace Akka.Persistence.Fsm
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool Notifies
             {
                 get
@@ -801,6 +976,11 @@ namespace Akka.Persistence.Fsm
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="events">TBD</param>
+            /// <returns>TBD</returns>
             public State Applying(ILinearSeq<TEvent> events)
             {
                 return _state.Applying(events);
@@ -809,8 +989,8 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             ///     Specify domain event to be applied when transitioning to the new state.
             /// </summary>
-            /// <param name="e"></param>
-            /// <returns></returns>
+            /// <param name="e">TBD</param>
+            /// <returns>TBD</returns>
             public State Applying(TEvent e)
             {
                 return _state.Applying(e);
@@ -819,13 +999,22 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             ///     Register a handler to be triggered after the state has been persisted successfully
             /// </summary>
-            /// <param name="handler"></param>
-            /// <returns></returns>
+            /// <param name="handler">TBD</param>
+            /// <returns>TBD</returns>
             public State AndThen(Action<TData> handler)
             {
                 return _state.AndThen(handler);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="timeout">TBD</param>
+            /// <param name="stopReason">TBD</param>
+            /// <param name="replies">TBD</param>
+            /// <param name="domainEvents">TBD</param>
+            /// <param name="afterTransitionDo">TBD</param>
+            /// <returns>TBD</returns>
             public State Copy(
                 TimeSpan? timeout,
                 FSMBase.Reason stopReason = null,
@@ -840,21 +1029,36 @@ namespace Akka.Persistence.Fsm
             ///     Modify state transition descriptor with new state data. The data will be set
             ///     when transitioning to the new state.
             /// </summary>
+            /// <param name="nextStateData">TBD</param>
+            /// <returns>TBD</returns>
             public State Using(TData nextStateData)
             {
                 return _state.Using(nextStateData);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="replyValue">TBD</param>
+            /// <returns>TBD</returns>
             public State Replying(object replyValue)
             {
                 return _state.Replying(replyValue);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="timeout">TBD</param>
+            /// <returns>TBD</returns>
             public State ForMax(TimeSpan timeout)
             {
                 return _state.ForMax(timeout);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public List<object> Replies
             {
                 get
@@ -863,6 +1067,9 @@ namespace Akka.Persistence.Fsm
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TState StateName
             {
                 get
@@ -871,6 +1078,9 @@ namespace Akka.Persistence.Fsm
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TData StateData
             {
                 get
@@ -879,6 +1089,9 @@ namespace Akka.Persistence.Fsm
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TimeSpan? Timeout
             {
                 get
@@ -887,6 +1100,9 @@ namespace Akka.Persistence.Fsm
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public FSMBase.Reason StopReason
             {
                 get
@@ -894,12 +1110,6 @@ namespace Akka.Persistence.Fsm
                     return _state.StopReason;
                 }
             }
-
-
-
-
-
-
         }
 
 
@@ -910,9 +1120,22 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         public class State : FSMBase.State<TState, TData>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Action<TData> AfterTransitionHandler { get; private set; }
 
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="stateName">TBD</param>
+            /// <param name="stateData">TBD</param>
+            /// <param name="timeout">TBD</param>
+            /// <param name="stopReason">TBD</param>
+            /// <param name="replies">TBD</param>
+            /// <param name="domainEvents">TBD</param>
+            /// <param name="afterTransitionDo">TBD</param>
             public State(TState stateName, TData stateData, TimeSpan? timeout = null, FSMBase.Reason stopReason = null,
                 List<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
                 : base(stateName, stateData, timeout, stopReason, replies)
@@ -922,15 +1145,21 @@ namespace Akka.Persistence.Fsm
                 Notifies = true;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ILinearSeq<TEvent> DomainEvents { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool Notifies { get; set; }
 
             /// <summary>
             ///     Specify domain events to be applied when transitioning to the new state.
             /// </summary>
-            /// <param name="events"></param>
-            /// <returns></returns>
+            /// <param name="events">TBD</param>
+            /// <returns>TBD</returns>
             public State Applying(ILinearSeq<TEvent> events)
             {
                 if (DomainEvents == null)
@@ -944,8 +1173,8 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             ///     Specify domain event to be applied when transitioning to the new state.
             /// </summary>
-            /// <param name="e"></param>
-            /// <returns></returns>
+            /// <param name="e">TBD</param>
+            /// <returns>TBD</returns>
             public State Applying(TEvent e)
             {
                 if (DomainEvents == null)
@@ -962,13 +1191,22 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             ///     Register a handler to be triggered after the state has been persisted successfully
             /// </summary>
-            /// <param name="handler"></param>
-            /// <returns></returns>
+            /// <param name="handler">TBD</param>
+            /// <returns>TBD</returns>
             public State AndThen(Action<TData> handler)
             {
                 return Copy(null, null, null, null, handler);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="timeout">TBD</param>
+            /// <param name="stopReason">TBD</param>
+            /// <param name="replies">TBD</param>
+            /// <param name="domainEvents">TBD</param>
+            /// <param name="afterTransitionDo">TBD</param>
+            /// <returns>TBD</returns>
             public State Copy(TimeSpan? timeout, FSMBase.Reason stopReason = null,
                 List<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
             {
@@ -981,12 +1219,19 @@ namespace Akka.Persistence.Fsm
             ///     Modify state transition descriptor with new state data. The data will be set
             ///     when transitioning to the new state.
             /// </summary>
+            /// <param name="nextStateData">TBD</param>
+            /// <returns>TBD</returns>
             public new State Using(TData nextStateData)
             {
                 return new State(StateName, nextStateData, Timeout, StopReason, Replies);
             }
 
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="replyValue">TBD</param>
+            /// <returns>TBD</returns>
             public new State Replying(object replyValue)
             {
                 if (Replies == null) Replies = new List<object>();
@@ -995,6 +1240,11 @@ namespace Akka.Persistence.Fsm
                 return Copy(Timeout, replies: newReplies);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="timeout">TBD</param>
+            /// <returns>TBD</returns>
             public new State ForMax(TimeSpan timeout)
             {
                 if (timeout <= TimeSpan.MaxValue) return Copy(timeout);
@@ -1004,6 +1254,8 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             ///     INTERNAL API
             /// </summary>
+            /// <param name="reason">TBD</param>
+            /// <returns>TBD</returns>
             internal State WithStopReason(FSMBase.Reason reason)
             {
                 return Copy(null, reason);

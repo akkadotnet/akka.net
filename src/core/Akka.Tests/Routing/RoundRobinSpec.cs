@@ -209,7 +209,7 @@ namespace Akka.Tests.Routing
             var helloLatch = new TestLatch(routeeCount);
             var stopLatch = new TestLatch(routeeCount);
 
-            var actor = Sys.ActorOf(new RandomPool(routeeCount)
+            var actor = Sys.ActorOf(new RoundRobinPool(routeeCount)
                 .Props(Props.Create(() => new RoundRobinPoolBroadcastActor(helloLatch, stopLatch))), "round-robin-broadcast");
 
             actor.Tell(new Broadcast("hello"));
@@ -222,7 +222,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Round_robin_pool_must_be_controlled_with_management_messages()
         {
-            IActorRef actor = Sys.ActorOf(new RandomPool(3)
+            IActorRef actor = Sys.ActorOf(new RoundRobinPool(3)
                 .Props(Props.Create<EmptyBehaviorActor>()), "round-robin-managed");
 
             RouteeSize(actor).Should().Be(3);

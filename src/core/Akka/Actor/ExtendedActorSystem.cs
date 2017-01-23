@@ -46,11 +46,17 @@ namespace Akka.Actor
         /// <summary>Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
         /// terminated.</summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IActorRef SystemActorOf(Props props, string name = null);
 
         /// <summary>Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
         /// terminated.</summary>
+        /// <typeparam name="TActor">TBD</typeparam>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public abstract IActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
 
         /// <summary>

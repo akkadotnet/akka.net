@@ -11,7 +11,7 @@ using Akka.Actor;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// 
+    /// TBD
     /// </summary>
     public interface ISemantics
     {
@@ -58,6 +58,10 @@ namespace Akka.Dispatch
     /// </summary>
     public interface IDequeBasedMessageQueueSemantics : ISemantics
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
         void EnqueueFirst(Envelope envelope);
     }
 

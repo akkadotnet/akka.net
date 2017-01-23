@@ -12,12 +12,21 @@ using Akka.Event;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class EmptyLocalActorRef : MinimalActorRef
     {
         private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
         private readonly EventStream _eventStream;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="provider">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <param name="eventStream">TBD</param>
         public EmptyLocalActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
         {
             _provider = provider;
@@ -25,14 +34,27 @@ namespace Akka.Actor
             _eventStream = eventStream;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path { get { return _path; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IActorRefProvider Provider { get { return _provider; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated>")]
         public override bool IsTerminated { get { return true; } }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
@@ -45,12 +67,22 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
             Mailbox.DebugPrint("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
             SpecialHandle(message, _provider.DeadLetters);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
             var watch = message as Watch;

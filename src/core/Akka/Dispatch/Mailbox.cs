@@ -20,8 +20,6 @@ using Assert = System.Diagnostics.Debug;
 
 namespace Akka.Dispatch
 {
-
-
     /// <summary>
     /// Mailbox base class
     /// </summary>
@@ -33,17 +31,41 @@ namespace Akka.Dispatch
         internal static class MailboxStatus
         {
             // primary status
+            /// <summary>
+            /// TBD
+            /// </summary>
             public const int Open = 0; // _status is not initialized in AbstractMailbox, so default must be zero! 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public const int Closed = 1;
 
             // secondary status
+            /// <summary>
+            /// TBD
+            /// </summary>
             public const int Scheduled = 2;
 
             // shifted by 2 - the suspend count
+            /// <summary>
+            /// TBD
+            /// </summary>
             public const int ShouldScheduleMask = 3;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public const int ShouldNotProcessMask = ~2;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public const int SuspendMask = ~3;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public const int SuspendUnit = 4;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public const int SuspendAwaitTask = ~4;
         }
 
@@ -83,20 +105,31 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Posts the specified envelope to the mailbox.
         /// </summary>
-        /// <param name="receiver"></param>
+        /// <param name="receiver">TBD</param>
         /// <param name="envelope">The envelope.</param>
         internal void Enqueue(IActorRef receiver, Envelope envelope)
         {
             MessageQueue.Enqueue(receiver, envelope);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="msg">TBD</param>
+        /// <returns>TBD</returns>
         internal bool TryDequeue(out Envelope msg)
         {
             return MessageQueue.TryDequeue(out msg);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal bool HasMessages => MessageQueue.HasMessages;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal int NumberOfMessages => MessageQueue.Count;
 
 
@@ -113,6 +146,12 @@ namespace Akka.Dispatch
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="old">TBD</param>
+        /// <param name="newQueue">TBD</param>
+        /// <returns>TBD</returns>
         internal bool SystemQueuePut(LatestFirstSystemMessageList old, LatestFirstSystemMessageList newQueue)
         {
             // Note: calling .head is not actually existing on the bytecode level as the parameters _old and _new
@@ -122,6 +161,12 @@ namespace Akka.Dispatch
             return Interlocked.CompareExchange(ref _systemQueueDoNotCallMeDirectly, newQueue.Head, old.Head) == prev;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="hasMessageHint">TBD</param>
+        /// <param name="hasSystemMessageHint">TBD</param>
+        /// <returns>TBD</returns>
         internal bool CanBeScheduledForExecution(bool hasMessageHint, bool hasSystemMessageHint)
         {
             var currentStatus = CurrentStatus();
@@ -146,39 +191,63 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Attaches an ActorCell to the Mailbox.
         /// </summary>
-        /// <param name="actorCell"></param>
+        /// <param name="actorCell">TBD</param>
         public virtual void SetActor(ActorCell actorCell)
         {
             _actor = actorCell;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int CurrentStatus() { return Volatile.Read(ref _statusDotNotCallMeDirectly); }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool ShouldProcessMessage() { return (CurrentStatus() & MailboxStatus.ShouldNotProcessMask) == 0; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int SuspendCount() { return CurrentStatus() / MailboxStatus.SuspendUnit; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool IsSuspended() { return (CurrentStatus() & MailboxStatus.SuspendMask) != 0; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool IsClosed() { return (CurrentStatus() == MailboxStatus.Closed); }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool IsScheduled()
         {
             return (CurrentStatus() & MailboxStatus.Scheduled) != 0;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool UpdateStatus(int oldStatus, int newStatus)
         {
             return Interlocked.CompareExchange(ref _statusDotNotCallMeDirectly, newStatus, oldStatus) == oldStatus;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetStatus(int newStatus)
         {
@@ -229,6 +298,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///  Set the new primary status to 
         /// </summary>
+        /// <returns>TBD</returns>
         internal bool BecomeClosed()
         {
             var status = CurrentStatus();
@@ -243,6 +313,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// Set scheduled status, keeping primary status as-is.
         /// </summary>
+        /// <returns>TBD</returns>
         internal bool SetAsScheduled()
         {
             while (true)
@@ -261,6 +332,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// Reset Scheduled status, keeping primary status as-is
         /// </summary>
+        /// <returns>TBD</returns>
         internal bool SetAsIdle()
         {
             while (true)
@@ -423,6 +495,11 @@ namespace Akka.Dispatch
         }
 
         /* In JVM the following three methods are implented as an internal trait. Added them directly onto the Mailbox itself instead. */
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
         internal virtual void SystemEnqueue(IActorRef receiver, SystemMessage message)
         {
             Assert.Assert(message.Unlinked);
@@ -442,6 +519,10 @@ namespace Akka.Dispatch
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="newContents">TBD</param>
         internal virtual EarliestFirstSystemMessageList SystemDrain(LatestFirstSystemMessageList newContents)
         {
             var currentList = SystemQueue;
@@ -450,6 +531,9 @@ namespace Akka.Dispatch
             else return SystemDrain(newContents);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal virtual bool HasSystemMessages
         {
             get
@@ -463,6 +547,8 @@ namespace Akka.Dispatch
         /// Prints a message tosStandard out if the Compile symbol "MAILBOXDEBUG" has been set.
         /// If the symbol is not set all invocations to this method will be removed by the compiler.
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="args">TBD</param>
         [Conditional("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args)
         {
@@ -488,9 +574,20 @@ namespace Akka.Dispatch
     /// </remarks>
     public abstract class MailboxType
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly Settings Settings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly Config Config;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="config">TBD</param>
         protected MailboxType(Settings settings, Config config)
         {
             Settings = settings;
@@ -517,16 +614,30 @@ namespace Akka.Dispatch
     /// </summary>
     public sealed class UnboundedMailbox : MailboxType, IProducesMessageQueue<UnboundedMessageQueue>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
             return new UnboundedMessageQueue();
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UnboundedMailbox() : this(null, null)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="config">TBD</param>
         public UnboundedMailbox(Settings settings, Config config) : base(settings, config)
         {
         }
@@ -537,16 +648,24 @@ namespace Akka.Dispatch
     /// </summary>
     public sealed class BoundedMailbox : MailboxType, IProducesMessageQueue<BoundedMessageQueue>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Capacity { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan PushTimeout { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BoundedMailbox" /> class.
         /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="config">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the 'mailbox-capacity' in <paramref name="config"/>
         /// or the 'mailbox-push-timeout-time' in <paramref name="config"/> is negative.
-        /// </exception>>
+        /// </exception>
         public BoundedMailbox(Settings settings, Config config) : base(settings, config)
         {
             Capacity = config.GetInt("mailbox-capacity");
@@ -556,6 +675,12 @@ namespace Akka.Dispatch
             if (PushTimeout.TotalSeconds < 0) throw new ArgumentException("The push time-out for BoundedMailbox cannot be be negative", nameof(config));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
             return new BoundedMessageQueue(Capacity, PushTimeout);
@@ -570,17 +695,39 @@ namespace Akka.Dispatch
     /// </summary>
     public abstract class UnboundedPriorityMailbox : MailboxType, IProducesMessageQueue<UnboundedPriorityMessageQueue>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract int PriorityGenerator(object message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int InitialCapacity { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const int DefaultCapacity = 11;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public sealed override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
             return new UnboundedPriorityMessageQueue(PriorityGenerator, InitialCapacity);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="config">TBD</param>
         protected UnboundedPriorityMailbox(Settings settings, Config config) : base(settings, config)
         {
             InitialCapacity = DefaultCapacity;
@@ -594,10 +741,21 @@ namespace Akka.Dispatch
     /// </summary>
     public sealed class UnboundedDequeBasedMailbox : MailboxType, IProducesMessageQueue<UnboundedDequeMessageQueue>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="config">TBD</param>
         public UnboundedDequeBasedMailbox(Settings settings, Config config) : base(settings, config)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
             return new UnboundedDequeMessageQueue();
@@ -609,16 +767,24 @@ namespace Akka.Dispatch
     /// </summary>
     public sealed class BoundedDequeBasedMailbox : MailboxType, IProducesMessageQueue<BoundedDequeMessageQueue>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Capacity { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan PushTimeout { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BoundedDequeBasedMailbox" /> class.
         /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="config">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the 'mailbox-capacity' in <paramref name="config"/>
         /// or the 'mailbox-push-timeout-time' in <paramref name="config"/> is negative.
-        /// </exception>>
+        /// </exception>
         public BoundedDequeBasedMailbox(Settings settings, Config config) : base(settings, config)
         {
             Capacity = config.GetInt("mailbox-capacity");
@@ -628,6 +794,12 @@ namespace Akka.Dispatch
             if (PushTimeout.TotalSeconds < 0) throw new ArgumentException("The push time-out for BoundedMailbox cannot be null", nameof(config));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
             return new BoundedDequeMessageQueue(Capacity, PushTimeout);

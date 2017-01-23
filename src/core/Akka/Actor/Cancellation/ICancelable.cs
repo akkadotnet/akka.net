@@ -34,6 +34,9 @@ namespace Akka.Actor
         /// </summary>
         bool IsCancellationRequested { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         CancellationToken Token { get; }
 
         /// <summary>

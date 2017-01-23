@@ -15,7 +15,7 @@ namespace Akka.Streams.TestKit.Tests
 {
     public class TestPublisherSubscriberSpec : AkkaSpec
     {
-        protected readonly ActorMaterializer Materializer;
+        private ActorMaterializer Materializer { get; }
 
         public TestPublisherSubscriberSpec(ITestOutputHelper output = null) : base(output)
         {
@@ -59,5 +59,20 @@ namespace Akka.Streams.TestKit.Tests
         }
 
         // "handle gracefully partial function that is not suitable" does not apply
+
+        [Fact]
+        public void TestPublisher_and_TestSubscriber_should_properly_update_PendingRequest_in_ExpectRequest()
+        {
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
+
+            Source.FromPublisher(upstream).RunWith(Sink.FromSubscriber(downstream), Materializer);
+
+            downstream.ExpectSubscription().Request(10);
+
+            upstream.ExpectRequest().Should().Be(10);
+            upstream.SendNext(1);
+            downstream.ExpectNext(1);
+        }
     }
 }

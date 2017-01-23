@@ -6,13 +6,16 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq;
 using Akka.IO;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Framing
     {
         /// <summary>
@@ -27,12 +30,12 @@ namespace Akka.Streams.Dsl
         /// <param name="delimiter">The byte sequence to be treated as the end of the frame.</param>
         /// <param name="maximumFrameLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
         /// <param name="allowTruncation">If false, then when the last frame being decoded contains no valid delimiter this Flow fails the stream instead of returning a truncated frame.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> Delimiter(ByteString delimiter, int maximumFrameLength,
             bool allowTruncation = false)
         {
             return Flow.Create<ByteString>()
-                .Transform(() => new DelimiterFramingStage(delimiter, maximumFrameLength, allowTruncation))
+                .Via(new DelimiterFramingStage(delimiter, maximumFrameLength, allowTruncation))
                 .Named("DelimiterFraming");
         }
 
@@ -47,7 +50,8 @@ namespace Akka.Streams.Dsl
         /// <param name="maximumFramelength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream. This length *includes* the header (i.e the offset and the length of the size field)</param>
         /// <param name="fieldOffset">The offset of the field from the beginning of the frame in bytes</param>
         /// <param name="byteOrder">The <see cref="ByteOrder"/> to be used when decoding the field</param>
-        /// <returns></returns>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
@@ -74,7 +78,7 @@ namespace Akka.Streams.Dsl
         /// The length field encodes the length of the user payload excluding the header itself.
         /// </summary>
         /// <param name="maximumMessageLength">Maximum length of allowed messages. If sent or received messages exceed the configured limit this BidiFlow will fail the stream. The header attached by this BidiFlow are not included in this limit.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public static BidiFlow<ByteString, ByteString, ByteString, ByteString, NotUsed> SimpleFramingProtocol(int maximumMessageLength)
         {
             return BidiFlow.FromFlowsMat(SimpleFramingProtocolEncoder(maximumMessageLength),
@@ -84,6 +88,8 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Protocol decoder that is used by <see cref="SimpleFramingProtocol"/>
         /// </summary>
+        /// <param name="maximumMessageLength">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
         {
             return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Drop(4));
@@ -92,13 +98,22 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Protocol encoder that is used by <see cref="SimpleFramingProtocol"/>
         /// </summary>
+        /// <param name="maximumMessageLength">TBD</param>
+        /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength)
         {
             return Flow.Create<ByteString>().Transform(() => new FramingDecoderStage(maximumMessageLength));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class FramingException : Exception
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="message">TBD</param>
             public FramingException(string message) : base(message)
             {
             }
@@ -162,95 +177,147 @@ namespace Akka.Streams.Dsl
             }
         }
 
-        private sealed class DelimiterFramingStage : PushPullStage<ByteString, ByteString>
+        private sealed class DelimiterFramingStage : GraphStage<FlowShape<ByteString, ByteString>>
         {
+            #region Logic
+
+            private sealed class Logic : InAndOutGraphStageLogic
+            {
+                private readonly DelimiterFramingStage _stage;
+                private readonly byte _firstSeparatorByte;
+                private ByteString _buffer;
+                private int _nextPossibleMatch;
+
+                public Logic(DelimiterFramingStage stage) : base (stage.Shape)
+                {
+                    _stage = stage;
+                    _firstSeparatorByte = stage._separatorBytes.Head;
+                    _buffer = ByteString.Empty;
+
+                    SetHandler(stage.In, this);
+                    SetHandler(stage.Out, this);
+                }
+
+                public override void OnPush()
+                {
+                    _buffer += Grab(_stage.In);
+                    DoParse();
+                }
+
+                public override void OnUpstreamFinish()
+                {
+                    if (_buffer.IsEmpty)
+                        CompleteStage();
+                    else if (IsAvailable(_stage.Out))
+                        DoParse();
+
+                    // else swallow the termination and wait for pull 
+                }
+
+                public override void OnPull() => DoParse();
+
+                private void TryPull()
+                {
+                    if (IsClosed(_stage.In))
+                    {
+                        if (_stage._allowTruncation)
+                        {
+                            Push(_stage.Out, _buffer);
+                            CompleteStage();
+                        }
+                        else
+                            FailStage(
+                                new FramingException(
+                                    "Stream finished but there was a truncated final frame in the buffer"));
+                    }
+                    else
+                        Pull(_stage.In);
+                }
+
+                private void DoParse()
+                {
+                    var possibleMatchPosition = -1;
+
+                    for (var i = _nextPossibleMatch; i < _buffer.Count; i++)
+                    {
+                        if (_buffer[i] == _firstSeparatorByte)
+                        {
+                            possibleMatchPosition = i;
+                            break;
+                        }
+                    }
+
+                    if (possibleMatchPosition > _stage._maximumLineBytes)
+                        FailStage(
+                            new FramingException(
+                                $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
+                    else if (possibleMatchPosition == -1)
+                    {
+                        if (_buffer.Count > _stage._maximumLineBytes)
+                            FailStage(
+                                new FramingException(
+                                    $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
+                        else
+                        {
+                            // No matching character, we need to accumulate more bytes into the buffer 
+                            _nextPossibleMatch = _buffer.Count;
+                            TryPull();
+                        }
+                    }
+                    else if (possibleMatchPosition + _stage._separatorBytes.Count > _buffer.Count)
+                    {
+                        // We have found a possible match (we found the first character of the terminator 
+                        // sequence) but we don't have yet enough bytes. We remember the position to 
+                        // retry from next time.
+                        _nextPossibleMatch = possibleMatchPosition;
+                        TryPull();
+                    }
+                    else if (Equals(_buffer.Slice(possibleMatchPosition, possibleMatchPosition + _stage._separatorBytes.Count), _stage._separatorBytes))
+                    {
+                        // Found a match
+                        var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
+                        _buffer = _buffer.Drop(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
+                        _nextPossibleMatch = 0;
+                        Push(_stage.Out, parsedFrame);
+
+                        if (IsClosed(_stage.In) && _buffer.IsEmpty)
+                            CompleteStage();
+                    }
+                    else
+                    {
+                        // possibleMatchPos was not actually a match 
+                        _nextPossibleMatch++;
+                        DoParse();
+                    }
+                }
+            }
+
+            #endregion
+
             private readonly ByteString _separatorBytes;
             private readonly int _maximumLineBytes;
             private readonly bool _allowTruncation;
-            private readonly byte _firstSeperatorByte;
-            private ByteString _buffer;
-            private int _nextPossibleMatch;
 
             public DelimiterFramingStage(ByteString separatorBytes, int maximumLineBytes, bool allowTruncation)
             {
                 _separatorBytes = separatorBytes;
                 _maximumLineBytes = maximumLineBytes;
                 _allowTruncation = allowTruncation;
-                _firstSeperatorByte = separatorBytes.Head;
-                _buffer = ByteString.Empty;
+
+                Shape = new FlowShape<ByteString, ByteString>(In, Out);
             }
+            
+            private Inlet<ByteString> In = new Inlet<ByteString>("DelimiterFraming.in");
 
-            public override ISyncDirective OnPush(ByteString element, IContext<ByteString> context)
-            {
-                _buffer += element;
-                return DoParse(context);
-            }
+            private Outlet<ByteString> Out = new Outlet<ByteString>("DelimiterFraming.in");
 
-            public override ISyncDirective OnPull(IContext<ByteString> context) => DoParse(context);
+            public override FlowShape<ByteString, ByteString> Shape { get; }
 
-            public override ITerminationDirective OnUpstreamFinish(IContext<ByteString> context)
-            {
-                return _buffer.NonEmpty ? context.AbsorbTermination() : context.Finish();
-            }
+            protected override Attributes InitialAttributes { get; } = DefaultAttributes.DelimiterFraming;
 
-            public override void PostStop() => _buffer = null;
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-            private ISyncDirective TryPull(IContext<ByteString> context)
-            {
-                if (!context.IsFinishing)
-                    return context.Pull();
-
-                return _allowTruncation
-                    ? context.PushAndFinish(_buffer)
-                    : context.Fail(new FramingException("Stream finished but there was a truncated final frame in the buffer"));
-            }
-
-            private ISyncDirective DoParse(IContext<ByteString> context)
-            {
-                var possibleMatchPosition = -1;
-
-                for (var i = _nextPossibleMatch; i < _buffer.Count; i++)
-                {
-                    if (_buffer[i] == _firstSeperatorByte)
-                    {
-                        possibleMatchPosition = i;
-                        break;
-                    }
-                }
-
-                if (possibleMatchPosition > _maximumLineBytes)
-                    return context.Fail(new FramingException($"Read {_buffer.Count} bytes which is more than {_maximumLineBytes} without seeing a line terminator"));
-
-                if (possibleMatchPosition == -1)
-                {
-                    // No matching character, we need to accumulate more bytes into the buffer
-                    _nextPossibleMatch = _buffer.Count;
-                    return TryPull(context);
-                }
-
-                if (possibleMatchPosition + _separatorBytes.Count > _buffer.Count)
-                {
-                    // We have found a possible match (we found the first character of the terminator
-                    // sequence) but we don't have yet enough bytes. We remember the position to
-                    // retry from next time.
-                    _nextPossibleMatch = possibleMatchPosition;
-                    return TryPull(context);
-                }
-
-                if (_buffer.Slice(possibleMatchPosition, possibleMatchPosition + _separatorBytes.Count).SequenceEqual(_separatorBytes))
-                {
-                    // Found a match
-                    var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
-                    _buffer = _buffer.Drop(possibleMatchPosition + _separatorBytes.Count);
-                    _nextPossibleMatch = 0;
-                    if (context.IsFinishing && _buffer.IsEmpty)
-                        return context.PushAndFinish(parsedFrame);
-                    return context.Push(parsedFrame);
-                }
-
-                _nextPossibleMatch += 1;
-                return DoParse(context);
-            }
+            public override string ToString() => "DelimiterFraming";
         }
 
         private sealed class LengthFieldFramingStage : PushPullStage<ByteString, ByteString>

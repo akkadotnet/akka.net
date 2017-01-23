@@ -251,14 +251,31 @@ namespace Akka.Streams.Tests.Dsl
                             throw new IndexOutOfRangeException();
                         return x;
                     })
-                    .RecoverWithRetries(_ => Source.From(new[] {11, 22}).Concat(Source.Failed<int>(Ex)), 3)
+                    .RecoverWithRetries(_ => Source.From(new[] {11, 22, 33})
+                        .Select(x =>
+                        {
+                            if (x == 33)
+                                throw Ex;
+                            return x;
+                        }), 3)
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
-                probe.Request(2).ExpectNext(1,2);
+                probe.Request(2).ExpectNext(1, 2);
                 probe.Request(2).ExpectNext(11, 22);
                 probe.Request(2).ExpectNext(11, 22);
                 probe.Request(2).ExpectNext(11, 22);
                 probe.Request(1).ExpectError().Should().Be(Ex);
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_RecoverWith_must_throw_ArgumentException_if_number_of_retries_is_less_than_minus_one()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                Flow.Create<int>()
+                    .Invoking(f => f.RecoverWithRetries(exception => Source.Empty<int>(), -2))
+                    .ShouldThrow<ArgumentException>();
             }, Materializer);
         }
     }

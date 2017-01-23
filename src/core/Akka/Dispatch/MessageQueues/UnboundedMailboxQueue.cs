@@ -20,6 +20,9 @@ namespace Akka.Dispatch.MessageQueues
     {
         private readonly TQueue _queue = new TQueue();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool HasMessages
         {
 #if MONO
@@ -29,21 +32,39 @@ namespace Akka.Dispatch.MessageQueues
 #endif
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int Count
         {
             get { return _queue.Count; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receiver">TBD</param>
+        /// <param name="envelope">TBD</param>
         public void Enqueue(IActorRef receiver, Envelope envelope)
         {
             _queue.Enqueue(envelope);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryDequeue(out Envelope envelope)
         {
             return _queue.TryDequeue(out envelope);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="deadletters">TBD</param>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
             Envelope msg;

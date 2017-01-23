@@ -25,6 +25,9 @@ namespace Akka.Cluster
     {
         private readonly Lazy<ClusterHeartbeatSender.HeartbeatRsp> _selfHeartbeatRsp;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ClusterHeartbeatReceiver()
         {
             // Important - don't use Cluster.Get(Context.System) in constructor because that would
@@ -48,6 +51,9 @@ namespace Akka.Cluster
         private ClusterHeartbeatSenderState _state;
         private readonly ICancelable _heartbeatTask;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ClusterHeartbeatSender()
         {
             _cluster = Cluster.Get(Context.System);
@@ -77,11 +83,17 @@ namespace Akka.Cluster
             Initializing();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent) });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             foreach (var receiver in _state.ActiveReceivers)
@@ -216,14 +228,26 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class Heartbeat : IClusterMessage, IPriorityMessage, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="from">TBD</param>
             public Heartbeat(Address from)
             {
                 From = from;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address From { get; }
 
 #pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
 #pragma warning restore 659
             {
@@ -243,14 +267,26 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class HeartbeatRsp : IClusterMessage, IPriorityMessage, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="from">TBD</param>
             public HeartbeatRsp(UniqueAddress from)
             {
                 From = from;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public UniqueAddress From { get; }
 
 #pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
 #pragma warning restore 659
             {
@@ -270,13 +306,23 @@ namespace Akka.Cluster
         /// </summary>
         private class HeartbeatTick { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class ExpectedFirstHeartbeat
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="from">TBD</param>
             public ExpectedFirstHeartbeat(UniqueAddress from)
             {
                 From = from;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public UniqueAddress From { get; }
         }
 
@@ -290,6 +336,12 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterHeartbeatSenderState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ring">TBD</param>
+        /// <param name="oldReceiversNowUnreachable">TBD</param>
+        /// <param name="failureDetector">TBD</param>
         public ClusterHeartbeatSenderState(HeartbeatNodeRing ring, ImmutableHashSet<UniqueAddress> oldReceiversNowUnreachable, IFailureDetectorRegistry<Address> failureDetector)
         {
             Ring = ring;
@@ -298,31 +350,67 @@ namespace Akka.Cluster
             ActiveReceivers = Ring.MyReceivers.Value.Union(OldReceiversNowUnreachable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public HeartbeatNodeRing Ring { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<UniqueAddress> OldReceiversNowUnreachable { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IFailureDetectorRegistry<Address> FailureDetector { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ImmutableHashSet<UniqueAddress> ActiveReceivers;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UniqueAddress SelfAddress { get { return Ring.SelfAddress; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nodes">TBD</param>
+        /// <param name="unreachable">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterHeartbeatSenderState Init(ImmutableHashSet<UniqueAddress> nodes, ImmutableHashSet<UniqueAddress> unreachable)
         {
             return Copy(ring: Ring.Copy(nodes: nodes.Add(SelfAddress), unreachable: unreachable));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public bool Contains(UniqueAddress node)
         {
             return Ring.Nodes.Contains(node);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterHeartbeatSenderState AddMember(UniqueAddress node)
         {
             return MembershipChange(Ring + node);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterHeartbeatSenderState RemoveMember(UniqueAddress node)
         {
             var newState = MembershipChange(Ring - node);
@@ -333,11 +421,21 @@ namespace Akka.Cluster
             return newState;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterHeartbeatSenderState UnreachableMember(UniqueAddress node)
         {
             return MembershipChange(Ring.Copy(unreachable: Ring.Unreachable.Add(node)));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterHeartbeatSenderState ReachableMember(UniqueAddress node)
         {
             return MembershipChange(Ring.Copy(unreachable: Ring.Unreachable.Remove(node)));
@@ -360,6 +458,11 @@ namespace Akka.Cluster
             return Copy(newRing, adjustedOldReceiversNowUnreachable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="from">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterHeartbeatSenderState HeartbeatRsp(UniqueAddress from)
         {
             if (ActiveReceivers.Contains(from))
@@ -379,6 +482,13 @@ namespace Akka.Cluster
             return this;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ring">TBD</param>
+        /// <param name="oldReceiversNowUnreachable">TBD</param>
+        /// <param name="failureDetector">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterHeartbeatSenderState Copy(HeartbeatNodeRing ring = null, ImmutableHashSet<UniqueAddress> oldReceiversNowUnreachable = null, IFailureDetectorRegistry<Address> failureDetector = null)
         {
             return new ClusterHeartbeatSenderState(ring ?? Ring, oldReceiversNowUnreachable ?? OldReceiversNowUnreachable, failureDetector ?? FailureDetector);
@@ -397,6 +507,14 @@ namespace Akka.Cluster
     {
         private readonly bool _useAllAsReceivers;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="selfAddress">TBD</param>
+        /// <param name="nodes">TBD</param>
+        /// <param name="unreachable">TBD</param>
+        /// <param name="monitoredByNumberOfNodes">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public HeartbeatNodeRing(
             UniqueAddress selfAddress,
             ImmutableHashSet<UniqueAddress> nodes,
@@ -415,12 +533,24 @@ namespace Akka.Cluster
             MyReceivers = new Lazy<ImmutableHashSet<UniqueAddress>>(() => Receivers(SelfAddress));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public UniqueAddress SelfAddress { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<UniqueAddress> Nodes { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<UniqueAddress> Unreachable { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int MonitoredByNumberOfNodes { get; }
 
         private ImmutableSortedSet<UniqueAddress> NodeRing()
@@ -433,6 +563,11 @@ namespace Akka.Cluster
         /// </summary>
         public readonly Lazy<ImmutableHashSet<UniqueAddress>> MyReceivers;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         public ImmutableHashSet<UniqueAddress> Receivers(UniqueAddress sender)
         {
             if (_useAllAsReceivers)
@@ -484,6 +619,14 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="selfAddress">TBD</param>
+        /// <param name="nodes">TBD</param>
+        /// <param name="unreachable">TBD</param>
+        /// <param name="monitoredByNumberOfNodes">TBD</param>
+        /// <returns>TBD</returns>
         public HeartbeatNodeRing Copy(UniqueAddress selfAddress = null, ImmutableHashSet<UniqueAddress> nodes = null, ImmutableHashSet<UniqueAddress> unreachable = null, int? monitoredByNumberOfNodes = null)
         {
             return new HeartbeatNodeRing(
@@ -495,11 +638,23 @@ namespace Akka.Cluster
 
         #region Operators
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ring">TBD</param>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public static HeartbeatNodeRing operator +(HeartbeatNodeRing ring, UniqueAddress node)
         {
             return ring.Nodes.Contains(node) ? ring : ring.Copy(nodes: ring.Nodes.Add(node));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ring">TBD</param>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public static HeartbeatNodeRing operator -(HeartbeatNodeRing ring, UniqueAddress node)
         {
             return ring.Nodes.Contains(node) || ring.Unreachable.Contains(node)
@@ -510,11 +665,23 @@ namespace Akka.Cluster
         #endregion
 
         #region Comparer
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class RingComparer : IComparer<UniqueAddress>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly RingComparer Instance = new RingComparer();
             private RingComparer() { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="a">TBD</param>
+            /// <param name="b">TBD</param>
+            /// <returns>TBD</returns>
             public int Compare(UniqueAddress a, UniqueAddress b)
             {
                 var result = Member.AddressOrdering.Compare(a.Address, b.Address);

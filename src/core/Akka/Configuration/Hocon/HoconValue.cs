@@ -29,6 +29,17 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="HoconValue"/> class.
+        /// </summary>
+        /// <param name="values">The list of elements inside this HOCON value.</param>
+        /// <param name="adoptedFromFallback">Indicates whether this instance was constructed during association with fallback <see cref="Config"/>.</param>
+        public HoconValue(List<IHoconElement> values, bool adoptedFromFallback = true)
+        {
+            Values = values;
+            AdoptedFromFallback = adoptedFromFallback;
+        }
+
+        /// <summary>
         /// Returns true if this HOCON value doesn't contain any elements
         /// </summary>
         public bool IsEmpty
@@ -52,6 +63,12 @@ namespace Akka.Configuration.Hocon
         /// The list of elements inside this HOCON value
         /// </summary>
         public List<IHoconElement> Values { get; private set; }
+
+        /// <summary>
+        /// Marker for values were merged during fallback attaching
+        /// serving exclusively to skip rendering such values in <see cref="HoconObject.ToString()"/>
+        /// </summary>
+        internal bool AdoptedFromFallback { get; private set; }
 
         /// <summary>
         /// Wraps this <see cref="HoconValue"/> into a new <see cref="Config"/> object at the specified key.

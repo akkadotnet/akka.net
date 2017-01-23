@@ -837,7 +837,11 @@ namespace Akka.Actor
     public class static Futures
     {
         public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
+        public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<object> Ask(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
         public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout = null) { }
+        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<T> Ask<T>(this Akka.Actor.ICanTell self, object message, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken) { }
     }
     public class static GracefulStopSupport
     {
@@ -1280,6 +1284,7 @@ namespace Akka.Actor
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider, bool loggingEnabled = True) { }
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Akka.Actor.IDecider decider, bool loggingEnabled = True) { }
         public OneForOneStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
+        public OneForOneStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider, bool loggingEnabled = True) { }
         public OneForOneStrategy(Akka.Actor.IDecider decider) { }
         protected OneForOneStrategy() { }
         public override Akka.Actor.IDecider Decider { get; }
@@ -1761,6 +1766,9 @@ namespace Akka.Actor.Dsl
         public void Receive<T>(System.Action<T, Akka.Actor.IActorContext> handler, System.Predicate<T> shouldHandle) { }
         public void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler) { }
         public void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler) { }
+        public void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
+        public void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        public void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
         protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
     }
     public class static ActExtensions
@@ -1786,6 +1794,9 @@ namespace Akka.Actor.Dsl
         void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler);
         void Receive<T>(System.Action<T, Akka.Actor.IActorContext> handler, System.Predicate<T> shouldHandle);
         void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler);
+        void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
+        void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null);
+        void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
         void UnbecomeStacked();
     }
 }
@@ -2010,6 +2021,14 @@ namespace Akka
         public Akka.Case With<TMessage>(System.Action action) { }
         public Akka.Case With<TMessage>(System.Action<TMessage> action) { }
     }
+    public class Case<T> : Akka.IMatchResult
+    {
+        public Case(object message) { }
+        public bool WasHandled { get; }
+        public T ResultOrDefault(System.Func<object, T> function) { }
+        public Akka.Case<T> With<TMessage>(System.Func<T> function) { }
+        public Akka.Case<T> With<TMessage>(System.Func<TMessage, T> function) { }
+    }
     public interface IMatchResult
     {
         bool WasHandled { get; }
@@ -2026,6 +2045,7 @@ namespace Akka
     public class static PatternMatch
     {
         public static Akka.Case Match(this object target) { }
+        public static Akka.Case<T> Match<T>(this object target) { }
     }
 }
 namespace Akka.Configuration
@@ -2042,7 +2062,7 @@ namespace Akka.Configuration
         public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
         [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__46))]
         public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
-        protected Akka.Configuration.Config Copy() { }
+        protected Akka.Configuration.Config Copy(Akka.Configuration.Config fallback = null) { }
         public virtual bool GetBoolean(string path, bool default = False) { }
         public virtual System.Collections.Generic.IList<bool> GetBooleanList(string path) { }
         public virtual System.Collections.Generic.IList<byte> GetByteList(string path) { }
@@ -2217,6 +2237,7 @@ namespace Akka.Configuration.Hocon
     public class HoconValue : Akka.Configuration.Hocon.IMightBeAHoconObject
     {
         public HoconValue() { }
+        public HoconValue(System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> values, bool adoptedFromFallback = True) { }
         public bool IsEmpty { get; }
         public System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> Values { get; }
         public void AppendValue(Akka.Configuration.Hocon.IHoconElement value) { }
@@ -2603,6 +2624,8 @@ namespace Akka.Dispatch.MessageQueues
     }
     public class UnboundedPriorityMessageQueue : Akka.Dispatch.MessageQueues.BlockingMessageQueue
     {
+        [System.ObsoleteAttribute("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initia" +
+            "lCapacity) instead.")]
         public UnboundedPriorityMessageQueue(int initialCapacity) { }
         public UnboundedPriorityMessageQueue(System.Func<object, int> priorityGenerator, int initialCapacity) { }
         protected override int LockedCount { get; }
@@ -4842,14 +4865,17 @@ namespace Akka.Util
         public override bool IsRight { get; }
         public TA Value { get; }
     }
-    public class ListPriorityQueue
+    public sealed class ListPriorityQueue
     {
+        [System.ObsoleteAttribute("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead")]
         public ListPriorityQueue(int initialCapacity) { }
+        public ListPriorityQueue(int initialCapacity, System.Func<object, int> priorityCalculator) { }
         public int Count() { }
         public Akka.Actor.Envelope Dequeue() { }
         public void Enqueue(Akka.Actor.Envelope item) { }
         public bool IsConsistent() { }
         public Akka.Actor.Envelope Peek() { }
+        [System.ObsoleteAttribute("Use the constructor to set the priority calculator instead.")]
         public void SetPriorityCalculator(System.Func<object, int> priorityCalculator) { }
         public override string ToString() { }
     }

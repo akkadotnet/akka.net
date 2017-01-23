@@ -30,7 +30,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         private readonly ITestOutputHelper _helper;
 
         // GraphStages can be reused
-        private static readonly Select<int,int> Select = new Select<int, int>(x=>x+1, Deciders.StoppingDecider);
+        private static readonly Select<int, int> Select = new Select<int, int>(x => x + 1);
         private static readonly Drop<int> DropOne = new Drop<int>(1);
         private static readonly Take<int> TakeOne = new Take<int>(1);
         private static readonly Take<int> TakeHalfOfRepetition = new Take<int>(Repetition/2);
@@ -44,8 +44,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_work_with_a_massive_chain_of_maps()
         {
-            var ops = Enumerable.Range(1, ChainLength).Select(_ => Select)
-                .Cast<IStage<int, int>>().ToArray();
+            var ops = Enumerable.Range(1, ChainLength).Select(_ => Select).ToArray();
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -79,10 +78,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             var ops =
                 Enumerable.Range(1, HalfLength)
                     .Select(_ => Select)
-                    .Select(ToGraphStage)
                     .ToList<IGraphStageWithMaterializedValue<FlowShape<int,int>, object>>();
             ops.Add(TakeHalfOfRepetition);
-            ops.AddRange(Enumerable.Range(1, HalfLength).Select(_ => Select).Select(ToGraphStage));
+            ops.AddRange(Enumerable.Range(1, HalfLength).Select(_ => Select));
 
             WithOneBoundedSetup(ops.ToArray(), (lastEvents, upstream, downstream) =>
             {

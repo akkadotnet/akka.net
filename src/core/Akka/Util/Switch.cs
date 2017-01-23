@@ -17,11 +17,21 @@ namespace Akka.Util
         private readonly Util.AtomicBoolean _switch;
         private readonly object _lock = new object();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="startAsOn">TBD</param>
         public Switch(bool startAsOn = false)
         {
             _switch = new Util.AtomicBoolean(startAsOn);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="from">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         protected bool TranscendFrom(bool from, Action action)
         {
             lock(_lock)
@@ -48,6 +58,7 @@ namespace Akka.Util
         /// Only executes the action if the switch is on, and switches it off immediately after obtaining the lock.
         /// Will switch it back on if the provided action throws an exception.
         /// </summary>
+        /// <param name="action">TBD</param>
         /// <returns>Returns <c>true</c> if the switch was switched off</returns>
         public bool SwitchOff(Action action)
         {
@@ -59,6 +70,7 @@ namespace Akka.Util
         /// Only executes the action if the switch is off, and switches it on immediately after obtaining the lock.
         /// Will switch it back off if the provided action throws an exception.
         /// </summary>
+        /// <param name="action">TBD</param>
         /// <returns>Returns <c>true</c> if the switch was switched on</returns>
         public bool SwitchOn(Action action)
         {
@@ -126,6 +138,8 @@ namespace Akka.Util
         /// Executes the provided action and returns if the action was executed or not, if the switch is on, waiting for any pending changes to happen before (locking)
         /// Be careful of longrunning or blocking within the provided action as it can lead to deadlocks or bad performance
         /// </summary>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         public bool WhileOn(Action action)
         {
             lock(_lock)
@@ -143,6 +157,8 @@ namespace Akka.Util
         /// Executes the provided action and returns if the action was executed or not, if the switch is off, waiting for any pending changes to happen before (locking)
         /// Be careful of longrunning or blocking within the provided action as it can lead to deadlocks or bad performance
         /// </summary>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
         public bool WhileOff(Action action)
         {
             lock(_lock)
@@ -178,6 +194,10 @@ namespace Akka.Util
             get { return !_switch.Value; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         public void Locked(Action action)
         {
             lock (_lock)

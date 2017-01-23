@@ -204,9 +204,13 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_suitably_ovveride_attribute_handling_methods()
         {
-            // ReSharper disable once UnusedVariable
             var b = (BidiFlow<int, long, ByteString, string, NotUsed>)
-                Bidi().WithAttributes(Attributes.CreateName("")).Async().Named("");
+                Bidi().WithAttributes(Attributes.CreateName("")).Async().Named("name");
+
+            b.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
+            b.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+                .Should()
+                .Be(Attributes.AsyncBoundary.Instance);
         }
     }
 }

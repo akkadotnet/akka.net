@@ -26,6 +26,7 @@ namespace Samples.Cluster.Transformation
             LaunchBackend(new[] { "2552" });
             LaunchBackend(new string[0]);
             LaunchFrontend(new string[0]);
+            LaunchFrontend(new string[0]);
             //starting 2 frontend nodes and 3 backend nodes
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();

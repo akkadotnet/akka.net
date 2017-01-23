@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_map_correctly()
         {
-            WithOneBoundedSetup(new Select<int, int>(x => x + 1, Deciders.StoppingDecider),
+            WithOneBoundedSetup(new Select<int, int>(x => x + 1),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -66,11 +66,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_chain_of_maps_correctly()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
+            WithOneBoundedSetup(new[]
             {
-                new Select<int, int>(x => x + 1, Deciders.StoppingDecider),
-                new Select<int, int>(x => x * 2, Deciders.StoppingDecider),
-                new Select<int, int>(x => x + 1, Deciders.StoppingDecider)
+                new Select<int, int>(x => x + 1),
+                new Select<int, int>(x => x * 2),
+                new Select<int, int>(x => x + 1)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_one_to_many_many_to_one_chain_correctly()
         {
-            WithOneBoundedSetup(new IGraphStageWithMaterializedValue<FlowShape<int,int>,object>[]
+            WithOneBoundedSetup(new IGraphStageWithMaterializedValue<FlowShape<int, int>, object>[]
             {
                 new Doubler<int>(),
                 new Where<int>(x => x != 0)
@@ -205,7 +205,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 new Where<int>(x => x != 0),
                 TakeTwo,
-                ToGraphStage(new Select<int, int>(x => x + 1, Deciders.StoppingDecider))
+                new Select<int, int>(x => x + 1)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -231,10 +231,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_fold()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
-            {
-                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
-            },
+            WithOneBoundedSetup(new Aggregate<int, int>(0, (agg, x) => agg + x),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -259,10 +256,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_fold_with_proper_cancel()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
-            {
-                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
-            },
+            WithOneBoundedSetup(new Aggregate<int, int>(0, (agg, x) => agg + x),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -287,10 +281,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_if_fold_completes_while_not_in_a_push_position()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
-            {
-                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
-            },
+            WithOneBoundedSetup(new Aggregate<int, int>(0, (agg, x) => agg + x),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -306,9 +297,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_grouped()
         {
-            WithOneBoundedSetup(ToGraphStage(
-                new Grouped<int>(3)
-                ),
+            WithOneBoundedSetup(new Grouped<int>(3),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -323,7 +312,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(new [] {0, 1, 2}));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(new[] { 0, 1, 2 }));
 
                     downstream.RequestOne();
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
@@ -332,7 +321,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnComplete();
-                    lastEvents().Should().BeEquivalentTo(new OnNext(new [] {3}), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(new[] { 3 }), new OnComplete());
                 });
         }
 
@@ -546,11 +535,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IGraphStageWithMaterializedValue<FlowShape<int, int>, object>[]
             {
-                ToGraphStage(new Select<int, int>(x => x, Deciders.StoppingDecider)),
-                ToGraphStage(new Select<int, int>(x => x, Deciders.StoppingDecider)),
+                new Select<int, int>(x => x),
+                new Select<int, int>(x => x),
                 new KeepGoing<int>(),
-                ToGraphStage(new Select<int, int>(x => x, Deciders.StoppingDecider)),
-                ToGraphStage(new Select<int, int>(x => x, Deciders.StoppingDecider))
+                new Select<int, int>(x => x),
+                new Select<int, int>(x => x)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -598,11 +587,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_PushAndFinish_if_indirect_upstream_completes_with_PushAndFinish()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
+            WithOneBoundedSetup(new IGraphStageWithMaterializedValue<FlowShape<int, int>, object>[]
             {
-                new Select<int, int>(x => x, Deciders.StoppingDecider),
+                new Select<int, int>(x => x),
                 new PushFinishStage<int>(),
-                new Select<int, int>(x => x, Deciders.StoppingDecider)
+                new Select<int, int>(x => x)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -619,10 +608,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_PushAndFinish_if_upstream_completes_with_PushAndFinish_and_downstream_immediately_pulls()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
+            WithOneBoundedSetup(new IGraphStageWithMaterializedValue<FlowShape<int, int>, object>[]
             {
                 new PushFinishStage<int>(),
-                new Aggregate<int, int>(0, (x, y) => x + y, Deciders.StoppingDecider)
+                new Aggregate<int, int>(0, (x, y) => x + y)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -660,7 +649,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_take_take()
         {
-            WithOneBoundedSetup(new []
+            WithOneBoundedSetup(new[]
             {
                 TakeOne,
                 TakeOne
@@ -680,7 +669,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_take_take_with_PushAndFinish_from_upstream()
         {
-            WithOneBoundedSetup(new []
+            WithOneBoundedSetup(new[]
             {
                 TakeOne,
                 TakeOne
@@ -700,7 +689,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_not_allow_AbsorbTermination_from_OnDownstreamFinish()
         {
-            WithOneBoundedSetup(new InvalidAbsorbTermination<int>(),
+            // This test must be kept since it tests the compatibility layer, which while is deprecated it is still here.
+            WithOneBoundedSetup(ToGraphStage(new InvalidAbsorbTermination<int>()),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -747,7 +737,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     });
                 }
             }
-#endregion
+            #endregion
 
             public Doubler()
             {
@@ -766,14 +756,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             private sealed class Logic : GraphStageLogic
             {
                 private T _lastElement;
-                
+
                 public Logic(KeepGoing<T> stage) : base(stage.Shape)
                 {
                     // Called when the output port has received a pull, and therefore ready to emit an element, i.e. GraphStageLogic.Push()
                     // is now allowed to be called on this port.
                     SetHandler(stage.Shape.Outlet, onPull: () =>
                     {
-                        if(IsClosed(stage.Shape.Inlet))
+                        if (IsClosed(stage.Shape.Inlet))
                             Push(stage.Shape.Outlet, _lastElement);
                         else
                             Pull(stage.Shape.Inlet);
@@ -783,7 +773,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     {
                         _lastElement = Grab(stage.Shape.Inlet);
                         Push(stage.Shape.Outlet, _lastElement);
-                    }, onUpstreamFinish:()=> {});
+                    }, onUpstreamFinish: () => { });
                 }
             }
             #endregion
@@ -798,49 +788,55 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
-        public class PushFinishStage<T> : PushStage<T, T>
+        public class PushFinishStage<T> : SimpleLinearGraphStage<T>
         {
+            private sealed class Logic : GraphStageLogic
+            {
+                private readonly PushFinishStage<T> _stage;
+
+                public Logic(PushFinishStage<T> stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+                    SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, onPush: () =>
+                    {
+                        Push(stage.Outlet, Grab(stage.Inlet));
+                        CompleteStage();
+                    }, onUpstreamFinish: () => FailStage(new TestException("Cannot happen")));
+                }
+
+                public override void PostStop() => _stage._onPostStop();
+            }
+
             private readonly Action _onPostStop;
 
             public PushFinishStage(Action onPostStop = null)
             {
-                _onPostStop = onPostStop ?? (() => {});
+                _onPostStop = onPostStop ?? (() => { });
             }
 
-            public override ISyncDirective OnPush(T element, IContext<T> context)
-            {
-                return context.PushAndFinish(element);
-            }
-
-            public override ITerminationDirective OnUpstreamFinish(IContext<T> context)
-            {
-                return context.Fail(new TestException("Cannot happen"));
-            }
-
-            public override void PostStop()
-            {
-                _onPostStop();
-            }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
-        public class PullWhileOpIsTerminating<T> : PushPullStage<T, T>
+        public class PullWhileOpIsTerminating<T> : SimpleLinearGraphStage<T>
         {
-            public override ISyncDirective OnPush(T element, IContext<T> context)
+            private sealed class Logic : GraphStageLogic
             {
-                return context.Pull();
+                public Logic(PullWhileOpIsTerminating<T> stage) : base(stage.Shape)
+                {
+                    SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, onPush: () => Pull(stage.Inlet), onUpstreamFinish: () =>
+                    {
+                        if (!HasBeenPulled(stage.Inlet))
+                            Pull(stage.Inlet);
+                    });
+                }
             }
 
-            public override ISyncDirective OnPull(IContext<T> context)
-            {
-                return context.Pull();
-            }
-
-            public override ITerminationDirective OnUpstreamFinish(IContext<T> context)
-            {
-                return context.AbsorbTermination();
-            }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
+        [Obsolete("Please use GraphStage instead.")]
         public class InvalidAbsorbTermination<T> : PushPullStage<T, T>
         {
             public override ISyncDirective OnPush(T element, IContext<T> context)

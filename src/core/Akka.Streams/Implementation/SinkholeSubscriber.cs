@@ -14,16 +14,25 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
     public sealed class SinkholeSubscriber<TIn> : ISubscriber<TIn>
     {
         private readonly TaskCompletionSource<NotUsed> _whenCompleted;
         private bool _running;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="whenCompleted">TBD</param>
         public SinkholeSubscriber(TaskCompletionSource<NotUsed> whenCompleted)
         {
             _whenCompleted = whenCompleted;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="subscription">TBD</param>
         public void OnSubscribe(ISubscription subscription)
         {
             ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
@@ -36,14 +45,25 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         public void OnError(Exception cause)
         {
             ReactiveStreamsCompliance.RequireNonNullException(cause);
             _whenCompleted.TrySetException(cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void OnComplete() => _whenCompleted.TrySetResult(NotUsed.Instance);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="element">TBD</param>
         public void OnNext(TIn element) => ReactiveStreamsCompliance.RequireNonNullElement(element);
     }
 }

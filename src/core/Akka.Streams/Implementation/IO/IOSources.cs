@@ -25,6 +25,15 @@ namespace Akka.Streams.Implementation.IO
         private readonly FileInfo _f;
         private readonly int _chunkSize;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="f">TBD</param>
+        /// <param name="chunkSize">TBD</param>
+        /// <param name="attributes">TBD</param>
+        /// <param name="shape">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public FileSource(FileInfo f, int chunkSize, Attributes attributes, SourceShape<ByteString> shape) : base(shape)
         {
             if(chunkSize <= 0)
@@ -37,20 +46,42 @@ namespace Akka.Streams.Implementation.IO
             Label = $"FileSource({f}, {chunkSize})";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Attributes Attributes { get; }
 
-        protected override string Label { get; } 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override string Label { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new FileSource(_f, _chunkSize, attributes, AmendShape(attributes));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
+        /// <returns>TBD</returns>
         protected override SourceModule<ByteString, Task<IOResult>> NewInstance(SourceShape<ByteString> shape)
             => new FileSource(_f, _chunkSize, Attributes, shape);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="task">TBD</param>
+        /// <returns>TBD</returns>
         public override IPublisher<ByteString> Create(MaterializationContext context, out Task<IOResult> task)
         {
             // FIXME rewrite to be based on GraphStage rather than dangerous downcasts
-            var materializer = ActorMaterializer.Downcast(context.Materializer);
+            var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = materializer.EffectiveSettings(context.EffectiveAttributes);
 
             var ioResultPromise = new TaskCompletionSource<IOResult>();
@@ -73,6 +104,13 @@ namespace Akka.Streams.Implementation.IO
         private readonly Func<Stream> _createInputStream;
         private readonly int _chunkSize;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="createInputStream">TBD</param>
+        /// <param name="chunkSize">TBD</param>
+        /// <param name="attributes">TBD</param>
+        /// <param name="shape">TBD</param>
         public InputStreamSource(Func<Stream> createInputStream, int chunkSize, Attributes attributes, SourceShape<ByteString> shape) : base(shape)
         {
             _createInputStream = createInputStream;
@@ -80,17 +118,36 @@ namespace Akka.Streams.Implementation.IO
             Attributes = attributes;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override Attributes Attributes { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new InputStreamSource(_createInputStream, _chunkSize, attributes, AmendShape(attributes));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shape">TBD</param>
+        /// <returns>TBD</returns>
         protected override SourceModule<ByteString, Task<IOResult>> NewInstance(SourceShape<ByteString> shape)
             => new InputStreamSource(_createInputStream, _chunkSize, Attributes, shape);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="context">TBD</param>
+        /// <param name="task">TBD</param>
+        /// <returns>TBD</returns>
         public override IPublisher<ByteString> Create(MaterializationContext context, out Task<IOResult> task)
         {
-            var materializer = ActorMaterializer.Downcast(context.Materializer);
+            var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var ioResultPromise = new TaskCompletionSource<IOResult>();
             IPublisher<ByteString> pub;
             

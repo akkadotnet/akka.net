@@ -89,8 +89,8 @@ namespace Akka.Remote
         /// <param name="system">The system.</param>
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
-        /// <param name="terminator"></param>
-        /// <param name="log"></param>
+        /// <param name="terminator">TBD</param>
+        /// <param name="log">TBD</param>
         public RemoteSystemDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent,IActorRef terminator, ILoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
@@ -151,6 +151,10 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
             if (message is DeathWatchNotification)

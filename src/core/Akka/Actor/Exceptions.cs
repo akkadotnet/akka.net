@@ -115,6 +115,11 @@ namespace Akka.Actor
     /// </summary>
     public class ActorInterruptedException : AkkaException
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="cause">TBD</param>
         public ActorInterruptedException(string message = null, Exception cause = null) : base(message, cause) { }
     }
 

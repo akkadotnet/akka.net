@@ -14,6 +14,7 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Akka.Actor;
 // ReSharper disable InvokeAsExtensionMethod
 
 namespace Akka.Streams.Tests.Dsl
@@ -243,6 +244,60 @@ namespace Akka.Streams.Tests.Dsl
                 return _;
             })), Keep.Right).To(Sink.Ignore<int>()).Run(materializer).Should().Be(NotUsed.Instance);
             done.Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void A_Graph_with_materialized_value_must_ignore_materialized_values_for_a_graph_with_no_materialized_values_exposed(bool autoFusing)
+        {
+            // The bug here was that the default behavior for "compose" in Module is Keep.left, but
+            // EmptyModule.compose broke this by always returning the other module intact, which means
+            // that the materialized value was that of the other module (which is inconsistent with Keep.left behavior).
+
+            var sink = Sink.Ignore<int>();
+
+            var g = RunnableGraph.FromGraph(GraphDsl.Create(b =>
+            {
+                var s = b.Add(sink);
+                var source = b.Add(Source.From(Enumerable.Range(1, 3)));
+                var flow = b.Add(Flow.Create<int>());
+
+                b.From(source).Via(flow).To(s);
+                return ClosedShape.Instance;
+            }));
+
+            var result = g.Run(CreateMaterializer(autoFusing));
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void A_Graph_with_materialized_value_must_ignore_materialized_values_for_a_graph_with_no_materialized_values_exposed_but_keep_side_effects(bool autoFusing)
+        {
+            // The bug here was that the default behavior for "compose" in Module is Keep.left, but
+            // EmptyModule.compose broke this by always returning the other module intact, which means
+            // that the materialized value was that of the other module (which is inconsistent with Keep.left behavior).
+
+            var sink = Sink.Ignore<int>().MapMaterializedValue(_=>
+            {
+                TestActor.Tell("side effect!");
+                return _;
+            });
+
+            var g = RunnableGraph.FromGraph(GraphDsl.Create(b =>
+            {
+                var s = b.Add(sink);
+                var source = b.Add(Source.From(Enumerable.Range(1, 3)));
+                var flow = b.Add(Flow.Create<int>());
+
+                b.From(source).Via(flow).To(s);
+                return ClosedShape.Instance;
+            }));
+
+            var result = g.Run(CreateMaterializer(autoFusing));
+
+            ExpectMsg("side effect!");
         }
 
         [Fact]

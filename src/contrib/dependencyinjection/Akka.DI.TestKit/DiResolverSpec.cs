@@ -219,6 +219,8 @@ namespace Akka.DI.TestKit
             Bind<DisposableActor>(container);
             Bind<DiPerRequestActor>(container);
             Bind<DiSingletonActor>(container);
+            Bind<BoundedStashActor>(container);
+            Bind<UnboundedStashActor>(container);
             return NewDependencyResolver(container, system);
         }
 

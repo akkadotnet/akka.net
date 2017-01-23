@@ -151,16 +151,22 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void FileSource_should_onError_when_trying_to_read_from_file_which_does_not_exist()
+        public void FileSource_should_onError_with_failure_and_return_a_failed_IOResult_when_trying_to_read_from_file_which_does_not_exist()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p = FileIO.FromFile(NotExistingFile()).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
+                var t = FileIO.FromFile(NotExistingFile())
+                    .ToMaterialized(Sink.AsPublisher<ByteString>(false), Keep.Both)
+                    .Run(_materializer);
+                var r = t.Item1;
+                var p = t.Item2;
+
                 var c = this.CreateManualSubscriberProbe<ByteString>();
                 p.Subscribe(c);
 
                 c.ExpectSubscription();
                 c.ExpectError();
+                r.AwaitResult(Dilated(TimeSpan.FromSeconds(3))).WasSuccessful.ShouldBeFalse();
             }, _materializer);
         }
 

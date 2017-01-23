@@ -1,11 +1,4 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AssemblyInfo.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
-namespace System
+﻿namespace System
 open System
 open System.Reflection
 open System.Runtime.InteropServices
@@ -13,7 +6,7 @@ open System.Runtime.InteropServices
 [<assembly: AssemblyTitleAttribute("Akka.FSharp")>]
 [<assembly: AssemblyProductAttribute("Akka.NET")>]
 [<assembly: AssemblyDescriptionAttribute("Akka.NET is a port of the popular Java/Scala framework Akka to .NET")>]
-[<assembly: AssemblyCopyrightAttribute("Copyright © 2013-2016 Akka.NET Team")>]
+[<assembly: AssemblyCopyrightAttribute("Copyright © 2013-2017 Akka.NET Team")>]
 [<assembly: AssemblyCompanyAttribute("Akka.NET Team")>]
 [<assembly: ComVisibleAttribute(false)>]
 [<assembly: CLSCompliantAttribute(true)>]
@@ -23,4 +16,3 @@ do ()
 
 module internal AssemblyVersionInformation =
     let [<Literal>] Version = "1.1.2.0"
-

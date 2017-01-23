@@ -1,3 +1,49 @@
+#### 1.1.3 January 22 2017 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET v1.1.3 features some new libraries and an enormous number of bug fixes.
+
+**Akka.DistributedData Beta**
+First, we've introduced an alpha of a new module intended for use with Akka.Cluster: Akka.DistributedData. The goal of this library is to make it possible to concurrently read and write replicated copies of the same entity across different nodes in the cluster using conflict-free replicated data types, often referred to as "CRDTs." These replicas can eventually be merged together in a fully consistent manner and are excellent choices for applications that require a high level of availability and partition tolerance.
+
+The library is still a bit of a work in progress at the moment, but you are free to use it via the following command:
+
+```
+PS> Install-Package Akka.DistributedData -pre
+```
+
+**Akka.Serialization.Wire Deprecated; Replaced with Akka.Serialization.Hyperion**
+Wire recently changed its license to GPLv3, which is a poor fit for a technology like Akka.NET. Therefore, our default serializer beginning in Akka.NET 1.5 will be [Hyperion](https://github.com/akkadotnet/Hyperion) instead. You can see how to set it up here: http://getakka.net/docs/Serialization#how-to-setup-hyperion-as-default-serializer
+
+**Other bug fixes, performance improvements, and changes**
+You can [see the full list of changes in Akka.NET 1.1.3 here](https://github.com/akkadotnet/akka.net/milestone/12).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 19 | 878 | 228 | Aaron Stannard |
+| 10 | 41654 | 3428 | Sean Gilliam |
+| 5 | 11983 | 4543 | Marc Piechura |
+| 4 | 37 | 33 | Arjen Smits |
+| 4 | 12742 | 300 | Bartosz Sypytkowski |
+| 3 | 144 | 74 | Max |
+| 2 | 99 | 8 | ZigMeowNyan |
+| 2 | 7 | 7 | zbynek001 |
+| 2 | 4 | 2 | Andrey Leskov |
+| 2 | 225 | 767 | Alex Valuyskiy |
+| 2 | 212 | 8 | Gordey Doronin |
+| 1 | 8 | 499 | Sean Farrow |
+| 1 | 5 | 5 | tomanekt |
+| 1 | 4 | 2 | Andrew Young |
+| 1 | 3 | 2 | boriskreminskimoldev |
+| 1 | 28 | 3 | Roman Eisendle |
+| 1 | 24 | 36 | Maxim Salamatko |
+| 1 | 2 | 2 | Jeff |
+| 1 | 190 | 38 | Sergey |
+| 1 | 15 | 9 | voltcode |
+| 1 | 12 | 2 | Alexander Pantyukhin |
+| 1 | 107 | 0 | Mikhail Kantarovskiy |
+| 1 | 101 | 0 | derrickcrowne |
+
 #### 1.1.2 September 21 2016 ####
 **Maintenance release for Akka.NET v1.1**
 

@@ -93,6 +93,28 @@ namespace Akka.Streams.Tests.IO
             resultFuture.Result.ShouldBeEquivalentTo(expectedOutput);
         }
 
+        [Fact]
+        public void Outgoing_TCP_stream_must_fail_the_materialized_task_when_the_connection_fails()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var tcpWriteProbe = new TcpWriteProbe(this);
+                var task =
+                    Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                        .ViaMaterialized(
+                            Sys.TcpStream()
+                                .OutgoingConnection(new DnsEndPoint("example.com", 666),
+                                    connectionTimeout: TimeSpan.FromSeconds(1)), Keep.Right)
+                        .ToMaterialized(Sink.Ignore<ByteString>(), Keep.Left)
+                        .Run(Materializer);
+
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<Exception>()
+                    .And.Message.Should()
+                    .Contain("Connection failed");
+            }, Materializer);
+        }
+
         [Fact(Skip = "Fix me")]
         public void Outgoing_TCP_stream_must_work_when_client_closes_write_then_remote_closes_write()
         {
@@ -477,6 +499,8 @@ namespace Akka.Streams.Tests.IO
                     .BindAndHandle(Flow.Create<ByteString>(), mat2, address.Address.ToString(), address.Port);
 
                 // Ensure server is running
+                bindingTask.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                // and is possible to communicate with 
                 var t = Source.Single(ByteString.FromString(""))
                     .Via(sys2.TcpStream().OutgoingConnection(address))
                     .RunWith(Sink.Ignore<ByteString>(), mat2);
@@ -484,7 +508,6 @@ namespace Akka.Streams.Tests.IO
 
                 sys2.Terminate().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
-                bindingTask.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var binding = bindingTask.Result;
                 binding.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             }

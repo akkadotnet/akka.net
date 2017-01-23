@@ -13,7 +13,6 @@ using Akka.TestKit.TestEvent;
 
 namespace Akka.TestKit
 {
-
     /// <summary>
     /// EventListener for running tests, which allows selectively filtering out
     /// expected messages. To use it, include something like this in
@@ -24,6 +23,11 @@ namespace Akka.TestKit
     {
         private readonly List<IEventFilter> _filters = new List<IEventFilter>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if(message is InitializeLogger)
@@ -134,4 +138,3 @@ namespace Akka.TestKit
         }
     }
 }
-

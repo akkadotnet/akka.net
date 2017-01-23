@@ -1,18 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKit_Config_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Testkit.Tests
+namespace Akka.TestKit.Tests.Xunit2
 {
     // ReSharper disable once InconsistentNaming
-    public class TestKit_Config_Tests : TestKit.Xunit.TestKit
+    public class TestKit_Config_Tests : TestKit.Xunit2.TestKit
     {
         [Fact]
         public void DefaultValues_should_be_correct()
@@ -25,8 +24,6 @@ namespace Akka.Testkit.Tests
             Sys.Settings.Config.GetString("akka.test.calling-thread-dispatcher.type").ShouldBe(callingThreadDispatcherTypeName);
             Sys.Settings.Config.GetString("akka.test.test-actor.dispatcher.type").ShouldBe(callingThreadDispatcherTypeName);
             CallingThreadDispatcher.Id.ShouldBe("akka.test.calling-thread-dispatcher");
-
-
         }
     }
 }

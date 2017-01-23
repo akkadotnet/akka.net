@@ -83,12 +83,12 @@ namespace Akka.Configuration
         /// Generates a deep clone of the current configuration.
         /// </summary>
         /// <returns>A deep clone of the current configuration</returns>
-        protected Config Copy()
+        protected Config Copy(Config fallback = null)
         {
             //deep clone
             return new Config
             {
-                Fallback = Fallback != null ? Fallback.Copy() : null,
+                Fallback = Fallback != null ? Fallback.Copy(fallback) : fallback,
                 Root = Root,
                 Substitutions = Substitutions
             };
@@ -96,22 +96,16 @@ namespace Akka.Configuration
 
         private HoconValue GetNode(string path)
         {
-            var elements = path.SplitDottedPathHonouringQuotes();
+            var parsedPath = path.SplitDottedPathHonouringQuotes();
             HoconValue currentNode = Root;
             if (currentNode == null)
             {
                 throw new InvalidOperationException("Current node should not be null");
             }
-            foreach (string key in elements)
+            foreach (string key in parsedPath)
             {
                 currentNode = currentNode.GetChildObject(key);
-                if (currentNode == null)
-                {
-                    if (Fallback != null)
-                        return Fallback.GetNode(path);
-
-                    return null;
-                }
+                if (currentNode == null) return null;
             }
             return currentNode;
         }
@@ -423,7 +417,7 @@ namespace Akka.Configuration
         /// Converts the current configuration to a string 
         /// </summary>
         /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public string ToString(bool includeFallback)
         {
             if (includeFallback == false)
@@ -455,19 +449,15 @@ namespace Akka.Configuration
         {
             if (fallback == this)
                 throw new ArgumentException("Config can not have itself as fallback", nameof(fallback));
-
-            Config clone = Copy();
-
-            Config current = clone;
-            while (current.Fallback != null)
-            {
-                current = current.Fallback;
-            }
-            current.Fallback = fallback;
-
-            return clone;
+            if (fallback == null)
+                return this;
+            var mergedRoot = Root.GetObject().MergeImmutable(fallback.Root.GetObject());
+            var newRoot = new HoconValue();
+            newRoot.AppendValue(mergedRoot);
+            var mergedConfig = Copy(fallback);
+            mergedConfig.Root = newRoot;
+            return mergedConfig;
         }
-
 
         /// <summary>
         /// Determine if a HOCON configuration element exists at the specified location

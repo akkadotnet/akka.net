@@ -13,8 +13,15 @@ using Akka.Configuration;
 
 namespace Akka.Remote
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class RemoteSettings
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
         public RemoteSettings(Config config)
         {
             //TODO: need to add value validation for each field
@@ -71,48 +78,138 @@ namespace Akka.Remote
         /// </summary>
         public static readonly string AkkaScheme = "akka";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Config Config { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public HashSet<string> TrustedSelectionPaths { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool UntrustedMode { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool LogSend { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool LogReceive { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int LogBufferSizeExceeding { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string RemoteLifecycleEventsLogLevel { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Dispatcher { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan ShutdownTimeout { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan FlushWait { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IList<string> TransportNames { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IDictionary<string, string> Adapters { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TransportSettings[] Transports { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan BackoffPeriod { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan RetryGateClosedFor { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool UsePassiveConnections { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int SysMsgBufferSize { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int SysResendLimit { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan SysResendTimeout { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan QuarantineSilentSystemTimeout { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan SysMsgAckTimeout { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan? QuarantineDuration { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan StartupTimeout { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan CommandAckTimeout { get; set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Config WatchFailureDetectorConfig { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string WatchFailureDetectorImplementationClass { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan WatchHeartBeatInterval { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan WatchUnreachableReaperInterval { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan WatchHeartbeatExpectedResponseAfter { get; set; }
 
         private Config TransportConfigFor(string transportName)
@@ -120,6 +217,11 @@ namespace Akka.Remote
             return Config.GetConfig(transportName);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <returns>TBD</returns>
         public Props ConfigureDispatcher(Props props)
         {
             return String.IsNullOrEmpty(Dispatcher) 
@@ -127,8 +229,15 @@ namespace Akka.Remote
                 : props.WithDispatcher(Dispatcher);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class TransportSettings
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="config">TBD</param>
             public TransportSettings(Config config)
             {
                 TransportClass = config.GetString("transport-class");
@@ -136,10 +245,19 @@ namespace Akka.Remote
                 Config = config;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Config Config { get; set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IList<string> Adapters { get; set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string TransportClass { get; set; }
         }
 

@@ -15,23 +15,44 @@ namespace Akka.Streams.Util
     /// Should only be needed in rare circumstances, where knowing whether there are
     /// more elements without consuming them makes the code easier to write.
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal interface IIterator<out T>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         bool HasNext();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         T Next();
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     internal class IteratorAdapter<T> : IIterator<T>
     {
         private readonly IEnumerator<T> _enumerator;
         private bool? _hasNext;
         private Exception _exception;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="enumerator">TBD</param>
         public IteratorAdapter(IEnumerator<T> enumerator)
         {
             _enumerator = enumerator;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool HasNext()
         {
             if (_hasNext == null)
@@ -52,6 +73,11 @@ namespace Akka.Streams.Util
             return _hasNext.Value;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <returns>TBD</returns>
         public T Next()
         {
             if (!HasNext())

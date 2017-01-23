@@ -11,8 +11,16 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Util
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class TypeExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="type">TBD</param>
+        /// <returns>TBD</returns>
         public static Type GetSubscribedType(this Type type)
         {
             return
@@ -23,6 +31,11 @@ namespace Akka.Streams.Util
                     .First();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="type">TBD</param>
+        /// <returns>TBD</returns>
         public static Type GetPublishedType(this Type type)
         {
             return

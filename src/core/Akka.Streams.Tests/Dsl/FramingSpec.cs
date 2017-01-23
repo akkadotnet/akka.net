@@ -12,6 +12,7 @@ using System.Text;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
+using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
@@ -55,8 +56,8 @@ namespace Akka.Streams.Tests.Dsl
                 var nextChunkSize = _rechunkBuffer.IsEmpty
                     ? 0
                     : ThreadLocalRandom.Current.Next(0, _rechunkBuffer.Count + 1);
-                var newChunk = _rechunkBuffer.Take(nextChunkSize);
-                _rechunkBuffer = _rechunkBuffer.Drop(nextChunkSize);
+                var newChunk = _rechunkBuffer.Take(nextChunkSize).Compact();
+                _rechunkBuffer = _rechunkBuffer.Drop(nextChunkSize).Compact();
                 return context.IsFinishing && _rechunkBuffer.IsEmpty
                     ? context.PushAndFinish(newChunk)
                     : context.Push(newChunk);
@@ -92,15 +93,15 @@ namespace Akka.Streams.Tests.Dsl
             {
                 foreach (var delimiter in DelimiterBytes)
                 {
-                    var task = Source.From(CompleteTestSequence(delimiter))
+                    var testSequence = CompleteTestSequence(delimiter).ToList();
+                    var task = Source.From(testSequence)
                         .Select(x => x + delimiter)
                         .Via(Rechunk)
                         .Via(Framing.Delimiter(delimiter, 256))
-                        .Grouped(1000)
-                        .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
+                        .RunWith(Sink.Seq<ByteString>(), Materializer);
 
                     task.Wait(TimeSpan.FromDays(3)).Should().BeTrue();
-                    task.Result.ShouldAllBeEquivalentTo(CompleteTestSequence(delimiter));
+                    task.Result.ShouldAllBeEquivalentTo(testSequence);
                 }
             }
         }
@@ -122,6 +123,13 @@ namespace Akka.Streams.Tests.Dsl
                     .Limit(100)
                     .RunWith(Sink.Seq<string>(), Materializer);
             task2.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+
+            var task3 =
+                Source.Single(ByteString.FromString("aaa"))
+                    .Via(SimpleLines("\n", 2))
+                    .Limit(100)
+                    .RunWith(Sink.Seq<string>(), Materializer);
+            task3.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
         }
 
         [Fact]
@@ -157,8 +165,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<string>>(), Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().ContainSingle(s => s.Equals("I have no end"));
+            task.AwaitResult().Should().ContainSingle(s => s.Equals("I have no end"));
         }
 
         private static string RandomString(int length)

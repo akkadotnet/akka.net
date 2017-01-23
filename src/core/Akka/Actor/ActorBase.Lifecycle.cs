@@ -9,9 +9,6 @@ using System;
 using System.Linq;
 namespace Akka.Actor
 {
-    /// <summary>
-    ///     Class ActorBase.
-    /// </summary>
     public abstract partial class ActorBase
     {
         /// <summary>

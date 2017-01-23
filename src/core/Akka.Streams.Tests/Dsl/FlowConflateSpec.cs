@@ -198,19 +198,19 @@ namespace Akka.Streams.Tests.Dsl
             var sinkProbe = this.CreateManualSubscriberProbe<int>();
             var exceptionlath = new TestLatch();
 
-            var graph = Source.FromPublisher(sourceProbe).ConflateWithSeed(i =>
-            {
-                if (i%2 == 0)
+            Source.FromPublisher(sourceProbe).ConflateWithSeed(i =>
                 {
-                    exceptionlath.Open();
-                    throw new TestException("I hate even seed numbers");
-                }
-                return i;
-            }, (sum, i) => sum + i)
+                    if (i%2 == 0)
+                    {
+                        exceptionlath.Open();
+                        throw new TestException("I hate even seed numbers");
+                    }
+                    return i;
+                }, (sum, i) => sum + i)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .To(Sink.FromSubscriber(sinkProbe))
-                .WithAttributes(Attributes.CreateInputBuffer(1, 1));
-            RunnableGraph.FromGraph(graph).Run(Materializer);
+                .WithAttributes(Attributes.CreateInputBuffer(1, 1))
+                .Run(Materializer);
 
             var sub = sourceProbe.ExpectSubscription();
             var sinkSub = sinkProbe.ExpectSubscription();
@@ -257,11 +257,11 @@ namespace Akka.Streams.Tests.Dsl
                 return state + elem;
             }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
 
-            var graph = Source.FromPublisher(sourceProbe)
+            Source.FromPublisher(sourceProbe)
                 .Via(conflate)
                 .To(Sink.FromSubscriber(sinkProbe))
-                .WithAttributes(Attributes.CreateInputBuffer(4, 4));
-            RunnableGraph.FromGraph(graph).Run(Materializer);
+                .WithAttributes(Attributes.CreateInputBuffer(4, 4))
+                .Run(Materializer);
 
             var sub = sourceProbe.ExpectSubscription();
 
@@ -283,22 +283,22 @@ namespace Akka.Streams.Tests.Dsl
             var sinkProbe = this.CreateManualSubscriberProbe<List<int>>();
             var saw4Latch = new TestLatch();
 
-            var graph = Source.FromPublisher(sourceProbe).ConflateWithSeed(i => new List<int> { i },
-                (state, elem) =>
-                {
-                    if (elem == 2)
-                        throw new TestException("three is a four letter word");
+            Source.FromPublisher(sourceProbe).ConflateWithSeed(i => new List<int> {i},
+                    (state, elem) =>
+                    {
+                        if (elem == 2)
+                            throw new TestException("three is a four letter word");
 
-                    if (elem == 4)
-                        saw4Latch.Open();
+                        if (elem == 4)
+                            saw4Latch.Open();
 
-                    state.Add(elem);
-                    return state;
-                })
+                        state.Add(elem);
+                        return state;
+                    })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .To(Sink.FromSubscriber(sinkProbe))
-                .WithAttributes(Attributes.CreateInputBuffer(1, 1));
-            RunnableGraph.FromGraph(graph).Run(Materializer);
+                .WithAttributes(Attributes.CreateInputBuffer(1, 1))
+                .Run(Materializer);
 
             var sub = sourceProbe.ExpectSubscription();
             var sinkSub = sinkProbe.ExpectSubscription();

@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 Interpreter.Execute(int.MaxValue);
             }
 
-            public void Step()
+            public virtual void Step()
             {
                 Interpreter.Execute(1);
             }
@@ -140,20 +140,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                         new Dictionary<IModule, object>(), s => { });
-                    var inHandlers = mat.Item1;
-                    var outHandlers = mat.Item2;
-                    var logics = mat.Item3;
-                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false, null);
+                    var connections = mat.Item1;
+                    var logics = mat.Item2;
+                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
 
                     var i = 0;
                     foreach (var upstream in _upstreams)
                     {
-                        interpreter.AttachUpstreamBoundary(i++, upstream.Item1);
+                        interpreter.AttachUpstreamBoundary(connections[i++], upstream.Item1);
                     }
                     i = 0;
                     foreach (var downstream in _downstreams)
                     {
-                        interpreter.AttachDownstreamBoundary((i++) + _upstreams.Count + _connections.Count, downstream.Item2);
+                        interpreter.AttachDownstreamBoundary(connections[i++ + _upstreams.Count + _connections.Count], downstream.Item2);
                     }
                     interpreter.Init(null);
                     _interpreterSetter(interpreter);
@@ -164,10 +163,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                     new Dictionary<IModule, object>(), s => { });
-                var inHandlers = mat.Item1;
-                var outHandlers = mat.Item2;
-                var logics = mat.Item3;
-                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false, null);
+                var connections = mat.Item1;
+                var logics = mat.Item2;
+                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
             }
 
             public AssemblyBuilder Builder(params IGraphStageWithMaterializedValue<Shape, object>[] stages)
@@ -553,22 +551,74 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public class PortTestSetup : TestSetup
         {
+            private readonly bool _chasing;
             public UpstreamPortProbe<int> Out { get; }
             public DownstreamPortProbe<int> In { get; }
 
-            private readonly GraphAssembly _assembly = new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[0],
-                new Attributes[0], new Inlet[] {null}, new[] {-1}, new Outlet[] {null}, new[] {-1});
+            private readonly GraphAssembly _assembly;
 
-            public PortTestSetup(ActorSystem system) : base(system)
+            public PortTestSetup(ActorSystem system, bool chasing = false) : base(system)
             {
+                _chasing = chasing;
+                var propagateStage = new EventPropagateStage();
+
+                _assembly = !chasing
+                    ? new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[0], new Attributes[0],
+                        new Inlet[] {null}, new[] {-1}, new Outlet[] {null}, new[] {-1})
+                    : new GraphAssembly(new[] {propagateStage}, new[] {Attributes.None},
+                        new Inlet[] {propagateStage.In, null}, new[] {0, -1}, new Outlet[] {null, propagateStage.Out},
+                        new[] {-1, 0});
+
                 Out = new UpstreamPortProbe<int>(this);
                 In = new DownstreamPortProbe<int>(this);
 
                 ManualInit(_assembly);
-                Interpreter.AttachDownstreamBoundary(0, In);
-                Interpreter.AttachUpstreamBoundary(0, Out);
+                Interpreter.AttachDownstreamBoundary(Interpreter.Connections[chasing ? 1 : 0], In);
+                Interpreter.AttachUpstreamBoundary(Interpreter.Connections[0], Out);
                 Interpreter.Init(null);
             }
+
+            public class EventPropagateStage : GraphStage<FlowShape<int, int>>
+            {
+                private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
+                {
+                    private readonly EventPropagateStage _stage;
+
+                    public Logic(EventPropagateStage stage) :base(stage.Shape)
+                    {
+                        _stage = stage;
+
+                        SetHandler(stage.In, this);
+                        SetHandler(stage.Out, this);
+                    }
+
+                    public void OnPush() => Push(_stage.Out, Grab(_stage.In));
+
+                    public void OnUpstreamFinish() => Complete(_stage.Out);
+
+                    public void OnUpstreamFailure(Exception e) => Fail(_stage.Out, e);
+
+                    public void OnPull() => Pull(_stage.In);
+
+                    public void OnDownstreamFinish() => Cancel(_stage.In);
+                }
+
+                public EventPropagateStage()
+                {
+                    Shape  = new FlowShape<int, int>(In, Out);
+                }
+
+                public Inlet<int> In { get; } = new Inlet<int>("Propagate.in");
+
+                public Outlet<int> Out { get; } = new Outlet<int>("Propagate.out");
+
+                public override FlowShape<int, int> Shape { get; }
+
+                protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+            }
+
+            // Step() means different depending whether we have a stage between the two probes or not
+            public override void Step() => Interpreter.Execute(!_chasing ? 1 : 2);
 
             public class UpstreamPortProbe<T> : UpstreamProbe<T>
             {
@@ -576,30 +626,15 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                 }
 
-                public bool IsAvailable()
-                {
-                    return IsAvailable(Out);
-                }
+                public bool IsAvailable() => IsAvailable(Out);
 
-                public bool IsClosed()
-                {
-                    return IsClosed(Out);
-                }
+                public bool IsClosed() => IsClosed(Out);
 
-                public void Push(T element)
-                {
-                    Push(Out, element);
-                }
+                public void Push(T element) => Push(Out, element);
 
-                public void Complete()
-                {
-                    Complete(Out);
-                }
+                public void Complete() => Complete(Out);
 
-                public void Fail(Exception ex)
-                {
-                    Fail(Out, ex);
-                }
+                public void Fail(Exception ex) => Fail(Out, ex);
             }
 
             public class DownstreamPortProbe<T> : DownstreamProbe<T>
@@ -610,7 +645,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     SetHandler(In, () =>
                     {
                         // Modified onPush that does not Grab() automatically the element. This access some internals.
-                        var internalEvent = Interpreter.ConnectionSlots[PortToConn[In.Id]];
+                        var internalEvent = PortToConn[In.Id].Slot;
 
                         if (internalEvent is GraphInterpreter.Failed)
                             ((PortTestSetup) setup).LastEvent.Add(new OnNext(probe,
@@ -623,35 +658,17 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         );
                 }
 
-                public bool IsAvailable()
-                {
-                    return IsAvailable(In);
-                }
+                public bool IsAvailable() => IsAvailable(In);
 
-                public bool HasBeenPulled()
-                {
-                    return HasBeenPulled(In);
-                }
+                public bool HasBeenPulled() => HasBeenPulled(In);
 
-                public bool IsClosed()
-                {
-                    return IsClosed(In);
-                }
+                public bool IsClosed() => IsClosed(In);
 
-                public void Pull()
-                {
-                    Pull(In);
-                }
+                public void Pull() => Pull(In);
 
-                public void Cancel()
-                {
-                    Cancel(In);
-                }
+                public void Cancel() => Cancel(In);
 
-                public T Grab()
-                {
-                    return Grab<T>(In);
-                }
+                public T Grab() => Grab<T>(In);
             }
         }
 

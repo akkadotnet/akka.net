@@ -19,7 +19,7 @@ cd __SOURCE_DIRECTORY__
 
 let product = "Akka.NET"
 let authors = [ "Akka.NET Team" ]
-let copyright = "Copyright © 2013-2016 Akka.NET Team"
+let copyright = "Copyright © 2013-2017 Akka.NET Team"
 let company = "Akka.NET Team"
 let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
@@ -222,8 +222,10 @@ Target "CopyOutput" <| fun _ ->
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
       "contrib/serializers/Akka.Serialization.Wire" 
+      "contrib/serializers/Akka.Serialization.Hyperion"
       "contrib/cluster/Akka.Cluster.Tools"
       "contrib/cluster/Akka.Cluster.Sharding"
+      "contrib/cluster/Akka.DistributedData"
       ]
     |> List.iter copyOutput
 
@@ -344,12 +346,19 @@ Target "NBench" <| fun _ ->
 
     let runNBench assembly =
         let spec = getBuildParam "spec"
+        let teamcityStr = (getBuildParam "teamcity")
+        let enableTeamCity = 
+            match teamcityStr with
+            | null -> false
+            | "" -> false
+            | _ -> bool.Parse teamcityStr
 
         let args = new StringBuilder()
                 |> append assembly
                 |> append (sprintf "output-directory=\"%s\"" perfOutput)
                 |> append (sprintf "concurrent=\"%b\"" true)
                 |> append (sprintf "trace=\"%b\"" true)
+                |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
                 |> toText
 
         let result = ExecProcess(fun info -> 
@@ -397,9 +406,11 @@ module Nuget =
     let getProjectVersion project =
       match project with
       | "Akka.Serialization.Wire" -> preReleaseVersion
+      | "Akka.Serialization.Hyperion" -> preReleaseVersion
       | cluster when (cluster.StartsWith("Akka.Cluster.") && not (cluster.EndsWith("TestKit"))) -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | streams when streams.StartsWith("Akka.Streams") -> preReleaseVersion
+      | "Akka.DistributedData" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget

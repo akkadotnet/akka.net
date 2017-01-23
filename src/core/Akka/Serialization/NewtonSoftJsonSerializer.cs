@@ -28,7 +28,13 @@ namespace Akka.Serialization
         private readonly JsonSerializerSettings _settings;
         private readonly JsonSerializer _serializer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public JsonSerializerSettings Settings { get { return _settings; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object Serializer { get { return _serializer; } }
 
         /// <summary>
@@ -54,8 +60,17 @@ namespace Akka.Serialization
             _serializer = JsonSerializer.Create(_settings);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class AkkaContractResolver : DefaultContractResolver
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="member">TBD</param>
+            /// <param name="memberSerialization">TBD</param>
+            /// <returns>TBD</returns>
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
             {
                 var prop = base.CreateProperty(member, memberSerialization);
@@ -154,9 +169,16 @@ namespace Akka.Serialization
             throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class SurrogateConverter : JsonConverter
         {
             private readonly NewtonSoftJsonSerializer _parent;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="parent">TBD</param>
             public SurrogateConverter(NewtonSoftJsonSerializer parent)
             {
                 _parent = parent;

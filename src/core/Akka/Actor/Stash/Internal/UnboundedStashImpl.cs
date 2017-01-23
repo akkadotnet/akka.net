@@ -17,6 +17,7 @@ namespace Akka.Actor.Internal
         /// A stash implementation that is bounded
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="context">TBD</param>
         public UnboundedStashImpl(IActorContext context)
             : base(context, int.MaxValue)
         {

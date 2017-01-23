@@ -54,9 +54,18 @@ namespace Akka.TestKit.Xunit
             //Intentionally left blank
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public new static Config DefaultConfig { get { return TestKitBase.DefaultConfig; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public new static Config FullDebugConfig { get { return TestKitBase.FullDebugConfig; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected static XunitAssertions Assertions { get { return _assertions; } }
 
 
@@ -122,4 +131,3 @@ namespace Akka.TestKit.Xunit
         }
     }
 }
-

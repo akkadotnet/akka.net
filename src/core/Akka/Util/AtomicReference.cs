@@ -16,12 +16,14 @@ namespace Akka.Util
     /// without any explicit locking. .NET's strong memory on write guarantees might already enforce
     /// this ordering, but the addition of the Volatile guarantees it.
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public class AtomicReference<T>
         where T : class
     {
         /// <summary>
         /// Sets the initial value of this <see cref="AtomicReference{T}"/> to <paramref name="originalValue"/>.
         /// </summary>
+        /// <param name="originalValue">TBD</param>
         public AtomicReference(T originalValue)
         {
             atomicValue = originalValue;
@@ -36,6 +38,9 @@ namespace Akka.Util
         }
 
         // ReSharper disable once InconsistentNaming
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected T atomicValue;
 
         /// <summary>
@@ -51,6 +56,8 @@ namespace Akka.Util
         /// If <see cref="Value"/> equals <paramref name="expected"/>, then set the Value to
         /// <paramref name="newValue"/>.
         /// </summary>
+        /// <param name="expected">TBD</param>
+        /// <param name="newValue">TBD</param>
         /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
         public bool CompareAndSet(T expected, T newValue)
         {
@@ -73,6 +80,8 @@ namespace Akka.Util
         /// <summary>
         /// Implicit conversion operator = automatically casts the <see cref="AtomicReference{T}"/> to an instance of <typeparamref name="T"/>.
         /// </summary>
+        /// <param name="aRef">TBD</param>
+        /// <returns>TBD</returns>
         public static implicit operator T(AtomicReference<T> aRef)
         {
             return aRef.Value;
@@ -81,8 +90,8 @@ namespace Akka.Util
         /// <summary>
         /// Implicit conversion operator = allows us to cast any type directly into a <see cref="AtomicReference{T}"/> instance.
         /// </summary>
-        /// <param name="newValue"></param>
-        /// <returns></returns>
+        /// <param name="newValue">TBD</param>
+        /// <returns>TBD</returns>
         public static implicit operator AtomicReference<T>(T newValue)
         {
             return new AtomicReference<T>(newValue);

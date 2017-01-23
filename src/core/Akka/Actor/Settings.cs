@@ -38,7 +38,7 @@ namespace Akka.Actor
         /// <summary>
         /// Injects a system config at the top of the fallback chain
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">TBD</param>
         public void InjectTopLevelFallback(Config config)
         {
             _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
@@ -272,6 +272,9 @@ namespace Akka.Actor
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool FsmDebugEvent { get; private set; }
 
         /// <summary>
@@ -284,6 +287,9 @@ namespace Akka.Actor
         /// </summary>
         public string SchedulerClass { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan SchedulerShutdownTimeout { get; private set; }
 
         /// <summary>

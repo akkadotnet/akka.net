@@ -12,16 +12,33 @@ using Akka.Streams.Implementation.Fusing;
 
 namespace Akka.Streams.Dsl
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static partial class GraphDsl
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
         public sealed class Builder<T>
         {
             #region internal API
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             internal Builder() { }
 
             private IModule _moduleInProgress = EmptyModule.Instance;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="T1">TBD</typeparam>
+            /// <typeparam name="T2">TBD</typeparam>
+            /// <param name="from">TBD</param>
+            /// <param name="to">TBD</param>
             internal void AddEdge<T1, T2>(Outlet<T1> from, Inlet<T2> to) where T2 : T1
             {
                 _moduleInProgress = _moduleInProgress.Wire(from, to);
@@ -32,13 +49,19 @@ namespace Akka.Streams.Dsl
             /// This is only used by the materialization-importing apply methods of Source,
             /// Flow, Sink and Graph.
             /// </summary>
+            /// <typeparam name="TShape">TBD</typeparam>
+            /// <typeparam name="TMat">TBD</typeparam>
+            /// <typeparam name="TMat2">TBD</typeparam>
+            /// <param name="graph">TBD</param>
+            /// <param name="transform">TBD</param>
+            /// <returns>TBD</returns>
             internal TShape Add<TShape, TMat, TMat2>(IGraph<TShape, TMat> graph, Func<TMat, TMat2> transform) where TShape : Shape
             {
                 if (StreamLayout.IsDebug)
                     StreamLayout.Validate(graph.Module);
 
                 var copy = graph.Module.CarbonCopy();
-                _moduleInProgress = _moduleInProgress.Compose(copy.TransformMaterializedValue(transform));
+                _moduleInProgress = _moduleInProgress.Compose<TMat,TMat2,TMat2>(copy.TransformMaterializedValue(transform), Keep.Right);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
             }
 
@@ -47,6 +70,13 @@ namespace Akka.Streams.Dsl
             /// This is only used by the materialization-importing apply methods of Source,
             /// Flow, Sink and Graph.
             /// </summary>
+            /// <typeparam name="TShape">TBD</typeparam>
+            /// <typeparam name="TMat1">TBD</typeparam>
+            /// <typeparam name="TMat2">TBD</typeparam>
+            /// <typeparam name="TMat3">TBD</typeparam>
+            /// <param name="graph">TBD</param>
+            /// <param name="combine">TBD</param>
+            /// <returns>TBD</returns>
             internal TShape Add<TShape, TMat1, TMat2, TMat3>(IGraph<TShape> graph, Func<TMat1, TMat2, TMat3> combine) where TShape : Shape
             {
                 if (StreamLayout.IsDebug)
@@ -63,6 +93,10 @@ namespace Akka.Streams.Dsl
             /// Import a graph into this module, performing a deep copy, discarding its
             /// materialized value and returning the copied Ports that are now to be connected.
             /// </summary>
+            /// <typeparam name="TShape">TBD</typeparam>
+            /// <typeparam name="TMat">TBD</typeparam>
+            /// <param name="graph">TBD</param>
+            /// <returns>TBD</returns>
             public TShape Add<TShape, TMat>(IGraph<TShape, TMat> graph)
                 where TShape : Shape
             {
@@ -70,7 +104,7 @@ namespace Akka.Streams.Dsl
                     StreamLayout.Validate(graph.Module);
 
                 var copy = graph.Module.CarbonCopy();
-                _moduleInProgress = _moduleInProgress.Compose(copy);
+                _moduleInProgress = _moduleInProgress.Compose<object, TMat, object>(copy, Keep.Left);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
             }
 
@@ -111,93 +145,233 @@ namespace Akka.Streams.Dsl
                 }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IModule Module => _moduleInProgress;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="outlet">TBD</param>
+            /// <returns>TBD</returns>
             public ForwardOps<TOut, T> From<TOut>(Outlet<TOut> outlet)
             {
                 return new ForwardOps<TOut, T>(this, outlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="source">TBD</param>
+            /// <returns>TBD</returns>
             public ForwardOps<TOut, T> From<TOut>(SourceShape<TOut> source)
             {
                 return new ForwardOps<TOut, T>(this, source.Outlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="source">TBD</param>
+            /// <returns>TBD</returns>
             public ForwardOps<TOut, T> From<TOut>(IGraph<SourceShape<TOut>, T> source)
             {
                 return new ForwardOps<TOut, T>(this, Add(source).Outlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="flow">TBD</param>
+            /// <returns>TBD</returns>
             public ForwardOps<TOut, T> From<TIn, TOut>(FlowShape<TIn, TOut> flow)
             {
                 return new ForwardOps<TOut, T>(this, flow.Outlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="flow">TBD</param>
+            /// <returns>TBD</returns>
             public ForwardOps<TOut, T> From<TIn, TOut>(IGraph<FlowShape<TIn, TOut>, T> flow)
             {
                 return new ForwardOps<TOut, T>(this, Add(flow).Outlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="fanIn">TBD</param>
+            /// <returns>TBD</returns>
             public ForwardOps<TOut, T> From<TIn, TOut>(UniformFanInShape<TIn, TOut> fanIn)
             {
                 return new ForwardOps<TOut, T>(this, fanIn.Out);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="fanOut">TBD</param>
+            /// <returns>TBD</returns>
             public ForwardOps<TOut, T> From<TIn, TOut>(UniformFanOutShape<TIn, TOut> fanOut)
             {
                 return new ForwardOps<TOut, T>(this, FindOut(this, fanOut, 0));
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <param name="inlet">TBD</param>
+            /// <returns>TBD</returns>
             public ReverseOps<TIn, T> To<TIn>(Inlet<TIn> inlet)
             {
                 return new ReverseOps<TIn, T>(this, inlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <param name="sink">TBD</param>
+            /// <returns>TBD</returns>
             public ReverseOps<TIn, T> To<TIn>(SinkShape<TIn> sink)
             {
                 return new ReverseOps<TIn, T>(this, sink.Inlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TMat">TBD</typeparam>
+            /// <param name="sink">TBD</param>
+            /// <returns>TBD</returns>
             public ReverseOps<TIn, T> To<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> sink)
             {
                 return new ReverseOps<TIn, T>(this, Add(sink).Inlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <typeparam name="TMat">TBD</typeparam>
+            /// <param name="flow">TBD</param>
+            /// <returns>TBD</returns>
             public ReverseOps<TIn, T> To<TIn, TOut, TMat>(IGraph<FlowShape<TIn, TOut>, TMat> flow)
             {
                 return new ReverseOps<TIn, T>(this, Add(flow).Inlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="flow">TBD</param>
+            /// <returns>TBD</returns>
             public ReverseOps<TIn, T> To<TIn, TOut>(FlowShape<TIn, TOut> flow)
             {
                 return new ReverseOps<TIn, T>(this, flow.Inlet);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="fanOut">TBD</param>
+            /// <returns>TBD</returns>
             public ReverseOps<TIn, T> To<TIn, TOut>(UniformFanOutShape<TIn, TOut> fanOut)
             {
                 return new ReverseOps<TIn, T>(this, fanOut.In);
             }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <typeparam name="TIn">TBD</typeparam>
+            /// <typeparam name="TOut">TBD</typeparam>
+            /// <param name="fanOut">TBD</param>
+            /// <returns>TBD</returns>
             public ReverseOps<TIn, T> To<TIn, TOut>(UniformFanInShape<TIn, TOut> fanOut)
             {
                 return new ReverseOps<TIn, T>(this, FindIn(this, fanOut, 0));
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
         public sealed class ForwardOps<TOut, TMat>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             internal readonly Builder<TMat> Builder;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="builder">TBD</param>
+            /// <param name="outlet">TBD</param>
             public ForwardOps(Builder<TMat> builder, Outlet<TOut> outlet)
             {
                 Builder = builder;
                 Out = outlet;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Outlet<TOut> Out { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
         public sealed class ReverseOps<TIn, TMat>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             internal readonly Builder<TMat> Builder;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="builder">TBD</param>
+            /// <param name="inlet">TBD</param>
             public ReverseOps(Builder<TMat> builder, Inlet<TIn> inlet)
             {
                 Builder = builder;
                 In = inlet;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Inlet<TIn> In { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="builder">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         internal static Outlet<TOut> FindOut<TIn, TOut, T>(Builder<T> builder, UniformFanOutShape<TIn, TOut> junction, int n)
         {
             var count = junction.Outlets.Count();
@@ -211,6 +385,17 @@ namespace Akka.Streams.Dsl
             throw new ArgumentException("No more outlets on junction");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="builder">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <param name="n">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         internal static Inlet<TIn> FindIn<TIn, TOut, T>(Builder<T> builder, UniformFanInShape<TIn, TOut> junction, int n)
         {
             var count = junction.Inlets.Count();
@@ -225,8 +410,20 @@ namespace Akka.Streams.Dsl
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ForwardOps
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="inlet">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, Inlet<TIn> inlet)
             where TIn : TOut
         {
@@ -234,6 +431,15 @@ namespace Akka.Streams.Dsl
             return ops.Builder;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="sink">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, SinkShape<TIn> sink)
             where TIn : TOut
         {
@@ -242,6 +448,15 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, FlowShape<TIn, TOut> flow)
             where TIn : TOut
         {
@@ -250,6 +465,15 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="sink">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, IGraph<SinkShape<TIn>, TMat> sink)
             where TIn : TOut
         {
@@ -258,6 +482,16 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)
             where TIn : TOut1
         {
@@ -267,6 +501,17 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction)
             where TIn : TOut1
         {
@@ -288,6 +533,16 @@ namespace Akka.Streams.Dsl
             return GraphDsl.FindOut(b, junction, 0);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, FlowShape<TIn, TOut2> flow)
             where TIn : TOut1
         {
@@ -296,6 +551,16 @@ namespace Akka.Streams.Dsl
             return new GraphDsl.ForwardOps<TOut2, TMat>(b, flow.Outlet);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, IGraph<FlowShape<TIn, TOut2>, NotUsed> flow)
             where TIn : TOut1
         {
@@ -305,6 +570,16 @@ namespace Akka.Streams.Dsl
             return new GraphDsl.ForwardOps<TOut2, TMat>(b, s.Outlet);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)
             where TIn : TOut1
         {
@@ -312,6 +587,16 @@ namespace Akka.Streams.Dsl
             return b.From(junction.Out);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction)
             where TIn : TOut1
         {
@@ -320,8 +605,20 @@ namespace Akka.Streams.Dsl
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ReverseOps
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="outlet">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, Outlet<TOut> outlet)
             where TIn : TOut
         {
@@ -330,6 +627,15 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, SourceShape<TOut> source)
             where TIn : TOut
         {
@@ -338,6 +644,15 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="source">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, IGraph<SourceShape<TOut>, TMat> source)
             where TIn : TOut
         {
@@ -347,6 +662,15 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, FlowShape<TIn, TOut> flow)
             where TIn : TOut
         {
@@ -355,6 +679,15 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
             where TIn : TOut
         {
@@ -370,6 +703,17 @@ namespace Akka.Streams.Dsl
             return GraphDsl.FindIn(b, junction, 0);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanOutShape<TOut1, TOut2> junction)
             where TIn : TOut2
         {
@@ -388,6 +732,16 @@ namespace Akka.Streams.Dsl
             throw new ArgumentException("No more inlets free on junction", nameof(junction));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.ReverseOps<TOut1, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, FlowShape<TOut1, TOut2> flow)
             where TIn : TOut2
         {
@@ -396,6 +750,16 @@ namespace Akka.Streams.Dsl
             return new GraphDsl.ReverseOps<TOut1, TMat>(b, flow.Inlet);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="flow">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.ReverseOps<TOut1, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, IGraph<FlowShape<TOut1, TOut2>, TMat> flow)
             where TIn : TOut2
         {
@@ -405,6 +769,15 @@ namespace Akka.Streams.Dsl
             return new GraphDsl.ReverseOps<TOut1, TMat>(b, f.Inlet);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
             where TIn : TOut
         {
@@ -412,12 +785,20 @@ namespace Akka.Streams.Dsl
             return ops.Builder.To(inlet);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="ops">TBD</param>
+        /// <param name="junction">TBD</param>
+        /// <returns>TBD</returns>
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanOutShape<TIn, TOut> junction)
             where TIn : TOut
         {
             var b = From(ops, junction);
             return b.To(junction.In);
         }
-
     }
 }

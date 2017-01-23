@@ -27,6 +27,12 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterActorRefProvider : RemoteActorRefProvider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="systemName">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="eventStream">TBD</param>
         public ClusterActorRefProvider(string systemName, Settings settings, EventStream eventStream /*DynamicAccess*/)
             : base(systemName, settings, eventStream)
         {
@@ -35,6 +41,10 @@ namespace Akka.Cluster
             Deployer = new ClusterDeployer(settings);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public override void Init(ActorSystemImpl system)
         {
             //Complete the usual RemoteActorRefProvider initializations - need access to transports and RemoteWatcher before clustering can work
@@ -44,6 +54,11 @@ namespace Akka.Cluster
             Cluster.Get(system);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         protected override IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             // make sure Cluster extension is initialized/loaded from init thread
@@ -108,11 +123,23 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterDeployer : RemoteDeployer
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
         public ClusterDeployer(Settings settings)
             : base(settings)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="key">TBD</param>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <returns>TBD</returns>
         public override Deploy ParseConfig(string key, Config config)
         {
             Config config2 = config;

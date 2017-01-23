@@ -23,10 +23,19 @@ namespace Akka.Streams.Implementation.IO
     {
         #region internal classes
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal interface IAdapterToStageMessage { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class ReadElementAcknowledgement : IAdapterToStageMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ReadElementAcknowledgement Instance = new ReadElementAcknowledgement();
 
             private ReadElementAcknowledgement()
@@ -35,8 +44,14 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Close : IAdapterToStageMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Close Instance = new Close();
 
             private Close()
@@ -45,20 +60,39 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal interface IStreamToAdapterMessage { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal struct Data : IStreamToAdapterMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ByteString Bytes;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="bytes">TBD</param>
             public Data(ByteString bytes)
             {
                 Bytes = bytes;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Finished : IStreamToAdapterMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Finished Instance = new Finished();
 
             private Finished()
@@ -67,8 +101,14 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Initialized : IStreamToAdapterMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Initialized Instance = new Initialized();
 
             private Initialized()
@@ -77,22 +117,39 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal struct Failed : IStreamToAdapterMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Exception Cause;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="cause">TBD</param>
             public Failed(Exception cause)
             {
                 Cause = cause;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal interface IStageWithCallback
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="msg">TBD</param>
             void WakeUp(IAdapterToStageMessage msg);
         }
 
-        private sealed class Logic : GraphStageLogic, IStageWithCallback
+        private sealed class Logic : InGraphStageLogic, IStageWithCallback
         {
             private readonly InputStreamSinkStage _stage;
             private readonly Action<IAdapterToStageMessage> _callback;
@@ -108,12 +165,10 @@ namespace Akka.Streams.Implementation.IO
                         CompleteStage();
                 });
 
-                SetHandler(stage._in, onPush: OnPush, 
-                    onUpstreamFinish: OnUpstreamFinish,
-                    onUpstreamFailure: OnUpstreamFailure);
+                SetHandler(stage._in, this);
             }
 
-            private void OnPush()
+            public override void OnPush()
             {
                 //1 is buffer for Finished or Failed callback
                 if (_stage._dataQueue.Count + 1 == _stage._dataQueue.BoundedCapacity)
@@ -124,13 +179,13 @@ namespace Akka.Streams.Implementation.IO
                     SendPullIfAllowed();
             }
 
-            private void OnUpstreamFinish()
+            public override void OnUpstreamFinish()
             {
                 _stage._dataQueue.Add(Finished.Instance);
                 CompleteStage();
             }
 
-            private void OnUpstreamFailure(Exception ex)
+            public override void OnUpstreamFailure(Exception ex)
             {
                 _stage._dataQueue.Add(new Failed(ex));
                 FailStage(ex);
@@ -157,16 +212,32 @@ namespace Akka.Streams.Implementation.IO
         private readonly TimeSpan _readTimeout;
         private BlockingCollection<IStreamToAdapterMessage> _dataQueue;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="readTimeout">TBD</param>
         public InputStreamSinkStage(TimeSpan readTimeout)
         {
             _readTimeout = readTimeout;
             Shape = new SinkShape<ByteString>(_in);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes => DefaultAttributes.InputStreamSink;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SinkShape<ByteString> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
@@ -188,26 +259,55 @@ namespace Akka.Streams.Implementation.IO
     {
         #region not supported 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="NotSupportedException">TBD</exception>
         public override void Flush()
         {
             throw new NotSupportedException("This stream can only read");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="offset">TBD</param>
+        /// <param name="origin">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <returns>TBD</returns>
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException("This stream can only read");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <returns>TBD</returns>
         public override void SetLength(long value)
         {
             throw new NotSupportedException("This stream can only read");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buffer">TBD</param>
+        /// <param name="offset">TBD</param>
+        /// <param name="count">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <returns>TBD</returns>
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException("This stream can only read");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="NotSupportedException">TBD</exception>
         public override long Length
         {
             get
@@ -216,6 +316,10 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="NotSupportedException">TBD</exception>
         public override long Position
         {
             get
@@ -239,6 +343,12 @@ namespace Akka.Streams.Implementation.IO
         private bool _isInitialized;
         private ByteString _detachedChunk;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sharedBuffer">TBD</param>
+        /// <param name="sendToStage">TBD</param>
+        /// <param name="readTimeout">TBD</param>
         public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer, IStageWithCallback sendToStage, TimeSpan readTimeout)
         {
             _sharedBuffer = sharedBuffer;
@@ -246,6 +356,10 @@ namespace Akka.Streams.Implementation.IO
             _readTimeout = readTimeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="disposing">TBD</param>
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
@@ -260,12 +374,26 @@ namespace Akka.Streams.Implementation.IO
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public sealed override int ReadByte()
         {
             var a = new byte[1];
             return Read(a, 0, 1) != 0 ? a[0] : -1;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buffer">TBD</param>
+        /// <param name="offset">TBD</param>
+        /// <param name="count">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IOException">TBD</exception>
+        /// <returns>TBD</returns>
         public override int Read(byte[] buffer, int offset, int count)
         {
             if (buffer.Length <= 0) throw new ArgumentException("array size must be > 0");
@@ -381,9 +509,18 @@ namespace Akka.Streams.Implementation.IO
 
             return null;
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool CanRead => true;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool CanSeek => false;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool CanWrite => false;
     }
 }

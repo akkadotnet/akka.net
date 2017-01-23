@@ -7,9 +7,17 @@
 
 namespace Akka.Streams.Util
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class Int32Extensions
     {
         // see http://stackoverflow.com/questions/10439242/count-leading-zeroes-in-an-int32
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="x">TBD</param>
+        /// <returns>TBD</returns>
         internal static int NumberOfLeadingZeros(this int x)
         {
             x |= (x >> 1);
@@ -28,6 +36,11 @@ namespace Akka.Streams.Util
             return sizeof (int)*8 - x;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="i">TBD</param>
+        /// <returns>TBD</returns>
         internal static int NumberOfTrailingZeros(this int i)
         {
             if (i == 0)

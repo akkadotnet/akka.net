@@ -8,6 +8,7 @@
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
+using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
 using System;
@@ -49,6 +50,51 @@ namespace Akka.Tests.Actor
                   {
                       XAssert.Throws<ArgumentException>(() => ActorSystem.Create(n));
                   });
+        }
+
+        /// <summary>
+        /// For additional info please check the original documentation.
+        /// http://doc.akka.io/docs/akka/2.4/scala/logging.html#Auxiliary_logging_options
+        /// akka {
+        ///     # Log the complete configuration at INFO level when the actor system is started.
+        ///     # This is useful when you are uncertain of what configuration is used.
+        ///     log-config-on-start = on
+        /// }
+        /// </summary>
+        [Fact]
+        public void Logs_config_on_start_with_info_level()
+        {
+            var config = ConfigurationFactory.ParseString("akka.log-config-on-start = on")
+                .WithFallback(DefaultConfig);
+
+            var system = new ActorSystemImpl(Guid.NewGuid().ToString(), config);
+            // Actor system should be started to attach the EventFilterFactory
+            system.Start();
+
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+
+            // Notice here we forcedly start actor system again to monitor how it processes
+            eventFilter.Info("{\r\n  akka : {\r\n    log-config-on-start : on\r\n  }\r\n}").ExpectOne(() => system.Start());
+
+            system.Terminate();
+        }
+
+        [Fact]
+        public void Does_not_log_config_on_start()
+        {
+            var config = ConfigurationFactory.ParseString("akka.log-config-on-start = off")
+                .WithFallback(DefaultConfig);
+
+            var system = new ActorSystemImpl(Guid.NewGuid().ToString(), config);
+            // Actor system should be started to attach the EventFilterFactory
+            system.Start();
+
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+
+            // Notice here we forcedly start actor system again to monitor how it processes
+            eventFilter.Info().Expect(0, () => system.Start());
+
+            system.Terminate();
         }
 
         [Fact]

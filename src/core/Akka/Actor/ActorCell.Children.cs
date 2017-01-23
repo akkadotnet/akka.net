@@ -20,6 +20,9 @@ namespace Akka.Actor
         private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IChildrenContainer ChildrenContainer
         {
             get { return _childrenContainerDoNotCallMeDirectly; } 
@@ -30,7 +33,12 @@ namespace Akka.Actor
             get { return ChildrenContainer.Children; }
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="isSystemService">TBD</param>
+        /// <param name="name">TBD</param>
         /// <exception cref="InvalidActorNameException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
         /// </exception>
@@ -40,12 +48,17 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
         /// </exception>
+        /// <returns>TBD</returns>
         public virtual IActorRef AttachChild(Props props, bool isSystemService, string name = null)
         {
             return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="props">TBD</param>
+        /// <param name="name">TBD</param>
         /// <exception cref="InvalidActorNameException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
         /// </exception>
@@ -55,6 +68,7 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
         /// </exception>
+        /// <returns>TBD</returns>
         public virtual IActorRef ActorOf(Props props, string name = null)
         {
             return ActorOf(props, name, false, false);
@@ -130,18 +144,30 @@ namespace Akka.Actor
             return InterlockedSpin.Swap(ref _childrenContainerDoNotCallMeDirectly, updater);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
         public void ReserveChild(string name)
         {
             UpdateChildrenRefs(c => c.Reserve(name));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
         protected void UnreserveChild(string name)
         {
             UpdateChildrenRefs(c => c.Unreserve(name));
 
         }
 
-        /// <summary>This should only be used privately or when creating the root actor. </summary>
+        /// <summary>
+        /// This should only be used privately or when creating the root actor. 
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <returns>TBD</returns>
         public ChildRestartStats InitChild(IInternalActorRef actor)
         {
             return UpdateChildrenRefs(cc =>
@@ -169,6 +195,11 @@ namespace Akka.Actor
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <returns>TBD</returns>
         protected bool SetChildrenTerminationReason(SuspendReason reason)
         {
             return UpdateChildrenRefs(cc =>
@@ -183,12 +214,21 @@ namespace Akka.Actor
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected void SetTerminated()
         {
             UpdateChildrenRefs(c => TerminatedChildrenContainer.Instance);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected bool IsNormal { get { return ChildrenContainer.IsNormal; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected bool IsTerminating { get { return ChildrenContainer.IsTerminating; } }
 
         private bool IsWaitingForChildren  // This is called isWaitingForChildrenOrNull in AkkaJVM but is used like if returned a bool
@@ -242,6 +282,9 @@ namespace Akka.Actor
         /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that 
         /// has been initialized/created.
         /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryGetChildStatsByName(string name, out IChildStats child)   //This is called getChildByName in Akka JVM
         {
             return ChildrenContainer.TryGetByName(name, out child);
@@ -267,6 +310,9 @@ namespace Akka.Actor
         /// Tries to get the stats for the specified child.
         /// <remarks>Since the child exists <see cref="ChildRestartStats"/> is the only valid <see cref="IChildStats"/>.</remarks>
         /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         protected bool TryGetChildStatsByRef(IActorRef actor, out ChildRestartStats child)   //This is called getChildByRef in Akka JVM
         {
             return ChildrenContainer.TryGetByRef(actor, out child);
@@ -274,6 +320,11 @@ namespace Akka.Actor
 
         // In Akka JVM there is a getAllChildStats here. Use ChildrenRefs.Stats instead
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("Use TryGetSingleChild")]
         public IInternalActorRef GetSingleChild(string name)
         {
@@ -281,6 +332,12 @@ namespace Akka.Actor
             return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryGetSingleChild(string name, out IInternalActorRef child)
         {
             if (name.IndexOf('#') < 0)
@@ -311,6 +368,11 @@ namespace Akka.Actor
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         protected SuspendReason RemoveChildAndGetStateChange(IActorRef child)
         {
             var terminating = ChildrenContainer as TerminatingChildrenContainer;

@@ -6,9 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Pattern;
 
 namespace PersistenceBenchmark
 {
@@ -17,66 +20,71 @@ namespace PersistenceBenchmark
         // if you want to benchmark your persistent storage provides, paste the configuration in string below
         // by default we're checking against in-memory journal
         private static Config config = ConfigurationFactory.ParseString(@"
-            ");
+            akka {
+                suppress-json-serializer-warning = true
+                persistence.journal {
+                    plugin = ""akka.persistence.journal.sqlite""
+                    sqlite {
+                        class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                        table-name = event_journal
+                        metadata-table-name = journal_metadata
+                        auto-initialize = on
+                        connection-string = ""FullUri=file:memdb-journal.db?mode=memory&cache=shared;Version=3;""
+                    }
+                }
+            }");
 
-        public const int LoadCycles = 1000;
+        public const int ActorCount = 1000;
+        public const int MessagesPerActor = 100;
 
         static void Main(string[] args)
         {
-            using (var system = ActorSystem.Create("persistent-benchmark", config))
+            using (var system = ActorSystem.Create("persistent-benchmark", config.WithFallback(ConfigurationFactory.Default())))
             {
-                StressCommandsourcedActor(system, null);
-                StressEventsourcedActor(system, null);
+                Console.WriteLine("Performance benchmark starting...");
+
+                var actors = new IActorRef[ActorCount];
+                for (int i = 0; i < ActorCount; i++)
+                {
+                    var pid = "a-" + i;
+                    actors[i] = system.ActorOf(Props.Create(() => new PerformanceTestActor(pid)));
+                }
+
+                Task.WaitAll(actors.Select(a => a.Ask<Done>(Init.Instance)).Cast<Task>().ToArray());
+
+                Console.WriteLine("All actors have been initialized...");
+
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+
+                for (int i = 0; i < MessagesPerActor; i++)
+                    for (int j = 0; j < ActorCount; j++)
+                    {
+                        actors[j].Tell(new Store(1));
+                    }
+
+                var finished = new Task[ActorCount];
+                for (int i = 0; i < ActorCount; i++)
+                {
+                    finished[i] = actors[i].Ask<Finished>(Finish.Instance);
+                }
+
+                Task.WaitAll(finished);
+
+                var elapsed = stopwatch.ElapsedMilliseconds;
+
+                Console.WriteLine($"{ActorCount} actors stored {MessagesPerActor} events each in {elapsed/1000.0} sec. Average: {ActorCount*MessagesPerActor*1000.0/elapsed} events/sec");
+
+                foreach (Task<Finished> task in finished)
+                {
+                    if (!task.IsCompleted || task.Result.State != MessagesPerActor)
+                        throw new IllegalStateException("Actor's state was invalid");
+                }
             }
 
             Console.ReadLine();
         }
-
-        private static void StressCommandsourcedActor(ActorSystem system, long? failAt)
-        {
-            var pref = system.ActorOf(Props.Create(() => new CommandsourcedPersistentActor("commandsourced-1")));
-            StressPersistentActor(pref, failAt, "persistent commands");
-        }
-
-        private static void StressEventsourcedActor(ActorSystem system, long? failAt)
-        {
-            var pref = system.ActorOf(Props.Create(() => new EventsourcedPersistentActor("eventsourced-1")));
-            StressPersistentActor(pref, failAt, "persistent events");
-        }
-
-        private static void StressMixedActor(ActorSystem system, long? failAt)
-        {
-            var pref = system.ActorOf(Props.Create(() => new MixedPersistentActor("mixed-1")));
-            StressPersistentActor(pref, failAt, "persistent events and commands");
-        }
-
-        private static void StressStashingPersistentActor(ActorSystem system)
-        {
-            var pref = system.ActorOf(Props.Create(() => new StashingEventsourcedPersistentActor("stashing-1")));
-            var m = new Measure(LoadCycles);
-
-            var commands = Enumerable.Range(1, LoadCycles/3).SelectMany(_ => new[] {"a", "b", "c"}).ToArray();
-            m.StartMeasure();
-
-            foreach (var command in commands) pref.Tell(command);
-
-            pref.Ask(StopMeasure.Instance, TimeSpan.FromSeconds(100)).Wait();
-            var ratio = m.StopMeasure();
-            Console.WriteLine("Throughtput: {0} persisted events per second", ratio);
-        }
-
-        private static void StressPersistentActor(IActorRef pref, long? failAt, string description)
-        {
-            if (failAt.HasValue) pref.Tell(new FailAt(failAt.Value));
-
-            var m = new Measure(LoadCycles);
-            m.StartMeasure();
-
-            for (int i = 1; i <= LoadCycles; i++) pref.Tell("msg" + i);
-
-            pref.Ask(StopMeasure.Instance, TimeSpan.FromSeconds(100)).Wait();
-            var ratio = m.StopMeasure();
-            Console.WriteLine("Throughtput: {0} {1} per second", ratio, description);
-        }
+        
     }
 }

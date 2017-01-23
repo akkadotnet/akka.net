@@ -21,13 +21,16 @@ namespace Akka.Routing
     {
         private readonly SupervisorStrategy _supervisorStrategy;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected Pool Pool;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RouterPoolActor"/> class.
         /// </summary>
         /// <param name="supervisorStrategy">The supervisor strategy.</param>
-        /// <exception cref="ActorInitializationException"></exception>
+        /// <exception cref="ActorInitializationException">TBD</exception>
         public RouterPoolActor(SupervisorStrategy supervisorStrategy)
         {
             _supervisorStrategy = supervisorStrategy;
@@ -43,6 +46,10 @@ namespace Akka.Routing
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return _supervisorStrategy;

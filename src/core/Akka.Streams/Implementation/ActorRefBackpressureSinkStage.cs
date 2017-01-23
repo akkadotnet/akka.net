@@ -16,11 +16,12 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
     internal class ActorRefBackpressureSinkStage<TIn> : GraphStage<SinkShape<TIn>>
     {
         #region internal classes 
 
-        private sealed class Logic : GraphStageLogic
+        private sealed class Logic : InGraphStageLogic
         {
             private bool _acknowledgementReceived;
             private bool _completeReceived;
@@ -38,27 +39,33 @@ namespace Akka.Streams.Implementation
 
                 _buffer = new List<TIn>();
 
-                SetHandler(_stage._inlet, onPush: () =>
+                SetHandler(_stage._inlet, this);
+            }
+
+            public override void OnPush()
+            {
+                _buffer.Add(Grab(_stage._inlet));
+                if (_acknowledgementReceived)
                 {
-                    _buffer.Add(Grab(_stage._inlet));
-                    if (_acknowledgementReceived)
-                    {
-                        DequeueAndSend();
-                        _acknowledgementReceived = false;
-                    }
-                    if(_buffer.Count < maxBuffer)
-                        Pull(stage._inlet);
-                }, onUpstreamFinish: () =>
-                {
-                    if (_buffer.Count == 0)
-                        Finish();
-                    else
-                        _completeReceived = true;
-                }, onUpstreamFailure: ex =>
-                {
-                    stage._actorRef.Tell(stage._onFailureMessage(ex), _self);
-                    FailStage(ex);
-                });
+                    DequeueAndSend();
+                    _acknowledgementReceived = false;
+                }
+                if (_buffer.Count < _maxBuffer)
+                    Pull(_stage._inlet);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_buffer.Count == 0)
+                    Finish();
+                else
+                    _completeReceived = true;
+            }
+
+            public override void OnUpstreamFailure(Exception ex)
+            {
+                _stage._actorRef.Tell(_stage._onFailureMessage(ex), _self);
+                FailStage(ex);
             }
 
             private void Receive(Tuple<IActorRef, object> evt)
@@ -125,6 +132,14 @@ namespace Akka.Streams.Implementation
         private readonly object _onCompleteMessage;
         private readonly Func<Exception, object> _onFailureMessage;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <param name="onInitMessage">TBD</param>
+        /// <param name="ackMessage">TBD</param>
+        /// <param name="onCompleteMessage">TBD</param>
+        /// <param name="onFailureMessage">TBD</param>
         public ActorRefBackpressureSinkStage(IActorRef actorRef, object onInitMessage, object ackMessage,
             object onCompleteMessage, Func<Exception, object> onFailureMessage)
         {
@@ -137,10 +152,22 @@ namespace Akka.Streams.Implementation
             Shape = new SinkShape<TIn>(_inlet);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.ActorRefWithAck;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override SinkShape<TIn> Shape { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;

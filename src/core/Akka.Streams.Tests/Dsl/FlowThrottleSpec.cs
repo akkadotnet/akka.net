@@ -183,7 +183,7 @@ namespace Akka.Streams.Tests.Dsl
                         .Throttle(2, TimeSpan.FromMilliseconds(750), 0, ThrottleMode.Shaping)
                         .RunWith(this.SinkProbe<int>(), Materializer);
                 probe.Request(5);
-                var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(950), filter: x => x);
+                var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(900), filter: x => x);
                 probe.ExpectNoMsg(TimeSpan.FromMilliseconds(150))
                     .ExpectNext(3)
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(150))

@@ -284,7 +284,7 @@ namespace Akka.Persistence.TestKit.Journal
             {
                 var evt = i == 7 ? (object) new NotSerializableEvent(false) : "b-" + i;
                 return new AtomicWrite(new Persistent(evt, i, Pid, sender: ActorRefs.NoSender, writerGuid: WriterGuid));
-            });
+            }).ToArray();
 
             var probe = CreateTestProbe();
             Journal.Tell(new WriteMessages(msgs, probe.Ref, ActorInstanceId));

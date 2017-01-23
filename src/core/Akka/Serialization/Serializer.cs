@@ -72,7 +72,7 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="address">The address to use when serializing local ActorRef´s</param>
         /// <param name="obj">The object to serialize</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public byte[] ToBinaryWithAddress(Address address, object obj)
         {
             return Serialization.SerializeWithTransport(system, address, () => ToBinary(obj));
@@ -97,22 +97,38 @@ namespace Akka.Serialization
         /// only the assembly calling <see cref="Type.GetType(string)"/> is searched.
         /// If the (partial) assembly name is included, it searches in the specified assembly.
         /// </remarks>
-        /// <param name="type"></param>
-        /// <returns></returns>
+        /// <param name="type">TBD</param>
+        /// <returns>TBD</returns>
         protected static string TypeQualifiedNameForManifest(Type type)
         {
             return type == null ? string.Empty : string.Format("{0},{1}", type.FullName, type.Assembly.GetName().Name);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class SerializerWithStringManifest : Serializer
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         protected SerializerWithStringManifest(ExtendedActorSystem system) : base(system)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed override bool IncludeManifest { get { return true; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bytes">TBD</param>
+        /// <param name="type">TBD</param>
+        /// <returns>TBD</returns>
         public sealed override object FromBinary(byte[] bytes, Type type)
         {
             var manifest = TypeQualifiedNameForManifest(type);
@@ -122,12 +138,17 @@ namespace Akka.Serialization
         /// <summary>
         /// Produces an object from an array of bytes, with an optional type-hint.
         /// </summary>
+        /// <param name="binary">TBD</param>
+        /// <param name="manifest">TBD</param>
+        /// <returns>TBD</returns>
         public abstract object FromBinary(byte[] binary, string manifest);
 
         /// <summary>
         /// Return the manifest (type hint) that will be provided in the fromBinary method.
         /// Return <see cref="string.Empty"/> if not needed.
         /// </summary>
+        /// <param name="o">TBD</param>
+        /// <returns>TBD</returns>
         public abstract string Manifest(object o);
     }
 
@@ -136,12 +157,20 @@ namespace Akka.Serialization
     /// </summary>
     public static class SerializerIdentifierHelper
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="type">TBD</param>
+        /// <param name="system">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the system couldn't find the given serializer <paramref name="type"/> id in the configuration.
         /// </exception>
+        /// <returns>TBD</returns>
         public static int GetSerializerIdentifierFromConfig(Type type, ExtendedActorSystem system)
         {
             var config = system.Settings.Config.GetConfig(SerializationIdentifiers);

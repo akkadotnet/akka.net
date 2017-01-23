@@ -15,15 +15,26 @@ namespace Akka.Event
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class LoggerMailboxType : MailboxType, IProducesMessageQueue<LoggerMailbox> {
+    internal sealed class LoggerMailboxType : MailboxType, IProducesMessageQueue<LoggerMailbox>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <param name="config">TBD</param>
         public LoggerMailboxType(Settings settings, Config config) : base(settings, config)
         {
         }
 
-        /// <summary></summary>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="system">TBD</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="owner"/> or <paramref name="system"/> is undefined.
         /// </exception>
+        /// <returns>TBD</returns>
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
             if(owner != null && system != null) return new LoggerMailbox(owner, system);
@@ -39,6 +50,11 @@ namespace Akka.Event
         private readonly IActorRef _owner;
         private readonly ActorSystem _system;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="system">TBD</param>
         public LoggerMailbox(IActorRef owner, ActorSystem system) : base(new UnboundedMessageQueue())
         {
             _owner = owner;

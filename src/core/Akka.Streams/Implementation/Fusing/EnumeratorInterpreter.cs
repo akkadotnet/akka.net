@@ -14,11 +14,25 @@ using Akka.Streams.Stage;
 
 namespace Akka.Streams.Implementation.Fusing
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class EnumeratorInterpreter
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
         public sealed class EnumeratorUpstream<TIn> : GraphInterpreter.UpstreamBoundaryStageLogic
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool HasNext;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="input">TBD</param>
             public EnumeratorUpstream(IEnumerator<TIn> input)
             {
                 Out = new Outlet<TIn>("IteratorUpstream.out") { Id = 0 };
@@ -40,16 +54,38 @@ namespace Akka.Streams.Implementation.Fusing
                 onDownstreamFinish: CompleteStage);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override Outlet Out { get; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
         public sealed class EnumeratorDownstream<TOut> : GraphInterpreter.DownstreamBoundaryStageLogic, IEnumerator<TOut>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             internal bool IsDone;
+            /// <summary>
+            /// TBD
+            /// </summary>
             internal TOut NextElement;
+            /// <summary>
+            /// TBD
+            /// </summary>
             internal bool NeedsPull = true;
+            /// <summary>
+            /// TBD
+            /// </summary>
             internal Exception LastFailure;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public EnumeratorDownstream()
             {
                 In = new Inlet<TOut>("IteratorDownstream.in") { Id = 0 };
@@ -71,10 +107,20 @@ namespace Akka.Streams.Implementation.Fusing
                 });
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public override Inlet In { get; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void Dispose() { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public bool MoveNext()
             {
                 if (LastFailure != null)
@@ -90,6 +136,9 @@ namespace Akka.Streams.Implementation.Fusing
                 return true;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public void Reset()
             {
                 IsDone = false;
@@ -98,6 +147,10 @@ namespace Akka.Streams.Implementation.Fusing
                 LastFailure = null;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public bool HasNext()
             {
                 if(!IsDone)
@@ -106,6 +159,9 @@ namespace Akka.Streams.Implementation.Fusing
                 return !(IsDone && NeedsPull) || LastFailure != null;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TOut Current => NextElement;
 
             object IEnumerator.Current => Current;
@@ -121,11 +177,21 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
     internal sealed class EnumeratorInterpreter<TIn, TOut> : IEnumerable<TOut>
     {
         private readonly IEnumerable<PushPullStage<TIn, TOut>> _ops;
         private readonly EnumeratorInterpreter.EnumeratorUpstream<TIn> _upstream;
         private readonly EnumeratorInterpreter.EnumeratorDownstream<TOut> _downstream = new EnumeratorInterpreter.EnumeratorDownstream<TOut>();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="input">TBD</param>
+        /// <param name="ops">TBD</param>
         public EnumeratorInterpreter(IEnumerator<TIn> input, IEnumerable<PushPullStage<TIn, TOut>> ops)
         {
             _ops = ops;
@@ -167,16 +233,14 @@ namespace Akka.Streams.Implementation.Fusing
 
             var assembly = new GraphAssembly(stages, attributes, ins, inOwners, outs, outOwners);
             var tup = assembly.Materialize(Attributes.None, assembly.Stages.Select(x => x.Module).ToArray(), new Dictionary<IModule, object>(), _ => { });
-            var inHandlers = tup.Item1;
-            var outHandlers = tup.Item2;
-            var logics = tup.Item3;
+            var connections = tup.Item1;
+            var logics = tup.Item2;
 
             var interpreter = new GraphInterpreter(
                 assembly: assembly, 
                 materializer: NoMaterializer.Instance, 
-                log: NoLogger.Instance, 
-                inHandlers: inHandlers,
-                outHandlers: outHandlers,
+                log: NoLogger.Instance,
+                connections: connections,
                 logics: logics,
                 onAsyncInput: (_1, _2, _3) => { throw new NotSupportedException("IteratorInterpreter does not support asynchronous events.");},
                 fuzzingMode: false,
@@ -186,6 +250,10 @@ namespace Akka.Streams.Implementation.Fusing
             interpreter.Init(null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IEnumerator<TOut> GetEnumerator() => _downstream;
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

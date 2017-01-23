@@ -621,7 +621,7 @@ namespace Akka.Cluster.Tools.Singleton
                         return GoTo(ClusterSingletonState.WasOldest).Using(new WasOldestData(oldestData.Singleton, oldestData.SingletonTerminated, null));
                     }
                 }
-                else if (e.FsmEvent.Equals(HandOverToMe.Instance) && oldestData != null)
+                else if (e.FsmEvent is HandOverToMe && oldestData != null)
                 {
                     return GoToHandingOver(oldestData.Singleton, oldestData.SingletonTerminated, Sender);
                 }
@@ -659,7 +659,7 @@ namespace Akka.Cluster.Tools.Singleton
                     else
                         throw new ClusterSingletonManagerIsStuck(string.Format("Expected hand-over to [{0}] never occured", wasOldestData.NewOldest));
                 }
-                else if (e.FsmEvent.Equals(HandOverToMe.Instance) && wasOldestData != null)
+                else if (e.FsmEvent is HandOverToMe && wasOldestData != null)
                 {
                     return GoToHandingOver(wasOldestData.Singleton, wasOldestData.SingletonTerminated, Sender);
                 }
@@ -695,7 +695,7 @@ namespace Akka.Cluster.Tools.Singleton
                     {
                         return HandleHandOverDone(handingOverData.HandOverTo);
                     }
-                    if (e.FsmEvent.Equals(HandOverToMe.Instance)
+                    if (e.FsmEvent is HandOverToMe
                         && handingOverData.HandOverTo.Equals(Sender))
                     {
                         Sender.Tell(HandOverInProgress.Instance);
@@ -753,12 +753,12 @@ namespace Akka.Cluster.Tools.Singleton
                     AddRemoved(m.Address);
                     return Stay();
                 }
-                if (e.FsmEvent.Equals(TakeOverFromMe.Instance))
+                if (e.FsmEvent is TakeOverFromMe)
                 {
                     Log.Info("Ignoring TakeOver request in [{0}] from [{1}].", StateName, Sender.Path.Address);
                     return Stay();
                 }
-                if (e.FsmEvent.Equals(Cleanup.Instance))
+                if (e.FsmEvent is Cleanup)
                 {
                     CleanupOverdueNotMemberAnyMore();
                     return Stay();
