@@ -12,6 +12,7 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 {
+    
     public class ClusterClientStartSpecConfig : MultiNodeConfig
     {
         public RoleName Client { get; }
@@ -79,7 +80,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                 }
             }
 
-            [MultiNodeFact]
+            [MultiNodeFact(Skip = "Disable due to known issues with this spec which are currently under investigation by ArjenSmitss")]
             public void ClusterClientStartSpecs()
             {
                 Start_Cluster();
