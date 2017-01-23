@@ -65,18 +65,36 @@ namespace Akka.Cluster.Sharding
         private readonly int _rebalanceThreshold;
         private readonly int _maxSimultaneousRebalance;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="rebalanceThreshold">TBD</param>
+        /// <param name="maxSimultaneousRebalance">TBD</param>
         public LeastShardAllocationStrategy(int rebalanceThreshold, int maxSimultaneousRebalance)
         {
             _rebalanceThreshold = rebalanceThreshold;
             _maxSimultaneousRebalance = maxSimultaneousRebalance;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="requester">TBD</param>
+        /// <param name="shardId">TBD</param>
+        /// <param name="currentShardAllocations">TBD</param>
+        /// <returns>TBD</returns>
         public Task<IActorRef> AllocateShard(IActorRef requester, string shardId, IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations)
         {
             var min = GetMinBy(currentShardAllocations, kv => kv.Value.Count);
             return Task.FromResult(min.Key);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="currentShardAllocations">TBD</param>
+        /// <param name="rebalanceInProgress">TBD</param>
+        /// <returns>TBD</returns>
         public Task<IImmutableSet<ShardId>> Rebalance(IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations, IImmutableSet<ShardId> rebalanceInProgress)
         {
             if (rebalanceInProgress.Count < _maxSimultaneousRebalance)
