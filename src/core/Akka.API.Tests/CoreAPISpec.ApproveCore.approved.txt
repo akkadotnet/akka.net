@@ -2021,6 +2021,14 @@ namespace Akka
         public Akka.Case With<TMessage>(System.Action action) { }
         public Akka.Case With<TMessage>(System.Action<TMessage> action) { }
     }
+    public class Case<T> : Akka.IMatchResult
+    {
+        public Case(object message) { }
+        public bool WasHandled { get; }
+        public T ResultOrDefault(System.Func<object, T> function) { }
+        public Akka.Case<T> With<TMessage>(System.Func<T> function) { }
+        public Akka.Case<T> With<TMessage>(System.Func<TMessage, T> function) { }
+    }
     public interface IMatchResult
     {
         bool WasHandled { get; }
@@ -2037,6 +2045,7 @@ namespace Akka
     public class static PatternMatch
     {
         public static Akka.Case Match(this object target) { }
+        public static Akka.Case<T> Match<T>(this object target) { }
     }
 }
 namespace Akka.Configuration

@@ -11,7 +11,13 @@ using Akka.Actor;
 
 namespace Akka.Cluster.Sharding
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IShardRegionCommand { }
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IShardRegionQuery { }
 
     /// <summary>
@@ -31,11 +37,18 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class Passivate : IShardRegionCommand
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="stopMessage">TBD</param>
         public Passivate(object stopMessage)
         {
             StopMessage = stopMessage;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object StopMessage { get; private set; }
     }
 
@@ -47,6 +60,9 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class GracefulShutdown : IShardRegionCommand
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly GracefulShutdown Instance = new GracefulShutdown();
 
         private GracefulShutdown()
@@ -61,8 +77,15 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class ShardInitialized
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string ShardId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shardId">TBD</param>
         public ShardInitialized(string shardId)
         {
             ShardId = shardId;
@@ -77,6 +100,9 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class GetCurrentRegions : IShardRegionQuery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly GetCurrentRegions Instance = new GetCurrentRegions();
 
         private GetCurrentRegions()
@@ -90,7 +116,14 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class CurrentRegions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Address[] Regions;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="regions">TBD</param>
         public CurrentRegions(Address[] regions)
         {
             Regions = regions;
@@ -109,8 +142,15 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class GetClusterShardingStats : IShardRegionQuery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
         public GetClusterShardingStats(TimeSpan timeout)
         {
             Timeout = timeout;
@@ -123,8 +163,15 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class ClusterShardingStats
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IDictionary<Address, ShardRegionStats> Regions;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="regions">TBD</param>
         public ClusterShardingStats(IDictionary<Address, ShardRegionStats> regions)
         {
             Regions = regions;
@@ -143,6 +190,9 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class GetShardRegionStats : IShardRegionQuery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly GetShardRegionStats Instance = new GetShardRegionStats();
 
         private GetShardRegionStats()
@@ -159,6 +209,9 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class GetShardRegionState : IShardRegionQuery
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly GetShardRegionState Instance = new GetShardRegionState();
 
         private GetShardRegionState()
@@ -172,31 +225,62 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class CurrentShardRegionState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ISet<ShardState> Shards;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shards">TBD</param>
         public CurrentShardRegionState(ISet<ShardState> shards)
         {
             Shards = shards;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class ShardRegionStats
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IDictionary<string, int> Stats;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="stats">TBD</param>
         public ShardRegionStats(IDictionary<string, int> stats)
         {
             Stats = stats;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class ShardState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string ShardId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string[] EntityIds;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shardId">TBD</param>
+        /// <param name="entityIds">TBD</param>
         public ShardState(string shardId, string[] entityIds)
         {
             ShardId = shardId;

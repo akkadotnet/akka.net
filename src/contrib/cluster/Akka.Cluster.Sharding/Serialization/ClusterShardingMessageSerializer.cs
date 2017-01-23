@@ -17,6 +17,9 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Cluster.Sharding.Serialization
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ClusterShardingMessageSerializer : SerializerWithStringManifest
     {
         #region manifests
@@ -53,11 +56,18 @@ namespace Akka.Cluster.Sharding.Serialization
 
         private readonly Dictionary<string, Func<byte[], object>> _fromBinaryMap;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const int BufferSize = 1024 << 2;
 
         private readonly int _identifier;
         private ExtendedActorSystem _system;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public ClusterShardingMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _system = system;
@@ -95,8 +105,17 @@ namespace Akka.Cluster.Sharding.Serialization
             };
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override int Identifier { get { return _identifier; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is PersistentShardCoordinator.State) return Compress(CoordinatorStateToProto((PersistentShardCoordinator.State)obj));
@@ -127,6 +146,13 @@ namespace Akka.Cluster.Sharding.Serialization
             throw new ArgumentException(string.Format("Can't serialize object of type [{0}] in [{1}]", obj.GetType(), this.GetType()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="binary">TBD</param>
+        /// <param name="manifest">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override object FromBinary(byte[] binary, string manifest)
         {
             Func<byte[], object> factory;
@@ -138,6 +164,12 @@ namespace Akka.Cluster.Sharding.Serialization
             throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in [{1}]", manifest, this.GetType()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="o">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override string Manifest(object o)
         {
             if (o is Shard.ShardState) return EntityStateManifest;

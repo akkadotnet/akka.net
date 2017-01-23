@@ -229,7 +229,7 @@ namespace Akka.Actor.Internal
             {
                 Log.Warning($"NewtonSoftJsonSerializer has been detected as a default serializer. " +
                             $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Hyperion " +
-                            $"(for more info visit: http://getakka.net/docs/Serialization#how-to-setup-wire-as-default-serializer ). " +
+                            $"(for more info visit: http://getakka.net/docs/Serialization#how-to-setup-hyperion-as-default-serializer ). " +
                             $"If you want to suppress this message set HOCON `{configPath}` config flag to on.");
             }
         }
