@@ -255,6 +255,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.Hyperion", "contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj", "{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.Hyperion.Tests", "contrib\serializers\Akka.Serialization.Hyperion.Tests\Akka.Serialization.Hyperion.Tests.csproj", "{E3549E17-7206-44F0-A322-EDC058A0498F}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Transports", "Transports", "{6AD34FA4-7584-454D-ACD4-A8911E0BDB00}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.Transport.Helios", "contrib\transports\Akka.Remote.Transport.Helios\Akka.Remote.Transport.Helios.csproj", "{29FEAABC-E326-450A-9008-B5FCECF0115F}"
