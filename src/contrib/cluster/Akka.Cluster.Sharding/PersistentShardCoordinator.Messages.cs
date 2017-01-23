@@ -14,6 +14,9 @@ namespace Akka.Cluster.Sharding
 {
     using ShardId = String;
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     partial class PersistentShardCoordinator
     {
         #region Message types
@@ -34,8 +37,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class Register : ICoordinatorCommand, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef ShardRegion;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardRegion">TBD</param>
             public Register(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
@@ -43,6 +53,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as Register;
@@ -53,6 +68,10 @@ namespace Akka.Cluster.Sharding
                 return ShardRegion.Equals(other.ShardRegion);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -70,8 +89,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class RegisterProxy : ICoordinatorCommand, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef ShardRegionProxy;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardRegionProxy">TBD</param>
             public RegisterProxy(IActorRef shardRegionProxy)
             {
                 ShardRegionProxy = shardRegionProxy;
@@ -79,6 +105,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as RegisterProxy;
@@ -89,6 +120,10 @@ namespace Akka.Cluster.Sharding
                 return ShardRegionProxy.Equals(other.ShardRegionProxy);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -105,8 +140,15 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public sealed class RegisterAck : ICoordinatorMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Coordinator;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="coordinator">TBD</param>
             public RegisterAck(IActorRef coordinator)
             {
                 Coordinator = coordinator;
@@ -114,6 +156,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as RegisterAck;
@@ -124,6 +171,10 @@ namespace Akka.Cluster.Sharding
                 return Coordinator.Equals(other.Coordinator);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -142,8 +193,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class GetShardHome : ICoordinatorCommand, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public GetShardHome(string shard)
             {
                 Shard = shard;
@@ -151,6 +209,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as GetShardHome;
@@ -161,6 +224,10 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -178,9 +245,20 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class ShardHome : ICoordinatorMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Ref;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="ref">TBD</param>
             public ShardHome(string shard, IActorRef @ref)
             {
                 Shard = shard;
@@ -189,6 +267,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardHome;
@@ -200,6 +283,10 @@ namespace Akka.Cluster.Sharding
                     && Ref.Equals(other.Ref);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -219,8 +306,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class HostShard : ICoordinatorMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public HostShard(string shard)
             {
                 Shard = shard;
@@ -228,6 +322,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as HostShard;
@@ -238,6 +337,10 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -255,8 +358,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class ShardStarted : ICoordinatorMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public ShardStarted(string shard)
             {
                 Shard = shard;
@@ -264,6 +374,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardStarted;
@@ -274,6 +389,10 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -286,18 +405,25 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// <see cref="PersistentShardCoordinator"/> initiates rebalancing process by sending this message
-        /// to all registered <see cref="ShardRegion"/> actors (including proxy only). They are
+        /// <see cref="PersistentShardCoordinator" /> initiates rebalancing process by sending this message
+        /// to all registered <see cref="ShardRegion" /> actors (including proxy only). They are
         /// supposed to discard their known location of the shard, i.e. start buffering
-        /// incoming messages for the shard. They reply with <see cref="BeginHandOffAck"/>.
-        /// When all have replied the <see cref="PersistentShardCoordinator"/> continues by sending
-        /// <see cref="HandOff"/> to the <see cref="ShardRegion"/> responsible for the shard.
+        /// incoming messages for the shard. They reply with <see cref="BeginHandOffAck" />.
+        /// When all have replied the <see cref="PersistentShardCoordinator" /> continues by sending
+        /// <see cref="HandOff" /> to the <see cref="ShardRegion" /> responsible for the shard.
         /// </summary>
         [Serializable]
         public sealed class BeginHandOff : ICoordinatorMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public BeginHandOff(string shard)
             {
                 Shard = shard;
@@ -305,6 +431,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as BeginHandOff;
@@ -315,6 +446,10 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -332,8 +467,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class BeginHandOffAck : ICoordinatorCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public BeginHandOffAck(string shard)
             {
                 Shard = shard;
@@ -341,6 +483,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as BeginHandOffAck;
@@ -351,11 +498,15 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
                 {
-                    return Shard?.GetHashCode() ?? 0; ;
+                    return Shard?.GetHashCode() ?? 0;
                 }
             }
 
@@ -371,8 +522,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class HandOff : ICoordinatorMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public HandOff(string shard)
             {
                 Shard = shard;
@@ -380,6 +538,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as HandOff;
@@ -390,6 +553,10 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -407,8 +574,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class ShardStopped : ICoordinatorCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public ShardStopped(string shard)
             {
                 Shard = shard;
@@ -416,6 +590,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardStopped;
@@ -426,6 +605,10 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -443,10 +626,25 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class AllocateShardResult : ICoordinatorCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef ShardRegion; // option
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef GetShardHomeSender;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="shardRegion">TBD</param>
+            /// <param name="getShardHomeSender">TBD</param>
             public AllocateShardResult(string shard, IActorRef shardRegion, IActorRef getShardHomeSender)
             {
                 Shard = shard;
@@ -461,8 +659,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class RebalanceResult : ICoordinatorCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IEnumerable<ShardId> Shards;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shards">TBD</param>
             public RebalanceResult(IEnumerable<string> shards)
             {
                 Shards = shards;
@@ -475,8 +680,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class GracefulShutdownRequest : ICoordinatorCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef ShardRegion;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardRegion">TBD</param>
             public GracefulShutdownRequest(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
@@ -484,6 +696,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as GracefulShutdownRequest;
@@ -494,6 +711,10 @@ namespace Akka.Cluster.Sharding
                 return ShardRegion.Equals(other.ShardRegion);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -510,11 +731,21 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public interface IDomainEvent { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public class ShardRegionRegistered : IDomainEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Region;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="region">TBD</param>
             public ShardRegionRegistered(IActorRef region)
             {
                 Region = region;
@@ -522,6 +753,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardRegionRegistered;
@@ -532,6 +768,10 @@ namespace Akka.Cluster.Sharding
                 return Region.Equals(other.Region);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -543,11 +783,21 @@ namespace Akka.Cluster.Sharding
             #endregion
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public class ShardRegionProxyRegistered : IDomainEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef RegionProxy;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="regionProxy">TBD</param>
             public ShardRegionProxyRegistered(IActorRef regionProxy)
             {
                 RegionProxy = regionProxy;
@@ -555,6 +805,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardRegionProxyRegistered;
@@ -565,6 +820,10 @@ namespace Akka.Cluster.Sharding
                 return RegionProxy.Equals(other.RegionProxy);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -576,11 +835,21 @@ namespace Akka.Cluster.Sharding
             #endregion
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public class ShardRegionTerminated : IDomainEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef Region;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="region">TBD</param>
             public ShardRegionTerminated(IActorRef region)
             {
                 Region = region;
@@ -588,6 +857,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardRegionTerminated;
@@ -598,6 +872,10 @@ namespace Akka.Cluster.Sharding
                 return Region.Equals(other.Region);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -609,11 +887,21 @@ namespace Akka.Cluster.Sharding
             #endregion
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public class ShardRegionProxyTerminated : IDomainEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef RegionProxy;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="regionProxy">TBD</param>
             public ShardRegionProxyTerminated(IActorRef regionProxy)
             {
                 RegionProxy = regionProxy;
@@ -621,6 +909,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardRegionProxyTerminated;
@@ -631,6 +924,10 @@ namespace Akka.Cluster.Sharding
                 return RegionProxy.Equals(other.RegionProxy);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -642,12 +939,28 @@ namespace Akka.Cluster.Sharding
             #endregion
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public class ShardHomeAllocated : IDomainEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public readonly ShardId Shard;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public readonly IActorRef Region;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="region">TBD</param>
             public ShardHomeAllocated(string shard, IActorRef region)
             {
                 Shard = shard;
@@ -656,6 +969,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardHomeAllocated;
@@ -667,6 +985,10 @@ namespace Akka.Cluster.Sharding
                     && Region.Equals(other.Region);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -680,11 +1002,21 @@ namespace Akka.Cluster.Sharding
             #endregion
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public class ShardHomeDeallocated : IDomainEvent
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId Shard;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
             public ShardHomeDeallocated(string shard)
             {
                 Shard = shard;
@@ -692,6 +1024,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardHomeDeallocated;
@@ -702,6 +1039,10 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -713,9 +1054,15 @@ namespace Akka.Cluster.Sharding
             #endregion
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class StateInitialized
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly StateInitialized Instance = new StateInitialized();
             private StateInitialized() { }
         }

@@ -19,11 +19,20 @@ namespace Akka.Cluster.Sharding
     using Msg = Object;
 
     //TODO: figure out how not to derive from persistent actor for the sake of alternative ddata based impl
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class Shard : PersistentActor
     {
         #region messages
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected interface IShardCommand { }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public interface IShardQuery { }
 
         /// <summary>
@@ -32,8 +41,15 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         internal protected class RetryPersistence : IShardCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly StateChange Payload;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="payload">TBD</param>
             public RetryPersistence(StateChange payload)
             {
                 Payload = payload;
@@ -46,6 +62,9 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         internal protected sealed class SnapshotTick : IShardCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly SnapshotTick Instance = new SnapshotTick();
 
             private SnapshotTick()
@@ -60,18 +79,35 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         internal protected sealed class RestartEntity : IShardCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly EntityId EntityId;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="entityId">TBD</param>
             public RestartEntity(string entityId)
             {
                 EntityId = entityId;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal protected abstract class StateChange
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly EntityId EntityId;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="entityId">TBD</param>
             protected StateChange(EntityId entityId)
             {
                 EntityId = entityId;
@@ -79,6 +115,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as StateChange;
@@ -89,6 +130,10 @@ namespace Akka.Cluster.Sharding
                 return EntityId.Equals(other.EntityId);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -106,6 +151,10 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         internal protected sealed class EntityStarted : StateChange
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="entityId">TBD</param>
             public EntityStarted(string entityId) : base(entityId)
             {
             }
@@ -117,14 +166,24 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         internal protected sealed class EntityStopped : StateChange
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="entityId">TBD</param>
             public EntityStopped(string entityId) : base(entityId)
             {
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class GetCurrentShardState : IShardQuery
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly GetCurrentShardState Instance = new GetCurrentShardState();
 
             private GetCurrentShardState()
@@ -132,12 +191,26 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class CurrentShardState
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly string ShardId;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly string[] EntityIds;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardId">TBD</param>
+            /// <param name="entityIds">TBD</param>
             public CurrentShardState(string shardId, string[] entityIds)
             {
                 ShardId = shardId;
@@ -145,9 +218,15 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class GetShardStats : IShardQuery
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly GetShardStats Instance = new GetShardStats();
 
             private GetShardStats()
@@ -155,12 +234,26 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class ShardStats
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly string ShardId;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly int EntityCount;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardId">TBD</param>
+            /// <param name="entityCount">TBD</param>
             public ShardStats(string shardId, int entityCount)
             {
                 ShardId = shardId;
@@ -169,6 +262,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardStats;
@@ -180,6 +278,10 @@ namespace Akka.Cluster.Sharding
                     && EntityCount.Equals(other.EntityCount);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -201,10 +303,20 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         internal protected class ShardState : IClusterShardingSerializable
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ShardState Empty = new ShardState(ImmutableHashSet<string>.Empty);
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IImmutableSet<EntityId> Entries;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="entries">TBD</param>
             public ShardState(IImmutableSet<EntityId> entries)
             {
                 Entries = entries;
@@ -212,6 +324,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardState;
@@ -222,6 +339,10 @@ namespace Akka.Cluster.Sharding
                 return Entries.SequenceEqual(other.Entries);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -240,27 +361,76 @@ namespace Akka.Cluster.Sharding
             #endregion
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string TypeName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ShardId ShardId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Actor.Props EntityProps;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ClusterShardingSettings Settings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IdExtractor ExtractEntityId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ShardResolver ExtractShardId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly object HandOffStopMessage;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<IActorRef, EntityId> IdByRef = ImmutableDictionary<IActorRef, EntityId>.Empty;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<EntityId, IActorRef> RefById = ImmutableDictionary<EntityId, IActorRef>.Empty;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableSet<IActorRef> Passivating = ImmutableHashSet<IActorRef>.Empty;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<EntityId, IImmutableList<Tuple<Msg, IActorRef>>> MessageBuffers =
             ImmutableDictionary<EntityId, IImmutableList<Tuple<Msg, IActorRef>>>.Empty;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IActorRef HandOffStopper = null;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ShardState State = ShardState.Empty;
 
         private ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeName">TBD</param>
+        /// <param name="shardId">TBD</param>
+        /// <param name="entityProps">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="extractEntityId">TBD</param>
+        /// <param name="extractShardId">TBD</param>
+        /// <param name="handOffStopMessage">TBD</param>
         protected Shard(
             string typeName,
             string shardId,
@@ -279,11 +449,17 @@ namespace Akka.Cluster.Sharding
             HandOffStopMessage = handOffStopMessage;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log
         {
             get { return _log ?? (_log = Context.GetLogger()); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected int TotalBufferSize
         {
             get { return MessageBuffers.Aggregate(0, (sum, entity) => sum + entity.Value.Count); }
@@ -291,16 +467,30 @@ namespace Akka.Cluster.Sharding
 
         #region common shard methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual void Initialized()
         {
             Context.Parent.Tell(new ShardInitialized(ShardId));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>>
+        /// <param name="evt">TBD</param>
+        /// <param name="handler">TBD</param>
         protected virtual void ProcessChange<T>(T evt, Action<T> handler)
         {
             handler(evt);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected bool HandleCommand(object message)
         {
             if (message is Terminated) HandleTerminated(((Terminated) message).ActorRef);
@@ -319,6 +509,10 @@ namespace Akka.Cluster.Sharding
             else if (query is GetShardStats) Sender.Tell(new ShardStats(ShardId, State.Entries.Count));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tref">TBD</param>
         protected virtual void EntityTerminated(IActorRef tref)
         {
             ShardId id;
@@ -419,6 +613,10 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
         protected void PassivateCompleted(EntityStopped evt)
         {
             var id = evt.EntityId;
@@ -432,6 +630,10 @@ namespace Akka.Cluster.Sharding
             MessageBuffers = MessageBuffers.Remove(id);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected void SendMessageBuffer(EntityStarted message)
         {
             var id = message.EntityId;
@@ -485,6 +687,13 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="payload">TBD</param>
+        /// <param name="sender">TBD</param>
         protected virtual void DeliverTo(string id, object message, object payload, IActorRef sender)
         {
             var name = Uri.EscapeDataString(id);
@@ -496,6 +705,11 @@ namespace Akka.Cluster.Sharding
                 child.Tell(payload, sender);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <returns>TBD</returns>
         protected IActorRef GetEntity(string id)
         {
             var name = Uri.EscapeDataString(id);
