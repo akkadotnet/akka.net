@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Remote.Proto;
 using Akka.Serialization;
 using Google.ProtocolBuffers;
 
