@@ -102,7 +102,7 @@ namespace Akka.Cluster.Tools.Client
             int bufferSize,
             TimeSpan? reconnectTimeout = null)
         {
-            if (bufferSize == 0 || bufferSize > 10000)
+            if (bufferSize < 0 || bufferSize > 10000)
             {
                 throw new ArgumentException("BufferSize must be >= 0 and <= 10000");
             }

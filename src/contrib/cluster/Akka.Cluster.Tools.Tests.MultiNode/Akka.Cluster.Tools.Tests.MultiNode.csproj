@@ -76,6 +76,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClusterClient\ClusterClientStartSpecConfig.cs" />
     <Compile Include="ClusterClient\ClusterClientStopSpec.cs" />
     <Compile Include="ClusterClient\ClusterClientSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
