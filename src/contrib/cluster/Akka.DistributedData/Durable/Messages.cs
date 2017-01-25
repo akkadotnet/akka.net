@@ -9,7 +9,9 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.DistributedData.Internal;
 
 namespace Akka.DistributedData.Durable
 {
@@ -18,13 +20,13 @@ namespace Akka.DistributedData.Durable
     /// should be used to signal success or failure of the operation to the contained
     /// <see cref="StoreReply.ReplyTo"/> actor.
     /// </summary>
-    public sealed class Store
+    internal sealed class Store
     {
         public readonly string Key;
-        public readonly IReplicatedData Data;
+        public readonly DurableDataEnvelope Data;
         public readonly StoreReply Reply;
 
-        public Store(string key, IReplicatedData data, StoreReply reply = null)
+        public Store(string key, DurableDataEnvelope data, StoreReply reply = null)
         {
             Key = key;
             Data = data;
@@ -32,7 +34,7 @@ namespace Akka.DistributedData.Durable
         }
     }
 
-    public sealed class StoreReply
+    internal sealed class StoreReply
     {
         public readonly object SuccessMessage;
         public readonly object FailureMessage;
@@ -52,10 +54,10 @@ namespace Akka.DistributedData.Durable
     /// It must reply with 0 or more `LoadData` messages
     /// followed by one `LoadAllCompleted` message to the `sender` (the `Replicator`).
     /// 
-    /// If the `LoadAll` fails it can throw `LoadFailed` and the `Replicator` supervisor
+    /// If the `LoadAll` fails it can throw `LoadFailedException` and the `Replicator` supervisor
     /// will stop itself and the durable store.
     /// </summary>
-    public sealed class LoadAll : IEquatable<LoadAll>
+    internal sealed class LoadAll : IEquatable<LoadAll>
     {
         public static readonly LoadAll Instance = new LoadAll();
         private LoadAll() { }
@@ -63,17 +65,17 @@ namespace Akka.DistributedData.Durable
         public override bool Equals(object obj) => obj is LoadAll;
     }
 
-    public sealed class LoadData
+    internal sealed class LoadData
     {
-        public readonly ImmutableDictionary<string, IReplicatedData> Data;
+        public readonly ImmutableDictionary<string, DurableDataEnvelope> Data;
 
-        public LoadData(ImmutableDictionary<string, IReplicatedData> data)
+        public LoadData(ImmutableDictionary<string, DurableDataEnvelope> data)
         {
             Data = data;
         }
     }
 
-    public sealed class LoadAllCompleted : IEquatable<LoadAllCompleted>
+    internal sealed class LoadAllCompleted : IEquatable<LoadAllCompleted>
     {
         public static readonly LoadAllCompleted Instance = new LoadAllCompleted();
         private LoadAllCompleted() { }
@@ -81,23 +83,22 @@ namespace Akka.DistributedData.Durable
         public override bool Equals(object obj) => obj is LoadAllCompleted;
     }
 
-    public sealed class LoadFailed
+    internal sealed class LoadFailedException : AkkaException
     {
-        public readonly string Message;
-        public readonly Exception Cause;
-
-        public LoadFailed(string message, Exception cause)
+        public LoadFailedException(string message, Exception cause) : base(message, cause)
         {
-            Message = message;
-            Cause = cause;
+        }
+
+        public LoadFailedException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
         }
     }
 
-    public sealed class DurableDataEnvelope : IReplicatorMessage, IEquatable<DurableDataEnvelope>
+    internal sealed class DurableDataEnvelope : IReplicatorMessage, IEquatable<DurableDataEnvelope>
     {
-        public readonly IReplicatedData Data;
+        public readonly DataEnvelope Data;
 
-        public DurableDataEnvelope(IReplicatedData data)
+        public DurableDataEnvelope(DataEnvelope data)
         {
             Data = data;
         }

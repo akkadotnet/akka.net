@@ -9,6 +9,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using System;
+using System.Collections.Immutable;
 
 namespace Akka.DistributedData
 {
@@ -31,6 +32,19 @@ namespace Akka.DistributedData
             var dispatcher = config.GetString("use-dispatcher");
             if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
 
+            var durableConfig = config.GetConfig("durable");
+            var durableKeys = durableConfig.GetStringList("keys");
+            Props durableStoreProps = Props.Empty;
+            if (durableKeys.Count != 0)
+            {
+                var durableStoreType = Type.GetType(durableConfig.GetString("store-actor-class"));
+                if (durableStoreType == null)
+                {
+                    throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` must be set when `akka.cluster.distributed-data.durable.keys` have been configured.");
+                }
+                durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(durableConfig.GetString("use-dispatcher"));
+            }
+
             return new ReplicatorSettings(
                 role: config.GetString("role"),
                 gossipInterval: config.GetTimeSpan("gossip-interval"),
@@ -38,7 +52,11 @@ namespace Akka.DistributedData
                 maxDeltaElements: config.GetInt("max-delta-elements"),
                 dispatcher: dispatcher,
                 pruningInterval: config.GetTimeSpan("pruning-interval"),
-                maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination"));
+                maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination"),
+                durableKeys: durableKeys.ToImmutableHashSet(),
+                durableStoreProps: durableStoreProps,
+                pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live"),
+                durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live"));
         }
 
         /// <summary>
@@ -81,13 +99,39 @@ namespace Akka.DistributedData
         /// </summary>
         public TimeSpan MaxPruningDissemination { get; }
 
+        /// <summary>
+        /// Keys that are durable. Prefix matching is supported by using `*` at the end of a key.
+        /// All entries can be made durable by including "*" in the `Set`.
+        /// </summary>
+        public IImmutableSet<string> DurableKeys { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public TimeSpan PruningMarkerTimeToLive { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public TimeSpan DurablePruningMarkerTimeToLive { get; }
+
+        /// <summary>
+        /// Props for the durable store actor, when taken from actor class type name, it requires
+        /// its constructor to take <see cref="Config"/> as constructor parameter.
+        /// </summary>
+        public Props DurableStoreProps { get; }
+
         public ReplicatorSettings(string role,
                                   TimeSpan gossipInterval,
                                   TimeSpan notifySubscribersInterval,
                                   int maxDeltaElements,
                                   string dispatcher,
                                   TimeSpan pruningInterval,
-                                  TimeSpan maxPruningDissemination)
+                                  TimeSpan maxPruningDissemination, 
+                                  IImmutableSet<string> durableKeys, 
+                                  Props durableStoreProps, 
+                                  TimeSpan pruningMarkerTimeToLive, 
+                                  TimeSpan durablePruningMarkerTimeToLive)
         {
             Role = role;
             GossipInterval = gossipInterval;
@@ -96,31 +140,35 @@ namespace Akka.DistributedData
             Dispatcher = dispatcher;
             PruningInterval = pruningInterval;
             MaxPruningDissemination = maxPruningDissemination;
+            DurableKeys = durableKeys;
+            DurableStoreProps = durableStoreProps;
+            PruningMarkerTimeToLive = pruningMarkerTimeToLive;
+            DurablePruningMarkerTimeToLive = durablePruningMarkerTimeToLive;
         }
 
         public object Clone()
         {
-            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination);
+            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination, DurableKeys, DurableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
         }
 
         public ReplicatorSettings WithRole(string role)
         {
-            return new ReplicatorSettings(role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination);
+            return new ReplicatorSettings(role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination, DurableKeys, DurableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
         }
 
         public ReplicatorSettings WithGossipInterval(TimeSpan gossipInterval)
         {
-            return new ReplicatorSettings(Role, gossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination);
+            return new ReplicatorSettings(Role, gossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination, DurableKeys, DurableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
         }
 
         public ReplicatorSettings WithNotifySubscribersInterval(TimeSpan notifySubscribersInterval)
         {
-            return new ReplicatorSettings(Role, GossipInterval, notifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination);
+            return new ReplicatorSettings(Role, GossipInterval, notifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination, DurableKeys, DurableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
         }
 
         public ReplicatorSettings WithMaxDeltaElements(int maxDeltaElements)
         {
-            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, maxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination);
+            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, maxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination, DurableKeys, DurableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
         }
 
         public ReplicatorSettings WithDispatcher(string dispatcher)
@@ -129,12 +177,27 @@ namespace Akka.DistributedData
             {
                 dispatcher = Dispatchers.DefaultDispatcherId;
             }
-            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, dispatcher, PruningInterval, MaxPruningDissemination);
+            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, dispatcher, PruningInterval, MaxPruningDissemination, DurableKeys, DurableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
         }
 
         public ReplicatorSettings WithPruning(TimeSpan pruningInterval, TimeSpan maxPruningDissemination)
         {
-            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, pruningInterval, maxPruningDissemination);
+            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, pruningInterval, maxPruningDissemination, DurableKeys, DurableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
+        }
+
+        public ReplicatorSettings WithDurableKeys(IImmutableSet<string> durableKeys)
+        {
+            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination, durableKeys, DurableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
+        }
+
+        public ReplicatorSettings WithDurableStoreProps(Props durableStoreProps)
+        {
+            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination, DurableKeys, durableStoreProps, PruningMarkerTimeToLive, DurablePruningMarkerTimeToLive);
+        }
+
+        public ReplicatorSettings WithPruningMarkerTimeToLive(TimeSpan pruningMarkerTtl, TimeSpan durablePruningMarkerTtl)
+        {
+            return new ReplicatorSettings(Role, GossipInterval, NotifySubscribersInterval, MaxDeltaElements, Dispatcher, PruningInterval, MaxPruningDissemination, DurableKeys, DurableStoreProps, pruningMarkerTtl, durablePruningMarkerTtl);
         }
     }
 }

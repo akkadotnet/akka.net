@@ -49,17 +49,7 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public static Replicator.Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, object request, Func<T, T> modify) where T : IReplicatedData =>
             new Replicator.Update(key, initial, consistency, data => modify((T)data), request);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="key">TBD</param>
-        /// <param name="consistency">TBD</param>
-        /// <returns>TBD</returns>
-        public static Replicator.Get Get<T>(IKey<T> key, IReadConsistency consistency) where T : IReplicatedData =>
-            new Replicator.Get(key, consistency);
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -68,7 +58,7 @@ namespace Akka.DistributedData
         /// <param name="consistency">TBD</param>
         /// <param name="request">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Get Get<T>(IKey<T> key, IReadConsistency consistency, object request) where T : IReplicatedData =>
+        public static Replicator.Get Get<T>(IKey<T> key, IReadConsistency consistency, object request = null) where T : IReplicatedData =>
             new Replicator.Get(key, consistency, request);
 
         /// <summary>
@@ -78,8 +68,8 @@ namespace Akka.DistributedData
         /// <param name="key">TBD</param>
         /// <param name="consistency">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Delete Delete<T>(IKey<T> key, IWriteConsistency consistency) where T: IReplicatedData =>
-            new Replicator.Delete(key, consistency);
+        public static Replicator.Delete Delete<T>(IKey<T> key, IWriteConsistency consistency, object request = null) where T: IReplicatedData =>
+            new Replicator.Delete(key, consistency, request);
 
         /// <summary>
         /// TBD

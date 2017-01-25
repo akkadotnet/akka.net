@@ -14,11 +14,8 @@ using System.IO;
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.DistributedData.Internal;
 using Akka.Event;
-using Akka.IO;
 using Akka.Serialization;
-using Google.ProtocolBuffers;
 using LightningDB;
 
 namespace Akka.DistributedData.Durable
@@ -28,10 +25,10 @@ namespace Akka.DistributedData.Durable
     /// has to implement the protocol with the messages defined here.
     /// 
     /// At startup the <see cref="Replicator"/> creates the durable store actor and sends the
-    /// <see cref="Load"/> message to it. It must then reply with 0 or more <see cref="LoadData"/> messages
-    /// followed by one <see cref="LoadAllCompleted"/> message to the `sender` (the <see cref="Replicator"/>).
+    /// <see cref="LoadAll"/> message to it. It must then reply with 0 or more <see cref="LoadData"/> messages
+    /// followed by one <see cref="LoadAllCompleted"/> message to the <see cref="IActorContext.Sender"/> (the <see cref="Replicator"/>).
     /// 
-    /// If the <see cref="LoadAll"/> fails it can throw <see cref="LoadFailed"/> and the <see cref="Replicator"/> supervisor
+    /// If the <see cref="LoadAll"/> fails it can throw <see cref="LoadFailedException"/> and the <see cref="Replicator"/> supervisor
     /// will stop itself and the durable store.
     /// 
     /// When the <see cref="Replicator"/> needs to store a value it sends a <see cref="Store"/> message
@@ -49,13 +46,11 @@ namespace Akka.DistributedData.Durable
         public static Actor.Props Props(Config config) => Actor.Props.Create(() => new LmdbDurableStore(config));
 
         private readonly TimeSpan _writeBehindInterval;
-        private readonly Dictionary<string, IReplicatedData> _pending = new Dictionary<string, IReplicatedData>();
+        private readonly Dictionary<string, DurableDataEnvelope> _pending = new Dictionary<string, DurableDataEnvelope>();
         private readonly LightningEnvironment _environment;
         private readonly LightningDatabase _db;
         private readonly ILoggingAdapter _log;
         private readonly Serializer _serializer;
-        private ByteBuffer _keyBuffer;
-        private ByteBuffer _valueBuffer;
 
         public LmdbDurableStore(Config config)
         {
@@ -86,9 +81,7 @@ namespace Akka.DistributedData.Durable
             {
                 _db = tx.OpenDatabase("ddata", new DatabaseConfiguration {Flags = DatabaseOpenFlags.Create});
             }
-
-            _keyBuffer = ByteBuffer.Allocate(1024);
-            _valueBuffer = ByteBuffer.Allocate(100 * 1014);
+            
             _serializer = Context.System.Serialization.FindSerializerForType(typeof(DurableDataEnvelope));
 
             Init();
@@ -150,16 +143,21 @@ namespace Akka.DistributedData.Durable
                     try
                     {
                         var n = 0;
-                        var builder = ImmutableDictionary<string, IReplicatedData>.Empty.ToBuilder();
+                        var builder = ImmutableDictionary<string, DurableDataEnvelope>.Empty.ToBuilder();
                         cursor = tx.CreateCursor(_db);
                         foreach (var entry in cursor)
                         {
                             n++;
                             var key = Encoding.UTF8.GetString(entry.Key);
                             var envelope = (DurableDataEnvelope)_serializer.FromBinary(entry.Value, typeof(DurableDataEnvelope));
-                            builder.Add(new KeyValuePair<string, IReplicatedData>(key, envelope.Data));
+                            builder.Add(new KeyValuePair<string, DurableDataEnvelope>(key, envelope));
                         }
-                        //TODO
+
+                        if (builder.Count > 0)
+                        {
+                            var loadData = new LoadData(builder.ToImmutable());
+                            Sender.Tell(loadData);
+                        }
 
                         Sender.Tell(LoadAllCompleted.Instance);
 
@@ -170,7 +168,7 @@ namespace Akka.DistributedData.Durable
                     }
                     catch (Exception e)
                     {
-                        //TODO
+                        throw new LoadFailedException("failed to load durable distributed-data", e);
                     }
                     finally
                     {
@@ -180,19 +178,11 @@ namespace Akka.DistributedData.Durable
             });
         }
 
-        private void DbPut(LightningTransaction tx, string key, IReplicatedData data)
+        private void DbPut(LightningTransaction tx, string key, DurableDataEnvelope data)
         {
-            try
-            {
-                Encoding.UTF8.GetBytes(key, 0, key.Length, _keyBuffer.Array(), 0);
-                var value = _serializer.ToBinary(new DurableDataEnvelope(data));
-                _valueBuffer.Put(value);
-                tx.Put(_db,);
-            }
-            finally
-            {
-                
-            }
+            var byteKey = Encoding.UTF8.GetBytes(key);
+            var byteValue = _serializer.ToBinary(data);
+            tx.Put(_db, byteKey, byteValue);
         }
 
         private void DoWriteBehind()
@@ -204,11 +194,21 @@ namespace Akka.DistributedData.Durable
                 {
                     try
                     {
+                        foreach (var entry in _pending)
+                        {
+                            DbPut(tx, entry.Key, entry.Value);
+                        }
+                        tx.Commit();
 
+                        if (_log.IsDebugEnabled)
+                        {
+                            _log.Debug("store and commit of [{0}] entries took {1} ms", _pending.Count, (DateTime.UtcNow - t0).TotalMilliseconds);
+                        }
                     }
                     catch (Exception cause)
                     {
-
+                        _log.Error(cause, "failed to store [{0}]", string.Join(", ", _pending.Keys));
+                        tx.Abort();
                     }
                     finally
                     {

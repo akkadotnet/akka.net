@@ -7,13 +7,13 @@
 
 using System;
 using System.Collections.Generic;
-using Akka.IO;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Event;
+using Google.ProtocolBuffers;
 
 namespace Akka.DistributedData.Internal
 {
@@ -170,6 +170,43 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => "WriteAck";
+    }
+
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    [Serializable]
+    internal sealed class WriteNack : IReplicatorMessage, IEquatable<WriteNack>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal static readonly WriteNack Instance = new WriteNack();
+
+        private WriteNack() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
+        public bool Equals(WriteNack other) => true;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
+        public override bool Equals(object obj) => obj is WriteNack;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override int GetHashCode() => 1;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString() => "WriteNack";
     }
 
     /// <summary>
@@ -565,7 +602,7 @@ namespace Akka.DistributedData.Internal
     /// </summary>
     /// <returns>TBD</returns>
     [Serializable]
-    public sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>
+    internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>
     {
         /// <summary>
         /// TBD

@@ -615,6 +615,44 @@ namespace Akka.DistributedData
                 ExceptionDispatchInfo.Capture(Cause).Throw();
             }
         }
+
+        /// <summary>
+        /// The local store or direct replication of the <see cref="Update"/> could not be fulfill according to
+        /// the given <see cref="IWriteConsistency"/> due to durable store errors. This is
+        /// only used for entries that have been configured to be durable.
+        /// 
+        /// The <see cref="Update"/> was still performed in memory locally and possibly replicated to some nodes,
+        /// but it might not have been written to durable storage.
+        /// It will eventually be disseminated to other replicas, unless the local replica
+        /// crashes before it has been able to communicate with other replicas.
+        /// </summary>
+        public sealed class StoreFailure : IUpdateFailure, IDeleteResponse
+        {
+            private readonly IKey _key;
+            private readonly object _request;
+
+            public StoreFailure(IKey key, object request = null)
+            {
+                _key = key;
+                _request = request;
+            }
+
+            IKey IUpdateResponse.Key => _key;
+            bool IDeleteResponse.IsSuccessful => false;
+
+            public bool AlreadyDeleted => false;
+            public object Request => _request;
+
+            IKey IDeleteResponse.Key => _key;
+            bool IUpdateResponse.IsSuccessful => false;
+
+            public void ThrowOnFailure()
+            {
+                throw Cause;
+            }
+
+            public Exception Cause => new Exception($"Failed to store value under the key {_key}");
+        }
         
         /// <summary>
         /// Send this message to the local <see cref="Replicator"/> to delete a data value for the
@@ -625,18 +663,20 @@ namespace Akka.DistributedData
         {
             public IKey Key { get; }
             public IWriteConsistency Consistency { get; }
+            public object Request { get; }
 
-            public Delete(IKey key, IWriteConsistency consistency)
+            public Delete(IKey key, IWriteConsistency consistency, object request)
             {
                 Key = key;
                 Consistency = consistency;
+                Request = request;
             }
             public bool Equals(Delete other)
             {
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(this, other)) return true;
 
-                return Equals(Key, other.Key) && Equals(Consistency, other.Consistency);
+                return Equals(Key, other.Key) && Equals(Consistency, other.Consistency) && Equals(Request, other.Request);
             }
 
             public override bool Equals(object obj) => obj is Delete && Equals((Delete)obj);
@@ -678,10 +718,12 @@ namespace Akka.DistributedData
         public sealed class DeleteSuccess : IDeleteResponse, IEquatable<DeleteSuccess> 
         {
             public IKey Key { get; }
+            public object Request { get; }
 
-            public DeleteSuccess(IKey key)
+            public DeleteSuccess(IKey key, object request)
             {
                 Key = key;
+                Request = request;
             }
             public bool IsSuccessful => true;
             public bool AlreadyDeleted => false;
@@ -728,10 +770,12 @@ namespace Akka.DistributedData
         public sealed class DataDeleted : Exception, IDeleteResponse, IEquatable<DataDeleted>
         {
             public IKey Key { get; }
+            public object Request { get; }
 
-            public DataDeleted(IKey key)
+            public DataDeleted(IKey key, object request)
             {
                 Key = key;
+                Request = request;
             }
             public bool IsSuccessful => true;
             public bool AlreadyDeleted => true;
@@ -743,7 +787,7 @@ namespace Akka.DistributedData
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(this, other)) return true;
 
-                return Equals(Key, other.Key);
+                return Equals(Key, other.Key) && Equals(Request, other.Request);
             }
 
             public override bool Equals(object obj) => obj is DataDeleted && Equals((DataDeleted)obj);
