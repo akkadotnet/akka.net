@@ -24,23 +24,24 @@ namespace Akka.Persistence.Sql.TestKit
     public abstract class EventsByTagSpec : Akka.TestKit.Xunit2.TestKit
     {
         private readonly ActorMaterializer _materializer;
-        private readonly SqlReadJournal _queries;
+        //private readonly SqlReadJournal _queries;
 
         protected EventsByTagSpec(Config config, ITestOutputHelper output) : base(config, output: output)
         {
             _materializer = Sys.Materializer();
-            _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
 
         [Fact]
         public void Sql_query_EventsByTag_should_implement_standard_EventsByTagQuery()
         {
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             (_queries is IEventsByTagQuery).Should().BeTrue();
         }
 
         [Fact]
         public void Sql_query_EventsByTag_should_find_existing_events()
         {
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var a = SetupEmpty("a");
             var b = SetupEmpty("b");
 
@@ -75,6 +76,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByTag_should_not_see_new_events_after_demand_request()
         {
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sql_query_EventsByTag_should_find_existing_events();
 
             var c = SetupEmpty("c");
@@ -97,6 +99,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByTag_should_find_events_from_offset()
         {
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sql_query_EventsByTag_should_not_see_new_events_after_demand_request();
 
             var greenSrc = _queries.CurrentEventsByTag("green", offset: 2);
@@ -111,6 +114,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_live_query_EventsByTag_should_find_new_events()
         {
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sql_query_EventsByTag_should_find_events_from_offset();
 
             var d = SetupEmpty("d");
@@ -135,6 +139,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_live_query_EventsByTag_should_find_events_from_offset()
         {
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sql_live_query_EventsByTag_should_find_new_events();
 
             var greenSrc = _queries.EventsByTag("green", offset: 2);

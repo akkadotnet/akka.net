@@ -22,23 +22,24 @@ namespace Akka.Persistence.Sql.TestKit
     public abstract class EventsByPersistenceIdSpec : Akka.TestKit.Xunit2.TestKit
     {
         private readonly ActorMaterializer _materializer;
-        private readonly SqlReadJournal _queries;
+        //private SqlReadJournal _queries;
 
         protected EventsByPersistenceIdSpec(Config config, ITestOutputHelper output) : base(config, output: output)
         {
             _materializer = Sys.Materializer();
-            _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
 
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_implement_standard_EventsByTagQuery()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             (_queries is IEventsByPersistenceIdQuery).Should().BeTrue();
         }
 
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_find_existing_events()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("a");
 
             var src = _queries.CurrentEventsByPersistenceId("a", 0, long.MaxValue);
@@ -54,6 +55,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_find_existing_events_up_to_a_sequence_number()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("b");
             var src = _queries.CurrentEventsByPersistenceId("b", 0L, 2L);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), _materializer)
@@ -65,6 +67,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_not_see_new_events_after_demand_request()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("f");
             var src = _queries.CurrentEventsByPersistenceId("f", 0L, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), _materializer)
@@ -84,6 +87,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("g1");
 
             pref.Tell(new TestActor.DeleteCommand(3));
@@ -96,6 +100,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("g2");
 
             pref.Tell(new TestActor.DeleteCommand(3));
@@ -108,6 +113,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("h");
 
             pref.Tell(new TestActor.DeleteCommand(2));
@@ -120,6 +126,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_return_empty_stream_for_empty_journal()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = SetupEmpty("i");
 
             var src = _queries.CurrentEventsByPersistenceId("i", 0L, long.MaxValue);
@@ -129,6 +136,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_return_empty_stream_for_journal_from_0_to_0()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("k1");
 
             var src = _queries.CurrentEventsByPersistenceId("k1", 0, 0);
@@ -138,6 +146,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_return_empty_stream_for_empty_journal_from_0_to_0()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = SetupEmpty("k2");
 
             var src = _queries.CurrentEventsByPersistenceId("k2", 0, 0);
@@ -147,6 +156,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByPersistenceId_should_return_empty_stream_for_journal_from_SequenceNr_greater_than_HighestSequenceNr()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("l");
 
             var src = _queries.CurrentEventsByPersistenceId("l", 4, 3);
@@ -157,6 +167,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_live_query_EventsByPersistenceId_should_find_new_events()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("c");
 
             var src = _queries.EventsByPersistenceId("c", 0, long.MaxValue);
@@ -173,6 +184,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_live_query_EventsByPersistenceId_should_find_new_events_up_to_SequenceNr()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("d");
 
             var src = _queries.EventsByPersistenceId("d", 0, 4);
@@ -189,6 +201,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_live_query_EventsByPersistenceId_should_find_new_events_after_demand_request()
         {
+            SqlReadJournal _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var pref = Setup("e");
 
             var src = _queries.EventsByPersistenceId("e", 0, long.MaxValue);

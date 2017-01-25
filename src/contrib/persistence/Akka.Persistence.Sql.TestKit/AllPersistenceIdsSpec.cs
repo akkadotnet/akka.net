@@ -23,23 +23,25 @@ namespace Akka.Persistence.Sql.TestKit
     {
 
         private readonly ActorMaterializer _materializer;
-        private readonly SqlReadJournal _queries;
+        //private readonly SqlReadJournal _queries;
 
         protected AllPersistenceIdsSpec(Config config, ITestOutputHelper output) : base(config, output: output)
         {
             _materializer = Sys.Materializer();
-            _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+//            _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
 
         [Fact]
         public void Sql_query_AllPersistenceIds_should_implement_standard_AllPersistenceIdsQuery()
         {
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             (_queries is IAllPersistenceIdsQuery).Should().BeTrue();
         }
 
         [Fact]
         public void Sql_query_AllPersistenceIds_should_find_existing_persistence_ids()
         {
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sys.ActorOf(TestKit.TestActor.Props("a")).Tell("a1");
             ExpectMsg("a1-done");
             Sys.ActorOf(TestKit.TestActor.Props("b")).Tell("b1");
@@ -58,27 +60,40 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_AllPersistenceIds_should_find_new_persistence_ids()
         {
-            Sql_query_AllPersistenceIds_should_find_existing_persistence_ids();
+            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+            Sys.ActorOf(TestKit.TestActor.Props("a")).Tell("a1");
+            ExpectMsg("a1-done");
+            Sys.ActorOf(TestKit.TestActor.Props("b")).Tell("b1");
+            ExpectMsg("b1-done");
+            Sys.ActorOf(TestKit.TestActor.Props("c")).Tell("c1");
+            ExpectMsg("c1-done");
+
+            var source = _queries.CurrentPersistenceIds();
+            var probe = source.RunWith(this.SinkProbe<string>(), _materializer);
+            probe.Within(TimeSpan.FromSeconds(10), () =>
+                probe.Request(5)
+                    .ExpectNextUnordered("a", "b", "c")
+                    .ExpectComplete());
             // a, b, c created by previous step
 
             Sys.ActorOf(TestKit.TestActor.Props("d")).Tell("d1");
             ExpectMsg("d1-done");
 
-            var source = _queries.AllPersistenceIds();
-            var probe = source.RunWith(this.SinkProbe<string>(), _materializer);
-            probe.Within(TimeSpan.FromSeconds(10), () =>
+            source = _queries.AllPersistenceIds();
+            var newprobe = source.RunWith(this.SinkProbe<string>(), _materializer);
+            newprobe.Within(TimeSpan.FromSeconds(10), () =>
             {
-                probe.Request(5).ExpectNextUnordered("a", "b", "c", "d");
+                newprobe.Request(5).ExpectNextUnordered("a", "b", "c", "d");
 
                 Sys.ActorOf(TestKit.TestActor.Props("e")).Tell("e1");
-                probe.ExpectNext("e");
+                newprobe.ExpectNext("e");
 
                 var more = Enumerable.Range(1, 100).Select(i => "f" + i).ToArray();
                 foreach (var x in more)
                     Sys.ActorOf(TestKit.TestActor.Props(x)).Tell(x);
 
-                probe.Request(100);
-                return probe.ExpectNextUnorderedN(more);
+                newprobe.Request(100);
+                return newprobe.ExpectNextUnorderedN(more);
             });
         }
 
