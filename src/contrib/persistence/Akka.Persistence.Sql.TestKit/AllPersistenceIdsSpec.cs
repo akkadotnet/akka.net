@@ -34,14 +34,14 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_AllPersistenceIds_should_implement_standard_AllPersistenceIdsQuery()
         {
-            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-            (_queries is IAllPersistenceIdsQuery).Should().BeTrue();
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+            (queries is IAllPersistenceIdsQuery).Should().BeTrue();
         }
 
         [Fact]
         public void Sql_query_AllPersistenceIds_should_find_existing_persistence_ids()
         {
-            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sys.ActorOf(TestKit.TestActor.Props("a")).Tell("a1");
             ExpectMsg("a1-done");
             Sys.ActorOf(TestKit.TestActor.Props("b")).Tell("b1");
@@ -49,7 +49,7 @@ namespace Akka.Persistence.Sql.TestKit
             Sys.ActorOf(TestKit.TestActor.Props("c")).Tell("c1");
             ExpectMsg("c1-done");
 
-            var source = _queries.CurrentPersistenceIds();
+            var source = queries.CurrentPersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), _materializer);
             probe.Within(TimeSpan.FromSeconds(10), () =>
                 probe.Request(5)
@@ -60,7 +60,7 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_AllPersistenceIds_should_find_new_persistence_ids()
         {
-            var _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sys.ActorOf(TestKit.TestActor.Props("a")).Tell("a1");
             ExpectMsg("a1-done");
             Sys.ActorOf(TestKit.TestActor.Props("b")).Tell("b1");
@@ -68,7 +68,7 @@ namespace Akka.Persistence.Sql.TestKit
             Sys.ActorOf(TestKit.TestActor.Props("c")).Tell("c1");
             ExpectMsg("c1-done");
 
-            var source = _queries.CurrentPersistenceIds();
+            var source = queries.CurrentPersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), _materializer);
             probe.Within(TimeSpan.FromSeconds(10), () =>
                 probe.Request(5)
@@ -79,7 +79,7 @@ namespace Akka.Persistence.Sql.TestKit
             Sys.ActorOf(TestKit.TestActor.Props("d")).Tell("d1");
             ExpectMsg("d1-done");
 
-            source = _queries.AllPersistenceIds();
+            source = queries.AllPersistenceIds();
             var newprobe = source.RunWith(this.SinkProbe<string>(), _materializer);
             newprobe.Within(TimeSpan.FromSeconds(10), () =>
             {
