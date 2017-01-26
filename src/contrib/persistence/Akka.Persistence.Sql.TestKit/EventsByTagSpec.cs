@@ -24,23 +24,24 @@ namespace Akka.Persistence.Sql.TestKit
     public abstract class EventsByTagSpec : Akka.TestKit.Xunit2.TestKit
     {
         private readonly ActorMaterializer _materializer;
-        private readonly SqlReadJournal _queries;
+        //private readonly SqlReadJournal _queries;
 
         protected EventsByTagSpec(Config config, ITestOutputHelper output) : base(config, output: output)
         {
             _materializer = Sys.Materializer();
-            _queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
 
         [Fact]
         public void Sql_query_EventsByTag_should_implement_standard_EventsByTagQuery()
         {
-            (_queries is IEventsByTagQuery).Should().BeTrue();
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+            (queries is IEventsByTagQuery).Should().BeTrue();
         }
 
         [Fact]
         public void Sql_query_EventsByTag_should_find_existing_events()
         {
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             var a = SetupEmpty("a");
             var b = SetupEmpty("b");
 
@@ -55,7 +56,7 @@ namespace Akka.Persistence.Sql.TestKit
             b.Tell("a green leaf");
             ExpectMsg("a green leaf-done");
 
-            var greenSrc = _queries.CurrentEventsByTag("green", offset: 0);
+            var greenSrc = queries.CurrentEventsByTag("green", offset: 0);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(2)
                 .ExpectNext(new EventEnvelope(2, "a", 2, "a green apple"))
@@ -65,7 +66,7 @@ namespace Akka.Persistence.Sql.TestKit
                 .ExpectNext(new EventEnvelope(5, "b", 2, "a green leaf"))
                 .ExpectComplete();
 
-            var blackSrc = _queries.CurrentEventsByTag("black", offset: 0);
+            var blackSrc = queries.CurrentEventsByTag("black", offset: 0);
             probe = blackSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(5)
                 .ExpectNext(new EventEnvelope(3, "b", 1, "a black car"))
@@ -75,10 +76,11 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByTag_should_not_see_new_events_after_demand_request()
         {
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sql_query_EventsByTag_should_find_existing_events();
 
             var c = SetupEmpty("c");
-            var greenSrc = _queries.CurrentEventsByTag("green", offset: 0);
+            var greenSrc = queries.CurrentEventsByTag("green", offset: 0);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(2)
                 .ExpectNext(new EventEnvelope(2, "a", 2, "a green apple"))
@@ -97,9 +99,10 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_query_EventsByTag_should_find_events_from_offset()
         {
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sql_query_EventsByTag_should_not_see_new_events_after_demand_request();
 
-            var greenSrc = _queries.CurrentEventsByTag("green", offset: 2);
+            var greenSrc = queries.CurrentEventsByTag("green", offset: 2);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(10)
                 .ExpectNext(new EventEnvelope(4, "a", 3, "a green banana"))
@@ -111,11 +114,12 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_live_query_EventsByTag_should_find_new_events()
         {
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sql_query_EventsByTag_should_find_events_from_offset();
 
             var d = SetupEmpty("d");
 
-            var blackSrc = _queries.EventsByTag("black", offset: 0);
+            var blackSrc = queries.EventsByTag("black", offset: 0);
             var probe = blackSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(2)
                 .ExpectNext(new EventEnvelope(3, "b", 1, "a black car"))
@@ -135,9 +139,10 @@ namespace Akka.Persistence.Sql.TestKit
         [Fact]
         public void Sql_live_query_EventsByTag_should_find_events_from_offset()
         {
+            var queries = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
             Sql_live_query_EventsByTag_should_find_new_events();
 
-            var greenSrc = _queries.EventsByTag("green", offset: 2);
+            var greenSrc = queries.EventsByTag("green", offset: 2);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(10)
                 .ExpectNext(new EventEnvelope(4, "a", 3L, "a green banana"))
