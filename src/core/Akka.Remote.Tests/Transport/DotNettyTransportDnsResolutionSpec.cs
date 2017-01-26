@@ -218,6 +218,17 @@ namespace Akka.Remote.Tests.Transport
             return endpointsIpFamilyMismatch;
         }
 
+        //[Fact]
+        //public Property HeliosTransport_Should_Resolve_DNS_with_PublicHostname()
+        //{
+
+        //    var inbound = new IPEndPoint(IPAddress.IPv6Loopback, 1337);
+        //    var publicInbound = new DnsEndPoint("localhost", 0);
+        //    var outbound = new IPEndPoint(IPAddress.IPv6Loopback, 1337);
+        //    var publicOutbound = new DnsEndPoint("localhost", 0);
+        //    var dnsUseIpv6 = true;
+        //    var enforceIpFamily = false;
+
         [Property]
         public Property HeliosTransport_Should_Resolve_DNS_with_PublicHostname(IPEndPoint inbound, DnsEndPoint publicInbound,
             IPEndPoint outbound, DnsEndPoint publicOutbound, bool dnsUseIpv6, bool enforceIpFamily)
