@@ -14,8 +14,8 @@ namespace Akka.DistributedData
 {
     internal class ReadAggregator : ReadWriteAggregator
     {
-        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, DataEnvelope localValue, IActorRef replyTo) =>
-            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, localValue, replyTo)).WithDeploy(Deploy.Local);
+        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo) =>
+            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, unreachable, localValue, replyTo)).WithDeploy(Deploy.Local);
 
         private readonly IKey _key;
         private readonly IReadConsistency _consistency;
@@ -25,8 +25,8 @@ namespace Akka.DistributedData
         
         private DataEnvelope _result;
 
-        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, DataEnvelope localValue, IActorRef replyTo)
-            : base(nodes, consistency.Timeout)
+        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo)
+            : base(nodes, unreachable, consistency.Timeout)
         {
             _key = key;
             _consistency = consistency;
@@ -40,29 +40,16 @@ namespace Akka.DistributedData
         {
             get
             {
-                if (_consistency is ReadFrom)
-                {
-                    var wt = (ReadFrom)_consistency;
-                    return Nodes.Count - wt.N - 1;
-                }
-                else if (_consistency is ReadAll)
-                {
-                    return 0;
-                }
+                if (_consistency is ReadFrom) return Nodes.Count - ((ReadFrom) _consistency).N - 1;
+                else if (_consistency is ReadAll) return 0;
                 else if (_consistency is ReadMajority)
                 {
                     var N = Nodes.Count + 1;
-                    var w = N / 2 + 1;
+                    var w = CalculateMajorityWithMinCapacity(((ReadMajority) _consistency).MinCapacity, N);
                     return N - w;
                 }
-                else if (_consistency is ReadLocal)
-                {
-                    throw new ArgumentException("ReadAggregator does not support ReadLocal");
-                }
-                else
-                {
-                    throw new ArgumentException("Invalid consistency level");
-                }
+                else if (_consistency is ReadLocal) throw new ArgumentException("ReadAggregator does not support ReadLocal");
+                else throw new ArgumentException("Invalid consistency level");
             }
         }
 
@@ -168,16 +155,18 @@ namespace Akka.DistributedData
     public sealed class ReadMajority : IReadConsistency
     {
         public TimeSpan Timeout { get; }
+        public int MinCapacity { get; }
 
-        public ReadMajority(TimeSpan timeout)
+        public ReadMajority(TimeSpan timeout, int minCapacity = 0)
         {
             Timeout = timeout;
+            MinCapacity = minCapacity;
         }
 
         public override bool Equals(object obj)
         {
             var other = obj as ReadMajority;
-            return other != null && Timeout == other.Timeout;
+            return other != null && Timeout == other.Timeout && MinCapacity == other.MinCapacity;
         }
     }
 

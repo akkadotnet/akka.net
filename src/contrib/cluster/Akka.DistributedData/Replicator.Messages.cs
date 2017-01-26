@@ -665,7 +665,7 @@ namespace Akka.DistributedData
             public IWriteConsistency Consistency { get; }
             public object Request { get; }
 
-            public Delete(IKey key, IWriteConsistency consistency, object request)
+            public Delete(IKey key, IWriteConsistency consistency, object request = null)
             {
                 Key = key;
                 Consistency = consistency;
@@ -720,7 +720,7 @@ namespace Akka.DistributedData
             public IKey Key { get; }
             public object Request { get; }
 
-            public DeleteSuccess(IKey key, object request)
+            public DeleteSuccess(IKey key, object request = null)
             {
                 Key = key;
                 Request = request;
@@ -772,7 +772,7 @@ namespace Akka.DistributedData
             public IKey Key { get; }
             public object Request { get; }
 
-            public DataDeleted(IKey key, object request)
+            public DataDeleted(IKey key, object request = null)
             {
                 Key = key;
                 Request = request;

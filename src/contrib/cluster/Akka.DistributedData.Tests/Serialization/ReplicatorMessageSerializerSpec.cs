@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
-using Akka.IO;
+using Google.ProtocolBuffers;
 using Xunit;
 using Xunit.Abstractions;
 using Address = Akka.Actor.Address;
@@ -66,8 +66,8 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new ReadResult(null));
             CheckSerialization(new Internal.Status(ImmutableDictionary.CreateRange(new []
             {
-                new KeyValuePair<string, ByteString>("A", ByteString.FromString("a")),
-                new KeyValuePair<string, ByteString>("B", ByteString.FromString("b")),  
+                new KeyValuePair<string, ByteString>("A", ByteString.CopyFromUtf8("a")),
+                new KeyValuePair<string, ByteString>("B", ByteString.CopyFromUtf8("b")),  
             }), 3, 10));
             CheckSerialization(new Gossip(ImmutableDictionary.CreateRange(new []
             {

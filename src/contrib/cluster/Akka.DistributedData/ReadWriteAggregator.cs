@@ -25,6 +25,8 @@ namespace Akka.DistributedData
 
         protected TimeSpan Timeout { get; }
         protected IImmutableSet<Address> Nodes { get; }
+        protected IImmutableSet<Address> Unreachable { get; }
+        protected IImmutableSet<Address> Reachable { get; }
 
         private readonly ICancelable _sendToSecondarySchedule;
         private readonly ICancelable _timeoutSchedule;
@@ -34,10 +36,12 @@ namespace Akka.DistributedData
 
         protected IImmutableSet<Address> Remaining;
 
-        protected ReadWriteAggregator(IImmutableSet<Address> nodes, TimeSpan timeout)
+        protected ReadWriteAggregator(IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, TimeSpan timeout)
         {
             Timeout = timeout;
             Nodes = nodes;
+            Unreachable = unreachable;
+            Reachable = nodes.Except(unreachable);
             Remaining = Nodes;
             _sendToSecondarySchedule = Context.System.Scheduler.ScheduleTellOnceCancelable((int)Timeout.TotalMilliseconds / 5, Self, SendToSecondary.Instance, Self);
             _timeoutSchedule = Context.System.Scheduler.ScheduleTellOnceCancelable(Timeout, Self, ReceiveTimeout.Instance, Self);
@@ -56,6 +60,14 @@ namespace Akka.DistributedData
                     return Tuple.Create((IImmutableSet<Address>)p, (IImmutableSet<Address>)s);
                 }
             });
+        }
+
+        protected static int CalculateMajorityWithMinCapacity(int minCapacity, int numberOfNodes)
+        {
+            if (numberOfNodes <= minCapacity) return numberOfNodes;
+
+            var majority = numberOfNodes / 2 + 1;
+            return majority <= minCapacity ? minCapacity : majority;
         }
 
         protected override void PostStop()

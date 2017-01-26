@@ -14,54 +14,52 @@ namespace Akka.DistributedData
 {
     internal class WriteAggregator : ReadWriteAggregator
     {
-        public static Props Props(IKey key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IActorRef replyTo) =>
-            Actor.Props.Create(() => new WriteAggregator(key, envelope, consistency, req, nodes, replyTo)).WithDeploy(Deploy.Local);
-
+        public static Props Props(IKey key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable) =>
+            Actor.Props.Create(() => new WriteAggregator(key, envelope, consistency, req, nodes, unreachable, replyTo, durable)).WithDeploy(Deploy.Local);
+        
         private readonly IKey _key;
         private readonly DataEnvelope _envelope;
         private readonly IWriteConsistency _consistency;
         private readonly object _req;
         private readonly IActorRef _replyTo;
         private readonly Write _write;
-        
-        public WriteAggregator(IKey key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IActorRef replyTo)
-            : base(nodes, consistency.Timeout)
+        private readonly bool _durable;
+        private bool _gotLocalStoreReply;
+        private IImmutableSet<Address> _gotNackFrom;
+
+        public WriteAggregator(IKey key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable)
+            : base(nodes, unreachable, consistency.Timeout)
         {
             _key = key;
             _envelope = envelope;
             _consistency = consistency;
             _req = req;
             _replyTo = replyTo;
+            _durable = durable;
             _write = new Write(key.Id, envelope);
+            _gotLocalStoreReply = !durable;
+            _gotNackFrom =ImmutableHashSet<Address>.Empty;
         }
+
+        protected bool IsDone => _gotLocalStoreReply && (Remaining.Count <= DoneWhenRemainingSize || (Remaining.Except(_gotNackFrom).Count == 0) || NotEnoughNodes);
+
+        protected bool NotEnoughNodes => DoneWhenRemainingSize < 0 || Nodes.Count < DoneWhenRemainingSize;
 
         protected override int DoneWhenRemainingSize
         {
             get
             {
-                if (_consistency is WriteTo)
-                {
-                    var wt = (WriteTo)_consistency;
-                    return Nodes.Count - wt.N - 1;
-                }
-                else if (_consistency is WriteAll)
-                {
-                    return 0;
-                }
+                if (_consistency is WriteTo) return Nodes.Count - ((WriteTo) _consistency).N - 1;
+                else if (_consistency is WriteAll) return 0;
                 else if (_consistency is WriteMajority)
                 {
+                    var consistency = (WriteMajority) _consistency;
                     var N = Nodes.Count + 1;
-                    var w = N / 2 + 1;
+                    var w = CalculateMajorityWithMinCapacity(consistency.MinCapacity, N);
                     return N - w;
                 }
-                else if (_consistency is WriteLocal)
-                {
-                    throw new ArgumentException("WriteAggregator does not support ReadLocal");
-                }
-                else
-                {
-                    throw new ArgumentException("Invalid consistency level");
-                }
+                else if (_consistency is WriteLocal) throw new ArgumentException("WriteAggregator does not support WriteLocal");
+                else throw new ArgumentException("Invalid consistency level");
             }
         }
 
@@ -69,42 +67,56 @@ namespace Akka.DistributedData
 
         protected override void PreStart()
         {
-            var primaryNodes = PrimaryAndSecondaryNodes.Value.Item1;
-            foreach (var n in primaryNodes)
-                Replica(n).Tell(_write);
+            foreach (var n in PrimaryAndSecondaryNodes.Value.Item1) Replica(n).Tell(_write);
 
-            if (Remaining.Count == DoneWhenRemainingSize)
-                Reply(true);
-            else if (DoneWhenRemainingSize < 0 || Remaining.Count < DoneWhenRemainingSize)
-                Reply(false);
+            if (IsDone) Reply(isTimeout: false);
         }
 
         protected override bool Receive(object message) => message.Match()
             .With<WriteAck>(x =>
             {
                 Remaining = Remaining.Remove(SenderAddress);
-                if (Remaining.Count == DoneWhenRemainingSize)
-                    Reply(true);
+                if (IsDone) Reply(isTimeout: false);
+            })
+            .With<WriteNack>(x =>
+            {
+                _gotNackFrom = _gotNackFrom.Remove(SenderAddress);
+                if (IsDone) Reply(isTimeout: false);
+            })
+            .With<Replicator.UpdateSuccess>(x =>
+            {
+                _gotLocalStoreReply = true;
+                if (IsDone) Reply(isTimeout: false);
+            })
+            .With<Replicator.StoreFailure>(x =>
+            {
+                _gotLocalStoreReply = true;
+                _gotNackFrom = _gotNackFrom.Remove(Cluster.Cluster.Get(Context.System).SelfAddress);
+                if (IsDone) Reply(isTimeout: false);
             })
             .With<SendToSecondary>(x =>
             {
                 foreach (var n in PrimaryAndSecondaryNodes.Value.Item2)
                     Replica(n).Tell(_write);
             })
-            .With<ReceiveTimeout>(x => Reply(false))
+            .With<ReceiveTimeout>(x => Reply(isTimeout: true))
             .WasHandled;
 
-        private void Reply(bool ok)
+        private void Reply(bool isTimeout)
         {
-            if (ok && _envelope.Data is DeletedData)
-                _replyTo.Tell(new Replicator.DeleteSuccess(_key), Context.Parent);
-            else if (ok)
-                _replyTo.Tell(new Replicator.UpdateSuccess(_key, _req), Context.Parent);
-            else if (_envelope.Data is DeletedData)
-                _replyTo.Tell(new Replicator.ReplicationDeletedFailure(_key), Context.Parent);
-            else
-                _replyTo.Tell(new Replicator.UpdateTimeout(_key, _req), Context.Parent);
+            var notEnoughNodes = NotEnoughNodes;
+            var isDelete = _envelope.Data is DeletedData;
+            var isSuccess = Remaining.Count <= DoneWhenRemainingSize && !notEnoughNodes;
+            var isTimeoutOrNotEnoughNodes = isTimeout || notEnoughNodes || _gotNackFrom.Count == 0;
 
+            object reply;
+            if (isSuccess && isDelete) reply = new Replicator.DeleteSuccess(_key, _req);
+            else if (isSuccess) reply = new Replicator.UpdateSuccess(_key, _req);
+            else if (isTimeoutOrNotEnoughNodes && isDelete) reply = new Replicator.ReplicationDeletedFailure(_key);
+            else if (isTimeoutOrNotEnoughNodes) reply = new Replicator.UpdateTimeout(_key, _req);
+            else reply = new Replicator.StoreFailure(_key, _req);
+
+            _replyTo.Tell(reply, Context.Parent);
             Context.Stop(Self);
         }
     }
@@ -152,16 +164,18 @@ namespace Akka.DistributedData
     public class WriteMajority : IWriteConsistency
     {
         public TimeSpan Timeout { get; }
+        public int MinCapacity { get; }
 
-        public WriteMajority(TimeSpan timeout)
+        public WriteMajority(TimeSpan timeout, int minCapacity = 0)
         {
             Timeout = timeout;
+            MinCapacity = minCapacity;
         }
 
         public override bool Equals(object obj)
         {
             var other = obj as WriteMajority;
-            return other != null && Timeout == other.Timeout;
+            return other != null && Timeout == other.Timeout && MinCapacity == other.MinCapacity;
         }
     }
 

@@ -251,7 +251,7 @@ namespace Akka.DistributedData
                 else Sender.Tell(new GetSuccess(key, req, localValue.Data));
             }
             else
-                Context.ActorOf(ReadAggregator.Props(key, consistency, req, _nodes, localValue, Sender)
+                Context.ActorOf(ReadAggregator.Props(key, consistency, req, _nodes, _unreachable, localValue, Sender)
                         .WithDispatcher(Context.Props.Dispatcher));
         }
 
@@ -307,7 +307,7 @@ namespace Akka.DistributedData
                 }
                 else
                 {
-                    var writeAggregator = Context.ActorOf(WriteAggregator.Props(key, envelope, consistency, request, _nodes, Sender).WithDispatcher(Context.Props.Dispatcher));
+                    var writeAggregator = Context.ActorOf(WriteAggregator.Props(key, envelope, consistency, request, _nodes, _unreachable, Sender, durable).WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
                     {
@@ -429,7 +429,7 @@ namespace Akka.DistributedData
                     }
                     else
                     {
-                        var writeAggregator = Context.ActorOf(WriteAggregator.Props(key, DeletedEnvelope, consistency, null, _nodes, Sender)
+                        var writeAggregator = Context.ActorOf(WriteAggregator.Props(key, DeletedEnvelope, consistency, null, _nodes, _unreachable, Sender, durable)
                             .WithDispatcher(Context.Props.Dispatcher));
 
                         if (durable)
