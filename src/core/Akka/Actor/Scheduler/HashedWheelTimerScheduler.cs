@@ -99,7 +99,7 @@ namespace Akka.Actor
         /// Normalize a wheel size to the nearest power of 2.
         /// </summary>
         /// <param name="ticksPerWheel">The original input per wheel.</param>
-        /// <returns><see cref="ticksPerWheel"/> normalized to the nearest power of 2.</returns>
+        /// <returns><paramref name="ticksPerWheel"/> normalized to the nearest power of 2.</returns>
         private static int NormalizeTicksPerWheel(int ticksPerWheel)
         {
             var normalizedTicksPerWheel = 1;
@@ -576,7 +576,7 @@ namespace Akka.Actor
             private static readonly Action<object> ExecuteRunnableWithState = r => ((IRunnable)r).Run();
 
             /// <summary>
-            /// Execute all <see cref="SchedulerRegistration"/>s that are due by or after <see cref="deadline"/>.
+            /// Execute all <see cref="SchedulerRegistration"/>s that are due by or after <paramref name="deadline"/>.
             /// </summary>
             /// <param name="deadline">The execution time.</param>
             public void Execute(long deadline)

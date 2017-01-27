@@ -417,8 +417,6 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
         public abstract class SimpleWriteCommand : WriteCommand
         {
             /// <summary>

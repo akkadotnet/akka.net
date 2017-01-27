@@ -948,12 +948,10 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            /// <param name="shard">TBD</param>
             public readonly ShardId Shard;
             /// <summary>
             /// TBD
             /// </summary>
-            /// <param name="shard">TBD</param>
             public readonly IActorRef Region;
 
             /// <summary>

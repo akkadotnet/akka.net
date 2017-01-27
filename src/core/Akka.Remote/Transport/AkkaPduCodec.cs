@@ -136,9 +136,6 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <returns>TBD</returns>
         public IInternalActorRef Recipient { get; private set; }
 
         /// <summary>
