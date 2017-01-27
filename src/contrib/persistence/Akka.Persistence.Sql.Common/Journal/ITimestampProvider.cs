@@ -17,6 +17,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Generates timestamp for provided <see cref="IPersistentRepresentation"/> message.
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         long GenerateTimestamp(IPersistentRepresentation message);
     }
     
@@ -25,6 +27,11 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public sealed class DefaultTimestampProvider : ITimestampProvider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public long GenerateTimestamp(IPersistentRepresentation message) => DateTime.UtcNow.Ticks;
     }
 }

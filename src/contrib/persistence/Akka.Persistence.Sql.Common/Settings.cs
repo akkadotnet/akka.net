@@ -56,6 +56,11 @@ namespace Akka.Persistence.Sql.Common
         /// </summary>
         public bool AutoInitialize { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public JournalSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException("config", "SqlServer journal settings cannot be initialized, because required HOCON section couldn't been found");
@@ -106,6 +111,11 @@ namespace Akka.Persistence.Sql.Common
         /// </summary>
         public bool AutoInitialize { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public SnapshotStoreSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException("config", "SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
@@ -118,6 +128,9 @@ namespace Akka.Persistence.Sql.Common
             AutoInitialize = config.GetBoolean("auto-initialize");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string FullTableName => string.IsNullOrEmpty(SchemaName) ? TableName : SchemaName + "." + TableName;
     }
 }
