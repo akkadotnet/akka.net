@@ -683,6 +683,20 @@ namespace Akka.Persistence
         {
             CommandAny(WrapAsyncHandler(handler));
         }
+        
+        //TODO: Fix it
+        //protected void PersistAsync<TEvent>(TEvent @event)
+        //{
+        //    var tcs = new TaskCompletionSource<TEvent>();
+        //    Func<TEvent, Task> asyncHandler = evt =>
+        //    {
+        //        Persist(evt, pEvent => tcs.TrySetResult(pEvent));
+        //        return tcs.Task;
+        //    };
+
+        //    WrapAsyncHandler(asyncHandler)(@event);
+        //}
+
         #endregion
     }
 }
