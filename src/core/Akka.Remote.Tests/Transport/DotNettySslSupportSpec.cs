@@ -41,9 +41,12 @@ namespace Akka.Remote.Tests.Transport
             }");
             return !enableSsl
                 ? config
-                : config.WithFallback(@"akka.remote.dot-netty.tcp.ssl.certificate {
-                    path = """ + certPath + @"""
-                    password = """ + password + @"""
+                : config.WithFallback(@"akka.remote.dot-netty.tcp.ssl {
+                    suppress-validation = """ + enableSsl.ToString().ToLowerInvariant() + @"""
+                    certificate {
+                        path = """ + certPath + @"""
+                        password = """ + password + @"""
+                    }
                 }");
         }
 

@@ -318,7 +318,11 @@ namespace Akka.Remote.Transport.DotNetty
                 var certificate = Settings.Ssl.Certificate;
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
-                channel.Pipeline.AddFirst("TlsHandler", TlsHandler.Client(host, certificate));
+                var tlsHandler = Settings.Ssl.SuppressValidation
+                    ? new TlsHandler(stream => new SslStream(stream, true, (sender, cert, chain, errors) => true), new ClientTlsSettings(host)) 
+                    : TlsHandler.Client(host, certificate);
+
+                channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
             }
 
             SetInitialChannelPipeline(channel);
