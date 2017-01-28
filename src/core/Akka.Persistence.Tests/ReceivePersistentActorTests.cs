@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -135,7 +136,58 @@ namespace Akka.Persistence.Tests
             ExpectMsg((object)"int:4711");
             ExpectMsg((object)"any:hello");
         }
-        
+
+        #region CommandAsync
+
+        //TODO: waiting for PersistAsync
+        //[Fact]
+        //public void Given_a_persistent_actor_with_CommandAsync_When_sending_two_commands_first_one_with_async_persist_Then_second_one_will_be_called_after_persist_callback()
+        //{
+        //    //Given
+        //    var pid = "p-7";
+
+        //    //When
+
+        //    //Then
+        //}
+
+        //TODO: waiting for PersistAsync
+        //[Fact]
+        //public void Given_a_persistent_actor_with_CommandAsync_When_sending_a_command_with_async_persist_Then_persist_will_be_called()
+        //{
+        //    //Given
+        //    const string msg = "hello";
+        //    var pid = "p-8";
+        //    WriteEvents(pid, 1, 2, 3);
+        //    var actor = Sys.ActorOf(Props.Create(() => new AsyncCommandActor(pid, 3000)), "asyncpersist");
+
+        //    //When
+        //    actor.Tell(new AsyncMsg(msg, shouldPersist: true));
+
+        //    //Then
+        //    ExpectMsg((object) "async:" + msg);
+        //    ExpectMsg((object) "callback:" + msg);
+        //}
+
+        [Fact]
+        public void Given_a_persistent_actor_with_Command_and_CommandAsync_When_sending_a_command_synchronously_and_another_asynchronously_Then_there_will_be_no_data_race()
+        {
+            //Given
+            const string msg = "hello";
+            var pid = "p-9";
+            WriteEvents(pid, 1, 2, 3);
+            var actor = Sys.ActorOf(Props.Create(() => new AsyncCommandActor(pid, 3000)), "asynccommand");
+
+            //When
+            actor.Tell(new AsyncMsg(msg));
+            actor.Tell(new SyncMsg(msg));
+
+            //Then
+            ExpectMsg((object) "async:" + msg);
+            ExpectMsg((object) "sync:" + msg);
+        }
+        #endregion
+
         private readonly AtomicCounterLong _seqNrCounter = new AtomicCounterLong(1L);
         /// <summary>
         /// Initialize test journal using provided events.
@@ -258,6 +310,39 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        private class AsyncMsg: SyncMsg
+        {
+            public bool ShouldPersist { get; }
+
+            public AsyncMsg(string msg, bool shouldPersist = false): base(msg)
+            {
+                ShouldPersist = shouldPersist;
+            }
+        }
+
+        private class SyncMsg
+        {
+            public string Msg { get; }
+
+            public SyncMsg(string msg) { Msg = msg; }
+        }
+
+        private class AsyncCommandActor : TestReceivePersistentActor
+        {
+            public AsyncCommandActor(string pid, int wait) : base(pid)
+            {
+               Command<SyncMsg>(sync => Sender.Tell("sync:" + sync.Msg, Self));
+               CommandAsync<AsyncMsg>(async @async =>
+               {
+                   await Task.Delay(wait);
+                   if (@async.ShouldPersist)
+                   {
+                        Sender.Tell("callback:"+ @async.Msg, Self);
+                   }
+                   Sender.Tell("async:" + @async.Msg, Self);
+               });
+            }
+        }
     }
 }
 
