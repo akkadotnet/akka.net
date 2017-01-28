@@ -133,13 +133,8 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Property]
-        //[Fact]
         public Property HeliosTransport_Should_Resolve_DNS(EndPoint inbound, EndPoint outbound, bool dnsIpv6, bool enforceIpFamily)
         {
-            //EndPoint inbound = new IPEndPoint(IPAddress.IPv6Loopback, 0);
-            //EndPoint outbound = new DnsEndPoint("localhost", 0);
-            //var dnsIpv6 = true;
-            //var enforceIpFamily = false;
             // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 8/22/2016)
             if (IsMono)
             {
@@ -217,18 +212,7 @@ namespace Akka.Remote.Tests.Transport
 
             return endpointsIpFamilyMismatch;
         }
-
-        //[Fact]
-        //public Property HeliosTransport_Should_Resolve_DNS_with_PublicHostname()
-        //{
-
-        //    var inbound = new IPEndPoint(IPAddress.IPv6Loopback, 1337);
-        //    var publicInbound = new DnsEndPoint("localhost", 0);
-        //    var outbound = new IPEndPoint(IPAddress.IPv6Loopback, 1337);
-        //    var publicOutbound = new DnsEndPoint("localhost", 0);
-        //    var dnsUseIpv6 = true;
-        //    var enforceIpFamily = false;
-
+        
         [Property]
         public Property HeliosTransport_Should_Resolve_DNS_with_PublicHostname(IPEndPoint inbound, DnsEndPoint publicInbound,
             IPEndPoint outbound, DnsEndPoint publicOutbound, bool dnsUseIpv6, bool enforceIpFamily)

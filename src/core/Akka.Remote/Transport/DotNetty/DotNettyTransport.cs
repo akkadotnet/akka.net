@@ -274,15 +274,15 @@ namespace Akka.Remote.Transport.DotNetty
         protected async Task<IPEndPoint> DnsToIPEndpoint(DnsEndPoint dns)
         {
             IPEndPoint endpoint;
-            if (!Settings.EnforceIpFamily)
-            {
-                endpoint = await ResolveNameAsync(dns);
-            }
-            else
-            {
+            //if (!Settings.EnforceIpFamily)
+            //{
+            //    endpoint = await ResolveNameAsync(dns);
+            //}
+            //else
+            //{
                 var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
                 endpoint = await ResolveNameAsync(dns, addressFamily);
-            }
+            //}
             return endpoint;
         }
 
@@ -390,7 +390,7 @@ namespace Akka.Remote.Transport.DotNetty
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)
         {
             var resolved = await Dns.GetHostEntryAsync(address.Host);
-            var found = resolved.AddressList.FirstOrDefault(a => a.AddressFamily == addressFamily);
+            var found = resolved.AddressList.LastOrDefault(a => a.AddressFamily == addressFamily);
             if (found == null)
             {
                 throw new KeyNotFoundException($"Couldn't resolve IP endpoint from provided DNS name '{address}' with address family of '{addressFamily}'");
