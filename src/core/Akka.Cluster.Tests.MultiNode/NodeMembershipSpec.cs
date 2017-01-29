@@ -28,15 +28,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class NodeMembershipNode1 : NodeMembershipSpec { }
-    public class NodeMembershipNode2 : NodeMembershipSpec { }
-    public class NodeMembershipNode3 : NodeMembershipSpec { }
-
-    public abstract class NodeMembershipSpec : MultiNodeClusterSpec
+    public class NodeMembershipSpec : MultiNodeClusterSpec
     {
         private readonly NodeMembershipSpecConfig _config;
 
-        protected NodeMembershipSpec() : this(new NodeMembershipSpecConfig())
+        public NodeMembershipSpec() : this(new NodeMembershipSpecConfig())
         {
         }
 

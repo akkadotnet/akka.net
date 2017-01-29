@@ -38,15 +38,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class DeterministicOldestWhenJoiningMultiNode1 : DeterministicOldestWhenJoiningSpec { }
-    public class DeterministicOldestWhenJoiningMultiNode2 : DeterministicOldestWhenJoiningSpec { }
-    public class DeterministicOldestWhenJoiningMultiNode3 : DeterministicOldestWhenJoiningSpec { }
-
-    public abstract class DeterministicOldestWhenJoiningSpec : MultiNodeClusterSpec
+    public class DeterministicOldestWhenJoiningSpec : MultiNodeClusterSpec
     {
         private readonly DeterministicOldestWhenJoiningConfig _config;
 
-        protected DeterministicOldestWhenJoiningSpec() : this(new DeterministicOldestWhenJoiningConfig())
+        public DeterministicOldestWhenJoiningSpec() : this(new DeterministicOldestWhenJoiningConfig())
         {
         }
 

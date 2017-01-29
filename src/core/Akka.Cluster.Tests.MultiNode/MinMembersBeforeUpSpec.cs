@@ -63,17 +63,9 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class MinMembersBeforeUpNode1 : MinMembersBeforeUpSpec { }
-    public class MinMembersBeforeUpNode2 : MinMembersBeforeUpSpec { }
-    public class MinMembersBeforeUpNode3 : MinMembersBeforeUpSpec { }
-
-    public class MinMembersOfRoleBeforeUpNode1 : MinMembersOfRoleBeforeUpSpec { }
-    public class MinMembersOfRoleBeforeUpNode2 : MinMembersOfRoleBeforeUpSpec { }
-    public class MinMembersOfRoleBeforeUpNode3 : MinMembersOfRoleBeforeUpSpec { }
-
-    public abstract class MinMembersBeforeUpSpec : MinMembersBeforeUpBase
+    public class MinMembersBeforeUpSpec : MinMembersBeforeUpBase
     {
-        protected MinMembersBeforeUpSpec() : this(new MinMembersBeforeUpSpecConfig())
+        public MinMembersBeforeUpSpec() : this(new MinMembersBeforeUpSpecConfig())
         {
         }
 
@@ -91,9 +83,9 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public abstract class MinMembersOfRoleBeforeUpSpec : MinMembersBeforeUpBase
+    public class MinMembersOfRoleBeforeUpSpec : MinMembersBeforeUpBase
     {
-        protected MinMembersOfRoleBeforeUpSpec() : this(new MinMembersOfRoleBeforeUpSpecConfig())
+        public MinMembersOfRoleBeforeUpSpec() : this(new MinMembersOfRoleBeforeUpSpecConfig())
         {
         }
 

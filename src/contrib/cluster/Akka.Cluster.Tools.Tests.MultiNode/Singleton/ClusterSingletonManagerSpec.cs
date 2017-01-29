@@ -56,15 +56,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         }
     }
 
-    public class ClusterSingletonManagerNode1 : ClusterSingletonManagerSpec { }
-    public class ClusterSingletonManagerNode2 : ClusterSingletonManagerSpec { }
-    public class ClusterSingletonManagerNode3 : ClusterSingletonManagerSpec { }
-    public class ClusterSingletonManagerNode4 : ClusterSingletonManagerSpec { }
-    public class ClusterSingletonManagerNode5 : ClusterSingletonManagerSpec { }
-    public class ClusterSingletonManagerNode6 : ClusterSingletonManagerSpec { }
-    public class ClusterSingletonManagerNode7 : ClusterSingletonManagerSpec { }
-    public class ClusterSingletonManagerNode8 : ClusterSingletonManagerSpec { }
-
     /**
      * This channel is extremely strict with regards to
      * registration and unregistration of consumer to
@@ -299,7 +290,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         }
     }
 
-    public abstract class ClusterSingletonManagerSpec : MultiNodeClusterSpec
+    public class ClusterSingletonManagerSpec : MultiNodeClusterSpec
     {
         #region Setup
 
@@ -328,7 +319,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             }
         }
 
-        protected ClusterSingletonManagerSpec() : this(new ClusterSingletonManagerSpecConfig())
+        public ClusterSingletonManagerSpec() : this(new ClusterSingletonManagerSpecConfig())
         {
         }
 

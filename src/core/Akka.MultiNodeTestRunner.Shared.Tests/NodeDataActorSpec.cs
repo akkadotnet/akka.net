@@ -16,10 +16,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
     public class NodeDataActorSpec : AkkaSpec
     {
         [Fact]
-        public void NodeData_should_maintain_events_in_time_order()
+        public void NodeData_should_maintain_events_in_time_order() 
         {
             var nodeIndex = 1;
-            var nodeDataActor = Sys.ActorOf(Props.Create(() => new NodeDataActor(nodeIndex)));
+            var nodeRole = NodeMessageHelpers.DummyRoleFor + nodeIndex;
+            var nodeDataActor = Sys.ActorOf(Props.Create(() => new NodeDataActor(nodeIndex, nodeRole)));
             var m1 = NodeMessageHelpers.GenerateMessageSequence(nodeIndex, 3);
 
             foreach(var m in m1)
@@ -39,6 +40,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
 
             Assert.True(m1.SetEquals(nodeData.EventStream));
             Assert.Equal(nodeIndex, nodeData.NodeIndex);
+            Assert.Equal(nodeRole, nodeData.NodeRole);
             Assert.False(nodeData.EndTime.HasValue);
             Assert.False(nodeData.Passed.HasValue);
         }
@@ -47,7 +49,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         public void NodeData_should_mark_as_complete_when_MultiNodeResultMessage_received()
         {
             var nodeIndex = 1;
-            var nodeDataActor = Sys.ActorOf(Props.Create(() => new NodeDataActor(nodeIndex)));
+            var nodeRole = NodeMessageHelpers.DummyRoleFor + nodeIndex;
+            var nodeDataActor = Sys.ActorOf(Props.Create(() => new NodeDataActor(nodeIndex, nodeRole)));
 
             var m1 = NodeMessageHelpers.GenerateMessageSequence(nodeIndex, 3);
             m1.UnionWith(NodeMessageHelpers.GenerateResultMessage(nodeIndex, true));
@@ -70,7 +73,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         public void NodeData_should_mark_as_failed_when_MultiNodeResultMessage_received()
         {
             var nodeIndex = 1;
-            var nodeDataActor = Sys.ActorOf(Props.Create(() => new NodeDataActor(nodeIndex)));
+            var nodeRole = NodeMessageHelpers.DummyRoleFor + nodeIndex;
+            var nodeDataActor = Sys.ActorOf(Props.Create(() => new NodeDataActor(nodeIndex, nodeRole)));
 
             var m1 = NodeMessageHelpers.GenerateMessageSequence(nodeIndex, 3);
             m1.UnionWith(NodeMessageHelpers.GenerateResultMessage(nodeIndex, false));
@@ -93,7 +97,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         public void NodeData_should_process_LogMessageFragments_into_timeline()
         {
             var nodeIndex = 1;
-            var nodeDataActor = Sys.ActorOf(Props.Create(() => new NodeDataActor(nodeIndex)));
+            var nodeRole = NodeMessageHelpers.DummyRoleFor + nodeIndex;
+            var nodeDataActor = Sys.ActorOf(Props.Create(() => new NodeDataActor(nodeIndex, nodeRole)));
             var m1 = NodeMessageHelpers.GenerateMessageSequence(nodeIndex, 3);
 
             foreach (var m in m1)
@@ -113,6 +118,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
 
             Assert.True(m1.SetEquals(nodeData.EventStream));
             Assert.Equal(nodeIndex, nodeData.NodeIndex);
+            Assert.Equal(nodeRole, nodeData.NodeRole);
             Assert.False(nodeData.EndTime.HasValue);
             Assert.False(nodeData.Passed.HasValue);
         }

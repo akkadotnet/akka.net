@@ -74,7 +74,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             if (UseTestCoordinator)
             {
                 var nodeMessage = new MultiNodeLogMessageFragment(logMessage.When.Ticks, logMessage.Message,
-                   logMessage.NodeIndex);
+                   logMessage.NodeIndex, logMessage.NodeRole);
 
                 TestCoordinatorActorRef.Tell(nodeMessage);
             }
@@ -85,7 +85,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             if (UseTestCoordinator)
             {
                 var nodeMessage = new MultiNodeLogMessage(logMessage.When.Ticks, logMessage.Message,
-                logMessage.NodeIndex, logMessage.LogSource, logMessage.Level);
+                logMessage.NodeIndex, logMessage.NodeRole, logMessage.LogSource, logMessage.Level);
 
                 TestCoordinatorActorRef.Tell(nodeMessage);
             }
@@ -107,7 +107,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             if (UseTestCoordinator)
             {
                 var nodeMessage = new MultiNodeResultMessage(DateTime.UtcNow.Ticks, nodeSuccess.Message,
-                    nodeSuccess.NodeIndex, true);
+                    nodeSuccess.NodeIndex, nodeSuccess.NodeRole, true);
 
                 TestCoordinatorActorRef.Tell(nodeMessage);
             }
@@ -118,7 +118,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             if (UseTestCoordinator)
             {
                 var nodeMessage = new MultiNodeResultMessage(DateTime.UtcNow.Ticks, nodeFail.Message,
-                    nodeFail.NodeIndex, false);
+                    nodeFail.NodeIndex, nodeFail.NodeRole, false);
 
                 TestCoordinatorActorRef.Tell(nodeMessage);
             }

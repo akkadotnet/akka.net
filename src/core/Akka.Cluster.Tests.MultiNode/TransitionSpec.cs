@@ -36,15 +36,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class TransitionMultiNode1 : TransitionSpec { }
-    public class TransitionMultiNode2 : TransitionSpec { }
-    public class TransitionMultiNode3 : TransitionSpec { }
-
-    public abstract class TransitionSpec : MultiNodeClusterSpec
+    public class TransitionSpec : MultiNodeClusterSpec
     {
         private readonly TransitionSpecConfig _config;
 
-        protected TransitionSpec() : this(new TransitionSpecConfig())
+        public TransitionSpec() : this(new TransitionSpecConfig())
         {
         }
 
