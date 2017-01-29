@@ -340,7 +340,8 @@ namespace Akka.Cluster.Tools.Client
                 {
                     _log.Debug("Heartbeat from client [{0}]", Sender.Path);
                 }
-                Sender.Tell(HeartbeatRsp.Instance);
+                var tunnel = ResponseTunnel(Sender);
+                tunnel.Tell(HeartbeatRsp.Instance);
                 UpdateClientInteractions(Sender);
             }
             else if (message is GetContacts)
@@ -487,6 +488,7 @@ namespace Akka.Cluster.Tools.Client
         private readonly IActorRef _client;
         private readonly ILoggingAdapter _log;
 
+
         public ClientResponseTunnel(IActorRef client, TimeSpan timeout)
         {
             _client = client;
@@ -507,8 +509,7 @@ namespace Akka.Cluster.Tools.Client
             }
             else
             {
-                if (!Sender.Equals(Self))
-                    _client.Tell(message, ActorRefs.NoSender);
+                _client.Tell(message, ActorRefs.NoSender);
             }
 
             return true;

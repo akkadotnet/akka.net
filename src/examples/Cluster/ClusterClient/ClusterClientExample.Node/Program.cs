@@ -18,8 +18,8 @@ namespace ClusterClientExample.Node
             {
                 var receptionist = ClusterClientReceptionist.Get(system);
                 var subscriber = system.ActorOf(Props.Create<PoliteResponder>(), "chat");
-                receptionist.RegisterService(subscriber);
-                receptionist.RegisterSubscriber(Topics.TextMessages.ToString(), subscriber);
+                receptionist.RegisterService(subscriber); //Register as service if you want to support Ask/Tell
+                receptionist.RegisterSubscriber(Topics.TextMessages.ToString(), subscriber); //Register for pubsub
                 Console.ReadLine();
                 receptionist.UnregisterSubscriber(Topics.TextMessages.ToString(), subscriber);
             }

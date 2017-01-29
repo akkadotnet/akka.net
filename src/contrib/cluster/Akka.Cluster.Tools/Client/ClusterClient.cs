@@ -87,9 +87,7 @@ namespace Akka.Cluster.Tools.Client
             }
         }
 
-        /// <summary>
-        /// The message will be delivered to all recipients Actors that have been registered as subscribers to
-        /// to the named topic.
+        /// <summary> 
         /// </summary>
         [Serializable]
         public sealed class Subscribe
@@ -487,9 +485,10 @@ namespace Akka.Cluster.Tools.Client
         {
             RegisterExternalSubscriber(subscribe);
             //receptionist.Ask<SubscribeAck>(new PublishSubscribe.Subscribe(subscribe.Topic, Self, subscribe.Group)).PipeTo(Self);
-            var ack =
-               receptionist.Ask<SubscribeAck>(new PublishSubscribe.Subscribe(subscribe.Topic, Self,
-                    subscribe.Group)).Result;
+            //var ack =
+            //   receptionist.Ask<SubscribeAck>(new PublishSubscribe.Subscribe(subscribe.Topic, Self,
+            //        subscribe.Group)).Result;
+            receptionist.Tell(new PublishSubscribe.Subscribe(subscribe.Topic, Self, subscribe.Group));
         }
         private void RegisterExternalSubscriber(Subscribe subscribe)
         {

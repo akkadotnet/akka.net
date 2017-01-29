@@ -11,9 +11,17 @@ namespace ClusterClientExample.Shared
 {
     public class TextMessageReceiver : ReceiveActor
     {
-        public TextMessageReceiver()
+        private readonly IActorRef _publisherRef;
+
+        public TextMessageReceiver(IActorRef publisherRef)
         {
-            Receive<TextMessage>(x => Console.WriteLine($"{x.GetType().Name} {x.Body} from {x.SenderPath}"));
+            _publisherRef = publisherRef;
+            Receive<TextMessage>(x =>
+            {
+                var senderPath = x.PublisherRef.Equals(_publisherRef) ? "self" : x.PublisherRef.Path.ToStringWithUid();
+                Console.WriteLine(
+                    $"{x.GetType().Name} {x.Body} from {senderPath} at:{DateTime.UtcNow.ToLongTimeString()}");
+            });
         }
     }
 
@@ -24,27 +32,14 @@ namespace ClusterClientExample.Shared
         {
             Receive<ThankYou>(x =>
             {
-                Console.WriteLine($"{x.Body} from {x.SenderPath}");
-                Sender.Tell(new YouAreWelcome("Got it", Self.Path.ToStringWithoutAddress()));
-                Mediator.Tell(new Publish(Topics.TextMessages.ToString(), new YouAreWelcome("Got it", Self.Path.ToStringWithoutAddress())));
+                Console.WriteLine($"{x.Body} from {x.PublisherRef.Path.ToStringWithUid()} at:{DateTime.UtcNow.ToLongTimeString()}");
+                Mediator.Tell(new Publish(Topics.TextMessages.ToString(), new YouAreWelcome("my pleasure", Self)));
             }, x => !Sender.Equals(Self));
 
             Receive<YouAreWelcome>(x =>
             {
-                Console.WriteLine($"{x.Body} from {x.SenderPath}");
+                Console.WriteLine($"{x.Body} from {x.PublisherRef.Path.ToStringWithUid()} at:{DateTime.UtcNow.ToLongTimeString()}");
             }, x => !Sender.Equals(Self));
-        }
-
-        protected override void PreStart()
-        {
-            base.PreStart();
-            //Mediator.Tell(new Subscribe(Topics.TextMessages.ToString(), Self));
-        }
-
-        protected override void PostStop()
-        {
-            base.PostStop();
-            //Mediator.Tell(new Unsubscribe(Topics.TextMessages.ToString(), Self));
         }
     }
 }

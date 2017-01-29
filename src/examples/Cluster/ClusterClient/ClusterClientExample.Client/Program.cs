@@ -19,17 +19,18 @@ namespace ClusterClientExample.Client
             {
                 system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
                 var client = system.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(system)));
-                
-                var subscriber = system.ActorOf(Props.Create<TextMessageReceiver>());
 
-                client.Tell(new ClusterClient.Subscribe(Topics.TextMessages.ToString(), typeof(TextMessage), subscriber));
+                var subscriber = system.ActorOf(Props.Create<TextMessageReceiver>(client));
+
+                client.Tell(new ClusterClient.Subscribe(Topics.TextMessages.ToString(), typeof(ThankYou), subscriber));
+                client.Tell(new ClusterClient.Subscribe(Topics.TextMessages.ToString(), typeof(YouAreWelcome), subscriber));
+
+                //client.Tell(new ClusterClient.Send("/user/chat", new ThankYou("Client Tell to Service", client))); //Tell/Ask is supported if you register actor as service on node
+
 
                 while (Console.ReadKey().Key != ConsoleKey.Escape)
                 {
-                    client.Tell(new ClusterClient.Publish(Topics.TextMessages.ToString(), new ThankYou("ThankYou from client", client.Path.ToStringWithoutAddress())));
-                    //var result = client.Ask<YouAreWelcome>(new ClusterClient.Send("/user/chat", new ThankYou("ThankYou from client", client.Path.ToStringWithoutAddress()))).Result;
-                    //subscriber.Tell(result);
-                    //client.Tell(new ClusterClient.Send("/user/chat", new ThankYou("ThankYou from client", client.Path.ToStringWithoutAddress())));
+                    client.Tell(new ClusterClient.Publish(Topics.TextMessages.ToString(), new ThankYou("", client)));
                 }
 
                 Console.ReadLine();
