@@ -19,15 +19,17 @@ namespace Akka.Streams.Tests.Performance
 {
     public class InterpreterBenchmark
     {
+        private const TestMode CurrentTestMode = TestMode.Measurement;
+
         [PerfBenchmark(Description = "Test the performance of the graph interpreter with 1 identity",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 200)]
         public void Graph_interpreter_100k_elements_with_1_identity() => Execute(1);
 
 
         [PerfBenchmark(Description = "Test the performance of the graph interpreter with 5 identities",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Skip = "FIXME Port is pulled twice")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 1000)]
@@ -35,7 +37,7 @@ namespace Akka.Streams.Tests.Performance
 
 
         [PerfBenchmark(Description = "Test the performance of the graph interpreter with 10 identities",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Skip = "FIXME Port is pulled twice")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 1000)]

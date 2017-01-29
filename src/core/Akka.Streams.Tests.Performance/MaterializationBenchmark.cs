@@ -16,6 +16,8 @@ namespace Akka.Streams.Tests.Performance
 {
     public class MaterializationBenchmark
     {
+        private const TestMode CurrentTestMode = TestMode.Measurement;
+
         private ActorSystem _actorSystem;
         private ActorMaterializerSettings _materializerSettings;
         private ActorMaterializer _materializer;
@@ -35,7 +37,7 @@ namespace Akka.Streams.Tests.Performance
         public void Shutdown() => _actorSystem.Terminate().Wait(TimeSpan.FromSeconds(5));
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a flow with 1 map stage",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2)]
         public void Flow_with_1_map() => FlowWithMapBuilder(1).Run(_materializer);
@@ -49,14 +51,14 @@ namespace Akka.Streams.Tests.Performance
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a flow with 100 map stages",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 10)]
         public void Flow_with_100_map() => FlowWithMapBuilder(100).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a flow with 1000 map stages",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 150)]
         public void Flow_with_1000_map() => FlowWithMapBuilder(1000).Run(_materializer);
@@ -64,28 +66,28 @@ namespace Akka.Streams.Tests.Performance
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 1 junction",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2)]
         public void Graph_with_1_junction() => GraphWithJunctionsBuilder(1).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 10 junctions",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 5)]
         public void Graph_with_10_junction() => GraphWithJunctionsBuilder(10).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 100 junctions",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 20)]
         public void Graph_with_100_junction() => GraphWithJunctionsBuilder(100).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 1000 junctions",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 1000)]
         public void Graph_with_1000_junction() => GraphWithJunctionsBuilder(1000).Run(_materializer);
@@ -93,28 +95,28 @@ namespace Akka.Streams.Tests.Performance
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 1 nested import",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2)]
         public void Graph_with_1_nested_imports() => GraphWithNestedImportsBuilder(1).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 10 nested imports",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 5)]
         public void Graph_with_10_nested_imports() => GraphWithNestedImportsBuilder(10).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 100 nested imports",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 5)]
         public void Graph_with_100_nested_imports() => GraphWithNestedImportsBuilder(100).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 1000 nested imports",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3,
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3,
             Skip = "Throws StackOverflowException by around 200 nested imports")]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 1000)]
@@ -123,28 +125,28 @@ namespace Akka.Streams.Tests.Performance
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 1 imported flow",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2)]
         public void Graph_with_1_imported_flow() => GraphWithImportedFlowBuilder(1).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 10 imported flows",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 5)]
         public void Graph_with_10_imported_flows() => GraphWithImportedFlowBuilder(10).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 100 imported flows",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 10)]
         public void Graph_with_100_imported_flows() => GraphWithImportedFlowBuilder(100).Run(_materializer);
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 1000 imported flows",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = CurrentTestMode, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 100)]
         public void Graph_with_1000_imported_flows() => GraphWithImportedFlowBuilder(1000).Run(_materializer);
