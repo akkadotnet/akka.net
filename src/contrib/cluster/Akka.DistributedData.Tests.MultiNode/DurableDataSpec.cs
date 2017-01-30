@@ -245,10 +245,11 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 var sys1 = ActorSystem.Create("AdditionalSys", Sys.Settings.Config);
-                var addr = Cluster.Cluster.Get(sys1).SelfAddress;
+                var cluster1 = Cluster.Cluster.Get(sys1);
+                var addr = cluster1.SelfAddress;
                 try
                 {
-                    Cluster.Cluster.Get(sys1).Join(addr);
+                    cluster1.Join(addr);
                     /* new TestKit(sys1) with ImplicitSender */
                     {
                         var r = NewReplicator(sys1);
@@ -264,10 +265,10 @@ namespace Akka.DistributedData.Tests.MultiNode
                         r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
                         ExpectMsg(new Replicator.NotFound(keyA, null));
 
-                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
-                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
-                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
-                        r.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
+                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
+                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
+                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
+                        r.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
 
                         ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
                         ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
@@ -293,7 +294,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         var r2 = NewReplicator(sys2);
 
                         // it should be possible to update while loading is in progress
-                        r2.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
+                        r2.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(Cluster.Cluster.Get(sys2))));
                         ExpectMsg(new Replicator.UpdateSuccess(keyB, null));
 
                         // wait until all loaded

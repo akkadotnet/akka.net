@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DurableDataSpec.cs" />
+    <Compile Include="DurablePrunningSpec.cs" />
     <Compile Include="JepsenInspiredInsertSpec.cs" />
     <Compile Include="ReplicatorChaosSpec.cs" />
     <Compile Include="ReplicatorPruningSpec.cs" />
