@@ -310,7 +310,8 @@ Target "MultiNodeTests" <| fun _ ->
     let multiNodeTestAssemblies = !! "src/**/bin/Release/Akka.Remote.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/Akka.Cluster.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/Akka.Cluster.Sharding.Tests.MultiNode.dll"
+                                     "src/**/bin/Release/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.DistributedData.Tests.MultiNode.dll"
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
