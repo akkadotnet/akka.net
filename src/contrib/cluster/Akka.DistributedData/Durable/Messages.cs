@@ -85,6 +85,10 @@ namespace Akka.DistributedData.Durable
 
     internal sealed class LoadFailedException : AkkaException
     {
+        public LoadFailedException(string message) : base(message)
+        {
+        }
+
         public LoadFailedException(string message, Exception cause) : base(message, cause)
         {
         }

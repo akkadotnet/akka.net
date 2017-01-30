@@ -55,7 +55,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 .ToImmutableDictionary(x => x.Key, x => (IEnumerable<int>)x.ToArray());
         }
 
-        //[MultiNodeFact]
+        [MultiNodeFact]
         public void JepsenInspiredInsert_Tests()
         {
             Insert_from_5_nodes_should_setup_cluster();

@@ -222,6 +222,8 @@ namespace Akka.DistributedData
 
             public override bool Equals(object obj) => obj is NotFound && Equals((NotFound)obj);
 
+            public override string ToString() => $"NotFound({Key}, {Request})";
+
             public override int GetHashCode()
             {
                 unchecked
@@ -517,6 +519,8 @@ namespace Akka.DistributedData
 
             public override bool Equals(object obj) => obj is UpdateSuccess && Equals((UpdateSuccess)obj);
 
+            public override string ToString() => $"UpdateSuccess({Key}, {Request})";
+
             public override int GetHashCode()
             {
                 unchecked
@@ -626,7 +630,7 @@ namespace Akka.DistributedData
         /// It will eventually be disseminated to other replicas, unless the local replica
         /// crashes before it has been able to communicate with other replicas.
         /// </summary>
-        public sealed class StoreFailure : IUpdateFailure, IDeleteResponse
+        public sealed class StoreFailure : IUpdateFailure, IDeleteResponse, IEquatable<StoreFailure>
         {
             private readonly IKey _key;
             private readonly object _request;
@@ -652,6 +656,30 @@ namespace Akka.DistributedData
             }
 
             public Exception Cause => new Exception($"Failed to store value under the key {_key}");
+
+            public bool Equals(StoreFailure other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Equals(_key, other._key) && Equals(_request, other._request);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is StoreFailure && Equals((StoreFailure) obj);
+            }
+
+            public override string ToString() => $"StoreFailure({_key}, {_request})";
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (_key.GetHashCode()* 397) ^ (_request?.GetHashCode() ?? 0);
+                }
+            }
         }
         
         /// <summary>
@@ -825,6 +853,8 @@ namespace Akka.DistributedData
             public override bool Equals(object obj) => obj is ReplicaCount && Equals((ReplicaCount) obj);
 
             public override int GetHashCode() => N.GetHashCode();
+
+            public override string ToString() => $"ReplicaCount({N})";
         }
 
         /// <summary>

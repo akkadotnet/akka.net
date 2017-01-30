@@ -43,7 +43,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 "replicator");
         }
 
-        //[MultiNodeFact]
+        [MultiNodeFact]
         public void Pruning_of_CRDT_should_move_data_from_removed_node()
         {
             Join(First, First);
