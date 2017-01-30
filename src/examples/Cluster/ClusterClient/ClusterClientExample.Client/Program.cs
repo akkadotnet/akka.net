@@ -22,15 +22,14 @@ namespace ClusterClientExample.Client
 
                 var subscriber = system.ActorOf(Props.Create<TextMessageReceiver>(client));
 
-                client.Tell(new ClusterClient.Subscribe(Topics.TextMessages.ToString(), typeof(ThankYou), subscriber));
-                client.Tell(new ClusterClient.Subscribe(Topics.TextMessages.ToString(), typeof(YouAreWelcome), subscriber));
-
+                client.Subscribe<ThankYou>(subscriber, Topics.TextMessages.ToString());
+                client.Subscribe<YouAreWelcome>(subscriber, Topics.TextMessages.ToString());
+                
                 //client.Tell(new ClusterClient.Send("/user/chat", new ThankYou("Client Tell to Service", client))); //Tell/Ask is supported if you register actor as service on node
-
 
                 while (Console.ReadKey().Key != ConsoleKey.Escape)
                 {
-                    client.Tell(new ClusterClient.Publish(Topics.TextMessages.ToString(), new ThankYou("", client)));
+                    client.Publish(Topics.TextMessages.ToString(), new ThankYou("", client));
                 }
 
                 Console.ReadLine();
