@@ -259,6 +259,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.Tests.MultiNode", "contrib\cluster\Akka.DistributedData.Tests.MultiNode\Akka.DistributedData.Tests.MultiNode.csproj", "{53A657B3-D3CD-461E-9759-664331218060}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.Hyperion", "contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj", "{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serialization.Hyperion.Tests", "contrib\serializers\Akka.Serialization.Hyperion.Tests\Akka.Serialization.Hyperion.Tests.csproj", "{E3549E17-7206-44F0-A322-EDC058A0498F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -980,6 +984,22 @@ Global
 		{53A657B3-D3CD-461E-9759-664331218060}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{53A657B3-D3CD-461E-9759-664331218060}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{53A657B3-D3CD-461E-9759-664331218060}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3549E17-7206-44F0-A322-EDC058A0498F}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3549E17-7206-44F0-A322-EDC058A0498F}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{E3549E17-7206-44F0-A322-EDC058A0498F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3549E17-7206-44F0-A322-EDC058A0498F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3549E17-7206-44F0-A322-EDC058A0498F}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{E3549E17-7206-44F0-A322-EDC058A0498F}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{E3549E17-7206-44F0-A322-EDC058A0498F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3549E17-7206-44F0-A322-EDC058A0498F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1098,5 +1118,7 @@ Global
 		{59CFFC88-8A73-445D-B191-281E40BE9421} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 		{0DBF3D66-6E5E-4A89-AA3D-674B92FE81B7} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 		{53A657B3-D3CD-461E-9759-664331218060} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
+		{6C995BF6-1F8D-40EE-B608-68E36EA6A6F8} = {0E55F1F8-E212-43D7-A0C0-ACEA9794B0D7}
+		{E3549E17-7206-44F0-A322-EDC058A0498F} = {0E55F1F8-E212-43D7-A0C0-ACEA9794B0D7}
 	EndGlobalSection
 EndGlobal

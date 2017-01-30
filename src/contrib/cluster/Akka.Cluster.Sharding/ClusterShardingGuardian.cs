@@ -19,28 +19,73 @@ namespace Akka.Cluster.Sharding
     {
         #region messages
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class Started : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IActorRef ShardRegion;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardRegion">TBD</param>
             public Started(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class Start : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly string TypeName;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Props EntityProps;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ClusterShardingSettings Settings;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IdExtractor IdExtractor;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardResolver ShardResolver;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IShardAllocationStrategy AllocationStrategy;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly object HandOffStopMessage;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="typeName">TBD</param>
+            /// <param name="entityProps">TBD</param>
+            /// <param name="settings">TBD</param>
+            /// <param name="idIdExtractor">TBD</param>
+            /// <param name="shardResolver">TBD</param>
+            /// <param name="allocationStrategy">TBD</param>
+            /// <param name="handOffStopMessage">TBD</param>
+            /// <exception cref="ArgumentNullException">TBD</exception>
             public Start(string typeName, Props entityProps, ClusterShardingSettings settings,
                 IdExtractor idIdExtractor, ShardResolver shardResolver, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
             {
@@ -57,14 +102,37 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class StartProxy : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly string TypeName;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ClusterShardingSettings Settings;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IdExtractor ExtractEntityId;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardResolver ExtractShardId;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="typeName">TBD</param>
+            /// <param name="settings">TBD</param>
+            /// <param name="extractEntityId">TBD</param>
+            /// <param name="extractShardId">TBD</param>
+            /// <exception cref="ArgumentException">TBD</exception>
             public StartProxy(string typeName, ClusterShardingSettings settings, IdExtractor extractEntityId, ShardResolver extractShardId)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException("typeName", "ClusterSharding start proxy requires type name to be provided");
@@ -81,6 +149,9 @@ namespace Akka.Cluster.Sharding
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly ClusterSharding _sharding = ClusterSharding.Get(Context.System);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ClusterShardingGuardian()
         {
             Receive<Start>(start =>

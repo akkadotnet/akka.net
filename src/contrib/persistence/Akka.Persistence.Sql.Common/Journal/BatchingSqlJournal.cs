@@ -59,6 +59,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Creates a new instance of the <see cref="ReplayFilterSettings"/> from provided HOCON <paramref name="config"/>.
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public ReplayFilterSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "No HOCON config was provided for replay filter settings");
@@ -80,6 +83,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             IsDebug = config.GetBoolean("debug", false);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="mode">TBD</param>
+        /// <param name="windowSize">TBD</param>
+        /// <param name="maxOldWriters">TBD</param>
+        /// <param name="isDebug">TBD</param>
         public ReplayFilterSettings(ReplayFilterMode mode, int windowSize, int maxOldWriters, bool isDebug)
         {
             Mode = mode;
@@ -116,6 +126,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Creates a new instance of the <see cref="CircuitBreakerSettings"/> from provided HOCON <paramref name="config"/>.
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <returns>TBD</returns>
         public CircuitBreakerSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
@@ -125,6 +138,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             ResetTimeout = config.GetTimeSpan("reset-timeout", TimeSpan.FromSeconds(60));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="maxFailures">TBD</param>
+        /// <param name="callTimeout">TBD</param>
+        /// <param name="resetTimeout">TBD</param>
         public CircuitBreakerSettings(int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
         {
             MaxFailures = maxFailures;
@@ -197,6 +216,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public QueryConfiguration NamingConventions { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <param name="namingConventions">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <returns>TBD</returns>
         protected BatchingSqlJournalSetup(Config config, QueryConfiguration namingConventions)
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "Sql journal settings cannot be initialized, because required HOCON section couldn't been found");
@@ -237,6 +264,19 @@ namespace Akka.Persistence.Sql.Common.Journal
             NamingConventions = namingConventions;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <param name="maxConcurrentOperations">TBD</param>
+        /// <param name="maxBatchSize">TBD</param>
+        /// <param name="maxBufferSize">TBD</param>
+        /// <param name="autoInitialize">TBD</param>
+        /// <param name="connectionTimeout">TBD</param>
+        /// <param name="isolationLevel">TBD</param>
+        /// <param name="circuitBreakerSettings">TBD</param>
+        /// <param name="replayFilterSettings">TBD</param>
+        /// <param name="namingConventions">TBD</param>
         protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions)
         {
             ConnectionString = connectionString;
@@ -445,6 +485,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="setup">TBD</param>
         protected BatchingSqlJournal(BatchingSqlJournalSetup setup)
         {
             Setup = setup;
@@ -528,6 +572,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 )";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             if (Setup.AutoInitialize)
@@ -548,7 +595,12 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             base.PreStart();
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected sealed override bool Receive(object message)
         {
             if (message is WriteMessages) BatchRequest((IJournalRequest)message);
@@ -697,6 +749,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Tries to add incoming <paramref name="message"/> to <see cref="Buffer"/>.
         /// Also checks if any DB connection has been released and next batch can be processed.
         /// </summary>
+        /// <param name="message">TBD</param>
         protected void BatchRequest(IJournalRequest message)
         {
             if (Buffer.Count > Setup.MaxBufferSize)
@@ -712,6 +765,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// due to buffer overflow. Overflow is controlled by max buffer size and can be set using 
         /// <see cref="BatchingSqlJournalSetup.MaxBufferSize"/> setting.
         /// </summary>
+        /// <param name="request">TBD</param>
         protected virtual void OnBufferOverflow(IJournalMessage request)
         {
             Log.Warning("Batching journal buffer limit has been reached. Denying a request [{0}].", request);
@@ -1124,8 +1178,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Returns a persitent representation of an event read from a current row in the database.
         /// </summary>
-        /// <param name="reader"></param>
-        /// <returns></returns>
+        /// <param name="reader">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual IPersistentRepresentation ReadEvent(DbDataReader reader)
         {
             var persistenceId = reader.GetString(PersistenceIdIndex);
@@ -1145,6 +1199,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Creates a new database connection from a given <paramref name="connectionString"/>.
         /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract TConnection CreateConnection(string connectionString);
 
         /// <summary>
@@ -1190,10 +1246,19 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class JournalBufferOverflowException : AkkaException
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly JournalBufferOverflowException Instance = new JournalBufferOverflowException();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public JournalBufferOverflowException() : base(
             "Batching journal buffer has been overflowed. This may happen as an effect of burst of persistent actors "
             + "requests incoming faster than the underlying database is able to fullfil them. You may modify "

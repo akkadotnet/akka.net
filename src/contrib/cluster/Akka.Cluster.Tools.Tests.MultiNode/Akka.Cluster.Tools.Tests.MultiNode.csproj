@@ -11,8 +11,6 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -78,6 +76,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClusterClient\ClusterClientStartSpecConfig.cs" />
     <Compile Include="ClusterClient\ClusterClientStopSpec.cs" />
     <Compile Include="ClusterClient\ClusterClientSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
