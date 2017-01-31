@@ -310,12 +310,14 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        private class AsyncMsg: SyncMsg
+        private class AsyncMsg
         {
+            public string Msg { get; set; }
             public bool ShouldPersist { get; }
 
-            public AsyncMsg(string msg, bool shouldPersist = false): base(msg)
+            public AsyncMsg(string msg, bool shouldPersist = false)
             {
+                Msg = msg;
                 ShouldPersist = shouldPersist;
             }
         }
