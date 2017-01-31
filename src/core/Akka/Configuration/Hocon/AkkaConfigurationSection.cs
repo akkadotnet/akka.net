@@ -43,6 +43,7 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the HOCON (Human-Optimized Config Object Notation)
         /// configuration string from the custom akka node.
         /// <code>
+        /// <![CDATA[
         /// <?xml version="1.0" encoding="utf-8" ?>
         /// <configuration>
         ///   <configSections>
@@ -54,6 +55,7 @@ namespace Akka.Configuration.Hocon
         ///      </hocon>
         ///   </akka>
         /// </configuration>
+        /// ]]>
         /// </code>
         /// </summary>
         [ConfigurationProperty(ConfigurationPropertyName, IsRequired = true)]

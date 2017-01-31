@@ -262,6 +262,11 @@ namespace Akka.Routing
     /// </summary>
     internal sealed class ConsistentRoutee
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routee">TBD</param>
+        /// <param name="selfAddress">TBD</param>
         public ConsistentRoutee(Routee routee, Address selfAddress)
         {
             SelfAddress = selfAddress;
@@ -410,10 +415,10 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Used by the <see cref="RoutedActorCell" /> to determine the initial number of routees.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The number of routees associated with this pool.</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return this.NrOfInstances;
@@ -654,9 +659,12 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="ConsistentHashingGroup(IEnumerable{System.String})"/> instead.
+        /// <code>
+        /// new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString()))
+        /// </code>
         /// </summary>
-        /// <param name="routees">TBD</param>
+        /// <param name="routees">N/A</param>
         [Obsolete("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead")]
         public ConsistentHashingGroup(IEnumerable<IActorRef> routees)
             : this(routees.Select(c => c.Path.ToString()))
@@ -699,10 +707,10 @@ namespace Akka.Routing
         public int VirtualNodesFactor { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Retrieves the actor paths used by this router during routee selection.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;
