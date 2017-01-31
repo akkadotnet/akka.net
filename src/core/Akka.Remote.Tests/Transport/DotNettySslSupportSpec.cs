@@ -30,12 +30,14 @@ namespace Akka.Remote.Tests.Transport
             var enableSsl = !string.IsNullOrEmpty(certPath);
             var config = ConfigurationFactory.ParseString(@"
             akka {
+                loglevel = DEBUG
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
                 remote {
                     dot-netty.tcp {
                         port = 0
                         hostname = ""127.0.0.1""
                         enable-ssl = """ + enableSsl.ToString().ToLowerInvariant() + @"""
+                        log-transport = true
                     }
                 }
             }");
