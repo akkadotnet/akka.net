@@ -199,18 +199,14 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <param name="element">TBD</param>
         /// <returns>TBD</returns>
         public IUpstreamDirective HoldUpstreamAndPush(object element) => HoldUpstreamAndPush((TOut) element);
 
         /// <summary>
         /// TBD
         /// </summary>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <param name="element">TBD</param>
         /// <returns>TBD</returns>
         public IUpstreamDirective HoldUpstreamAndPush(TOut element)
         {
@@ -221,9 +217,6 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
         /// <returns>TBD</returns>
         public IDownstreamDirective HoldDownstreamAndPull()
         {

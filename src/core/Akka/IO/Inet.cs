@@ -177,8 +177,6 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            /// <param name="token">TBD</param>
-            /// <returns>TBD</returns>
             public class SendBufferSize : SocketOption
             {
                 private readonly int _size;

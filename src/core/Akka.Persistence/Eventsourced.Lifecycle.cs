@@ -18,8 +18,6 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="envelope">TBD</param>
-        /// <returns>TBD</returns>
         public static readonly Func<Envelope, bool> UnstashFilterPredicate =
             envelope => !(envelope.Message is WriteMessageSuccess || envelope.Message is ReplayedMessage);
 

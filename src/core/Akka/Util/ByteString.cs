@@ -915,7 +915,6 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="map">TBD</param>
         /// <param name="array">TBD</param>
         /// <param name="offset">TBD</param>
         /// <param name="length">TBD</param>
@@ -987,7 +986,6 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="map">TBD</param>
         /// <param name="len">TBD</param>
         /// <param name="byteOrder">TBD</param>
         /// <param name="fill">TBD</param>
