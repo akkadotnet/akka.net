@@ -319,20 +319,27 @@ namespace Akka.Cluster.Tools.Client
 
         protected override bool Receive(object message)
         {
-            if (message is PublishSubscribe.Send
-                || message is PublishSubscribe.SendToAll
-                || message is PublishSubscribe.Publish)
+            if (message is Send
+                || message is SendToAll
+                || message is Publish)
             {
                 var tunnel = ResponseTunnel(Sender);
                 tunnel.Tell(Ping.Instance); // keep alive
                 _pubSubMediator.Tell(message, tunnel);
             }
-            else if (message is PublishSubscribe.Subscribe)
+            else if (message is Subscribe)
             {
                 var tunnel = ResponseTunnel(Sender);
                 tunnel.Tell(Ping.Instance); // keep alive
                 var subscribe = (Subscribe)message;
                 _pubSubMediator.Tell(new Subscribe(subscribe.Topic, tunnel, subscribe.Group), tunnel);
+            }
+            else if (message is Unsubscribe)
+            {
+                var tunnel = ResponseTunnel(Sender);
+                tunnel.Tell(Ping.Instance); // keep alive
+                var unsubscribe = (Unsubscribe)message;
+                _pubSubMediator.Tell(new Unsubscribe(unsubscribe.Topic, tunnel, unsubscribe.Group), tunnel);
             }
             else if (message is Heartbeat)
             {
