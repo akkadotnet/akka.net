@@ -15,9 +15,6 @@ namespace Akka.Util
     /// <summary>
     /// TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    /// <param name="value">TBD</param>
-    /// <returns>TBD</returns>
     internal static class MonotonicClock
     {
         private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();

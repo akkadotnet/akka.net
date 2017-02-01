@@ -249,7 +249,7 @@ namespace Akka.Cluster.TestKit
         }
 
         /// <summary>
-        /// Initialize the cluster of the specified member nodes (<see cref="roles"/>)
+        /// Initialize the cluster of the specified member nodes (<paramref name="roles"/>)
         /// and wait until all joined and <see cref="MemberStatus.Up"/>.
         /// 
         /// First node will be started first and others will join the first.

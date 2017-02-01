@@ -34,15 +34,15 @@ namespace Akka.Configuration.Hocon
     public abstract class CDataConfigurationElement : ConfigurationElement
     {
         /// <summary>
-        /// TBD
+        /// The name of the property that contains the content to deserialize.
         /// </summary>
         protected const string ContentPropertyName = "content";
 
         /// <summary>
         /// Deserializes the text located in a CDATA node of the configuration file.
         /// </summary>
-        /// <param name="reader">The <see cref="T:System.Xml.XmlReader" /> that reads from the configuration file.</param>
-        /// <param name="serializeCollectionKey">true to serialize only the collection key properties; otherwise, false.</param>
+        /// <param name="reader">The <see cref="System.Xml.XmlReader" /> that reads from the configuration file.</param>
+        /// <param name="serializeCollectionKey"><c>true</c> to serialize only the collection key properties; otherwise, <c>false</c>.</param>
         protected override void DeserializeElement(XmlReader reader, bool serializeCollectionKey)
         {
             foreach (ConfigurationProperty configurationProperty in Properties)

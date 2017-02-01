@@ -92,10 +92,10 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Used by the <see cref="RoutedActorCell" /> to determine the initial number of routees.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The number of routees associated with this pool.</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return NrOfInstances;
@@ -294,10 +294,10 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves the actor paths used by this router during routee selection.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;

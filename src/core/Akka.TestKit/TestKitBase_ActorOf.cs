@@ -153,7 +153,7 @@ namespace Akka.TestKit
         /// <summary>
         ///  Creates an <see cref="ActorSelection(string)"/>
         ///  </summary>
-        /// <param name="anchorRef">The base actor that anchros the <see cref="actorPath"/>.</param>
+        /// <param name="anchorRef">The base actor that anchros the <paramref name="actorPath"/>.</param>
         /// <param name="actorPath">The path of the actor(s) we want to select.</param>
         /// <returns>An ActorSelection</returns>
         public ActorSelection ActorSelection(IActorRef anchorRef, string actorPath)

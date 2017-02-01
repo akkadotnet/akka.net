@@ -285,6 +285,11 @@
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
+    <Compile Include="Util\MatchHandler\PartialHandlerArgumentsCapture.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>PartialHandlerArgumentsCapture.tt</DependentUpon>
+    </Compile>
     <Compile Include="Util\RuntimeDetector.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
     <Compile Include="Util\Result.cs" />
@@ -349,7 +354,6 @@
     <Compile Include="Util\MatchHandler\MatchExpressionBuilderResult.cs" />
     <Compile Include="Util\MatchHandler\MatchExpressionBuilder.cs" />
     <Compile Include="Util\MatchHandler\PartialActionBuilder.cs" />
-    <Compile Include="Util\MatchHandler\PartialHandlerArgumentsCapture.cs" />
     <Compile Include="Util\MatchHandler\HandlerKind.cs" />
     <Compile Include="Util\MatchHandler\IMatchCompiler.cs" />
     <Compile Include="Util\MatchHandler\MatchBuilder.cs" />
@@ -381,8 +385,14 @@
     <Content Include="Akka.ExternalAnnotations.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PartialHandlerArgumentsCapture.cs</LastGenOutput>
+    </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

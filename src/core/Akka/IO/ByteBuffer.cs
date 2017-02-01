@@ -182,7 +182,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="srsc">TBD</param>
+        /// <param name="src">TBD</param>
         /// <param name="length">TBD</param>
         public void Put(ByteBuffer src, int length)
         {
