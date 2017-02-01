@@ -1441,7 +1441,15 @@ namespace Akka.Cluster
                     _log.Info("New incarnation of existing member [{0}] is trying to join. " +
                         "Existing will be removed from the cluster and then new member will be allowed to join.", node);
                     if (localMember.Status != MemberStatus.Down)
+                    {
+                        // we can confirm it as terminated/unreachable immediately
+                        var newReachability = _latestGossip.Overview.Reachability.Terminated(
+                            _cluster.SelfUniqueAddress, localMember.UniqueAddress);
+                        var newOverview = _latestGossip.Overview.Copy(reachability: newReachability);
+                        var newGossip = _latestGossip.Copy(overview: newOverview);
+                        UpdateLatestGossip(newGossip);
                         Downing(localMember.Address);
+                    }
                 }
                 else
                 {
