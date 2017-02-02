@@ -25,19 +25,39 @@ namespace Akka.Cluster.Tools.Singleton
     {
         #region Internal messages
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class GetNext
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly GetNext Instance = new GetNext();
             private GetNext() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class InitialOldestState
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Address Oldest;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly bool SafeToBeOldest;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="oldest">TBD</param>
+            /// <param name="safeToBeOldest">TBD</param>
             public InitialOldestState(Address oldest, bool safeToBeOldest)
             {
                 Oldest = oldest;
@@ -45,11 +65,21 @@ namespace Akka.Cluster.Tools.Singleton
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         public sealed class OldestChanged
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly Address Oldest;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="oldest">TBD</param>
             public OldestChanged(Address oldest)
             {
                 Oldest = oldest;
@@ -58,6 +88,10 @@ namespace Akka.Cluster.Tools.Singleton
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
         public OldestChangedBuffer(string role)
         {
             _role = role;
@@ -120,16 +154,26 @@ namespace Akka.Cluster.Tools.Singleton
             Context.Parent.Tell(change);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             _cluster.Unsubscribe(Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is ClusterEvent.CurrentClusterState) HandleInitial((ClusterEvent.CurrentClusterState)message);

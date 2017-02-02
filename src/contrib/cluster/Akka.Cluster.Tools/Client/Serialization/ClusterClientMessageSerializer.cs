@@ -18,8 +18,14 @@ using Contacts = Akka.Cluster.Client.Serializers.Proto.Contacts;
 
 namespace Akka.Cluster.Tools.Client.Serialization
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ClusterClientMessageSerializer : SerializerWithStringManifest
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const int BufferSize = 1024 * 4;
 
         private const string ContactsManifest = "A";
@@ -30,8 +36,15 @@ namespace Akka.Cluster.Tools.Client.Serialization
         private static readonly byte[] EmptyBytes = new byte[0];
         private readonly IDictionary<string, Func<byte[], IClusterClientMessage>> _fromBinaryMap;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override int Identifier { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public ClusterClientMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             Identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system);
@@ -44,6 +57,12 @@ namespace Akka.Cluster.Tools.Client.Serialization
             };
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is ClusterReceptionist.Contacts) return Compress(ContactsToProto(obj as ClusterReceptionist.Contacts));
@@ -54,6 +73,13 @@ namespace Akka.Cluster.Tools.Client.Serialization
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bytes">TBD</param>
+        /// <param name="manifestString">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override object FromBinary(byte[] bytes, string manifestString)
         {
             Func<byte[], IClusterClientMessage> deserializer;
@@ -65,6 +91,12 @@ namespace Akka.Cluster.Tools.Client.Serialization
             throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifestString}] in serializer {GetType()}");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="o">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override string Manifest(object o)
         {
             if (o is ClusterReceptionist.Contacts) return ContactsManifest;

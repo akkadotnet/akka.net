@@ -31,6 +31,9 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public interface IClusterClientInteraction
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         IActorRef ClusterClient { get; }
     }
 
@@ -40,11 +43,18 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class ClusterClientUp : IClusterClientInteraction
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="clusterClient">TBD</param>
         public ClusterClientUp(IActorRef clusterClient)
         {
             ClusterClient = clusterClient;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef ClusterClient { get; }
     }
 
@@ -54,11 +64,18 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class ClusterClientUnreachable : IClusterClientInteraction
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="clusterClient">TBD</param>
         public ClusterClientUnreachable(IActorRef clusterClient)
         {
             ClusterClient = clusterClient;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef ClusterClient { get; }
     }
 
@@ -72,6 +89,9 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class SubscribeClusterClients
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly SubscribeClusterClients Instance = new SubscribeClusterClients();
         private SubscribeClusterClients() { }
     }
@@ -81,6 +101,9 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class UnsubscribeClusterClients
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly UnsubscribeClusterClients Instance = new UnsubscribeClusterClients();
         private UnsubscribeClusterClients() { }
     }
@@ -91,6 +114,9 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class GetClusterClients
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly GetClusterClients Instance = new GetClusterClients();
         private GetClusterClients() { }
     }
@@ -109,6 +135,9 @@ namespace Akka.Cluster.Tools.Client
             ClusterClientsList = clusterClientsList;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<IActorRef> ClusterClientsList { get; }
     }
 
@@ -138,23 +167,44 @@ namespace Akka.Cluster.Tools.Client
     {
         #region Messages
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class GetContacts : IClusterClientMessage, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly GetContacts Instance = new GetContacts();
             private GetContacts() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class Contacts : IClusterClientMessage
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ImmutableList<string> ContactPoints;
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="contactPoints">TBD</param>
             public Contacts(ImmutableList<string> contactPoints)
             {
                 ContactPoints = contactPoints;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -166,6 +216,10 @@ namespace Akka.Cluster.Tools.Client
                 return ContactPoints.SequenceEqual(other.ContactPoints);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -180,29 +234,53 @@ namespace Akka.Cluster.Tools.Client
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class Heartbeat : IClusterClientMessage, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Heartbeat Instance = new Heartbeat();
             private Heartbeat() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class HeartbeatRsp : IClusterClientMessage, IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly HeartbeatRsp Instance = new HeartbeatRsp();
             private HeartbeatRsp() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class Ping : IDeadLetterSuppression
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Ping Instance = new Ping();
             private Ping() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class CheckDeadlines
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly CheckDeadlines Instance = new CheckDeadlines();
             private CheckDeadlines() { }
         }
@@ -211,6 +289,9 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Factory method for <see cref="ClusterReceptionist"/> <see cref="Actor.Props"/>.
         /// </summary>
+        /// <param name="pubSubMediator">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(IActorRef pubSubMediator, ClusterReceptionistSettings settings)
         {
             return Actor.Props.Create(() => new ClusterReceptionist(
@@ -220,11 +301,23 @@ namespace Akka.Cluster.Tools.Client
 
 
         #region RingOrdering
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class RingOrdering : IComparer<Address>
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly RingOrdering Instance = new RingOrdering();
             private RingOrdering() { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="node">TBD</param>
+            /// <exception cref="IllegalStateException">TBD</exception>
+            /// <returns>TBD</returns>
             public static int HashFor(Address node)
             {
                 // cluster node identifier is the host and port of the address; protocol and system is assumed to be the same
@@ -234,6 +327,12 @@ namespace Akka.Cluster.Tools.Client
                     throw new IllegalStateException("Unexpected address without host/port: " + node);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="a">TBD</param>
+            /// <param name="b">TBD</param>
+            /// <returns>TBD</returns>
             public int Compare(Address a, Address b)
             {
                 var ha = HashFor(a);
@@ -258,6 +357,12 @@ namespace Akka.Cluster.Tools.Client
         private ImmutableList<IActorRef> _subscribers;
         private ICancelable _checkDeadlinesTask;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="pubSubMediator">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public ClusterReceptionist(IActorRef pubSubMediator, ClusterReceptionistSettings settings)
         {
             _log = Context.GetLogger();
@@ -285,6 +390,10 @@ namespace Akka.Cluster.Tools.Client
                 Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="IllegalStateException">TBD</exception>
         protected override void PreStart()
         {
             base.PreStart();
@@ -295,6 +404,9 @@ namespace Akka.Cluster.Tools.Client
             _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
@@ -317,6 +429,11 @@ namespace Akka.Cluster.Tools.Client
                 : Context.ActorOf(Actor.Props.Create(() => new ClientResponseTunnel(client, _settings.ResponseTunnelReceiveTimeout)), encName);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if (message is PublishSubscribe.Send
@@ -480,6 +597,11 @@ namespace Akka.Cluster.Tools.Client
         private readonly IActorRef _client;
         private readonly ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="client">TBD</param>
+        /// <param name="timeout">TBD</param>
         public ClientResponseTunnel(IActorRef client, TimeSpan timeout)
         {
             _client = client;
@@ -487,6 +609,11 @@ namespace Akka.Cluster.Tools.Client
             Context.SetReceiveTimeout(timeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if (message is ClusterReceptionist.Ping)

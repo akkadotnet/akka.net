@@ -11,11 +11,17 @@ using Akka.Configuration;
 
 namespace Akka.Cluster.Tools.Client
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class ClusterReceptionistSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Create settings from the default configuration "akka.cluster.client.receptionist".
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static ClusterReceptionistSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
@@ -30,6 +36,8 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Create settings from a configuration with the same layout as the default configuration "akka.cluster.client.receptionist".
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterReceptionistSettings Create(Config config)
         {
             var role = config.GetString("role");
@@ -79,6 +87,15 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public readonly TimeSpan FailureDetectionInterval;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <param name="numberOfContacts">TBD</param>
+        /// <param name="responseTunnelReceiveTimeout">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="acceptableHeartbeatPause">TBD</param>
+        /// <param name="failureDetectionInterval">TBD</param>
         public ClusterReceptionistSettings(
             string role,
             int numberOfContacts,
@@ -95,26 +112,52 @@ namespace Akka.Cluster.Tools.Client
             FailureDetectionInterval = failureDetectionInterval;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterReceptionistSettings WithRole(string role)
         {
             return Copy(role: role);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public ClusterReceptionistSettings WithoutRole()
         {
             return Copy(role: "");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="numberOfContacts">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterReceptionistSettings WithNumberOfContacts(int numberOfContacts)
         {
             return Copy(numberOfContacts: numberOfContacts);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="responseTunnelReceiveTimeout">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterReceptionistSettings WithResponseTunnelReceiveTimeout(TimeSpan responseTunnelReceiveTimeout)
         {
             return Copy(responseTunnelReceiveTimeout: responseTunnelReceiveTimeout);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="acceptableHeartbeatPause">TBD</param>
+        /// <param name="failureDetectionInterval">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterReceptionistSettings WithHeartbeat(TimeSpan heartbeatInterval, TimeSpan acceptableHeartbeatPause, TimeSpan failureDetectionInterval)
         {
             return Copy(
