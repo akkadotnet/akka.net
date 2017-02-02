@@ -935,7 +935,7 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         protected readonly UniqueAddress SelfUniqueAddress;
-        private const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 3;
+        private const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 5;
         private const int MaxGossipsBeforeShuttingDownMyself = 5;
 
         private readonly VectorClock.Node _vclockNode;
@@ -1125,6 +1125,7 @@ namespace Akka.Cluster
             else if (message is InternalClusterAction.JoinSeedNodes)
             {
                 var js = message as InternalClusterAction.JoinSeedNodes;
+                BecomeUninitialized();
                 JoinSeedNodes(js.SeedNodes);
             }
             else if (message is InternalClusterAction.ISubscriptionMessage)
@@ -1534,6 +1535,8 @@ namespace Akka.Cluster
 
                 _log.Info("Marked address [{0}] as [{1}]", address, MemberStatus.Leaving);
                 Publish(_latestGossip);
+                // immediate gossip to speed up the leaving process
+                SendGossip();
             }
         }
 
@@ -1734,6 +1737,11 @@ namespace Akka.Cluster
                     gossipType = ReceiveGossipType.Newer;
                     break;
                 default:
+                    // conflicting versions, merge
+                    // We can see that a removal was done when it is not in one of the gossips has status
+                    // Down or Exiting in the other gossip.
+                    // Perform the same pruning (clear of VectorClock) as the leader did when removing a member.
+                    // Removal of member itself is handled in merge (pickHighestPriority)
                     var prunedLocalGossip = localGossip.Members.Aggregate(localGossip, (g, m) =>
                     {
                         if (Gossip.RemoveUnreachableWithMemberStatus.Contains(m.Status) && !remoteGossip.Members.Contains(m))
@@ -1910,15 +1918,12 @@ namespace Akka.Cluster
                 // don't go lower than 1/10 of the configured GossipDifferentViewProbability
                 var minP = _cluster.Settings.GossipDifferentViewProbability / 10;
                 if (size >= high) return minP;
-                else
-                {
-                    // linear reduction of the probability with increasing number of nodes
-                    // from ReduceGossipDifferentViewProbability at ReduceGossipDifferentViewProbability nodes
-                    // to ReduceGossipDifferentViewProbability / 10 at ReduceGossipDifferentViewProbability * 3 nodes
-                    // i.e. default from 0.8 at 400 nodes, to 0.08 at 1600 nodes     
-                    var k = (minP - _cluster.Settings.GossipDifferentViewProbability) / (high - low);
-                    return _cluster.Settings.GossipDifferentViewProbability + (size - low) * k;
-                }
+                // linear reduction of the probability with increasing number of nodes
+                // from ReduceGossipDifferentViewProbability at ReduceGossipDifferentViewProbability nodes
+                // to ReduceGossipDifferentViewProbability / 10 at ReduceGossipDifferentViewProbability * 3 nodes
+                // i.e. default from 0.8 at 400 nodes, to 0.08 at 1600 nodes     
+                var k = (minP - _cluster.Settings.GossipDifferentViewProbability) / (high - low);
+                return _cluster.Settings.GossipDifferentViewProbability + (size - low) * k;
             }
         }
 
@@ -2164,7 +2169,7 @@ namespace Akka.Cluster
                                 _cluster.SelfAddress, nonExiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b), string.Join(",", _cluster.SelfRoles));
 
                         if (!exiting.IsEmpty)
-                            _log.Warning("Marking exiting node(s) as UNREACHABLE [{0}]. This is expected and they will be removed.",
+                            _log.Warning("Cluster Node [{0}] - Marking exiting node(s) as UNREACHABLE [{1}]. This is expected and they will be removed.",
                                 _cluster.SelfAddress, exiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
 
                         if (!newlyDetectedReachableMembers.IsEmpty)
