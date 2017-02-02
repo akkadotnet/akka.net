@@ -29,7 +29,7 @@ namespace Akka.Util
         protected TokenBucket(long capacity, long ticksBetweenTokens)
         {
             if(capacity<0)
-                throw new ArgumentException("Capacity must be non-negativ", nameof(capacity));
+                throw new ArgumentException("Capacity must be non-negative", nameof(capacity));
             if (ticksBetweenTokens <= 0)
                 throw new ArgumentException("Time between tokens must be larger than zero ticks.",
                     nameof(ticksBetweenTokens));
@@ -69,7 +69,7 @@ namespace Akka.Util
         public long Offer(long cost)
         {
             if(cost < 0)
-                throw new ArgumentException("Cost must be non-negativ", nameof(cost));
+                throw new ArgumentException("Cost must be non-negative", nameof(cost));
 
             var now = CurrentTime;
             var timeElapsed = now - _lastUpdate;

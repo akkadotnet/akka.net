@@ -1,11 +1,4 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Helios.Concurrency.DedicatedThreadPool.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
-/*
+﻿/*
  * Copyright 2015 Roger Alsing, Aaron Stannard
  * Helios.DedicatedThreadPool - https://github.com/helios-io/DedicatedThreadPool
  */
@@ -446,8 +439,8 @@ namespace Helios.Concurrency
 
             public bool TryAdd(Action work)
             {
-                // If TryAdd returns true, it's garanteed the work item will be executed.
-                // If it returns false, it's also garanteed the work item won't be executed.
+                // If TryAdd returns true, it's guaranteed the work item will be executed.
+                // If it returns false, it's also guaranteed the work item won't be executed.
 
                 if (IsAddingCompleted)
                     return false;
@@ -512,7 +505,7 @@ namespace Helios.Concurrency
             {
                 // There is a double counter here (_outstandingRequest and _semaphore)
                 // Unfair semaphore does not support value bigger than short.MaxValue,
-                // tring to Release more than short.MaxValue could fail miserably.
+                // trying to Release more than short.MaxValue could fail miserably.
 
                 // The _outstandingRequest counter ensure that we only request a
                 // maximum of {ProcessorCount} to the semaphore.
@@ -579,7 +572,7 @@ namespace Helios.Concurrency
                 [FieldOffset(0)]
                 public short Spinners;
 
-                //how much of the semaphore's count is availble to spinners?
+                //how much of the semaphore's count is available to spinners?
                 [FieldOffset(2)]
                 public short CountForSpinners;
 

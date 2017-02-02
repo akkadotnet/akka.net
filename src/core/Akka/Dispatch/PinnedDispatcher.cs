@@ -36,7 +36,7 @@ namespace Akka.Dispatch
         {
             
             _executorServiceConfigurator = new ForkJoinExecutorServiceFactory(ForkJoinExecutorServiceFactory.SingleThreadDefault.WithFallback("id=" + config.GetString("id")), Prerequisites);
-            // We don't bother trying to support any other type of exectuor here. PinnedDispatcher doesn't support them
+            // We don't bother trying to support any other type of executor here. PinnedDispatcher doesn't support them
         }
 
         /// <summary>

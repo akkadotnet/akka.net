@@ -114,7 +114,7 @@ namespace Akka.Actor
 
             SchedulerClass = Config.GetString("akka.scheduler.implementation");
             SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout");
-            //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
+            //TODO: dunno.. we don't have FiniteStateMachines, don't know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
                 final val Daemonicity: Boolean = getBoolean("akka.daemonic")                

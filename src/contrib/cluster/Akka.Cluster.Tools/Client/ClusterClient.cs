@@ -301,7 +301,7 @@ namespace Akka.Cluster.Tools.Client
                 {
                     if (!_failureDetector.IsAvailable)
                     {
-                        _log.Info("Lost contact with [{0}], restablishing connection", receptionist);
+                        _log.Info("Lost contact with [{0}], reestablishing connection", receptionist);
                         SendGetContacts();
                         ScheduleRefreshContactsTick(_settings.EstablishingGetContactsInterval);
                         Context.Become(Establishing);

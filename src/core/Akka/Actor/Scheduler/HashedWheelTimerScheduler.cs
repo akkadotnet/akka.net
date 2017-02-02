@@ -130,7 +130,7 @@ namespace Akka.Actor
 
             else if (_workerState == WORKER_STATE_SHUTDOWN)
             {
-                throw new SchedulerException("cannot enque after timer shutdown");
+                throw new SchedulerException("cannot enqueue after timer shutdown");
             }
             else
             {
@@ -156,7 +156,7 @@ namespace Akka.Actor
             _startTime = HighResMonotonicClock.Ticks;
             if (_startTime == 0)
             {
-                // 0 means it's an uninitiliazed value, so bump to 1 to indicate it's started
+                // 0 means it's an uninitialized value, so bump to 1 to indicate it's started
                 _startTime = 1;
             }
 

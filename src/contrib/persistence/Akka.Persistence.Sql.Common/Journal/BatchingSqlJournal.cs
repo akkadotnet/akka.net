@@ -1261,7 +1261,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public JournalBufferOverflowException() : base(
             "Batching journal buffer has been overflowed. This may happen as an effect of burst of persistent actors "
-            + "requests incoming faster than the underlying database is able to fullfil them. You may modify "
+            + "requests incoming faster than the underlying database is able to fulfill them. You may modify "
             + "`max-buffer-size`, `max-batch-size` and `max-concurrent-operations` HOCON settings in order to "
             + " change it.")
         {

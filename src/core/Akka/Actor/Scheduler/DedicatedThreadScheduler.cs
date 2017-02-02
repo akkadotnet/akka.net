@@ -230,7 +230,7 @@ namespace Akka.Actor
         private void AddWork(TimeSpan delay, Action work, CancellationToken token)
         {
             if (_stopped.Value != null)
-                throw new SchedulerException("cannot enque after timer shutdown");
+                throw new SchedulerException("cannot enqueue after timer shutdown");
             var expected = HighResMonotonicClock + delay;
             var scheduledWord = new ScheduledWork(expected.Ticks, work, token);
             _workQueue.Enqueue(scheduledWord);

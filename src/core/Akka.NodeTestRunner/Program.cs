@@ -49,7 +49,7 @@ namespace Akka.NodeTestRunner
                 /* need to pass in just the assembly name to Discovery, not the full path
                  * i.e. "Akka.Cluster.Tests.MultiNode.dll"
                  * not "bin/Release/Akka.Cluster.Tests.MultiNode.dll" - this will cause
-                 * the Discovery class to actually not find any indivudal specs to run
+                 * the Discovery class to actually not find any individual specs to run
                  */
                 var assemblyName = Path.GetFileName(assemblyFileName);
                 Console.WriteLine("Running specs for {0} [{1}]", assemblyName, assemblyFileName);

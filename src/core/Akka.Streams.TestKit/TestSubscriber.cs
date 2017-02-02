@@ -196,7 +196,7 @@ namespace Akka.Streams.TestKit
                 var expectedSet = new HashSet<T>(elems) {e1, e2};
                 expectedSet.ExceptWith(e);
 
-                Assert(expectedSet.Count == 0, "unexpected elemenents [{0}] found in the result", string.Join(", ", expectedSet));
+                Assert(expectedSet.Count == 0, "unexpected elements [{0}] found in the result", string.Join(", ", expectedSet));
                 return this;
             }
 
