@@ -15,11 +15,17 @@ using Akka.Remote;
 
 namespace Akka.Cluster.Tools.Client
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class ClusterClientSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Create settings from the default configuration 'akka.cluster.client'.
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static ClusterClientSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
@@ -34,6 +40,8 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Java API: Create settings from a configuration with the same layout as the default configuration 'akka.cluster.client'.
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterClientSettings Create(Config config)
         {
             var initialContacts = config.GetStringList("initial-contacts").Select(ActorPath.Parse).ToImmutableSortedSet();
@@ -93,6 +101,17 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public readonly TimeSpan? ReconnectTimeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialContacts">TBD</param>
+        /// <param name="establishingGetContactsInterval">TBD</param>
+        /// <param name="refreshContactsInterval">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="acceptableHeartbeatPause">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="reconnectTimeout">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
             TimeSpan establishingGetContactsInterval,
@@ -116,6 +135,12 @@ namespace Akka.Cluster.Tools.Client
             ReconnectTimeout = reconnectTimeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialContacts">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithInitialContacts(IImmutableSet<ActorPath> initialContacts)
         {
             if (initialContacts.Count == 0)
@@ -126,32 +151,63 @@ namespace Akka.Cluster.Tools.Client
             return Copy(initialContacts: initialContacts);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialContacts">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         [Obsolete("Use WithInitialContacts(IImmutableSet<ActorPath> initialContacts) instead")]
         public ClusterClientSettings WithInitialContacts(IEnumerable<ActorPath> initialContacts)
         {
             return WithInitialContacts(initialContacts.ToImmutableHashSet());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithEstablishingGetContactsInterval(TimeSpan value)
         {
             return Copy(establishingGetContactsInterval: value);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithRefreshContactsInterval(TimeSpan value)
         {
             return Copy(refreshContactsInterval: value);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithHeartbeatInterval(TimeSpan value)
         {
             return Copy(heartbeatInterval: value);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bufferSize">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithBufferSize(int bufferSize)
         {
             return Copy(bufferSize: bufferSize);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reconnectTimeout">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithReconnectTimeout(TimeSpan? reconnectTimeout)
         {
             return Copy(reconnectTimeout: reconnectTimeout);

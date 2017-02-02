@@ -11,9 +11,18 @@ using Akka.Configuration;
 
 namespace Akka.Cluster.Tools.Singleton
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class ClusterSingletonManagerSettings : INoSerializationVerificationNeeded
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <returns>TBD</returns>
         public static ClusterSingletonManagerSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
@@ -25,6 +34,11 @@ namespace Akka.Cluster.Tools.Singleton
             return Create(config).WithRemovalMargin(Cluster.Get(system).Settings.DownRemovalMargin);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterSingletonManagerSettings Create(Config config)
         {
             return new ClusterSingletonManagerSettings(
@@ -41,9 +55,21 @@ namespace Akka.Cluster.Tools.Singleton
             return role;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string SingletonName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string Role;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan RemovalMargin;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan HandOverRetryInterval;
 
         /// <summary>
@@ -68,6 +94,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// over has started or the previous oldest member is removed from the cluster
         /// (+ <paramref name="removalMargin"/>).
         /// </param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval)
         {
             if (string.IsNullOrWhiteSpace(singletonName))
@@ -83,21 +110,41 @@ namespace Akka.Cluster.Tools.Singleton
             HandOverRetryInterval = handOverRetryInterval;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singletonName">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonManagerSettings WithSingletonName(string singletonName)
         {
             return Copy(singletonName: singletonName);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonManagerSettings WithRole(string role)
         {
             return Copy(role: RoleOption(role));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="removalMargin">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonManagerSettings WithRemovalMargin(TimeSpan removalMargin)
         {
             return Copy(removalMargin: removalMargin);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="handOverRetryInterval">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonManagerSettings WithHandOverRetryInterval(TimeSpan handOverRetryInterval)
         {
             return Copy(handOverRetryInterval: handOverRetryInterval);

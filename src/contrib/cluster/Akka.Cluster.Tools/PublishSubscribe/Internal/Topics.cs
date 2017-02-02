@@ -15,15 +15,37 @@ using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal abstract class TopicLike : ActorBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly TimeSpan PruneInterval;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly ICancelable PruneCancelable;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly ISet<IActorRef> Subscribers;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly TimeSpan EmptyTimeToLive;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected Deadline PruneDeadline = null;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="emptyTimeToLive">TBD</param>
         protected TopicLike(TimeSpan emptyTimeToLive)
         {
             Subscribers = new HashSet<IActorRef>();
@@ -32,12 +54,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             PruneCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(PruneInterval, PruneInterval, Self, Prune.Instance, Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
             PruneCancelable.Cancel();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected bool DefaultReceive(object message)
         {
             if (message is Subscribe)
@@ -90,8 +120,18 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract bool Business(object message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return Business(message) || DefaultReceive(message);
@@ -108,17 +148,30 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class Topic : TopicLike
     {
         private readonly RoutingLogic _routingLogic;
         private readonly PerGroupingBuffer _buffer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="emptyTimeToLive">TBD</param>
+        /// <param name="routingLogic">TBD</param>
         public Topic(TimeSpan emptyTimeToLive, RoutingLogic routingLogic) : base(emptyTimeToLive)
         {
             _routingLogic = routingLogic;
             _buffer = new PerGroupingBuffer();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Business(object message)
         {
             Subscribe subscribe;
@@ -194,15 +247,28 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class Group : TopicLike
     {
         private readonly RoutingLogic _routingLogic;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="emptyTimeToLive">TBD</param>
+        /// <param name="routingLogic">TBD</param>
         public Group(TimeSpan emptyTimeToLive, RoutingLogic routingLogic) : base(emptyTimeToLive)
         {
             _routingLogic = routingLogic;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Business(object message)
         {
             if (message is SendToOneSubscriber)
@@ -219,6 +285,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class Utils
     {
         /// <summary>
@@ -233,21 +302,38 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// user message.
         /// </para>
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public static object WrapIfNeeded(object message)
         {
             return message is RouterEnvelope ? new MediatorRouterEnvelope(message) : message;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
         public static string MakeKey(IActorRef actorRef)
         {
             return MakeKey(actorRef.Path);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public static string EncodeName(string name)
         {
             return name == null ? null : Uri.EscapeDataString(name);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public static string MakeKey(ActorPath path)
         {
             return path.ToStringWithoutAddress();

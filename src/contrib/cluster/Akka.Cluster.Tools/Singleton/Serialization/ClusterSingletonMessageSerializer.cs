@@ -12,6 +12,9 @@ using Akka.Serialization;
 
 namespace Akka.Cluster.Tools.Singleton.Serialization
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ClusterSingletonMessageSerializer : SerializerWithStringManifest
     {
         private const string HandOverToMeManifest = "A";
@@ -23,8 +26,15 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         private readonly IDictionary<string, Func<byte[], IClusterSingletonMessage>> _fromBinaryMap;
 
         private readonly int _identifier;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override int Identifier { get { return _identifier; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public ClusterSingletonMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
@@ -37,6 +47,12 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
             };
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is HandOverToMe) return EmptyBytes;
@@ -47,6 +63,13 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
             throw new ArgumentException(string.Format("Cannot serialize object of type [{0}] in [{1}]", obj.GetType(), GetType()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="binary">TBD</param>
+        /// <param name="manifest">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override object FromBinary(byte[] binary, string manifest)
         {
             Func<byte[], IClusterSingletonMessage> mapper;
@@ -58,6 +81,12 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
             throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in [{1}]", manifest, GetType()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="o">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override string Manifest(object o)
         {
             if (o is HandOverToMe) return HandOverToMeManifest;
