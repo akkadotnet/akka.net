@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using System;
+using Akka.Util.Internal.Collections;
 using FluentAssertions;
 using Xunit;
 
@@ -200,25 +200,6 @@ namespace Akka.Cluster.Tests
             var expected = new List<Member> {m7, m8, m1, m2, m3, m4, m5, m6};
             var shuffled = expected.Shuffle().ToImmutableList();
             shuffled.Sort(Member.LeaderStatusOrdering).Should().BeEquivalentTo(expected);
-        }
-    }
-
-    static class ListExtensions
-    {
-        public static List<T> Shuffle<T>(this List<T> @this)
-        {
-            var list = new List<T>(@this);
-            var rng = new Random();
-            var n = list.Count;
-            while (n > 1)
-            {
-                n--;
-                var k = rng.Next(n + 1);
-                var value = list[k];
-                list[k] = list[n];
-                list[n] = value;
-            }
-            return list;
         }
     }
 }

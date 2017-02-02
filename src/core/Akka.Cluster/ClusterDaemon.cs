@@ -16,6 +16,7 @@ using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Cluster
 {
@@ -1853,6 +1854,21 @@ namespace Akka.Cluster
             return _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
         }
 
+
+        /// <summary>
+        /// Sends full gossip to `n` other random members.
+        /// </summary>
+        private void SendGossipRandom(int n)
+        {
+            if (!IsSingletonCluster && n > 0)
+            {
+                var localGossip = _latestGossip;
+                var possibleTargets = new List<UniqueAddress>(localGossip.Members.Where(m => ValidNodeForGossip(m.UniqueAddress)).Select(m => m.UniqueAddress));
+                var randomTargets = possibleTargets.Count <= n ? possibleTargets : possibleTargets.Shuffle().Slice(0, n);
+                randomTargets.ForEach(GossipTo);
+            }
+        }
+
         /// <summary>
         /// Initiates a new round of gossip.
         /// </summary>
@@ -1977,11 +1993,9 @@ namespace Akka.Cluster
                     // the reason for not shutting down immediately is to give the gossip a chance to spread
                     // the downing information to other downed nodes, so that they can shutdown themselves
                     _log.Info("Shutting down myself");
-                    downed
-                        .Where(n => !unreachable.Contains(n) || n == SelfUniqueAddress)
-                        .Take(MaxGossipsBeforeShuttingDownMyself)
-                        .ForEach(GossipTo);
-
+                    // not crucial to send gossip, but may speedup removal since fallback to failure detection is not needed
+                    // if other downed know that this node has seen the version
+                    SendGossipRandom(MaxGossipsBeforeShuttingDownMyself);
                     Shutdown();
                 }
             }
@@ -2110,10 +2124,7 @@ namespace Akka.Cluster
                     // for downing. However, if those final gossip messages never arrive it is
                     // alright to require the downing, because that is probably caused by a
                     // network failure anyway.
-                    for (var i = 1; i <= NumberOfGossipsBeforeShutdownWhenLeaderExits; i++)
-                    {
-                        SendGossip();
-                    }
+                    SendGossipRandom(NumberOfGossipsBeforeShutdownWhenLeaderExits);
                     Shutdown();
                 }
             }
