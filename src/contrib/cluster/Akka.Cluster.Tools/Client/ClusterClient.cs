@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Internal;
+using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util.Internal;
@@ -86,6 +88,35 @@ namespace Akka.Cluster.Tools.Client
             }
         }
 
+        /// <summary> 
+        /// </summary>
+        [Serializable]
+        public sealed class Subscribe
+        {
+            public string Topic { get; }
+            public string Group { get; }
+            public Type MessageType { get; }
+            public IActorRef Subscriber { get; }
+
+            public Subscribe(string topic, Type messageType, IActorRef subscriber, string group = null)
+            {
+                Topic = topic;
+                MessageType = messageType;
+                Subscriber = subscriber;
+                Group = group;
+            }
+        }
+
+        [Serializable]
+        public sealed class Unsubscribe
+        {
+            public Subscribe Subscribe { get; }
+            public Unsubscribe(Subscribe subscribe)
+            {
+                Subscribe = subscribe;
+            }
+        }
+
         [Serializable]
         internal sealed class RefreshContactsTick
         {
@@ -120,7 +151,7 @@ namespace Akka.Cluster.Tools.Client
             return Actor.Props.Create(() => new ClusterClient(settings)).WithDeploy(Deploy.Local);
         }
 
-        private ILoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly ClusterClientSettings _settings;
         private readonly DeadlineFailureDetector _failureDetector;
         private ImmutableHashSet<ActorPath> _contactPaths;
@@ -131,6 +162,8 @@ namespace Akka.Cluster.Tools.Client
         private readonly ICancelable _heartbeatTask;
         private ICancelable _refreshContactsCancelable;
         private readonly Queue<Tuple<object, IActorRef>> _buffer;
+        private ImmutableDictionary<Type, ImmutableHashSet<IActorRef>> _externalSubscribers;
+        private ImmutableDictionary<Tuple<string, string>, int> _topicSubscriptions;
 
         public ClusterClient(ClusterClientSettings settings)
         {
@@ -150,6 +183,8 @@ namespace Akka.Cluster.Tools.Client
 
             _contactPathsPublished = ImmutableHashSet<ActorPath>.Empty;
             _subscribers = ImmutableList<IActorRef>.Empty;
+            _externalSubscribers = ImmutableDictionary<Type, ImmutableHashSet<IActorRef>>.Empty;
+            _topicSubscriptions = ImmutableDictionary<Tuple<string, string>, int>.Empty;
 
             _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 settings.HeartbeatInterval,
@@ -265,6 +300,10 @@ namespace Akka.Cluster.Tools.Client
                 var publish = (Publish)message;
                 Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
             }
+            else if (message is Subscribe || message is Unsubscribe)
+            {
+                Buffer(message);
+            }
             else if (message is ReconnectTimeout)
             {
                 _log.Warning("Receptionist reconnect not successful within {0} stopping cluster client", _settings.ReconnectTimeout);
@@ -272,7 +311,7 @@ namespace Akka.Cluster.Tools.Client
             }
             else
             {
-                return ContactPointMessages(message);
+                return ContactPointMessages(message) || TryHandleExternalSubcriptions(message);
             }
 
             return true;
@@ -296,6 +335,24 @@ namespace Akka.Cluster.Tools.Client
                 {
                     var publish = (Publish)message;
                     receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message));
+                }
+                else if (message is Subscribe)
+                {
+                    ProcessSubscribeMessage((Subscribe)message, receptionist);
+                }
+                else if (message is Unsubscribe)
+                {
+                    ProcessUnsubscribeMessage((Unsubscribe)message, receptionist);
+                }
+                else if (message is SubscribeAck)
+                {
+                    var ack = (SubscribeAck)message;
+                    _log.Debug(ack.ToString());
+                }
+                else if (message is UnsubscribeAck)
+                {
+                    var ack = (UnsubscribeAck)message;
+                    _log.Debug(ack.ToString());
                 }
                 else if (message is HeartbeatTick)
                 {
@@ -338,7 +395,7 @@ namespace Akka.Cluster.Tools.Client
                 }
                 else
                 {
-                    return ContactPointMessages(message);
+                    return ContactPointMessages(message) || TryHandleExternalSubcriptions(message);
                 }
 
                 return true;
@@ -414,7 +471,11 @@ namespace Akka.Cluster.Tools.Client
             while (_buffer.Count != 0)
             {
                 var t = _buffer.Dequeue();
-                receptionist.Tell(t.Item1, t.Item2);
+                var item1 = t.Item1 as Subscribe;
+                if (item1 != null)
+                    ProcessSubscribeMessage(item1, receptionist);
+                else
+                    receptionist.Tell(t.Item1, t.Item2);
             }
         }
 
@@ -439,6 +500,74 @@ namespace Akka.Cluster.Tools.Client
             }
 
             _contactPathsPublished = _contactPaths;
+        }
+
+        private void ProcessSubscribeMessage(Subscribe subscribe, IActorRef receptionist)
+        {
+            if (RegisterExternalSubscriber(subscribe))
+                receptionist.Tell(new PublishSubscribe.Subscribe(subscribe.Topic, Self, subscribe.Group));
+        }
+
+        private void ProcessUnsubscribeMessage(Unsubscribe unsubscribe, IActorRef receptionist)
+        {
+            if (UnregisterExternalSubscriber(unsubscribe))
+                receptionist.Tell(new PublishSubscribe.Unsubscribe(unsubscribe.Subscribe.Topic, Self, unsubscribe.Subscribe.Group));
+        }
+
+        private bool RegisterExternalSubscriber(Subscribe subscribe)
+        {
+            ImmutableHashSet<IActorRef> actors;
+            if (!_externalSubscribers.TryGetValue(subscribe.MessageType, out actors))
+                actors = ImmutableHashSet<IActorRef>.Empty;
+
+            actors = actors.Add(subscribe.Subscriber);
+            _externalSubscribers = _externalSubscribers.SetItem(subscribe.MessageType, actors);
+
+            var key = new Tuple<string, string>(subscribe.Topic, subscribe.Group);
+            int subscribersCount;
+            _topicSubscriptions.TryGetValue(key, out subscribersCount);
+            _topicSubscriptions = _topicSubscriptions.SetItem(key, ++subscribersCount);
+
+            return subscribersCount == 1;
+        }
+
+        private bool UnregisterExternalSubscriber(Unsubscribe unsubscribe)
+        {
+            var subscribe = unsubscribe.Subscribe;
+            ImmutableHashSet<IActorRef> actors;
+            if (!_externalSubscribers.TryGetValue(subscribe.MessageType, out actors))
+                actors = ImmutableHashSet<IActorRef>.Empty;
+
+            if (!actors.Contains(subscribe.Subscriber))
+                return false;
+
+            actors = actors.Remove(subscribe.Subscriber);
+            if (actors.IsEmpty)
+                _externalSubscribers = _externalSubscribers.Remove(subscribe.MessageType);
+            else
+                _externalSubscribers = _externalSubscribers.SetItem(subscribe.MessageType, actors);
+
+            var key = new Tuple<string, string>(subscribe.Topic, subscribe.Group);
+            int subscribersCount;
+            _topicSubscriptions.TryGetValue(key, out subscribersCount);
+            if (--subscribersCount == 0)
+                _topicSubscriptions.Remove(key);
+            else
+                _topicSubscriptions = _topicSubscriptions.SetItem(key, subscribersCount);
+
+            return subscribersCount == 0;
+        }
+
+        private bool TryHandleExternalSubcriptions(object message)
+        {
+            var type = message.GetType();
+            ImmutableHashSet<IActorRef> actors;
+            if (_externalSubscribers.TryGetValue(type, out actors))
+            {
+                actors.ForEach(a => a.Tell(message));
+                return true;
+            }
+            return false;
         }
     }
 

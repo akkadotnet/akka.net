@@ -319,13 +319,27 @@ namespace Akka.Cluster.Tools.Client
 
         protected override bool Receive(object message)
         {
-            if (message is PublishSubscribe.Send
-                || message is PublishSubscribe.SendToAll
-                || message is PublishSubscribe.Publish)
+            if (message is Send
+                || message is SendToAll
+                || message is Publish)
             {
                 var tunnel = ResponseTunnel(Sender);
                 tunnel.Tell(Ping.Instance); // keep alive
                 _pubSubMediator.Tell(message, tunnel);
+            }
+            else if (message is Subscribe)
+            {
+                var tunnel = ResponseTunnel(Sender);
+                tunnel.Tell(Ping.Instance); // keep alive
+                var subscribe = (Subscribe)message;
+                _pubSubMediator.Tell(new Subscribe(subscribe.Topic, tunnel, subscribe.Group), tunnel);
+            }
+            else if (message is Unsubscribe)
+            {
+                var tunnel = ResponseTunnel(Sender);
+                tunnel.Tell(Ping.Instance); // keep alive
+                var unsubscribe = (Unsubscribe)message;
+                _pubSubMediator.Tell(new Unsubscribe(unsubscribe.Topic, tunnel, unsubscribe.Group), tunnel);
             }
             else if (message is Heartbeat)
             {
@@ -333,7 +347,8 @@ namespace Akka.Cluster.Tools.Client
                 {
                     _log.Debug("Heartbeat from client [{0}]", Sender.Path);
                 }
-                Sender.Tell(HeartbeatRsp.Instance);
+                var tunnel = ResponseTunnel(Sender);
+                tunnel.Tell(HeartbeatRsp.Instance);
                 UpdateClientInteractions(Sender);
             }
             else if (message is GetContacts)
@@ -480,6 +495,7 @@ namespace Akka.Cluster.Tools.Client
         private readonly IActorRef _client;
         private readonly ILoggingAdapter _log;
 
+
         public ClientResponseTunnel(IActorRef client, TimeSpan timeout)
         {
             _client = client;
@@ -498,7 +514,10 @@ namespace Akka.Cluster.Tools.Client
                 _log.Debug("ClientResponseTunnel for client [{0}] stopped due to inactivity", _client.Path);
                 Context.Stop(Self);
             }
-            else _client.Tell(message, ActorRefs.NoSender);
+            else
+            {
+                _client.Tell(message, ActorRefs.NoSender);
+            }
 
             return true;
         }
