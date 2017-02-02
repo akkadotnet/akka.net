@@ -6,6 +6,14 @@
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/pr)](http://www.issuestats.com/github/akkadotnet/akka.net)
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/issue)](http://www.issuestats.com/github/akkadotnet/akka.net)
 
+## Builds status
+||Windows|Linux (Mono)|
+|:--:|:--:|:--:|
+|Build|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetWindowsBuild/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetWindowsBuild&guest=1)|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_LinuxMonoBuild/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_LinuxMonoBuild&guest=1)|
+|Unit Tests|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetWindowsUnitTests/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetWindowsUnitTests&guest=1)|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetLinuxMonoUnitTests/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetLinuxMonoUnitTests&guest=1)|
+|MultiNode Tests|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetWindowsMultiNodeTests/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetWindowsMultiNodeTests&guest=1)|
+|Perf Tests|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetWindowsPerformanceTests/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetWindowsPerformanceTests&guest=1)||
+
 ## [Akka.NET Current Roadmap](https://petabridge.com/blog/akkadotnet-2016-roadmap/)
 
 **Akka.NET** is a community-driven port of the popular Java/Scala framework [Akka](http://akka.io) to .NET.
