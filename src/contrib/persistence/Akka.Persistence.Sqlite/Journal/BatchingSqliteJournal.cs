@@ -16,8 +16,15 @@ using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class BatchingSqliteJournalSetup : BatchingSqlJournalSetup
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
         public BatchingSqliteJournalSetup(Config config) : base(config, new QueryConfiguration(
                     schemaName: null,
                     journalEventsTableName: config.GetString("table-name"),
@@ -34,6 +41,19 @@ namespace Akka.Persistence.Sqlite.Journal
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <param name="maxConcurrentOperations">TBD</param>
+        /// <param name="maxBatchSize">TBD</param>
+        /// <param name="maxBufferSize">TBD</param>
+        /// <param name="autoInitialize">TBD</param>
+        /// <param name="connectionTimeout">TBD</param>
+        /// <param name="isolationLevel">TBD</param>
+        /// <param name="circuitBreakerSettings">TBD</param>
+        /// <param name="replayFilterSettings">TBD</param>
+        /// <param name="namingConventions">TBD</param>
         public BatchingSqliteJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, 
             TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions) 
             : base(connectionString, maxConcurrentOperations, maxBatchSize, maxBufferSize, autoInitialize, connectionTimeout, isolationLevel, circuitBreakerSettings, replayFilterSettings, namingConventions)
@@ -41,14 +61,25 @@ namespace Akka.Persistence.Sqlite.Journal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class BatchingSqliteJournal : BatchingSqlJournal<SQLiteConnection, SQLiteCommand>
     {
         private DbConnection _anchor;
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
         public BatchingSqliteJournal(Config config) : this(new BatchingSqliteJournalSetup(config))
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="setup">TBD</param>
         public BatchingSqliteJournal(BatchingSqliteJournalSetup setup) : base(setup)
         {
             var conventions = Setup.NamingConventions;
@@ -75,8 +106,14 @@ namespace Akka.Persistence.Sqlite.Journal
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override ImmutableDictionary<string, string> Initializers { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             _anchor = CreateConnection(Setup.ConnectionString);
@@ -84,12 +121,20 @@ namespace Akka.Persistence.Sqlite.Journal
             base.PreStart();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
             _anchor.Dispose();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <returns>TBD</returns>
         protected override SQLiteConnection CreateConnection(string connectionString) => new SQLiteConnection(connectionString);
     }
 }
