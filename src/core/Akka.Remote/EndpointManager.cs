@@ -672,7 +672,7 @@ namespace Akka.Remote
                 // We still need to clean up any remaining transports because handles might be in mailboxes, and for example
                 // Netty is not part of the actor hierarchy, so its handles will not be cleaned up if no actor is taking
                 // responsibility of them (because they are sitting in a mailbox).
-                _log.Error("Remoting system has been terminated abrubtly. Attempting to shut down transports");
+                _log.Error("Remoting system has been terminated abruptly. Attempting to shut down transports");
                 foreach (var t in _transportMapping.Values)
                     t.Shutdown();
             }

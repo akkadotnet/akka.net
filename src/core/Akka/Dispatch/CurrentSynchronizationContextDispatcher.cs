@@ -65,7 +65,7 @@ namespace Akka.Dispatch
         {
 
             _executorServiceConfigurator = new CurrentSynchronizationContextExecutorServiceFactory(config, prerequisites);
-            // We don't bother trying to support any other type of exectuor here. PinnedDispatcher doesn't support them
+            // We don't bother trying to support any other type of executor here. PinnedDispatcher doesn't support them
         }
 
         /// <summary>

@@ -91,7 +91,7 @@ namespace Akka.Remote.Tests.MultiNode
                 // Manually Quarantine the other system
                 RARP.For(Sys).Provider.Transport.Quarantine(Node(_config.Second).Address, uid);
 
-                // Quarantining is not immedeiate
+                // Quarantining is not immediate
                 Thread.Sleep(1000);
 
                 // Quarantine is up - Should not be able to communicate with remote system any more

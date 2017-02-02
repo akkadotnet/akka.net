@@ -297,7 +297,7 @@ namespace Akka.Streams.Implementation
                     id = 0;
 
                 if (id != _preferredId)
-                    throw new ArgumentException("Tried to equeue without waiting for any demand");
+                    throw new ArgumentException("Tried to enqueue without waiting for any demand");
             }
 
             return id;

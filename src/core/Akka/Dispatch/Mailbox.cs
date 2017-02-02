@@ -494,7 +494,7 @@ namespace Akka.Dispatch
             }
         }
 
-        /* In JVM the following three methods are implented as an internal trait. Added them directly onto the Mailbox itself instead. */
+        /* In JVM the following three methods are implemented as an internal trait. Added them directly onto the Mailbox itself instead. */
         /// <summary>
         /// TBD
         /// </summary>

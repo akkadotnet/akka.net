@@ -601,7 +601,7 @@ namespace Akka.Persistence.Tests
             probeA.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             // at each redelivery round, 2 (even) messages are sent, the first goes through
-            // without throttiling, at each round half of the messages would go through
+            // without throttling, at each round half of the messages would go through
             var toDeliver = Enumerable.Range(1, N).Where(i => i%2 == 0).Select(i => (long)i).ToList();
             for (int i = 2; i <= N; i = i+2)
             {

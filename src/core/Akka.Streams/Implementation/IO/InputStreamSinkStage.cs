@@ -242,7 +242,7 @@ namespace Akka.Streams.Implementation.IO
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0)
-                throw new ArgumentException("Buffer size must be greather than 0");
+                throw new ArgumentException("Buffer size must be greater than 0");
 
             _dataQueue = new BlockingCollection<IStreamToAdapterMessage>(maxBuffer + 2);
 

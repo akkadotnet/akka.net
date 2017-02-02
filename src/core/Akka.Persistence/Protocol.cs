@@ -21,6 +21,6 @@ namespace Akka.Persistence
     /// </summary>
     public interface IPersistenceMessage // : INoSerializationVerificationNeeded
     {
-        // TODO look into why extending INoSerializationVerficationNeeded breaks the tests
+        // TODO look into why extending INoSerializationVerificationNeeded breaks the tests
     }
 }
