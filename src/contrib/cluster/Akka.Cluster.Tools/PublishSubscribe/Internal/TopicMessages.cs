@@ -15,31 +15,65 @@ using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class Prune
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Prune Instance = new Prune();
         private Prune() { }
     }
 
     // Only for testing purposes, to poll/await replication
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class Count
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Count Instance = new Count();
         private Count() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal class Bucket : IEquatable<Bucket>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Address Owner;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long Version;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IImmutableDictionary<string, ValueHolder> Content;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
         public Bucket(Address owner) : this(owner, 0L, ImmutableDictionary<string, ValueHolder>.Empty)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="version">TBD</param>
+        /// <param name="content">TBD</param>
         public Bucket(Address owner, long version, IImmutableDictionary<string, ValueHolder> content)
         {
             Owner = owner;
@@ -47,6 +81,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             Content = content;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(Bucket other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -57,11 +96,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                    && Content.SequenceEqual(other.Content);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as Bucket);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -74,23 +122,45 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class ValueHolder : IEquatable<ValueHolder>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long Version;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Ref;
 
         [NonSerialized]
         private Routee _routee;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="version">TBD</param>
+        /// <param name="ref">TBD</param>
         public ValueHolder(long version, IActorRef @ref)
         {
             Version = version;
             Ref = @ref;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Routee Routee { get { return _routee ?? (_routee = Ref != null ? new ActorRefRoutee(Ref) : null); } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(ValueHolder other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -99,11 +169,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                    Equals(Ref, other.Ref);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as ValueHolder);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -115,19 +194,38 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class Status : IDistributedPubSubMessage, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="versions">TBD</param>
+        /// <param name="isReplyToStatus">TBD</param>
         public Status(IDictionary<Address, long> versions, bool isReplyToStatus)
         {
             Versions = versions ?? new Dictionary<Address, long>(0);
             IsReplyToStatus = isReplyToStatus;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IDictionary<Address, long> Versions { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsReplyToStatus { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null)) return false;
@@ -141,6 +239,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                 && IsReplyToStatus.Equals(other.IsReplyToStatus);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -158,16 +260,31 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class Delta : IDistributedPubSubMessage, IEquatable<Delta>, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Bucket[] Buckets;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="buckets">TBD</param>
         public Delta(Bucket[] buckets)
         {
             Buckets = buckets ?? new Bucket[0];
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(Delta other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -176,11 +293,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             return Buckets.SequenceEqual(other.Buckets);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as Delta);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return Buckets != null ? Buckets.GetHashCode() : 0;
@@ -188,39 +314,75 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     // Only for testing purposes, to verify replication
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class DeltaCount
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly DeltaCount Instance = new DeltaCount();
 
         private DeltaCount() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class GossipTick
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly GossipTick Instance = new GossipTick();
 
         private GossipTick() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class RegisterTopic
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef TopicRef;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="topicRef">TBD</param>
         public RegisterTopic(IActorRef topicRef)
         {
             TopicRef = topicRef;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class Subscribed
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly SubscribeAck Ack;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Subscriber;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ack">TBD</param>
+        /// <param name="subscriber">TBD</param>
         public Subscribed(SubscribeAck ack, IActorRef subscriber)
         {
             Ack = ack;
@@ -228,12 +390,26 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class Unsubscribed
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly UnsubscribeAck Ack;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Subscriber;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ack">TBD</param>
+        /// <param name="subscriber">TBD</param>
         public Unsubscribed(UnsubscribeAck ack, IActorRef subscriber)
         {
             Ack = ack;
@@ -241,11 +417,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class SendToOneSubscriber
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly object Message;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public SendToOneSubscriber(object message)
         {
             Message = message;
@@ -269,6 +455,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     internal class NoMoreSubscribers : IChildActorTerminationProtocol
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static NoMoreSubscribers Instance = new NoMoreSubscribers();
         private NoMoreSubscribers()
         {
@@ -281,6 +470,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     internal class TerminateRequest : IChildActorTerminationProtocol
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static TerminateRequest Instance = new TerminateRequest();
         private TerminateRequest()
         {
@@ -294,15 +486,25 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     internal class NewSubscriberArrived : IChildActorTerminationProtocol
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static NewSubscriberArrived Instance = new NewSubscriberArrived();
         private NewSubscriberArrived()
         {
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class MediatorRouterEnvelope : RouterEnvelope
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public MediatorRouterEnvelope(object message) : base(message) { }
     }
 }

@@ -162,7 +162,7 @@ namespace Akka.Pattern
             var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
             if (!cbTask.Wait(CallTimeout))
             {
-                //throw new TimeoutException( string.Format( "Execution did not complete within the time alotted {0} ms", CallTimeout.TotalMilliseconds ) );
+                //throw new TimeoutException( string.Format( "Execution did not complete within the time allotted {0} ms", CallTimeout.TotalMilliseconds ) );
             }
             if (cbTask.Exception != null)
             {

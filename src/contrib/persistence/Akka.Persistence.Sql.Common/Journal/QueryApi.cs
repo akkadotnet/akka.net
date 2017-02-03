@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryApi.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -209,8 +209,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo)
         {
             if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", "fromOffset");
-            if (toOffset <= 0) throw new ArgumentException("To offset must be a possitive number", "toOffset");
-            if (max <= 0) throw new ArgumentException("Maximum number of replayed messages must be a possitive number", "max");
+            if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", "toOffset");
+            if (max <= 0) throw new ArgumentException("Maximum number of replayed messages must be a positive number", "max");
             if (string.IsNullOrEmpty(tag)) throw new ArgumentNullException("tag", "Replay tagged messages require a tag value to be provided");
 
             FromOffset = fromOffset;

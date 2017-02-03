@@ -41,10 +41,25 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class Send
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Path { get; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Message { get; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool LocalAffinity { get; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="path">TBD</param>
+            /// <param name="message">TBD</param>
+            /// <param name="localAffinity">TBD</param>
             public Send(string path, object message, bool localAffinity = false)
             {
                 Path = path;
@@ -59,9 +74,20 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class SendToAll
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Path { get; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Message { get; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="path">TBD</param>
+            /// <param name="message">TBD</param>
             public SendToAll(string path, object message)
             {
                 Path = path;
@@ -76,9 +102,20 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class Publish
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public string Topic { get; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Message { get; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="topic">TBD</param>
+            /// <param name="message">TBD</param>
             public Publish(string topic, object message)
             {
                 Topic = topic;
@@ -86,23 +123,41 @@ namespace Akka.Cluster.Tools.Client
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class RefreshContactsTick
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly RefreshContactsTick Instance = new RefreshContactsTick();
             private RefreshContactsTick() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class HeartbeatTick
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly HeartbeatTick Instance = new HeartbeatTick();
             private HeartbeatTick() { }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class ReconnectTimeout
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly ReconnectTimeout Instance = new ReconnectTimeout();
             private ReconnectTimeout() { }
         }
@@ -112,6 +167,9 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Factory method for <see cref="ClusterClient"/> <see cref="Actor.Props"/>.
         /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <returns>TBD</returns>
         public static Props Props(ClusterClientSettings settings)
         {
             if (settings == null)
@@ -132,6 +190,12 @@ namespace Akka.Cluster.Tools.Client
         private ICancelable _refreshContactsCancelable;
         private readonly Queue<Tuple<object, IActorRef>> _buffer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public ClusterClient(ClusterClientSettings settings)
         {
             if (settings.InitialContacts.Count == 0)
@@ -181,6 +245,9 @@ namespace Akka.Cluster.Tools.Client
                 Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
@@ -193,6 +260,11 @@ namespace Akka.Cluster.Tools.Client
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return Establishing(message);
@@ -301,7 +373,7 @@ namespace Akka.Cluster.Tools.Client
                 {
                     if (!_failureDetector.IsAvailable)
                     {
-                        _log.Info("Lost contact with [{0}], restablishing connection", receptionist);
+                        _log.Info("Lost contact with [{0}], reestablishing connection", receptionist);
                         SendGetContacts();
                         ScheduleRefreshContactsTick(_settings.EstablishingGetContactsInterval);
                         Context.Become(Establishing);
@@ -448,6 +520,9 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public interface IContactPointChange
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         ActorPath ContactPoint { get; }
     }
 
@@ -457,11 +532,18 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class ContactPointAdded : IContactPointChange
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="contactPoint">TBD</param>
         public ContactPointAdded(ActorPath contactPoint)
         {
             ContactPoint = contactPoint;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorPath ContactPoint { get; }
     }
 
@@ -471,14 +553,24 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class ContactPointRemoved : IContactPointChange
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="contactPoint">TBD</param>
         public ContactPointRemoved(ActorPath contactPoint)
         {
             ContactPoint = contactPoint;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorPath ContactPoint { get; }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface ISubscribeContactPoints
     {
     }
@@ -493,10 +585,16 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class SubscribeContactPoints : ISubscribeContactPoints
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly SubscribeContactPoints Instance = new SubscribeContactPoints();
         private SubscribeContactPoints() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IUnsubscribeContactPoints
     {
     }
@@ -506,10 +604,16 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class UnsubscribeContactPoints : IUnsubscribeContactPoints
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly UnsubscribeContactPoints Instance = new UnsubscribeContactPoints();
         private UnsubscribeContactPoints() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IGetContactPoints
     {
     }
@@ -520,6 +624,9 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class GetContactPoints : IGetContactPoints
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly GetContactPoints Instance = new GetContactPoints();
         private GetContactPoints() { }
     }
@@ -529,11 +636,18 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class ContactPoints
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="contactPoints">TBD</param>
         public ContactPoints(ImmutableHashSet<ActorPath> contactPoints)
         {
             ContactPointsList = contactPoints;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<ActorPath> ContactPointsList { get; }
     }
 }

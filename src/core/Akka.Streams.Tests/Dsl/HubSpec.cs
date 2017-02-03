@@ -129,11 +129,11 @@ namespace Akka.Streams.Tests.Dsl
                 // One element consumed (it was requested), demand 0 remains at producer
                 downstream.ExpectNext(1);
 
-                // Requesting next element, results in next elemetn to be consumed.
+                // Requesting next element, results in next element to be consumed.
                 sub.Request(1);
                 downstream.ExpectNext(2);
 
-                // Two elements habe been consumed, so threshold of 2 is reached, additional 2 demand is dispatched.
+                // Two elements have been consumed, so threshold of 2 is reached, additional 2 demand is dispatched.
                 // There is 2 demand at the producer now
 
                 ExpectMsg(4);

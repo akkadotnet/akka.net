@@ -123,7 +123,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             })
             .With<Failure>(failure =>
             {
-                _log.Error(failure.Exception, "Error during snapshot store intiialization");
+                _log.Error(failure.Exception, "Error during snapshot store initialization");
                 Context.Stop(Self);
             })
             .Default(_ => Stash.Stash())

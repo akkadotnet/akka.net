@@ -81,7 +81,7 @@ namespace Akka.Routing
 
             if (_routees.IsNullOrEmpty())
             {
-                tcs.SetResult(new Status.Failure(new AskTimeoutException("Timeout due to no routess")));
+                tcs.SetResult(new Status.Failure(new AskTimeoutException("Timeout due to no routees")));
             }
             else
             {

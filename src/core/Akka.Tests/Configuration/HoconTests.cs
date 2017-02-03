@@ -745,7 +745,7 @@ test.value = 456
             Assert.Equal(null, ConfigurationFactory.ParseString(hocon).GetString("a"));
         }
 
-        [Fact(Skip = "we currently do not make any destinction between quoted and unquoted strings once parsed")]
+        [Fact(Skip = "we currently do not make any distinction between quoted and unquoted strings once parsed")]
         public void Can_assign_quoted_null_string_to_field()
         {
             var hocon = @"a=""null""";

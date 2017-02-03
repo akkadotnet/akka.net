@@ -338,7 +338,7 @@ namespace Akka.Cluster.Sharding
             else if (message is ShardHome)
             {
                 // On rebalance, we send ourselves a GetShardHome message to reallocate a
-                // shard. This recieve handles the "response" from that message. i.e. Ingores it.
+                // shard. This receive handles the "response" from that message. i.e. Ignores it.
             }
             else if (message is ClusterEvent.ClusterShuttingDown)
             {

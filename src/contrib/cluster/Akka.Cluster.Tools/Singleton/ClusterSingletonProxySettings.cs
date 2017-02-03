@@ -11,8 +11,17 @@ using Akka.Configuration;
 
 namespace Akka.Cluster.Tools.Singleton
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class ClusterSingletonProxySettings
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <returns>TBD</returns>
         public static ClusterSingletonProxySettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
@@ -23,6 +32,11 @@ namespace Akka.Cluster.Tools.Singleton
             return Create(config);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterSingletonProxySettings Create(Config config)
         {
             var role = config.GetString("role");
@@ -35,9 +49,21 @@ namespace Akka.Cluster.Tools.Singleton
                 bufferSize: config.GetInt("buffer-size"));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string SingletonName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string Role;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan SingletonIdentificationInterval;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int BufferSize;
 
         /// <summary>
@@ -52,6 +78,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// are sent viea the proxy.Use 0 to disable buffering, i.e.messages will be dropped immediately if the location 
         /// of the singleton is unknown.
         /// </param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public ClusterSingletonProxySettings(string singletonName, string role, TimeSpan singletonIdentificationInterval, int bufferSize)
         {
             if (string.IsNullOrEmpty(singletonName))
@@ -67,11 +94,21 @@ namespace Akka.Cluster.Tools.Singleton
             BufferSize = bufferSize;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singletonName">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonProxySettings WithSingletonName(string singletonName)
         {
             return Copy(singletonName: singletonName);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonProxySettings WithRole(string role)
         {
             return new ClusterSingletonProxySettings(
@@ -81,16 +118,34 @@ namespace Akka.Cluster.Tools.Singleton
                 bufferSize: BufferSize);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singletonIdentificationInterval">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval)
         {
             return Copy(singletonIdentificationInterval: SingletonIdentificationInterval);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bufferSize">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonProxySettings WithBufferSize(int bufferSize)
         {
             return Copy(bufferSize: bufferSize);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singletonName">TBD</param>
+        /// <param name="role">TBD</param>
+        /// <param name="singletonIdentificationInterval">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonProxySettings Copy(string singletonName = null, string role = null,
             TimeSpan? singletonIdentificationInterval = null, int? bufferSize = null)
         {
