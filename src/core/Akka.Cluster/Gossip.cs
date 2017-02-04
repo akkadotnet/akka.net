@@ -332,9 +332,9 @@ namespace Akka.Cluster
         private UniqueAddress LeaderOf(ImmutableSortedSet<Member> mbrs, UniqueAddress selfUniqueAddress)
         {
             var reachableMembers = _overview.Reachability.IsAllReachable
-                ? mbrs
+                ? mbrs.Where(m => m.Status != MemberStatus.Down)
                 : mbrs
-                    .Where(m => _overview.Reachability.IsReachable(m.UniqueAddress) || m.UniqueAddress == selfUniqueAddress)
+                    .Where(m => m.Status != MemberStatus.Down && _overview.Reachability.IsReachable(m.UniqueAddress) || m.UniqueAddress == selfUniqueAddress)
                     .ToImmutableSortedSet();
 
             if (!reachableMembers.Any()) return null;
