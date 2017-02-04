@@ -266,7 +266,7 @@ namespace Akka.Cluster
         /// Command to initiate the process to join the specified
         /// seed nodes.
         /// </summary>
-        internal sealed class JoinSeedNodes
+        internal sealed class JoinSeedNodes : IDeadLetterSuppression
         {
             readonly ImmutableList<Address> _seedNodes;
 
@@ -303,7 +303,7 @@ namespace Akka.Cluster
         /// <summary>
         /// See JoinSeedNode
         /// </summary>
-        internal class InitJoin : IClusterMessage
+        internal class InitJoin : IClusterMessage, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -319,7 +319,7 @@ namespace Akka.Cluster
         /// <summary>
         /// See JoinSeeNode
         /// </summary>
-        internal sealed class InitJoinAck : IClusterMessage
+        internal sealed class InitJoinAck : IClusterMessage, IDeadLetterSuppression
         {
             readonly Address _address;
 
@@ -371,7 +371,7 @@ namespace Akka.Cluster
         /// <summary>
         /// See JoinSeeNode
         /// </summary>
-        internal sealed class InitJoinNack : IClusterMessage
+        internal sealed class InitJoinNack : IClusterMessage, IDeadLetterSuppression
         {
             readonly Address _address;
 
