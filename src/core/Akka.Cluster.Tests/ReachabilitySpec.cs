@@ -293,5 +293,23 @@ namespace Akka.Cluster.Tests
             r.Status(nodeB, nodeC).Should().Be(Reachability.ReachabilityStatus.Reachable);
             r.Status(nodeB, nodeE).Should().Be(Reachability.ReachabilityStatus.Reachable);
         }
+
+        [Fact]
+        public void ReachabilityTable_must_remove_correctly_after_pruning()
+        {
+            var r = Reachability.Empty.
+                Unreachable(nodeB, nodeA).
+                Unreachable(nodeB, nodeC).
+                Unreachable(nodeD, nodeC).
+                Reachable(nodeB, nodeA).
+                Reachable(nodeB, nodeC);
+
+            r.Records.Should().BeEquivalentTo(ImmutableList.Create(
+                new Reachability.Record(nodeD, nodeC, Reachability.ReachabilityStatus.Unreachable, 1L)));
+
+            var r2 = r.Remove(ImmutableList.Create(nodeB));
+            r2.AllObservers.Should().BeEquivalentTo(ImmutableList.Create(nodeD));
+            r2.Versions.Keys.Should().BeEquivalentTo(ImmutableList.Create(nodeD));
+        }
     }
 }
