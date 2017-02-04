@@ -138,6 +138,8 @@ namespace Akka.DistributedData
         }
 
         private WriteLocal() { }
+
+        public override string ToString() => "WriteLocal";
     }
 
     public class WriteTo : IWriteConsistency
@@ -159,6 +161,8 @@ namespace Akka.DistributedData
             var other = obj as WriteTo;
             return other != null && (N == other.N && Timeout == other.Timeout);
         }
+
+        public override string ToString() => $"WriteTo({N})";
     }
 
     public class WriteMajority : IWriteConsistency
@@ -177,6 +181,8 @@ namespace Akka.DistributedData
             var other = obj as WriteMajority;
             return other != null && Timeout == other.Timeout && MinCapacity == other.MinCapacity;
         }
+
+        public override string ToString() => "WriteMajority";
     }
 
     public class WriteAll : IWriteConsistency
@@ -193,5 +199,7 @@ namespace Akka.DistributedData
             var other = obj as WriteAll;
             return other != null && Timeout == other.Timeout;
         }
+
+        public override string ToString() => "WriteAll";
     }
 }

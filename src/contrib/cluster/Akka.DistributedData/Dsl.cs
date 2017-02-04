@@ -30,6 +30,17 @@ namespace Akka.DistributedData
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="key">TBD</param>
+        /// <param name="consistency">TBD</param>
+        /// <param name="modify">TBD</param>
+        /// <returns>TBD</returns>
+        public static Replicator.Update Update<T>(IKey<T> key, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
+            new Replicator.Update(key, consistency, data => modify((T)data));
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="key">TBD</param>
         /// <param name="initial">TBD</param>
         /// <param name="consistency">TBD</param>
         /// <param name="modify">TBD</param>

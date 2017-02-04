@@ -131,6 +131,8 @@ namespace Akka.DistributedData
         private ReadLocal() { }
 
         public override bool Equals(object obj) => obj != null && obj is ReadLocal;
+
+        public override string ToString() => "ReadLocal";
     }
 
     public sealed class ReadFrom : IReadConsistency
@@ -150,6 +152,8 @@ namespace Akka.DistributedData
             var other = obj as ReadFrom;
             return other != null && (N == other.N && Timeout.Equals(other.Timeout));
         }
+
+        public override string ToString() => $"ReadFrom({N})";
     }
 
     public sealed class ReadMajority : IReadConsistency
@@ -168,6 +172,8 @@ namespace Akka.DistributedData
             var other = obj as ReadMajority;
             return other != null && Timeout == other.Timeout && MinCapacity == other.MinCapacity;
         }
+
+        public override string ToString() => "ReadMajority";
     }
 
     public sealed class ReadAll : IReadConsistency
@@ -184,5 +190,7 @@ namespace Akka.DistributedData
             var other = obj as ReadAll;
             return other != null && Timeout == other.Timeout;
         }
+
+        public override string ToString() => "ReadAll";
     }
 }

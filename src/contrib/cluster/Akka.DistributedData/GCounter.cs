@@ -205,7 +205,7 @@ namespace Akka.DistributedData
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return State.SequenceEqual(other.State);
+            return Equals(Value, other.Value);
         }
 
         /// <summary>
