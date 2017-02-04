@@ -17,6 +17,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Remote.Tests
 {
@@ -222,9 +223,10 @@ namespace Akka.Remote.Tests
              */
             EventFilter.Exception<TimeoutException>().ExpectOne(() => { });
 
-            var finalActors = targets.SelectMany(CollectLiveActors).ToImmutableHashSet();
-
-            AssertActors(initialActors, finalActors);
+            AwaitAssert(() =>
+            {
+                AssertActors(initialActors, targets.SelectMany(CollectLiveActors).ToImmutableHashSet());
+            }, 5.Seconds());
         }
     }
 }
