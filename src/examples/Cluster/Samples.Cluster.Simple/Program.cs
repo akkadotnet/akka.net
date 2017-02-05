@@ -29,7 +29,7 @@ namespace Samples.Cluster.Simple
             {
                 //Override the configuration of the port
                 var config =
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.port=" + port)
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + port)
                         .WithFallback(section.AkkaConfig);
 
                 //create an Akka system

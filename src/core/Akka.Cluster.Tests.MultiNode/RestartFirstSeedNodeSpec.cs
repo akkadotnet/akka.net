@@ -69,7 +69,7 @@ namespace Akka.Cluster.Tests.MultiNode
             restartedSeed1System = new Lazy<ActorSystem>(() =>
             {
                 var localConfig = ConfigurationFactory
-                    .ParseString("akka.remote.helios.tcp.port=" + GetSeedNodes().First().Port)
+                    .ParseString("akka.remote.dot-netty.tcp.port=" + GetSeedNodes().First().Port)
                     .WithFallback(Sys.Settings.Config);
                 return ActorSystem.Create(Sys.Name, localConfig);
             });

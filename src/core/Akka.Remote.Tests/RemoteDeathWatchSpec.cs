@@ -29,7 +29,7 @@ namespace Akka.Remote.Tests
                 }
                 remote.retry-gate-closed-for = 1 s
                 remote.initial-system-message-delivery-timeout = 3 s
-                remote.helios.tcp {
+                remote.dot-netty.tcp {
                     hostname = ""localhost""
                         port = 0
                 }
@@ -41,7 +41,7 @@ namespace Akka.Remote.Tests
         public RemoteDeathWatchSpec() : base(_config)
         {
             _other = ActorSystem.Create("other",
-                ConfigurationFactory.ParseString(@"akka.remote.helios.tcp.port=2666").WithFallback(_config));
+                ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=2666").WithFallback(_config));
         }
 
         protected override void BeforeTermination()

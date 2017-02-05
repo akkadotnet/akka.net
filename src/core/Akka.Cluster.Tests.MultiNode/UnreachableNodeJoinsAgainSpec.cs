@@ -214,7 +214,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
 
                 // create new ActorSystem with same host:port
-                var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString(@"akka.remote.helios.tcp{
+                var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp{
                     hostname = "+ victimAddress.Host + @"
                     port = "+ victimAddress.Port + @"
                 }").WithFallback(Sys.Settings.Config));

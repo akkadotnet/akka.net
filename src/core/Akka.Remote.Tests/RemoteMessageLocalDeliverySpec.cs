@@ -16,6 +16,7 @@ using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -32,12 +33,12 @@ namespace Akka.Remote.Tests
     {
         private static readonly Config RemoteConfiguration = ConfigurationFactory.ParseString(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                akka.remote.helios.tcp.hostname = 127.0.0.1
-                akka.remote.helios.tcp.port = 0
-            akka.remote.helios.tcp.applied-adapters = [trttl, gremlin]
+                akka.remote.dot-netty.tcp.hostname = 127.0.0.1
+                akka.remote.dot-netty.tcp.port = 0
+            akka.remote.dot-netty.tcp.applied-adapters = [trttl, gremlin]
         ");
 
-        public RemoteMessageLocalDeliverySpec() : base(RemoteConfiguration) { }
+        public RemoteMessageLocalDeliverySpec(ITestOutputHelper output) : base(RemoteConfiguration, output) { }
 
         /// <summary>
         /// Reproduces https://github.com/akkadotnet/akka.net/issues/2151

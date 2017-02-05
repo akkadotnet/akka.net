@@ -24,7 +24,7 @@ namespace Akka.Cluster.Tests
             akka.actor.default-dispatcher.Type = ForkJoinDispatcher
             akka.actor.default-dispatcher.dedicated-thread-pool.thread-count = 1
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            akka.remote.helios.tcp.port = 0
+            akka.remote.dot-netty.tcp.port = 0
         ");
 
         private long _startTime;

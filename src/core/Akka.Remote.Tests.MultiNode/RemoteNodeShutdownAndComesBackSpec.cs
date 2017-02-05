@@ -156,7 +156,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
-                var freshConfig = new StringBuilder().AppendLine("akka.remote.helios.tcp {").AppendLine("hostname = " + addr.Host)
+                var freshConfig = new StringBuilder().AppendLine("akka.remote.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
                         .AppendLine("port = " + addr.Port)
                         .AppendLine("}").ToString();
 

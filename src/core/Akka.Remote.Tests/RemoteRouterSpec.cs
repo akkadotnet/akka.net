@@ -17,6 +17,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -60,10 +61,10 @@ namespace Akka.Remote.Tests
         private ActorSystem masterSystem;
         private Address intendedRemoteAddress;
 
-        public RemoteRouterSpec()
+        public RemoteRouterSpec(ITestOutputHelper output)
             : base(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            akka.remote.helios.tcp {
+            akka.remote.dot-netty.tcp {
                 hostname = 127.0.0.1
                 port = 0
             }
@@ -81,7 +82,7 @@ namespace Akka.Remote.Tests
                 nr-of-instances = 6
               }
             }
-        ")
+        ", output)
         {
             // ReSharper disable once PossibleInvalidOperationException
             port = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress.Port.Value;
