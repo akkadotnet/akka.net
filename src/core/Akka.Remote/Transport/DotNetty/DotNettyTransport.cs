@@ -122,6 +122,13 @@ namespace Akka.Remote.Transport.DotNetty
         {
             System = system;
             Config = config;
+
+            if (system.Settings.Config.HasPath("akka.remote.helios.tcp"))
+            {
+                var heliosFallbackConfig = system.Settings.Config.GetConfig("akka.remote.helios.tcp");
+                config = heliosFallbackConfig.WithFallback(config);
+            }
+
             Settings = DotNettyTransportSettings.Create(config);
             Log = Logging.GetLogger(System, GetType());
             serverEventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);

@@ -19,7 +19,7 @@ using DotNetty.Buffers;
 
 namespace Akka.Remote.Transport.DotNetty
 {
-    public sealed class DotNettyTransportSettings
+    internal sealed class DotNettyTransportSettings
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
         {
@@ -219,13 +219,13 @@ namespace Akka.Remote.Transport.DotNetty
             ByteOrder = byteOrder;
         }
     }
-    public enum TransportMode
+    internal enum TransportMode
     {
         Tcp,
         Udp
     }
 
-    public sealed class SslSettings
+    internal sealed class SslSettings
     {
         public static readonly SslSettings Empty = new SslSettings();
         public static SslSettings Create(Config config)
