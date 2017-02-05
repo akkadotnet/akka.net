@@ -251,6 +251,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusterClientExample.Node", "examples\Cluster\ClusterClient\ClusterClientExample.Node\ClusterClientExample.Node.csproj", "{82BD32CF-58BC-474D-B814-CE05C708E6C8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusterClientExample.Client", "examples\Cluster\ClusterClient\ClusterClientExample.Client\ClusterClientExample.Client.csproj", "{85208CFE-764B-409C-94E3-C6F7EE14C5AC}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Sharding.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Sharding.Tests.MultiNode\Akka.Cluster.Sharding.Tests.MultiNode.csproj", "{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData", "contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj", "{59CFFC88-8A73-445D-B191-281E40BE9421}"
