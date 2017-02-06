@@ -1863,7 +1863,10 @@ namespace Akka.Cluster
             if (!IsSingletonCluster && n > 0)
             {
                 var localGossip = _latestGossip;
-                var possibleTargets = new List<UniqueAddress>(localGossip.Members.Where(m => ValidNodeForGossip(m.UniqueAddress)).Select(m => m.UniqueAddress));
+                var possibleTargets =
+                    localGossip.Members.Where(m => ValidNodeForGossip(m.UniqueAddress))
+                        .Select(m => m.UniqueAddress)
+                        .ToList();
                 var randomTargets = possibleTargets.Count <= n ? possibleTargets : possibleTargets.Shuffle().Slice(0, n);
                 randomTargets.ForEach(GossipTo);
             }

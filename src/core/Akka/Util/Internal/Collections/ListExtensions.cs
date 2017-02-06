@@ -10,20 +10,19 @@ using System.Collections.Generic;
 
 namespace Akka.Util.Internal.Collections
 {
-    public static class ListExtensions
+    internal static class ListExtensions
     {
         public static List<T> Shuffle<T>(this List<T> @this)
         {
             var list = new List<T>(@this);
-            var rng = new Random();
-            var n = list.Count;
-            while (n > 1)
+            var r = ThreadLocalRandom.Current;
+            for (int i = list.Count - 1; i > 0; i--)
             {
-                n--;
-                var k = rng.Next(n + 1);
-                var value = list[k];
-                list[k] = list[n];
-                list[n] = value;
+                int index = r.Next(i);
+                //swap
+                var tmp = list[index];
+                list[index] = list[i];
+                list[i] = tmp;
             }
             return list;
         }

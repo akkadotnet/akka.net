@@ -5145,10 +5145,6 @@ namespace Akka.Util.Internal.Collections
         public T Next() { }
         public System.Collections.Generic.IEnumerable<T> ToVector() { }
     }
-    public class static ListExtensions
-    {
-        public static System.Collections.Generic.List<T> Shuffle<T>(this System.Collections.Generic.List<T> @this) { }
-    }
 }
 namespace Akka.Util.Reflection
 {
