@@ -32,7 +32,7 @@ akka {
         }
     }
     remote {
-        helios.tcp {
+        dot-netty.tcp {
 		    port = 8080
 		    hostname = localhost
         }

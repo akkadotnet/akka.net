@@ -141,7 +141,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 var sb = new StringBuilder()
                     .AppendLine("akka.remote.retry-gate-closed-for = 0.5 s")
-                    .AppendLine("akka.remote.helios.tcp {")
+                    .AppendLine("akka.remote.dot-netty.tcp {")
                     .AppendLine("hostname = " + addr.Host)
                     .AppendLine("port = " + addr.Port)
                     .AppendLine("}");

@@ -17,6 +17,8 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
+using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -25,8 +27,8 @@ namespace Akka.Remote.Tests
         public static readonly Config Confg = ConfigurationFactory.ParseString(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.loglevel = DEBUG
-            akka.remote.helios.tcp.applied-adapters = [trttl]
-            akka.remote.helios.tcp.hostname = 127.0.0.1
+            akka.remote.dot-netty.tcp.applied-adapters = [trttl]
+            akka.remote.dot-netty.tcp.hostname = 127.0.0.1
             akka.remote.log-lifecycle-events = on
             akka.remote.transport-failure-detector.heartbeat-interval = 1 s
             akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
@@ -34,7 +36,7 @@ namespace Akka.Remote.Tests
             akka.test.filter-leeway = 12 s
         ");
 
-        public ActorsLeakSpec() : base(Confg)
+        public ActorsLeakSpec(ITestOutputHelper output) : base(Confg, output)
         {
         }
 
@@ -94,7 +96,7 @@ namespace Akka.Remote.Tests
             for (var i = 1; i <= 3; i++)
             {
                 var remoteSystem = ActorSystem.Create("remote",
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.port = 0")
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port = 0")
                         .WithFallback(Sys.Settings.Config));
 
                 try
@@ -116,7 +118,7 @@ namespace Akka.Remote.Tests
             {
                 // always use the same address
                 var remoteSystem = ActorSystem.Create("remote",
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.port = 2553")
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port = 2553")
                         .WithFallback(Sys.Settings.Config));
 
                 try
@@ -154,7 +156,7 @@ namespace Akka.Remote.Tests
             for (var i = 1; i <= 3; i++)
             {
                 var remoteSystem = ActorSystem.Create("remote",
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.port = 0")
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port = 0")
                         .WithFallback(Sys.Settings.Config));
                 var remoteAddress = RARP.For(remoteSystem).Provider.DefaultAddress;
 
@@ -181,7 +183,7 @@ namespace Akka.Remote.Tests
 
             // Remote idle for too long case
             var idleRemoteSystem = ActorSystem.Create("remote",
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.port = 0")
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port = 0")
                         .WithFallback(Sys.Settings.Config));
             var idleRemoteAddress = RARP.For(idleRemoteSystem).Provider.DefaultAddress;
 
@@ -222,9 +224,10 @@ namespace Akka.Remote.Tests
              */
             EventFilter.Exception<TimeoutException>().ExpectOne(() => { });
 
-            var finalActors = targets.SelectMany(CollectLiveActors).ToImmutableHashSet();
-
-            AssertActors(initialActors, finalActors);
+            AwaitAssert(() =>
+            {
+                AssertActors(initialActors, targets.SelectMany(CollectLiveActors).ToImmutableHashSet());
+            }, 5.Seconds());
         }
     }
 }

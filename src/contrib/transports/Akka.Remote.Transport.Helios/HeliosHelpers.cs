@@ -1,24 +1,18 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="HeliosHelpers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿#region copyright
+// -----------------------------------------------------------------------
+//  <copyright file="HeliosHelpers.cs" company="Akka.NET project">
+//      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet>
+//  </copyright>
+// -----------------------------------------------------------------------
+#endregion
 
 using System;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Google.ProtocolBuffers;
-using Helios;
-using Helios.Buffers;
 using Helios.Channels;
-using Helios.Exceptions;
-using Helios.Net;
-using Helios.Ops;
-using Helios.Serialization;
-using Helios.Topology;
 
 namespace Akka.Remote.Transport.Helios
 {
@@ -55,7 +49,7 @@ namespace Akka.Remote.Transport.Helios
         {
             if (!WrappedTransport.ConnectionGroup.TryAdd(context.Channel))
             {
-                Log.Warning("Unable to REMOVE channel [{0}->{1}](Id={2}) to connection group. May not shut down cleanly.", 
+                Log.Warning("Unable to REMOVE channel [{0}->{1}](Id={2}) to connection group. May not shut down cleanly.",
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
             }
         }
@@ -137,4 +131,3 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 }
-

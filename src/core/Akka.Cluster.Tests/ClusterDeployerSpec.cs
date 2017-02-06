@@ -50,7 +50,7 @@ namespace Akka.Cluster.Tests
               cluster.use-role = backend
             }
           }
-          akka.remote.helios.tcp.port = 0");
+          akka.remote.dot-netty.tcp.port = 0");
 
         public ClusterDeployerSpec() : base(deployerConf) { }
 

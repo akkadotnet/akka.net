@@ -375,15 +375,8 @@ namespace Akka.Cluster
         {
             var nodesSet = nodes.ToImmutableHashSet();
             var newRecords = _records.FindAll(r => !nodesSet.Contains(r.Observer) && !nodesSet.Contains(r.Subject));
-            if (newRecords.Count == _records.Count)
-            {
-                return this;
-            }
-            else
-            {
-                var newVersions = _versions.RemoveRange(nodes);
-                return new Reachability(newRecords, newVersions);
-            }
+            var newVersions = _versions.RemoveRange(nodes);
+            return new Reachability(newRecords, newVersions);
         }
 
         /// <summary>
@@ -400,15 +393,8 @@ namespace Akka.Cluster
             else
             {
                 var newRecords = _records.FindAll(r => !nodes.Contains(r.Observer));
-                if (newRecords.Count == _records.Count)
-                {
-                    return this;
-                }
-                else
-                {
-                    var newVersions = _versions.RemoveRange(nodes);
-                    return new Reachability(newRecords, newVersions);
-                }
+                var newVersions = _versions.RemoveRange(nodes);
+                return new Reachability(newRecords, newVersions);
             }
         }
 

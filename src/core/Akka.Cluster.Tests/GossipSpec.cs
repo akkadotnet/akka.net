@@ -158,6 +158,12 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void A_gossip_must_not_have_Down_member_as_leader()
+        {
+            new Gossip(ImmutableSortedSet.Create(e3)).Leader(e3.UniqueAddress).Should().BeNull();
+        }
+
+        [Fact]
         public void A_gossip_must_merge_seen_table_correctly()
         {
             var vclockNode = VectorClock.Node.Create("something");

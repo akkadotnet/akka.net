@@ -146,7 +146,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     var newSystem = ActorSystem.Create(
                         Sys.Name,
                         ConfigurationFactory
-                            .ParseString($"akka.remote.helios.tcp.port={Cluster.Get(Sys).SelfAddress.Port}")
+                            .ParseString($"akka.remote.dot-netty.tcp.port={Cluster.Get(Sys).SelfAddress.Port}")
                             .WithFallback(Sys.Settings.Config));
 
                     try
