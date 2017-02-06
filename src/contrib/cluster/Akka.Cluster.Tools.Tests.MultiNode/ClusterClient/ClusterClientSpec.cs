@@ -611,7 +611,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     // start new system on same port
                     var sys2 = ActorSystem.Create(
                         Sys.Name,
-                        ConfigurationFactory.ParseString("akka.remote.helios.tcp.port=" + Cluster.Get(Sys).SelfAddress.Port).WithFallback(Sys.Settings.Config));
+                        ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + Cluster.Get(Sys).SelfAddress.Port).WithFallback(Sys.Settings.Config));
                     Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
                     var service2 = sys2.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
                     ClusterClientReceptionist.Get(sys2).RegisterService(service2);

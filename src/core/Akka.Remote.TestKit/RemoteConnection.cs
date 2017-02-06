@@ -12,7 +12,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Remote.TestKit.Proto;
-using Akka.Remote.Transport.Helios;
+using Akka.Remote.Transport.DotNetty;
 using Helios.Buffers;
 using Helios.Channels;
 using Helios.Channels.Bootstrap;

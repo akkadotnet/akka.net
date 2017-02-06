@@ -64,7 +64,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             _config = config;
             _secondSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
-            _secondRestartedSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString("akka.remote.helios.tcp.port=" + _secondUniqueAddress.Address.Port)
+            _secondRestartedSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + _secondUniqueAddress.Address.Port)
                 .WithFallback(Sys.Settings.Config)));
         }
 

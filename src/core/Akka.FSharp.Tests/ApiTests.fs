@@ -52,7 +52,7 @@ type TestUnion2 =
 //                }
 //            }
 //            remote {
-//                helios.tcp {
+//                dot-netty.tcp {
 //                    port = %i
 //                    hostname = localhost
 //                }

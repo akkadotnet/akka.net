@@ -1106,7 +1106,7 @@ namespace Akka.Remote
             }
             catch (Exception e)
             {
-                return new Status.Failure(e.InnerException);
+                return new Status.Failure(e.InnerException ?? e);
             }
         }
 

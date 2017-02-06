@@ -34,7 +34,7 @@ namespace Akka.Remote.Tests.Transport
                 akka {
                   actor.serialize-messages = off
                   actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                  remote.helios.tcp.hostname = ""localhost""
+                  remote.dot-netty.tcp.hostname = ""localhost""
                   remote.log-remote-lifecycle-events = on
 
                 ## Keep gate duration in this test for a low value otherwise too much messages are dropped
@@ -47,8 +47,8 @@ namespace Akka.Remote.Tests.Transport
                         heartbeat-interval = 1 s
                         acceptable-heartbeat-pause = 1 s
                   }
-                  remote.helios.tcp.applied-adapters = [""gremlin""]
-                  remote.helios.tcp.port = 0
+                  remote.dot-netty.tcp.applied-adapters = [""gremlin""]
+                  remote.dot-netty.tcp.port = 0
                 }");
             }
         }
