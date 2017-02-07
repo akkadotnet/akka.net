@@ -88,6 +88,16 @@ namespace Akka.Cluster.Tools.Client
             }
         }
 
+        [Serializable]
+        public sealed class SetUnhandledMessagesMediator
+        {
+            public IActorRef ActorRef { get; }
+            public SetUnhandledMessagesMediator(IActorRef actorRef)
+            {
+                ActorRef = actorRef;
+            }
+        }
+
         /// <summary> 
         /// </summary>
         [Serializable]
@@ -95,14 +105,10 @@ namespace Akka.Cluster.Tools.Client
         {
             public string Topic { get; }
             public string Group { get; }
-            public Type MessageType { get; }
-            public IActorRef Subscriber { get; }
 
-            public Subscribe(string topic, Type messageType, IActorRef subscriber, string group = null)
+            public Subscribe(string topic, string group = null)
             {
                 Topic = topic;
-                MessageType = messageType;
-                Subscriber = subscriber;
                 Group = group;
             }
         }
@@ -162,8 +168,7 @@ namespace Akka.Cluster.Tools.Client
         private readonly ICancelable _heartbeatTask;
         private ICancelable _refreshContactsCancelable;
         private readonly Queue<Tuple<object, IActorRef>> _buffer;
-        private ImmutableDictionary<Type, ImmutableHashSet<IActorRef>> _externalSubscribers;
-        private ImmutableDictionary<Tuple<string, string>, int> _topicSubscriptions;
+        private IActorRef _unhandledMessagesMediator = ActorRefs.Nobody;
 
         public ClusterClient(ClusterClientSettings settings)
         {
@@ -183,8 +188,6 @@ namespace Akka.Cluster.Tools.Client
 
             _contactPathsPublished = ImmutableHashSet<ActorPath>.Empty;
             _subscribers = ImmutableList<IActorRef>.Empty;
-            _externalSubscribers = ImmutableDictionary<Type, ImmutableHashSet<IActorRef>>.Empty;
-            _topicSubscriptions = ImmutableDictionary<Tuple<string, string>, int>.Empty;
 
             _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 settings.HeartbeatInterval,
@@ -300,9 +303,25 @@ namespace Akka.Cluster.Tools.Client
                 var publish = (Publish)message;
                 Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
             }
-            else if (message is Subscribe || message is Unsubscribe)
+            else if (message is SetUnhandledMessagesMediator)
             {
-                Buffer(message);
+                var mediator = (SetUnhandledMessagesMediator)message;
+                SetAndWatchUnhandledMessagesMediator(mediator);
+            }
+            else if (message is Terminated)
+            {
+                var terminated = (Terminated)message;
+                OnTerminated(terminated);
+            }
+            else if (message is Subscribe)
+            {
+                var subscribe = (Subscribe)message;
+                Buffer(new PublishSubscribe.Subscribe(subscribe.Topic, Self, subscribe.Group), Self);
+            }
+            else if (message is Unsubscribe)
+            {
+                var unsubscribe = (Unsubscribe)message;
+                Buffer(new PublishSubscribe.Unsubscribe(unsubscribe.Subscribe.Topic, Self, unsubscribe.Subscribe.Group), Self);
             }
             else if (message is ReconnectTimeout)
             {
@@ -311,7 +330,7 @@ namespace Akka.Cluster.Tools.Client
             }
             else
             {
-                return ContactPointMessages(message) || TryHandleExternalSubcriptions(message);
+                return ContactPointMessages(message);
             }
 
             return true;
@@ -336,13 +355,25 @@ namespace Akka.Cluster.Tools.Client
                     var publish = (Publish)message;
                     receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message));
                 }
+                else if (message is SetUnhandledMessagesMediator)
+                {
+                    var mediator = (SetUnhandledMessagesMediator)message;
+                    SetAndWatchUnhandledMessagesMediator(mediator);
+                }
+                else if (message is Terminated)
+                {
+                    var terminated = (Terminated)message;
+                    OnTerminated(terminated);
+                }
                 else if (message is Subscribe)
                 {
-                    ProcessSubscribeMessage((Subscribe)message, receptionist);
+                    var subscribe = (Subscribe)message;
+                    receptionist.Tell(new PublishSubscribe.Subscribe(subscribe.Topic, Self, subscribe.Group));
                 }
                 else if (message is Unsubscribe)
                 {
-                    ProcessUnsubscribeMessage((Unsubscribe)message, receptionist);
+                    var unsubscribe = (Unsubscribe)message;
+                    receptionist.Tell(new PublishSubscribe.Unsubscribe(unsubscribe.Subscribe.Topic, Self, unsubscribe.Subscribe.Group));
                 }
                 else if (message is SubscribeAck)
                 {
@@ -395,7 +426,7 @@ namespace Akka.Cluster.Tools.Client
                 }
                 else
                 {
-                    return ContactPointMessages(message) || TryHandleExternalSubcriptions(message);
+                    return ContactPointMessages(message) || TryForwardUnhandledMessage(message);
                 }
 
                 return true;
@@ -446,7 +477,7 @@ namespace Akka.Cluster.Tools.Client
             sendTo.ForEach(c => c.Tell(ClusterReceptionist.GetContacts.Instance));
         }
 
-        private void Buffer(object message)
+        private void Buffer(object message, IActorRef sender = null)
         {
             if (_settings.BufferSize == 0)
             {
@@ -456,12 +487,12 @@ namespace Akka.Cluster.Tools.Client
             {
                 var m = _buffer.Dequeue();
                 _log.Debug("Receptionist not available, buffer is full, dropping first message [{0}]", m.Item1.GetType().Name);
-                _buffer.Enqueue(Tuple.Create(message, Sender));
+                _buffer.Enqueue(Tuple.Create(message, sender ?? Sender));
             }
             else
             {
                 _log.Debug("Receptionist not available, buffering message type [{0}]", message.GetType().Name);
-                _buffer.Enqueue(Tuple.Create(message, Sender));
+                _buffer.Enqueue(Tuple.Create(message, sender ?? Sender));
             }
         }
 
@@ -471,11 +502,7 @@ namespace Akka.Cluster.Tools.Client
             while (_buffer.Count != 0)
             {
                 var t = _buffer.Dequeue();
-                var item1 = t.Item1 as Subscribe;
-                if (item1 != null)
-                    ProcessSubscribeMessage(item1, receptionist);
-                else
-                    receptionist.Tell(t.Item1, t.Item2);
+                receptionist.Tell(t.Item1, t.Item2);
             }
         }
 
@@ -502,72 +529,30 @@ namespace Akka.Cluster.Tools.Client
             _contactPathsPublished = _contactPaths;
         }
 
-        private void ProcessSubscribeMessage(Subscribe subscribe, IActorRef receptionist)
+        private void SetAndWatchUnhandledMessagesMediator(SetUnhandledMessagesMediator mediator)
         {
-            if (RegisterExternalSubscriber(subscribe))
-                receptionist.Tell(new PublishSubscribe.Subscribe(subscribe.Topic, Self, subscribe.Group));
+            if (!_unhandledMessagesMediator.IsNobody())
+                Context.Unwatch(_unhandledMessagesMediator);
+
+            _unhandledMessagesMediator = mediator.ActorRef;
+            if (!_unhandledMessagesMediator.IsNobody())
+                Context.Watch(_unhandledMessagesMediator);
         }
 
-        private void ProcessUnsubscribeMessage(Unsubscribe unsubscribe, IActorRef receptionist)
+        private void OnTerminated(Terminated terminated)
         {
-            if (UnregisterExternalSubscriber(unsubscribe))
-                receptionist.Tell(new PublishSubscribe.Unsubscribe(unsubscribe.Subscribe.Topic, Self, unsubscribe.Subscribe.Group));
+            if (terminated.ActorRef.Equals(_unhandledMessagesMediator))
+                _unhandledMessagesMediator = ActorRefs.Nobody;
+            //TODO: do I need to supervise it fully and try to restart or recreate by using factory, or leave it for whoever created it?
         }
 
-        private bool RegisterExternalSubscriber(Subscribe subscribe)
+        private bool TryForwardUnhandledMessage(object message)
         {
-            ImmutableHashSet<IActorRef> actors;
-            if (!_externalSubscribers.TryGetValue(subscribe.MessageType, out actors))
-                actors = ImmutableHashSet<IActorRef>.Empty;
-
-            actors = actors.Add(subscribe.Subscriber);
-            _externalSubscribers = _externalSubscribers.SetItem(subscribe.MessageType, actors);
-
-            var key = new Tuple<string, string>(subscribe.Topic, subscribe.Group);
-            int subscribersCount;
-            _topicSubscriptions.TryGetValue(key, out subscribersCount);
-            _topicSubscriptions = _topicSubscriptions.SetItem(key, ++subscribersCount);
-
-            return subscribersCount == 1;
-        }
-
-        private bool UnregisterExternalSubscriber(Unsubscribe unsubscribe)
-        {
-            var subscribe = unsubscribe.Subscribe;
-            ImmutableHashSet<IActorRef> actors;
-            if (!_externalSubscribers.TryGetValue(subscribe.MessageType, out actors))
-                actors = ImmutableHashSet<IActorRef>.Empty;
-
-            if (!actors.Contains(subscribe.Subscriber))
+            if (_unhandledMessagesMediator.IsNobody())
                 return false;
 
-            actors = actors.Remove(subscribe.Subscriber);
-            if (actors.IsEmpty)
-                _externalSubscribers = _externalSubscribers.Remove(subscribe.MessageType);
-            else
-                _externalSubscribers = _externalSubscribers.SetItem(subscribe.MessageType, actors);
-
-            var key = new Tuple<string, string>(subscribe.Topic, subscribe.Group);
-            int subscribersCount;
-            _topicSubscriptions.TryGetValue(key, out subscribersCount);
-            if (--subscribersCount == 0)
-                _topicSubscriptions.Remove(key);
-            else
-                _topicSubscriptions = _topicSubscriptions.SetItem(key, subscribersCount);
-
-            return subscribersCount == 0;
-        }
-
-        private bool TryHandleExternalSubcriptions(object message)
-        {
-            var type = message.GetType();
-            ImmutableHashSet<IActorRef> actors;
-            if (_externalSubscribers.TryGetValue(type, out actors))
-            {
-                actors.ForEach(a => a.Tell(message));
-                return true;
-            }
-            return false;
+            _unhandledMessagesMediator.Tell(message);
+            return true;
         }
     }
 

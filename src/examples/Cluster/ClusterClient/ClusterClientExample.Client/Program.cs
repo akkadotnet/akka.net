@@ -21,19 +21,20 @@ namespace ClusterClientExample.Client
                 var client = system.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(system)));
 
                 var subscriber = system.ActorOf(Props.Create<TextMessageReceiver>(client));
+                client.Tell(new ClusterClient.SetUnhandledMessagesMediator(subscriber));
 
-                var thankyouUnsubscribe = client.Subscribe<ThankYou>(subscriber, Topics.TextMessages.ToString());
-                var welcomeUnsubscribe = client.Subscribe<YouAreWelcome>(subscriber, Topics.TextMessages.ToString());
+                var subscribe = new ClusterClient.Subscribe(Topics.TextMessages.ToString());
+                client.Tell(subscribe);
 
                 //client.Tell(new ClusterClient.Send("/user/chat", new ThankYou("Client Tell to Service", client))); //Tell/Ask is supported if you register actor as service on node
 
                 while (Console.ReadKey().Key != ConsoleKey.Escape)
                 {
-                    client.Publish(Topics.TextMessages.ToString(), new ThankYou("", client));
+                    client.Tell(new ClusterClient.Publish(Topics.TextMessages.ToString(), new ThankYou("", client)));
                 }
 
-                thankyouUnsubscribe();
-                welcomeUnsubscribe();
+                client.Tell(new ClusterClient.Unsubscribe(subscribe));
+                client.Tell(new ClusterClient.SetUnhandledMessagesMediator(ActorRefs.Nobody));
 
                 Console.ReadLine();
             }

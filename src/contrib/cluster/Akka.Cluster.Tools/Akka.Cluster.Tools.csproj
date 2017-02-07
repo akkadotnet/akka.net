@@ -57,7 +57,6 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Client\ClusterClient.cs" />
-    <Compile Include="Client\ClusterClientExtensions.cs" />
     <Compile Include="Client\ClusterClientReceptionist.cs" />
     <Compile Include="Client\ClusterClientSettings.cs" />
     <Compile Include="Client\ClusterReceptionist.cs" />

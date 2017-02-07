@@ -28,7 +28,7 @@ namespace Akka.Cluster.Tools.Client
         {
             return system.WithExtension<ClusterClientReceptionist, ClusterClientReceptionistExtensionProvider>();
         }
-        
+
         private readonly ExtendedActorSystem _system;
         private readonly string _role;
         private readonly Config _config;
