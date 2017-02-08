@@ -364,21 +364,25 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    /// 
+    /// Used by built-in <see cref="IActorRef"/> implementations for handling
+    /// internal operations that are not exposed directly to end-users.
     /// </summary>
     public interface IInternalActorRef : IActorRef, IActorRefScope
     {
         /// <summary>
-        /// TBD
+        /// The parent of this actor.
         /// </summary>
         IInternalActorRef Parent { get; }
         /// <summary>
-        /// TBD
+        /// The <see cref="IActorRefProvider"/> used by the <see cref="ActorSystem"/>
+        /// to which this actor belongs.
         /// </summary>
         IActorRefProvider Provider { get; }
 
         /// <summary>
-        /// TBD
+        /// Indicates if the current actor reference is terminated.
         /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated>")]
         bool IsTerminated { get; }
@@ -394,112 +398,92 @@ namespace Akka.Actor
         IActorRef GetChild(IEnumerable<string> name);
 
         /// <summary>
-        /// TBD
+        /// Resumes an actor if it has been suspended.
         /// </summary>
-        /// <param name="causedByFailure">TBD</param>
+        /// <param name="causedByFailure">Optional. Passed in if the actor is resuming as a result of recovering from failure.</param>
         void Resume(Exception causedByFailure = null);
+
         /// <summary>
-        /// TBD
+        /// Start a newly created actor.
         /// </summary>
         void Start();
+
         /// <summary>
-        /// TBD
+        /// Stop the actor. Terminates it permanently.
         /// </summary>
         void Stop();
+
         /// <summary>
-        /// TBD
+        /// Restart the actor.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The exception that caused the actor to fail in the first place.</param>
         void Restart(Exception cause);
+
         /// <summary>
-        /// TBD
+        /// Suspend the actor. Actor will not process any more messages until <see cref="Resume"/> is called.
         /// </summary>
         void Suspend();
 
         /// <summary>
-        /// TBD
+        /// Sends an <see cref="ISystemMessage"/> to the underlying actor.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The system message we're sending.</param>
+        /// <param name="sender">The sender of the message. Not used.</param>
         [Obsolete("Use SendSystemMessage(message)")]
         void SendSystemMessage(ISystemMessage message, IActorRef sender);
+
         /// <summary>
-        /// TBD
+        /// Sends an <see cref="ISystemMessage"/> to the underlying actor.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The system message we're sending.</param>
         void SendSystemMessage(ISystemMessage message);
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    /// 
+    /// Abstract implementation of <see cref="IInternalActorRef"/>.
     /// </summary>
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract IInternalActorRef Parent { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract IActorRefProvider Provider { get; }
 
-        /// <summary>
-        /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
-        /// looking it up at some provider-specific location. 
-        /// A path element of ".." signifies the parent, a trailing "" element must be disregarded. 
-        /// If the requested path does not exist, returns <see cref="Nobody"/>.
-        /// </summary>
-        /// <param name="name">The path elements.</param>
-        /// <returns>The <see cref="IActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract IActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.		
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="causedByFailure">TBD</param>
+
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void Resume(Exception causedByFailure = null);
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void Start();
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void Stop();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="cause">TBD</param>
+
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void Restart(Exception cause);
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void Suspend();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract bool IsTerminated { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract bool IsLocal { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <inheritdoc cref="IInternalActorRef"/>
         [Obsolete("Use SendSystemMessage(message) instead")]
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             SendSystemMessage(message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void SendSystemMessage(ISystemMessage message);
     }
 
