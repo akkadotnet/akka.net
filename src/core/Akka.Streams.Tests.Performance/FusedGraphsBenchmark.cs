@@ -278,7 +278,7 @@ namespace Akka.Streams.Tests.Performance
         public void SingleIdentity() => _singleIdentity.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Measurement, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 100)]
         public void ChainOfIdentities() => _chainOfIdentities.Run(_materializer).Ready();
@@ -290,7 +290,7 @@ namespace Akka.Streams.Tests.Performance
         public void SingleSelect() => _singleSelect.Run(_materializer).Ready();
 
         
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Measurement, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 110)]
         public void ChainOfSelects() => _chainOfSelects.Run(_materializer).Ready();
@@ -308,7 +308,7 @@ namespace Akka.Streams.Tests.Performance
         public void ChainOfBuffers() => _chainOfBuffers.Run(_materializer).Ready();
 
 
-        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+        [PerfBenchmark(RunMode = RunMode.Iterations, TestMode = TestMode.Measurement, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 3500)]
         public void RepeatTakeSelectAndAggregate() => _repeatTakeSelectAndAggregate.Run(_materializer).Ready();
