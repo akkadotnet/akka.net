@@ -1026,7 +1026,8 @@ namespace Akka.Cluster.Tools.Singleton
         WasOldest = 4,
         HandingOver = 5,
         TakeOver = 6,
-        End = 7,
+        Stopping = 7,
+        End = 8,
     }
     public interface IClusterSingletonData { }
     public interface IClusterSingletonMessage { }
