@@ -62,7 +62,7 @@ namespace Akka.TestKit
         /// If no <paramref name="system"/> is passed in, a new system 
         /// with <see cref="DefaultConfig"/> will be created.
         /// </summary>
-        /// <param name="assertions">TBD</param>
+        /// <param name="assertions">The framework-specific assertion tools.</param>
         /// <param name="system">Optional: The actor system.</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
         protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
@@ -93,12 +93,12 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes the <see cref="TestState"/> for a new spec.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="config">TBD</param>
-        /// <param name="actorSystemName">TBD</param>
-        /// <param name="testActorName">TBD</param>
+        /// <param name="system">The actor system this test will use. Can be null.</param>
+        /// <param name="config">The configuration that <see cref="system"/> will use if it's null.</param>
+        /// <param name="actorSystemName">The name that <see cref="system"/> will use if it's null.</param>
+        /// <param name="testActorName">The name of the test actor. Can be null.</param>
         protected void InitializeTest(ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
             _testState = new TestState();
@@ -153,35 +153,42 @@ namespace Akka.TestKit
         private TimeSpan SingleExpectDefaultTimeout { get { return _testState.TestKitSettings.SingleExpectDefault; } }
 
         /// <summary>
-        /// TBD
+        /// The <see cref="ActorSystem"/> that is recreated and used for each test.
         /// </summary>
         public ActorSystem Sys { get { return _testState.System; } }
+
         /// <summary>
-        /// TBD
+        /// The settings for the testkit.
         /// </summary>
         public TestKitSettings TestKitSettings { get { return _testState.TestKitSettings; } }
+
         /// <summary>
-        /// TBD
+        /// The last <see cref="IActorRef"/> to send a message to the <see cref="TestActor"/>.
         /// </summary>
         public IActorRef LastSender { get { return _testState.LastMessage.Sender; } }
+
         /// <summary>
-        /// TBD
+        /// The default TestKit configuration.
         /// </summary>
         public static Config DefaultConfig { get { return _defaultConfig; } }
+
         /// <summary>
-        /// TBD
+        /// A full debugging configuration with all log settings enabled.
         /// </summary>
         public static Config FullDebugConfig { get { return _fullDebugConfig; } }
+
         /// <summary>
-        /// TBD
+        /// The current time.
         /// </summary>
         public static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
+
         /// <summary>
-        /// TBD
+        /// The built-in <see cref="ILoggingAdapter"/> used by <see cref="Sys"/>.
         /// </summary>
         public ILoggingAdapter Log { get { return _testState.Log; } }
+
         /// <summary>
-        /// TBD
+        /// The last message received by the <see cref="TestActor"/>.
         /// </summary>
         public object LastMessage { get { return _testState.LastMessage.Message; } }
 
