@@ -48,6 +48,7 @@
     <Compile Include="Actor\ActorSelectionSpecs.cs" />
     <Compile Include="Actor\ActorSystemShutdownSpec.cs" />
     <Compile Include="Actor\AddressSpec.cs" />
+    <Compile Include="Actor\Internal\ChildrenContainerSpec.cs" />
     <Compile Include="Actor\MinimalActorRefThroughputSpec.cs" />
     <Compile Include="Actor\Pattern\AskSpec.cs" />
     <Compile Include="Actor\ReceiveActorThroughputSpec.cs" />
