@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Remote.Proto;
 using Akka.Routing;
 using Akka.Serialization;
 using Google.ProtocolBuffers;

@@ -292,6 +292,27 @@ namespace Akka.Cluster.Tools.Singleton
     /// TBD
     /// </summary>
     [Serializable]
+    internal sealed class StoppingData : IClusterSingletonData
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly IActorRef Singleton;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singleton">TBD</param>
+        public StoppingData(IActorRef singleton)
+        {
+            Singleton = singleton;
+        }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    [Serializable]
     internal sealed class EndData : IClusterSingletonData
     {
         /// <summary>
@@ -362,6 +383,10 @@ namespace Akka.Cluster.Tools.Singleton
         /// TBD
         /// </summary>
         TakeOver,
+        /// <summary>
+        /// TBD
+        /// </summary>
+        Stopping,
         /// <summary>
         /// TBD
         /// </summary>
@@ -615,6 +640,11 @@ namespace Akka.Cluster.Tools.Singleton
             return GoTo(ClusterSingletonState.HandingOver).Using(new HandingOverData(singleton, handOverTo));
         }
 
+        private State<ClusterSingletonState, IClusterSingletonData> GoToStopping(IActorRef singleton)
+        {
+            singleton.Tell(_terminationMessage);
+            return GoTo(ClusterSingletonState.Stopping).Using(new StoppingData(singleton));
+        }
 
         private void InitializeFSM()
         {
@@ -848,8 +878,21 @@ namespace Akka.Cluster.Tools.Singleton
                 if (e.FsmEvent is TakeOverRetry && wasOldestData != null)
                 {
                     var takeOverRetry = (TakeOverRetry)e.FsmEvent;
-                    if (takeOverRetry.Count <= _maxTakeOverRetries)
+
+                    if (_cluster.IsTerminated
+                        && (wasOldestData.NewOldest == null || takeOverRetry.Count > _maxTakeOverRetries))
                     {
+                        if (wasOldestData.SingletonTerminated)
+                        {
+                            return Stop();
+                        }
+                        else
+                        {
+                            return GoToStopping(wasOldestData.Singleton);
+                        }
+                    }
+                    else if (takeOverRetry.Count <= _maxTakeOverRetries)
+                    { 
                         Log.Info("Retry [{0}], sending TakeOverFromMe to [{1}]", takeOverRetry.Count, wasOldestData.NewOldest);
 
                         if (wasOldestData.NewOldest != null)
@@ -858,12 +901,10 @@ namespace Akka.Cluster.Tools.Singleton
                         SetTimer(TakeOverRetryTimer, new TakeOverRetry(takeOverRetry.Count + 1), _settings.HandOverRetryInterval);
                         return Stay();
                     }
-                    else if (_cluster.IsTerminated)
-                    {
-                        return Stop();
-                    }
                     else
+                    {
                         throw new ClusterSingletonManagerIsStuck(string.Format("Expected hand-over to [{0}] never occured", wasOldestData.NewOldest));
+                    }
                 }
                 else if (e.FsmEvent is HandOverToMe && wasOldestData != null)
                 {
@@ -908,6 +949,20 @@ namespace Akka.Cluster.Tools.Singleton
                         return Stay();
                     }
                 }
+                return null;
+            });
+
+            When(ClusterSingletonState.Stopping, e =>
+            {
+                var terminated = e.FsmEvent as Terminated;
+                var stoppingData = e.StateData as StoppingData;
+                if (terminated != null 
+                    && stoppingData != null 
+                    && terminated.ActorRef.Equals(stoppingData.Singleton))
+                {
+                    return Stop();
+                }
+
                 return null;
             });
 
