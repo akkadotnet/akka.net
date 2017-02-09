@@ -142,7 +142,7 @@ namespace Akka.Actor
     /// <summary>
     /// This class represents the base provider implementation for creating, registering and retrieving extensions within an <see cref="ActorSystem"/>.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of the extension being provided.</typeparam>
     public abstract class ExtensionIdProvider<T> : IExtensionId<T> where T:IExtension
     {
         /// <summary>

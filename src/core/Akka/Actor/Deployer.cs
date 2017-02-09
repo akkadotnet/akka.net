@@ -117,11 +117,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor deployment to the supplied path, <paramref name="key"/>, using the supplied configuration, <paramref name="config"/>.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="key">The path used to deploy the actor.</param>
+        /// <param name="config">The configuration used to configure the deployed actor.</param>
+        /// <returns>A configured actor deployment to the given path.</returns>
         public virtual Deploy ParseConfig(string key, Config config)
         {
             var deployment = config.WithFallback(Default);

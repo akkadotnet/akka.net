@@ -10,35 +10,42 @@ using System.Collections.Generic;
 namespace Akka.TestKit.Internal
 {
     /// <summary>
+    /// This class represents an implementation of <see cref="ITestActorQueue{T}"/>
+    /// that uses a <see cref="BlockingQueue{T}"/> as its backing store.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of item to store.</typeparam>
     public class BlockingCollectionTestActorQueue<T> : ITestActorQueue<T>
     {
         private readonly BlockingQueue<T> _queue;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BlockingCollectionTestActorQueue{T}"/> class.
         /// </summary>
-        /// <param name="queue">TBD</param>
+        /// <param name="queue">The queue to use as the backing store.</param>
         public BlockingCollectionTestActorQueue(BlockingQueue<T> queue)
         {
             _queue = queue;
         }
 
         /// <summary>
-        /// TBD
+        /// Adds the specified item to the end of the queue.
         /// </summary>
-        /// <param name="item">TBD</param>
+        /// <param name="item">The item to add to the queue.</param>
         public void Enqueue(T item)
         {
             _queue.Enqueue(item);
         }
 
         /// <summary>
-        /// TBD
+        /// <para>
+        /// Retrieves all items from the queue.
+        /// </para>
+        /// <note>
+        /// This will remove all items from the queue.
+        /// </note>
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumeration of all items removed from the queue.</returns>
         public IEnumerable<T> GetAll()
         {
             T item;

@@ -81,11 +81,13 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="name">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown since a <see cref="TestProbe"/> cannot be created from a <see cref="TestProbe"/>.
+        /// </exception>
+        /// <returns>N/A</returns>
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
         public override TestProbe CreateTestProbe(string name=null)
         {
