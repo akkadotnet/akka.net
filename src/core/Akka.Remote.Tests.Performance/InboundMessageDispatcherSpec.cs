@@ -8,6 +8,7 @@
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Remote.Proto;
 using Akka.Util.Internal;
 using Google.ProtocolBuffers;
 using NBench;
