@@ -210,25 +210,25 @@ namespace Akka.Dispatch
         internal bool ShouldProcessMessage() { return (CurrentStatus() & MailboxStatus.ShouldNotProcessMask) == 0; }
 
         /// <summary>
-        /// TBD
+        /// Returns the number of times this mailbox is currently suspended.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int SuspendCount() { return CurrentStatus() / MailboxStatus.SuspendUnit; }
 
         /// <summary>
-        /// TBD
+        /// Returns <c>true</c> if the mailbox is currently suspended from processing. <c>false</c> otherwise.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool IsSuspended() { return (CurrentStatus() & MailboxStatus.SuspendMask) != 0; }
 
         /// <summary>
-        /// TBD
+        /// Returns <c>true</c> if the mailbox is closed. <c>false</c> otherwise.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool IsClosed() { return (CurrentStatus() == MailboxStatus.Closed); }
 
         /// <summary>
-        /// TBD
+        /// Returns <c>true</c> if the mailbox is scheduled for execution on a <see cref="Dispatcher"/>. <c>false</c> otherwise.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool IsScheduled()
@@ -237,7 +237,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Updates the status of the current mailbox.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool UpdateStatus(int oldStatus, int newStatus)
@@ -246,7 +246,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Forcefully sets the status of the current mailbox.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetStatus(int newStatus)
@@ -296,9 +296,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        ///  Set the new primary status to 
+        ///  Set the new primary status to <see cref="MailboxStatus.Closed"/>.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if we were able to successfully close the mailbox. <c>false</c> otherwise.</returns>
         internal bool BecomeClosed()
         {
             var status = CurrentStatus();
@@ -313,7 +313,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// Set scheduled status, keeping primary status as-is.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>Returns <c>true</c> if the set operation succeeded. <c>false</c> otherwise.</returns>
         internal bool SetAsScheduled()
         {
             while (true)
@@ -332,7 +332,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// Reset Scheduled status, keeping primary status as-is
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>Returns <c>true</c> if the set operation succeeded. <c>false</c> otherwise.</returns>
         internal bool SetAsIdle()
         {
             while (true)
