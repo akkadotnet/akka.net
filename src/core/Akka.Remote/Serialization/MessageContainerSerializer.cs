@@ -49,12 +49,14 @@ namespace Akka.Remote.Serialization
         /// </summary>
         /// <param name="obj">The object to serialize </param>
         /// <returns>A byte array containing the serialized object</returns>
-        /// <exception cref="ArgumentException">Object must be of type <see cref="ActorSelectionMessage"/></exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="obj"/> is not of type <see cref="ActorSelectionMessage"/>.
+        /// </exception>
         public override byte[] ToBinary(object obj)
         {
             if (!(obj is ActorSelectionMessage))
             {
-                throw new ArgumentException("Object must be of type ActorSelectionMessage");
+                throw new ArgumentException("Object must be of type ActorSelectionMessage", nameof(obj));
             }
 
             return SerializeSelection((ActorSelectionMessage)obj);
@@ -118,7 +120,10 @@ namespace Akka.Remote.Serialization
         /// <param name="bytes">The array containing the serialized object</param>
         /// <param name="type">The type of object contained in the array</param>
         /// <returns>The object contained in the array</returns>
-        /// <exception cref="NotSupportedException">Unknown SelectionEnvelope.Elements.Type</exception>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if the <see cref="SelectionEnvelope"/>, contained within the specified byte array
+        /// <paramref name="bytes"/>, contains an unknown <see cref="PatternType"/>.
+        /// </exception>
         public override object FromBinary(byte[] bytes, Type type)
         {
             SelectionEnvelope selectionEnvelope = SelectionEnvelope.ParseFrom(bytes);

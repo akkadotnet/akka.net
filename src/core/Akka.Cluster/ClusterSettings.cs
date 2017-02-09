@@ -15,7 +15,7 @@ using Akka.Dispatch;
 namespace Akka.Cluster
 {
     /// <summary>
-    /// TBD
+    /// This class represents configuration information used when setting up a cluster.
     /// </summary>
     public sealed class ClusterSettings
     {
@@ -23,10 +23,10 @@ namespace Akka.Cluster
         readonly string _useDispatcher;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterSettings"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="systemName">TBD</param>
+        /// <param name="config">The configuration to use when setting up the cluster.</param>
+        /// <param name="systemName">The name of the actor system hosting the cluster.</param>
         public ClusterSettings(Config config, string systemName)
         {
             //TODO: Requiring!
@@ -81,7 +81,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Determine whether to log <see cref="Akka.Event.LogLevel.InfoLevel"/> messages.
         /// </summary>
         public bool LogInfo { get; }
 
@@ -96,7 +96,7 @@ namespace Akka.Cluster
         public string FailureDetectorImplementationClass { get; }
 
         /// <summary>
-        /// TBD
+        /// The amount of time between when heartbeat messages are sent.
         /// </summary>
         public TimeSpan HeartbeatInterval { get; }
 
@@ -111,7 +111,7 @@ namespace Akka.Cluster
         public int MonitoredByNrOfMembers { get; }
 
         /// <summary>
-        /// TBD
+        /// A list of designated seed nodes for the cluster.
         /// </summary>
         public ImmutableList<Address> SeedNodes { get; }
 
@@ -131,7 +131,7 @@ namespace Akka.Cluster
         public TimeSpan PeriodicTasksInitialDelay { get; }
 
         /// <summary>
-        /// TBD
+        /// The amount of time between when gossip messages are sent.
         /// </summary>
         public TimeSpan GossipInterval { get; }
 
@@ -201,13 +201,13 @@ namespace Akka.Cluster
         public ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="P:Cluster.DowningProvider.DownRemovalMargin"/>.
         /// </summary>
         [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin")]
         public TimeSpan DownRemovalMargin { get; }
 
         /// <summary>
-        /// TBD
+        /// Determine whether or not to log heartbeat message in verbose mode.
         /// </summary>
         public bool VerboseHeartbeatLogging { get; }
 

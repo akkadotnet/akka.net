@@ -52,14 +52,11 @@ namespace Akka.Remote
             }
             
             if (!string.IsNullOrWhiteSpace(remote))
-                throw new ConfigurationException(string.Format("unparseable remote node name [{0}]", remote));
+                throw new ConfigurationException($"unparseable remote node name [{remote}]");
 
             return CheckRemoteRouterConfig(deploy);
         }
 
-        /// <summary>
-        /// Used to determine if a given <paramref name="deploy"/> is an instance of <see cref="RemoteRouterConfig"/>.
-        /// </summary>
         private static Deploy CheckRemoteRouterConfig(Deploy deploy)
         {
             var nodes = deploy.Config.GetStringList("target.nodes").Select(Address.Parse).ToList();

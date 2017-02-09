@@ -42,11 +42,13 @@ namespace Akka.Remote.Serialization
         }
 
         /// <summary>
-        /// Serializes the given object into a byte array
+        /// N/A
         /// </summary>
-        /// <param name="obj">The object to serialize </param>
-        /// <returns>A byte array containing the serialized object</returns>
-        /// <exception cref="NotImplementedException">This method is not currently implemented.</exception>
+        /// <param name="obj">N/A</param>
+        /// <exception cref="NotImplementedException">
+        /// This exception is automatically thrown since <see cref="ProtobufSerializer"/> does not implement this function.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override byte[] ToBinary(object obj)
         {
             throw new NotImplementedException();
@@ -58,12 +60,14 @@ namespace Akka.Remote.Serialization
         }
 
         /// <summary>
-        /// Deserializes a byte array into an object of type <paramref name="type"/>.
+        /// N/A
         /// </summary>
-        /// <param name="bytes">The array containing the serialized object</param>
-        /// <param name="type">The type of object contained in the array</param>
-        /// <returns>The object contained in the array</returns>
-        /// <exception cref="NotImplementedException">This method is not currently implemented.</exception>
+        /// <param name="bytes">N/A</param>
+        /// <param name="type">N/A</param>
+        /// <exception cref="NotImplementedException">
+        /// This exception is automatically thrown since <see cref="ProtobufSerializer"/> does not implement this function.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
             throw new NotImplementedException();
