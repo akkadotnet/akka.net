@@ -60,7 +60,7 @@ namespace Akka.TestKit
         /// <summary>
         /// Create a filter for <see cref="Akka.Event.Error"/> events. Events must match the specified pattern to be filtered.
         /// <example>
-        /// Error&lt;MyException&gt;(pattern: new Regex("weird.*message"), source: obj) // filter on pattern and source
+        /// Exception&lt;MyException&gt;(pattern: new Regex("weird.*message"), source: obj) // filter on pattern and source
         /// </example>
         /// <remarks>Please note that filtering on the <paramref name="source"/> being
         /// <c>null</c> does NOT work (passing <c>null</c> disables the source filter).
@@ -77,9 +77,9 @@ namespace Akka.TestKit
 
 
         /// <summary>
-        /// Create a filter for Error events. Events must match the specified pattern to be filtered.
+        /// Create a filter for <see cref="Akka.Event.Error"/> events. Events must match the specified pattern to be filtered.
         /// <example>
-        /// Error&lt;MyException&gt;(pattern: new Regex("weird.*message"), source: obj) // filter on pattern and source
+        /// Exception&lt;MyException&gt;(pattern: new Regex("weird.*message"), source: obj) // filter on pattern and source
         /// </example>
         /// <remarks>Please note that filtering on the <paramref name="source"/> being
         /// <c>null</c> does NOT work (passing <c>null</c> disables the source filter).
@@ -98,16 +98,17 @@ namespace Akka.TestKit
 
 
         /// <summary>
-        /// Create a filter for Error events.
+        /// Create a filter for <see cref="Akka.Event.Error"/> events.
         /// <para><paramref name="message" /> takes priority over <paramref name="start" />.
         /// If <paramref name="message" />!=<c>null</c> the event must match it to be filtered.
         /// If <paramref name="start" />!=<c>null</c> and <paramref name="message" /> has not been specified,
         /// the event must start with the given string to be filtered.
-        /// </para><example>
-        /// Error&lt;MyException&gt;()                                         // filter only on exception type
-        /// Error&lt;MyException&gt;("message")                                // filter on exactly matching message
-        /// Error&lt;MyException&gt;(source: obj)                              // filter on event source
-        /// Error&lt;MyException&gt;(start: "Expected")                        // filter on start of message
+        /// </para>
+        /// <example>
+        /// Exception&lt;MyException&gt;()                                         // filter only on exception type
+        /// Exception&lt;MyException&gt;("message")                                // filter on exactly matching message
+        /// Exception&lt;MyException&gt;(source: obj)                              // filter on event source
+        /// Exception&lt;MyException&gt;(start: "Expected")                        // filter on start of message
         /// </example>
         /// <remarks>Please note that filtering on the <paramref name="source"/> being
         /// <c>null</c> does NOT work (passing <c>null</c> disables the source filter).
@@ -125,16 +126,17 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Create a filter for Error events.
+        /// Create a filter for <see cref="Akka.Event.Error"/> events.
         /// <para><paramref name="message" /> takes priority over <paramref name="start" />.
         /// If <paramref name="message" />!=<c>null</c> the event must match it to be filtered.
         /// If <paramref name="start" />!=<c>null</c> and <paramref name="message" /> has not been specified,
         /// the event must start with the given string to be filtered.
-        /// </para><example>
-        /// Error(typeof(MyException))                                     // filter only on exception type
-        /// Error(typeof(MyException), "message")                          // filter on exactly matching message
-        /// Error(typeof(MyException), source: obj)                        // filter on event source
-        /// Error(typeof(MyException), start: "Expected")                  // filter on start of message
+        /// </para>
+        /// <example>
+        /// Exception(typeof(MyException))                                     // filter only on exception type
+        /// Exception(typeof(MyException), "message")                          // filter on exactly matching message
+        /// Exception(typeof(MyException), source: obj)                        // filter on event source
+        /// Exception(typeof(MyException), start: "Expected")                  // filter on start of message
         /// </example>
         /// <remarks>Please note that filtering on the <paramref name="source"/> being
         /// <c>null</c> does NOT work (passing <c>null</c> disables the source filter).
@@ -154,9 +156,6 @@ namespace Akka.TestKit
             return Exception(exceptionType, messageMatcher, sourceMatcher, checkInnerExceptions);
         }
 
-        /// <summary>
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
         private IEventFilterApplier Exception(Type exceptionType, IStringMatcher messageMatcher, IStringMatcher sourceMatcher, bool checkInnerExceptions)
         {
             var filter = new ErrorFilter(exceptionType, messageMatcher, sourceMatcher, checkInnerExceptions);
@@ -165,7 +164,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Create a custom event filter. The filter will affect those events for
-        ///  which the predicate function returns <c>true</c>.
+        /// which the <paramref name="predicate"/> function returns <c>true</c>.
         /// </summary>
         /// <param name="predicate">This function must return <c>true</c> for events that should be filtered.</param>
         /// <returns>TBD</returns>
@@ -178,7 +177,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Create a custom event filter. The filter will affect those events for
-        ///  which the predicate function returns <c>true</c>.
+        /// which the <paramref name="predicate"/> function returns <c>true</c>.
         /// </summary>
         /// <typeparam name="TLogEvent">TBD</typeparam>
         /// <param name="predicate">This function must return <c>true</c> for events that should be filtered.</param>
@@ -190,18 +189,20 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Creates a event filter given the specified <paramref name="logLevel"/>.
+        /// Creates an event filter given the specified <paramref name="logLevel"/>.
         /// This is the same as calling <see cref="Debug(string,string,string,string)"/>, <see cref="Info(string,string,string,string)"/>
-        ///  <see cref="Warning(string,string,string,string)"/> or <see cref="Error(string,string,string,string)"/>
+        /// <see cref="Warning(string,string,string,string)"/> or <see cref="Error(string,string,string,string)"/>
         /// directly.
         /// </summary>
-        /// <param name="logLevel">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="start">TBD</param>
-        /// <param name="contains">TBD</param>
-        /// <param name="source">TBD</param>
-        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="logLevel">The log level used to match events being filtered.</param>
+        /// <param name="message">Optional. If specified the event must match it exactly to be filtered.</param>
+        /// <param name="start">Optional. If specified (and <paramref name="message"/> is not specified), the event must start with the string to be filtered.</param>
+        /// <param name="contains">Optional. If specified (and neither <paramref name="message"/> nor <paramref name="start"/> are specified), the event must contain the string to be filtered.</param>
+        /// <param name="source">Optional. The event source.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown when the given <paramref name="logLevel"/> is unknown.
+        /// </exception>
+        /// <returns>An event filter that matches on the given <paramref name="logLevel"/>.</returns>
         public IEventFilterApplier ForLogLevel(LogLevel logLevel, string message = null, string start = null, string contains = null, string source = null)
         {
             switch(logLevel)
@@ -215,21 +216,23 @@ namespace Akka.TestKit
                 case LogLevel.ErrorLevel:
                     return Error(message, start, contains, source);
                 default:
-                    throw new ArgumentOutOfRangeException("logLevel", string.Format("Unknown {1} value: {0}", logLevel, typeof(LogLevel).Name));
+                    throw new ArgumentOutOfRangeException(nameof(logLevel), $"Unknown {typeof(LogLevel).Name} value: {logLevel}");
             }
         }
 
         /// <summary>
         /// Creates a filter given the specified <paramref name="logLevel"/>.
         /// This is the same as calling <see cref="Debug(Regex,string)"/>, <see cref="Info(Regex,string)"/>
-        ///  <see cref="Warning(Regex,string)"/> or <see cref="Error(Regex,string)"/>
+        /// <see cref="Warning(Regex,string)"/> or <see cref="Error(Regex,string)"/>
         /// directly.
         /// </summary>
-        /// <param name="logLevel">TBD</param>
-        /// <param name="pattern">TBD</param>
-        /// <param name="source">TBD</param>
-        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="logLevel">The log level used to match events being filtered.</param>
+        /// <param name="pattern">The event must match the pattern to be filtered.</param>
+        /// <param name="source">>Optional. The event source.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown when the given <paramref name="logLevel"/> is unknown.
+        /// </exception>
+        /// <returns>An event filter that matches the given <paramref name="logLevel"/> with the supplied <paramref name="pattern"/>.</returns>
         public IEventFilterApplier ForLogLevel(LogLevel logLevel, Regex pattern, string source = null)
         {
             switch(logLevel)
@@ -243,7 +246,7 @@ namespace Akka.TestKit
                 case LogLevel.ErrorLevel:
                     return Error(pattern, source);
                 default:
-                    throw new ArgumentOutOfRangeException("logLevel", string.Format("Unknown {1} value: {0}", logLevel, typeof(LogLevel).Name));
+                    throw new ArgumentOutOfRangeException(nameof(logLevel), $"Unknown {typeof(LogLevel).Name} value: {logLevel}");
             }
         }
 

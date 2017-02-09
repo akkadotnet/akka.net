@@ -23,10 +23,12 @@ namespace Akka.TestKit
         private readonly bool _logTestKitCalls;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="TestKitSettings"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <param name="config">The configuration to use when setting up the tests.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when a negative value is given for the <c>akka.test.timefactor</c> configuration item.
+        /// </exception>
         public TestKitSettings(Config config)
         {
             _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", allowInfinite:false);
@@ -36,7 +38,7 @@ namespace Akka.TestKit
             _logTestKitCalls = config.GetBoolean("akka.test.testkit.debug");
 
             if(_timefactor <= 0)
-                throw new ConfigurationException(@"Expected a positive value for ""akka.test.timefactor"" but found " + _timefactor);
+                throw new ConfigurationException($@"Expected a positive value for ""akka.test.timefactor"" but found {_timefactor}");
         }
 
 

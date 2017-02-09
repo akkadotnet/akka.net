@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Google.ProtocolBuffers;
 using System.Runtime.Serialization;
+using Akka.Remote.Proto;
 
 namespace Akka.Remote.Transport
 {

@@ -71,8 +71,6 @@ namespace Akka.Cluster
                 RemoteSettings.WatchUnreachableReaperInterval,
                 RemoteSettings.WatchHeartbeatExpectedResponseAfter), "remote-watcher");
         }
-
-        
     }
 
     /// <summary>
@@ -160,9 +158,9 @@ namespace Akka.Cluster
                 if (deploy.Config.GetBoolean("cluster.enabled"))
                 {
                     if (deploy.Scope != Deploy.NoScopeGiven)
-                        throw new ConfigurationException(string.Format("Cluster deployment can't be combined with scope [{0}]", deploy.Scope));
+                        throw new ConfigurationException($"Cluster deployment can't be combined with scope [{deploy.Scope}]");
                     if (deploy.RouterConfig is RemoteRouterConfig)
-                        throw new ConfigurationException(string.Format("Cluster deployment can't be combined with [{0}]", deploy.Config));
+                        throw new ConfigurationException($"Cluster deployment can't be combined with [{deploy.Config}]");
 
                     if (deploy.RouterConfig is Pool)
                     {
@@ -180,7 +178,7 @@ namespace Akka.Cluster
                     }
                     else
                     {
-                        throw new ArgumentException(string.Format("Cluster-aware router can only wrap Pool or Group, got [{0}]", deploy.RouterConfig.GetType()));
+                        throw new ArgumentException($"Cluster-aware router can only wrap Pool or Group, got [{deploy.RouterConfig.GetType()}]");
                     }
                 }
                 else

@@ -29,7 +29,7 @@ namespace Akka.TestKit
         /// <param name="sender">The sender.</param>
         /// <param name="message">The message.</param>
         /// <returns>The <see cref="AutoPilot"/> to be used for the next round</returns>
-        abstract public AutoPilot Run(IActorRef sender, object message);
+        public abstract AutoPilot Run(IActorRef sender, object message);
 
         /// <summary>
         /// When returned by another <see cref="AutoPilot"/> then no
@@ -84,15 +84,17 @@ namespace Akka.TestKit
         /// </summary>
         public static KeepRunning Instance = new KeepRunning();
 
-        private KeepRunning(){}
+        private KeepRunning(){ }
         
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="sender">N/A</param>
+        /// <param name="message">N/A</param>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is automatically thrown since calling this function would never occur in normal operation.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             throw new InvalidOperationException("Must not call");
