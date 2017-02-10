@@ -7,7 +7,9 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Util;
 using Hyperion;
 
@@ -25,7 +27,16 @@ namespace Akka.Serialization
         /// Initializes a new instance of the <see cref="HyperionSerializer"/> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer.</param>
-        public HyperionSerializer(ExtendedActorSystem system) : base(system)
+        public HyperionSerializer(ExtendedActorSystem system) : this(system, HyperionSerializerSettings.Create(system))
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HyperionSerializer"/> class.
+        /// </summary>
+        /// <param name="system">The actor system to associate with this serializer.</param>
+        /// <param name="settings">Serializer settings.</param>
+        public HyperionSerializer(ExtendedActorSystem system, HyperionSerializerSettings settings) : base(system)
         {
             var akkaSurrogate =
                 Surrogate
@@ -33,14 +44,14 @@ namespace Akka.Serialization
                 from => from.ToSurrogate(system),
                 to => to.FromSurrogate(system));
 
+            var provider = CreateKnownTypesProvider(system, settings.KnownTypesProvider);
+
             _serializer =
                 new Hyperion.Serializer(new SerializerOptions(
-                    preserveObjectReferences: true,
-                    versionTolerance: true,
-                    surrogates: new[]
-                    {
-                        akkaSurrogate
-                    }));
+                    preserveObjectReferences: settings.PreserveObjectReferences,
+                    versionTolerance: settings.VersionTolerance,
+                    surrogates: new[] { akkaSurrogate },
+                    knownTypes: provider.GetKnownTypes()));
         }
 
         /// <summary>
@@ -86,6 +97,60 @@ namespace Akka.Serialization
                 var res = _serializer.Deserialize<object>(ms);
                 return res;
             }
+        }
+
+        private IKnownTypesProvider CreateKnownTypesProvider(ExtendedActorSystem system, Type type)
+        {
+            var ctors = type.GetConstructors();
+            var ctor = ctors.FirstOrDefault(c =>
+            {
+                var parameters = c.GetParameters();
+                return parameters.Length == 1 && (parameters[0].ParameterType == typeof(ActorSystem)
+                    || parameters[0].ParameterType == typeof(ExtendedActorSystem));
+            });
+
+            return ctor == null
+                ? (IKnownTypesProvider) Activator.CreateInstance(type)
+                : (IKnownTypesProvider) ctor.Invoke(new object[] {system});
+        }
+    }
+
+    public sealed class HyperionSerializerSettings
+    {
+        public static readonly HyperionSerializerSettings Default = new HyperionSerializerSettings(
+            preserveObjectReferences: true,
+            versionTolerance: true,
+            knownTypesProvider: typeof(NoKnownTypes));
+
+        public static HyperionSerializerSettings Create(ExtendedActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.serializers.hyperion");
+            return config == null ? Default : Create(config);
+        }
+
+        public static HyperionSerializerSettings Create(Config config)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config), "HyperionSerializerSettings require a config, default path: `akka.serializers.hyperion`");
+
+            var type = Type.GetType(config.GetString("known-types-provider"), true);
+            if (!typeof(IKnownTypesProvider).IsAssignableFrom(type)) 
+                throw new ArgumentException($"Known types provider must implement an interface {typeof(IKnownTypesProvider).FullName}", nameof(config));
+
+            return new HyperionSerializerSettings(
+                preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
+                versionTolerance: config.GetBoolean("version-tolerance", true),
+                knownTypesProvider: type);
+        }
+
+        public readonly bool PreserveObjectReferences;
+        public readonly bool VersionTolerance;
+        public readonly Type KnownTypesProvider;
+
+        public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider)
+        {
+            PreserveObjectReferences = preserveObjectReferences;
+            VersionTolerance = versionTolerance;
+            KnownTypesProvider = knownTypesProvider;
         }
     }
 }
