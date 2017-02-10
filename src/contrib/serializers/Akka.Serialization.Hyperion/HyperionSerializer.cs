@@ -27,7 +27,18 @@ namespace Akka.Serialization
         /// Initializes a new instance of the <see cref="HyperionSerializer"/> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer.</param>
-        public HyperionSerializer(ExtendedActorSystem system) : this(system, HyperionSerializerSettings.Create(system))
+        public HyperionSerializer(ExtendedActorSystem system) 
+            : this(system, HyperionSerializerSettings.Default)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HyperionSerializer"/> class.
+        /// </summary>
+        /// <param name="system">The actor system to associate with this serializer.</param>
+        /// <param name="config">Configuration passed from related HOCON config path.</param>
+        public HyperionSerializer(ExtendedActorSystem system, Config config) 
+            : this(system, HyperionSerializerSettings.Create(config))
         {
         }
 
@@ -36,7 +47,8 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer.</param>
         /// <param name="settings">Serializer settings.</param>
-        public HyperionSerializer(ExtendedActorSystem system, HyperionSerializerSettings settings) : base(system)
+        public HyperionSerializer(ExtendedActorSystem system, HyperionSerializerSettings settings)
+            : base(system)
         {
             var akkaSurrogate =
                 Surrogate
@@ -121,12 +133,6 @@ namespace Akka.Serialization
             preserveObjectReferences: true,
             versionTolerance: true,
             knownTypesProvider: typeof(NoKnownTypes));
-
-        public static HyperionSerializerSettings Create(ExtendedActorSystem system)
-        {
-            var config = system.Settings.Config.GetConfig("akka.serializers.hyperion");
-            return config == null ? Default : Create(config);
-        }
 
         public static HyperionSerializerSettings Create(Config config)
         {

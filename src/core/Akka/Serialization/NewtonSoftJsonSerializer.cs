@@ -8,9 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -19,6 +21,39 @@ using Newtonsoft.Json.Serialization;
 
 namespace Akka.Serialization
 {
+    internal sealed class NewtonSoftJsonSerializerSettings
+    {
+        public static NewtonSoftJsonSerializerSettings Create(Config config) => 
+            new NewtonSoftJsonSerializerSettings(converters: GetConverterTypes(config));
+
+        private static IEnumerable<Type> GetConverterTypes(Config config)
+        {
+            var converterNames = config.GetStringList("converters");
+            foreach (var converterName in converterNames)
+            {
+                var type = Type.GetType(converterName, true);
+                if (!typeof(JsonConverter).IsAssignableFrom(type))
+                    throw new ArgumentException($"Type {type} doesn't inherit from a {typeof(JsonConverter)}.");
+
+                yield return type;
+            }
+        }
+
+        public NewtonSoftJsonSerializerSettings(IEnumerable<Type> converters)
+        {
+            if (converters == null)
+                throw new ArgumentNullException(nameof(converters), $"{nameof(NewtonSoftJsonSerializerSettings)} requires a sequence of converters.");
+            
+            Converters = converters;
+        }
+
+        /// <summary>
+        /// A collection of an aditional converter types to be applied to a <see cref="NewtonSoftJsonSerializer"/>.
+        /// Converters must inherit from <see cref="JsonConverter"/> class and implement a default constructor.
+        /// </summary>
+        public IEnumerable<Type> Converters { get; }
+    }
+
     /// <summary>
     /// This is a special <see cref="Serializer"/> that serializes and deserializes javascript objects only.
     /// These objects need to be in the JavaScript Object Notation (JSON) format.
@@ -54,10 +89,38 @@ namespace Akka.Serialization
                 ObjectCreationHandling = ObjectCreationHandling.Replace, //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 TypeNameHandling = TypeNameHandling.All,
-                ContractResolver = new AkkaContractResolver(),
+                ContractResolver = new AkkaContractResolver()
             };
 
             _serializer = JsonSerializer.Create(_settings);
+        }
+
+        public NewtonSoftJsonSerializer(ExtendedActorSystem system, Config config)
+            : base(system)
+        {
+            var serializerSettings = NewtonSoftJsonSerializerSettings.Create(config);
+            var converters = serializerSettings.Converters
+                .Select(converterType => (JsonConverter) Activator.CreateInstance(converterType))
+                .ToList();
+
+            converters.Add(new SurrogateConverter(this));
+            converters.Add(new DiscriminatedUnionConverter());
+
+            _settings = new JsonSerializerSettings
+            {
+                PreserveReferencesHandling = PreserveReferencesHandling.Objects,
+                Converters = converters,
+                NullValueHandling = NullValueHandling.Ignore,
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+                MissingMemberHandling = MissingMemberHandling.Ignore,
+                ObjectCreationHandling = ObjectCreationHandling.Replace, //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
+                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                TypeNameHandling = TypeNameHandling.All,
+                ContractResolver = new AkkaContractResolver()
+            };
+
+            _serializer = JsonSerializer.Create(_settings);
+
         }
 
         /// <summary>
