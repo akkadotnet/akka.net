@@ -6,15 +6,22 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
+using Akka.Tests.Actor;
 using Akka.Util.Internal;
+using FsCheck;
+using FsCheck.Xunit;
 using Xunit;
+using Config = Akka.Configuration.Config;
 
 namespace Akka.Tests.Dispatch
 {
@@ -71,6 +78,33 @@ int-prio-mailbox {
 ";
         }
 
+        [Property]
+        public Property UnboundedPriorityQueue_should_sort_items_in_expected_order(int[] integers, PositiveInt capacity)
+        {
+            var pq = new UnboundedPriorityMessageQueue(o => o as int? ?? int.MaxValue, capacity.Get);
+            var expectedOrder = integers.OrderBy(x => x).ToList();
+            var actualOrder = new List<int>(integers.Length);
+
+            // build up the entire list
+            var loop = Parallel.ForEach(integers, i =>
+            {
+                pq.Enqueue(ActorRefs.Nobody, new Envelope(i, ActorRefs.NoSender));
+            });
+            AwaitCondition(() => loop.IsCompleted);
+
+            Envelope e;
+
+            // now that everything is sorted, dequeue it into its expected order
+            while (pq.TryDequeue(out e))
+            {
+                actualOrder.Add((int)e.Message);
+            }
+
+            return
+                expectedOrder.SequenceEqual(actualOrder)
+                    .Label($"Expected [{string.Join(";", expectedOrder)}], but was [{string.Join(";", actualOrder)}]");
+        }
+
         [Fact]
         public void Can_use_unbounded_priority_mailbox()
         {
@@ -78,6 +112,9 @@ int-prio-mailbox {
 
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
+
+            // wait until we can confirm that the mailbox is suspended before we begin sending messages
+            AwaitCondition(() => (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
