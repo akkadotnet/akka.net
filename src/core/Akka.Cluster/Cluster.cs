@@ -22,40 +22,42 @@ using Akka.Util.Internal;
 namespace Akka.Cluster
 {
     /// <summary>
-    /// TBD
+    /// This class represents an <see cref="ActorSystem"/> provider used to create the cluster extension.
     /// </summary>
     public class ClusterExtension : ExtensionIdProvider<Cluster>
     {
         /// <summary>
-        /// TBD
+        /// Creates the cluster extension using a given actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system to use when creating the extension.</param>
+        /// <returns>The extension created using the given actor system.</returns>
         public override Cluster CreateExtension(ExtendedActorSystem system)
         {
             return new Cluster((ActorSystemImpl)system);
         }
     }
 
-    //TODO: xmldoc
     /// <summary>
-    /// This module is responsible for cluster membership information. Changes to the cluster
-    /// information is retrieved through <see cref="InternalClusterAction.Subscribe"/>. Commands to operate the cluster is
-    /// available through methods in this class, such as <see cref="Akka.Cluster.Cluster.Join"/>, <see cref="Akka.Cluster.Cluster.Down"/> and <see cref="Akka.Cluster.Cluster.Leave"/>.
-    /// 
-    /// Each cluster <see cref="Akka.Cluster.Member"/> is identified by its <see cref="Akka.Actor.Address"/>, and
-    /// the cluster address of this actor system is [[#selfAddress]]. A member also has a status;
-    /// initially <see cref="Akka.Cluster.MemberStatus.Joining"/> followed by <see cref="Akka.Cluster.MemberStatus.Up"/>.
+    /// <para>
+    /// This class represents an <see cref="ActorSystem"/> extension used to create, monitor and manage
+    /// a cluster of member nodes hosted within the actor system.
+    /// </para>
+    /// <para>
+    /// Each cluster <see cref="Akka.Cluster.Member"/> is identified by its <see cref="Akka.Actor.Address"/>
+    /// and the cluster address of this actor system is <see cref="SelfAddress"/>. A member also has a
+    /// <see cref="Akka.Cluster.MemberStatus">status</see>; initially <see cref="Akka.Cluster.MemberStatus.Joining"/>
+    /// followed by <see cref="Akka.Cluster.MemberStatus.Up"/>.
+    /// </para>
     /// </summary>
     public class Cluster : IExtension
     {
         //TODO: Issue with missing overrides for Get and Lookup
 
         /// <summary>
-        /// TBD
+        /// Retrieves the extension from the specified actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system from which to retrieve the extension.</param>
+        /// <returns>The extension retrieved from the given actor system.</returns>
         public static Cluster Get(ActorSystem system)
         {
             return system.WithExtension<Cluster, ClusterExtension>();
@@ -80,10 +82,12 @@ namespace Akka.Cluster
         public UniqueAddress SelfUniqueAddress { get; }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Cluster"/> class.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <param name="system">The actor system that hosts the cluster.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the <paramref name="system"/> does not have a <see cref="ClusterActorRefProvider"/> enabled in the configuration.
+        /// </exception>
         public Cluster(ActorSystemImpl system)
         {
             System = system;
@@ -92,9 +96,7 @@ namespace Akka.Cluster
             var provider = system.Provider as ClusterActorRefProvider;
             if (provider == null)
                 throw new ConfigurationException(
-                    String.Format("ActorSystem {0} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {1}",
-                        system,
-                        system.Provider.GetType().FullName));
+                    $"ActorSystem {system} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
@@ -122,9 +124,6 @@ namespace Akka.Cluster
             LogInfo("Started up successfully");
         }
 
-        /// <summary>
-        /// Handles initialization logic for the <see cref="Cluster"/>
-        /// </summary>
         private async Task<IActorRef> GetClusterCoreRef()
         {
             var timeout = System.Settings.CreationTimeout;
@@ -157,47 +156,52 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="subscriber">The actor who'll receive the cluster domain events</param>
         /// <param name="initialStateMode">
-        /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents"/> the events corresponding to the current state
-        /// will be sent to <paramref name="subscriber"/> to mimic what it would have seen if it were listening to the events when they occurred in the past.
+        /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents"/>, then the events corresponding to the current state
+        /// are sent to <paramref name="subscriber"/> to mimic what it would have seen if it were listening to the events when they occurred in the past.
         /// 
-        /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot"/> 
-        /// a snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message. </param>
-        /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
+        /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot"/>, then a snapshot of
+        /// <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message.
+        /// </param>
+        /// <param name="to">An array of event types that the actor receives.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the array of supplied types, <paramref name="to"/>, is empty
+        /// or contains types that do not implement <see cref="ClusterEvent.IClusterDomainEvent"/>.
+        /// </exception>
         public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, params Type[] to)
         {
             if (to.Length == 0)
-                throw new ArgumentException("At least one `IClusterDomainEvent` class is required");
+                throw new ArgumentException("At least one `IClusterDomainEvent` class is required", nameof(to));
             if (!to.All(t => typeof(ClusterEvent.IClusterDomainEvent).IsAssignableFrom(t)))
-                throw new ArgumentException($"Subscribe to `IClusterDomainEvent` or subclasses, was [{string.Join(", ", to.Select(c => c.Name))}]");
+                throw new ArgumentException($"Subscribe to `IClusterDomainEvent` or subclasses, was [{string.Join(", ", to.Select(c => c.Name))}]", nameof(to));
 
             ClusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create(to)));
         }
 
         /// <summary>
-        /// Unsubscribe to all cluster domain events.
+        /// Stops the specific actor from receiving all types of cluster domain events.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The actor that no longer receives cluster domain events.</param>
         public void Unsubscribe(IActorRef subscriber)
         {
             Unsubscribe(subscriber, null);
         }
 
         /// <summary>
-        /// Unsubscribe to a specific type of cluster domain event
+        /// Stops the specific actor from receiving a specific type of cluster domain event.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="to">TBD</param>
+        /// <param name="subscriber">The actor that no longer receives cluster domain events.</param>
+        /// <param name="to">The event type that the actor no longer receives.</param>
         public void Unsubscribe(IActorRef subscriber, Type to)
         {
             ClusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
         }
 
         /// <summary>
-        /// Send the current (full) state of the cluster to the specified receiver.
+        /// Sends the current (full) state of the cluster to the specified actor.
         /// If you want this to happen periodically, you can use the <see cref="Scheduler"/> to schedule
         /// a call to this method. You can also call <see cref="State"/> directly for this information.
         /// </summary>
-        /// <param name="receiver">TBD</param>
+        /// <param name="receiver">The actor that receives the current cluster state.</param>
         public void SendCurrentClusterState(IActorRef receiver)
         {
             ClusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
@@ -231,7 +235,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Join the specified seed nodes without defining them in config.
+        /// Joins the specified seed nodes without defining them in config.
         /// Especially useful from tests when Addresses are unknown before startup time.
         /// 
         /// An actor system can only join a cluster once. Additional attempts will be ignored.
@@ -246,7 +250,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Send command to issue state transition to LEAVING for the node specified by <paramref name="address"/>.
+        /// Sends a command to issue state transition to LEAVING for the node specified by <paramref name="address"/>.
         /// The member will go through the status changes <see cref="MemberStatus.Leaving"/> (not published to 
         /// subscribers) followed by <see cref="MemberStatus.Exiting"/> and finally <see cref="MemberStatus.Removed"/>.
         /// 
@@ -313,7 +317,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Send command to DOWN the node specified by <paramref name="address"/>.
+        /// Sends a command to DOWN the node specified by <paramref name="address"/>.
         /// 
         /// When a member is considered by the failure detector to be unreachable the leader is not
         /// allowed to perform its duties, such as changing status of new joining members to <see cref="MemberStatus.Up"/>.
@@ -327,22 +331,22 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Up"/>.
+        /// Registers the supplied callback to run once when the current cluster member is <see cref="MemberStatus.Up"/>.
         /// Typically used together with configuration option 'akka.cluster.min-nr-of-members' to defer some action,
         /// such as starting actors, until the cluster has reached a certain size.
         /// </summary>
-        /// <param name="callback">The callback that will be run whenever the current member achieves a status of <see cref="MemberStatus.Up"/></param>
+        /// <param name="callback">The callback that is run whenever the current member achieves a status of <see cref="MemberStatus.Up"/></param>
         public void RegisterOnMemberUp(Action callback)
         {
             _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
         }
 
         /// <summary>
-        /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Removed"/>.
+        /// Registers the supplied callback to run once when the current cluster member is <see cref="MemberStatus.Removed"/>.
         /// 
         /// Typically used in combination with <see cref="Leave"/> and <see cref="ActorSystem.Terminate"/>.
         /// </summary>
-        /// <param name="callback">The callback that will be run whenever the current member achieves a status of <see cref="MemberStatus.Down"/></param>
+        /// <param name="callback">The callback that is run whenever the current member achieves a status of <see cref="MemberStatus.Down"/></param>
         public void RegisterOnMemberRemoved(Action callback)
         {
             if (IsTerminated)
@@ -352,8 +356,8 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Generate the remote actor path by replacing the Address in the RootActor Path for the given
-        /// ActorRef with the cluster's `SelfAddress`, unless address' host is already defined
+        /// Generates the remote actor path by replacing the <see cref="ActorPath.Address"/> in the RootActorPath for the given
+        /// ActorRef with the cluster's <see cref="SelfAddress"/>, unless address' host is already defined
         /// </summary>
         /// <param name="actorRef">TBD</param>
         /// <returns>TBD</returns>
@@ -383,7 +387,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// roles that this member has
+        /// The roles that this cluster member is currently a part.
         /// </summary>
         public ImmutableHashSet<string> SelfRoles
         {
@@ -391,14 +395,14 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Current snapshot state of the cluster.
+        /// The current snapshot state of the cluster.
         /// </summary>
         public ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
 
         private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
         /// <summary>
-        /// Returns true if this cluster instance has be shutdown.
+        /// Determine whether or not this cluster instance has been shutdown.
         /// </summary>
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
@@ -446,10 +450,10 @@ namespace Akka.Cluster
         /// INTERNAL API.
         /// 
         /// Shuts down all connections to other members, the cluster daemon and the periodic gossip and cleanup tasks.
-        /// Should not called by the user. 
+        /// This should not be called directly by the user
         /// 
         /// The user can issue a <see cref="Leave"/> command which will tell the node
-        /// to go through graceful handoff process `LEAVE -> EXITING ->  REMOVED -> SHUTDOWN`.
+        /// to go through graceful handoff process <c>LEAVE -> EXITING ->  REMOVED -> SHUTDOWN</c>.
         /// </summary>
         internal void Shutdown()
         {
@@ -486,30 +490,30 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific message.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message being logged.</param>
         internal void LogInfo(string message)
         {
             _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
         /// </summary>
-        /// <param name="template">TBD</param>
-        /// <param name="arg1">TBD</param>
+        /// <param name="template">The template being rendered and logged.</param>
+        /// <param name="arg1">The argument that fills in the template placeholder.</param>
         internal void LogInfo(string template, object arg1)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
         /// </summary>
-        /// <param name="template">TBD</param>
-        /// <param name="arg1">TBD</param>
-        /// <param name="arg2">TBD</param>
+        /// <param name="template">The template being rendered and logged.</param>
+        /// <param name="arg1">The first argument that fills in the cooresponding template placeholder.</param>
+        /// <param name="arg2">The second argument that fills in the cooresponding template placeholder.</param>
         internal void LogInfo(string template, object arg1, object arg2)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);

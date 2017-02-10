@@ -20,9 +20,9 @@ namespace Akka.Dispatch.MessageQueues
         private readonly BlockingCollection<Envelope> _queue;
 
         /// <summary>
-        /// TBD
+        /// Creates a new bounded message queue.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The configuration for this mailbox.</param>
         public BoundedMessageQueue(Config config)
             : this(config.GetInt("mailbox-capacity"), config.GetTimeSpan("mailbox-push-timeout-time"))
         {
@@ -53,21 +53,13 @@ namespace Akka.Dispatch.MessageQueues
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="IMessageQueue"/>
         public bool HasMessages => _queue.Count > 0;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="IMessageQueue"/>
         public int Count => _queue.Count;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receiver">TBD</param>
-        /// <param name="envelope">TBD</param>
+        /// <inheritdoc cref="IMessageQueue"/>
         public void Enqueue(IActorRef receiver, Envelope envelope)
         {
             if (!_queue.TryAdd(envelope, PushTimeOut)) // dump messages that can't be delivered in-time into DeadLetters
@@ -76,22 +68,13 @@ namespace Akka.Dispatch.MessageQueues
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="envelope">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IMessageQueue"/>
         public bool TryDequeue(out Envelope envelope)
         {
             return _queue.TryTake(out envelope);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="owner">TBD</param>
-        /// <param name="deadletters">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IMessageQueue"/>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
             Envelope msg;
@@ -102,7 +85,7 @@ namespace Akka.Dispatch.MessageQueues
         }
 
         /// <summary>
-        /// TBD
+        /// The push timeout for this bounded queue.
         /// </summary>
         public TimeSpan PushTimeOut { get; set; }
     }

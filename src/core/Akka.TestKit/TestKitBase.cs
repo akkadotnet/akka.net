@@ -65,6 +65,9 @@ namespace Akka.TestKit
         /// <param name="assertions">TBD</param>
         /// <param name="system">Optional: The actor system.</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
+        /// </exception>
         protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
             : this(assertions, system, _defaultConfig, null, testActorName)
         {
@@ -78,6 +81,9 @@ namespace Akka.TestKit
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="actorSystemName">TBD</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
+        /// </exception>
         protected TestKitBase(ITestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
             : this(assertions, null, config ?? ConfigurationFactory.Empty, actorSystemName, testActorName)
         {
@@ -85,7 +91,7 @@ namespace Akka.TestKit
 
         private TestKitBase(ITestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
-            if(assertions == null) throw new ArgumentNullException("assertions");
+            if(assertions == null) throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
 
             _assertions = assertions;
             
@@ -266,11 +272,15 @@ namespace Akka.TestKit
         }
 
         /// <summary>
+        /// <para>
         /// Install an <see cref="AutoPilot" /> to drive the <see cref="TestActor" />.
         /// The <see cref="AutoPilot" /> will be run for each received message and can
         /// be used to send or forward messages, etc.
+        /// </para>
+        /// <para>
         /// Each invocation must return the AutoPilot for the next round. To reuse the
-        /// same <see cref="AutoPilot" /> return <see cref="AutoPilot.KeepRunning" />
+        /// same <see cref="AutoPilot" /> return <see cref="AutoPilot.KeepRunning" />.
+        /// </para>
         /// </summary>
         /// <param name="pilot">The pilot to install.</param>
         public void SetAutoPilot(AutoPilot pilot)
@@ -278,23 +288,30 @@ namespace Akka.TestKit
             _testState.TestActor.Tell(new TestActor.SetAutoPilot(pilot));
         }
 
-
-        /// <summary>Obtain time remaining for execution of the innermost enclosing `within`
-        /// block or missing that it returns the properly dilated default for this
-        /// case from settings (key "akka.test.single-expect-default"). <remarks>The returned value is always finite.</remarks>
+        /// <summary>
+        /// <para>
+        /// Retrieves the time remaining for execution of the innermost enclosing
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?)">Within</see> block.
+        /// If missing that, then it returns the properly dilated default for this
+        /// case from settings (key: "akka.test.single-expect-default").
+        /// </para>
+        /// <remarks>The returned value is always finite.</remarks>
         /// </summary>
         public TimeSpan RemainingOrDefault
         {
             get { return RemainingOr(Dilated(SingleExpectDefaultTimeout)); }
         }
 
-
         /// <summary>
-        /// Obtain time remaining for execution of the innermost enclosing <see cref="Within(System.TimeSpan,System.Action)">Within</see>
-        /// block or throw an <see cref="InvalidOperationException" /> if no `within` block surrounds this
-        /// call. <remarks>The returned value is always finite.</remarks>
+        /// <para>
+        /// Retrieves the time remaining for execution of the innermost enclosing
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?)">Within</see> block.
+        /// </para>
+        /// <remarks>The returned value is always finite.</remarks>
         /// </summary>
-        /// <exception cref="InvalidOperationException">Thrown if this was called outside of within</exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown when called from outside of `within`.
+        /// </exception>
         public TimeSpan Remaining
         {
             get
