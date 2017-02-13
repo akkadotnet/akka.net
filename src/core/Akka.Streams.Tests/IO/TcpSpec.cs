@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.IO
                 serverConnection.Read(5);
                 serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
 
-                // Close clint side write
+                // Close client side write
                 tcpWriteProbe.Close();
                 serverConnection.ExpectClosed(Akka.IO.Tcp.ConfirmedClosed.Instance);
                 serverConnection.ExpectTerminated();
@@ -261,7 +261,7 @@ namespace Akka.Streams.Tests.IO
 
                 serverConnection.ConfirmedClose();
 
-                // Close clint side write
+                // Close client side write
                 tcpWriteProbe.Close();
                 serverConnection.ExpectClosed(Akka.IO.Tcp.ConfirmedClosed.Instance);
                 serverConnection.ExpectTerminated();

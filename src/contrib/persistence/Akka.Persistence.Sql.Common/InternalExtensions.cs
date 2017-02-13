@@ -9,8 +9,16 @@ using System;
 
 namespace Akka.Persistence.Sql.Common
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class InternalExtensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="type">TBD</param>
+        /// <returns>TBD</returns>
         public static string QualifiedTypeName(this Type type)
         {
             return type.FullName + ", " + type.Assembly.GetName().Name;

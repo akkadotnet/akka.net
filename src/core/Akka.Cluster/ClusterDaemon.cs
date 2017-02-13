@@ -266,7 +266,7 @@ namespace Akka.Cluster
         /// Command to initiate the process to join the specified
         /// seed nodes.
         /// </summary>
-        internal sealed class JoinSeedNodes
+        internal sealed class JoinSeedNodes : IDeadLetterSuppression
         {
             readonly ImmutableList<Address> _seedNodes;
 
@@ -303,7 +303,7 @@ namespace Akka.Cluster
         /// <summary>
         /// See JoinSeedNode
         /// </summary>
-        internal class InitJoin : IClusterMessage
+        internal class InitJoin : IClusterMessage, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -319,7 +319,7 @@ namespace Akka.Cluster
         /// <summary>
         /// See JoinSeeNode
         /// </summary>
-        internal sealed class InitJoinAck : IClusterMessage
+        internal sealed class InitJoinAck : IClusterMessage, IDeadLetterSuppression
         {
             readonly Address _address;
 
@@ -371,7 +371,7 @@ namespace Akka.Cluster
         /// <summary>
         /// See JoinSeeNode
         /// </summary>
-        internal sealed class InitJoinNack : IClusterMessage
+        internal sealed class InitJoinNack : IClusterMessage, IDeadLetterSuppression
         {
             readonly Address _address;
 
@@ -1441,7 +1441,15 @@ namespace Akka.Cluster
                     _log.Info("New incarnation of existing member [{0}] is trying to join. " +
                         "Existing will be removed from the cluster and then new member will be allowed to join.", node);
                     if (localMember.Status != MemberStatus.Down)
+                    {
+                        // we can confirm it as terminated/unreachable immediately
+                        var newReachability = _latestGossip.Overview.Reachability.Terminated(
+                            _cluster.SelfUniqueAddress, localMember.UniqueAddress);
+                        var newOverview = _latestGossip.Overview.Copy(reachability: newReachability);
+                        var newGossip = _latestGossip.Copy(overview: newOverview);
+                        UpdateLatestGossip(newGossip);
                         Downing(localMember.Address);
+                    }
                 }
                 else
                 {

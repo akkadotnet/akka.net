@@ -25,20 +25,45 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
     /**
      * Protobuf serializer of DistributedPubSubMediator messages.
      */
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class DistributedPubSubMessageSerializer : SerializerWithStringManifest
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const int BufferSize = 1024 * 4;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string StatusManifest = "A";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string DeltaManifest = "B";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string SendManifest = "C";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string SendToAllManifest = "D";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string PublishManifest = "E";
 
         private readonly IDictionary<string, Func<byte[], object>> _fromBinaryMap;
 
         private readonly int _identifier;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public DistributedPubSubMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
@@ -52,8 +77,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             };
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override int Identifier { get { return _identifier; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is Internal.Status) return Compress(StatusToProto(obj as Internal.Status));
@@ -65,6 +99,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             throw new ArgumentException(string.Format("Can't serialize object of type {0} with {1}", obj.GetType(), GetType()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bytes">TBD</param>
+        /// <param name="manifestString">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override object FromBinary(byte[] bytes, string manifestString)
         {
             Func<byte[], object> deserializer;
@@ -76,6 +117,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in serializer {1}", manifestString, GetType()));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="o">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public override string Manifest(object o)
         {
             if (o is Internal.Status) return StatusManifest;

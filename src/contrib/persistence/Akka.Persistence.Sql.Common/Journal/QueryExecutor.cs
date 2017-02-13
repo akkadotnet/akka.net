@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -32,7 +32,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Asynchronously returns all persistence Ids.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken);
 
         /// <summary>
@@ -40,6 +42,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <paramref name="persistenceId"/>, within boundaries of <paramref name="fromSequenceNr"/> 
         /// and <paramref name="toSequenceNr"/> up to <paramref name="max"/> number of events.
         /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="callback">TBD</param>
+        /// <returns>TBD</returns>
         Task SelectByPersistenceIdAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> callback);
 
         /// <summary>
@@ -48,50 +58,136 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <paramref name="toOffset"/>, up to <paramref name="max"/> number of elements.
         /// Returns highest sequence number from selected events.
         /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="tag">TBD</param>
+        /// <param name="fromOffset">TBD</param>
+        /// <param name="toOffset">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="callback">TBD</param>
+        /// <returns>TBD</returns>
         Task<long> SelectByTagAsync(DbConnection connection, CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, Action<ReplayedTaggedMessage> callback);
 
         /// <summary>
         /// Asynchronously returns single number considered as the highest sequence number in current journal for the provided <paramref name="persistenceId"/>.
         /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <returns>TBD</returns>
         Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId);
 
         /// <summary>
         /// Asynchronously inserts a collection of events and theirs tags into a journal table.
         /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="write">TBD</param>
+        /// <returns>TBD</returns>
         Task InsertBatchAsync(DbConnection connection, CancellationToken cancellationToken, WriteJournalBatch write);
 
         /// <summary>
-        /// Asynchronously (permamanently) deletes all events with given <paramref name="persistenceId"/>, up to provided <paramref name="toSequenceNr"/>.
+        /// Asynchronously (permanently) deletes all events with given <paramref name="persistenceId"/>, up to provided <paramref name="toSequenceNr"/>.
         /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <returns>TBD</returns>
         Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long toSequenceNr);
 
         /// <summary>
         /// Asynchronously tries to create new event journal and metadata tables.
         /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         Task CreateTablesAsync(DbConnection connection, CancellationToken cancellationToken);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="hints">TBD</param>
+        /// <param name="callback">TBD</param>
+        /// <returns>TBD</returns>
         [Obsolete("This method will be obsoleted. Use Akka.Persistence.Query read journal features instead.")]
         Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public class QueryConfiguration
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string TagsColumnName;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string SchemaName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string JournalEventsTableName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string MetaTableName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string PersistenceIdColumnName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string SequenceNrColumnName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string PayloadColumnName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string ManifestColumnName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string TimestampColumnName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string IsDeletedColumnName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string OrderingColumnName;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan Timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="schemaName">TBD</param>
+        /// <param name="journalEventsTableName">TBD</param>
+        /// <param name="metaTableName">TBD</param>
+        /// <param name="persistenceIdColumnName">TBD</param>
+        /// <param name="sequenceNrColumnName">TBD</param>
+        /// <param name="payloadColumnName">TBD</param>
+        /// <param name="manifestColumnName">TBD</param>
+        /// <param name="timestampColumnName">TBD</param>
+        /// <param name="isDeletedColumnName">TBD</param>
+        /// <param name="tagsColumnName">TBD</param>
+        /// <param name="orderingColumnName">TBD</param>
+        /// <param name="timeout">TBD</param>
         public QueryConfiguration(
             string schemaName,
             string journalEventsTableName,
@@ -120,28 +216,76 @@ namespace Akka.Persistence.Sql.Common.Journal
             OrderingColumnName = orderingColumnName;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string FullJournalTableName => string.IsNullOrEmpty(SchemaName) ? JournalEventsTableName : SchemaName + "." + JournalEventsTableName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string FullMetaTableName => string.IsNullOrEmpty(SchemaName) ? MetaTableName : SchemaName + "." + MetaTableName;
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class AbstractQueryExecutor : IJournalQueryExecutor
     {
         // indexes of particular fields returned from all events queries 
         // they must match `allEventColumnNames` order
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected const int PersistenceIdIndex = 0;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected const int SequenceNrIndex = 1;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected const int TimestampIndex = 2;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected const int IsDeletedIndex = 3;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected const int ManifestIndex = 4;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected const int PayloadIndex = 5;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected const int OrderingIndex = 6;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected static readonly string LongTypeName = typeof(long).FullName;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected Akka.Serialization.Serialization Serialization;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ITimestampProvider TimestampProvider;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public QueryConfiguration Configuration { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="configuration">TBD</param>
+        /// <param name="serialization">TBD</param>
+        /// <param name="timestampProvider">TBD</param>
         protected AbstractQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization, ITimestampProvider timestampProvider)
         {
             TimestampProvider = timestampProvider;
@@ -181,7 +325,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 FROM {Configuration.FullJournalTableName} e
                 WHERE e.{Configuration.PersistenceIdColumnName} = @PersistenceId
                 AND e.{Configuration.SequenceNrColumnName} BETWEEN @FromSequenceNr AND @ToSequenceNr
-				ORDER BY {Configuration.SequenceNrColumnName} ASC;";
+                ORDER BY {Configuration.SequenceNrColumnName} ASC;";
 
             ByTagSql =
                 $@"
@@ -215,21 +359,62 @@ namespace Akka.Persistence.Sql.Common.Journal
                 WHERE ";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual string AllPersistenceIdsSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual string HighestSequenceNrSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual string DeleteBatchSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual string UpdateSequenceNrSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual string ByPersistenceIdSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual string ByTagSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual string InsertEventSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected abstract string CreateEventsJournalSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected abstract string CreateMetaTableSql { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Obsolete]
         protected string QueryEventsSql { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract DbCommand CreateCommand(DbConnection connection);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         public virtual async Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken)
         {
             using (var command = GetCommand(connection, AllPersistenceIdsSql))
@@ -245,6 +430,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="callback">TBD</param>
+        /// <returns>TBD</returns>
         public virtual async Task SelectByPersistenceIdAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr,
             long max, Action<IPersistentRepresentation> callback)
         {
@@ -266,6 +462,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="tag">TBD</param>
+        /// <param name="fromOffset">TBD</param>
+        /// <param name="toOffset">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="callback">TBD</param>
+        /// <returns>TBD</returns>
         public virtual async Task<long> SelectByTagAsync(DbConnection connection, CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max,
             Action<ReplayedTaggedMessage> callback)
         {
@@ -292,6 +499,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <returns>TBD</returns>
         public virtual async Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId)
         {
             using (var command = GetCommand(connection, HighestSequenceNrSql))
@@ -303,6 +517,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="write">TBD</param>
+        /// <returns>TBD</returns>
         public virtual async Task InsertBatchAsync(DbConnection connection, CancellationToken cancellationToken, WriteJournalBatch write)
         {
             using (var command = GetCommand(connection, InsertEventSql))
@@ -324,6 +545,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="toSequenceNr">TBD</param>
+        /// <returns>TBD</returns>
         public virtual async Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long toSequenceNr)
         {
             using (var deleteCommand = GetCommand(connection, DeleteBatchSql))
@@ -362,6 +591,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
         public virtual async Task CreateTablesAsync(DbConnection connection, CancellationToken cancellationToken)
         {
             using (var command = GetCommand(connection, CreateEventsJournalSql))
@@ -372,6 +607,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="sql">TBD</param>
+        /// <returns>TBD</returns>
         protected DbCommand GetCommand(DbConnection connection, string sql)
         {
             var command = CreateCommand(connection);
@@ -380,6 +621,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             return command;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="command">TBD</param>
+        /// <param name="e">TBD</param>
+        /// <param name="tags">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual void WriteEvent(DbCommand command, IPersistentRepresentation e, IImmutableSet<string> tags)
         {
             var manifest = string.IsNullOrEmpty(e.Manifest) ? e.Payload.GetType().QualifiedTypeName() : e.Manifest;
@@ -406,6 +654,11 @@ namespace Akka.Persistence.Sql.Common.Journal
             else AddParameter(command, "@Tag", DbType.String, DBNull.Value);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reader">TBD</param>
+        /// <returns>TBD</returns>
         protected virtual IPersistentRepresentation ReadEvent(DbDataReader reader)
         {
             var persistenceId = reader.GetString(PersistenceIdIndex);
@@ -422,6 +675,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="command">TBD</param>
+        /// <param name="parameterName">TBD</param>
+        /// <param name="parameterType">TBD</param>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         protected void AddParameter(DbCommand command, string parameterName, DbType parameterType, object value)
         {
             var parameter = command.CreateParameter();
@@ -432,6 +693,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             command.Parameters.Add(parameter);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="cancellationToken">TBD</param>
+        /// <param name="hints">TBD</param>
+        /// <param name="callback">TBD</param>
+        /// <returns>TBD</returns>
         public virtual async Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback)
         {
             using (var command = GetCommand(connection, QueryEventsSql))
@@ -449,6 +718,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="hint">TBD</param>
+        /// <param name="command">TBD</param>
+        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <returns>TBD</returns>
         protected virtual string HintToSql(IHint hint, DbCommand command)
         {
             if (hint is TimestampRange)

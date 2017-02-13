@@ -683,7 +683,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             private readonly Outlet<int> _stageOut;
             private readonly FlowShape<int, int> _stageShape;
 
-            // Must be lazy because I turned this stage "inside-out" therefore changin initialization order
+            // Must be lazy because I turned this stage "inside-out" therefore changing initialization order
             // to make tests a bit more readable
             public Lazy<GraphStageLogic> Stage { get; }
 

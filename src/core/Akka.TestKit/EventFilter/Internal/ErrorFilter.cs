@@ -20,11 +20,24 @@ namespace Akka.TestKit.Internal
         private readonly Type _exceptionType;
         private readonly bool _recurseInnerExceptions;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageMatcher">TBD</param>
+        /// <param name="sourceMatcher">TBD</param>
         public ErrorFilter(IStringMatcher messageMatcher = null, IStringMatcher sourceMatcher = null)
             : this(null,messageMatcher,sourceMatcher, false)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="exceptionType">TBD</param>
+        /// <param name="messageMatcher">TBD</param>
+        /// <param name="sourceMatcher">TBD</param>
+        /// <param name="recurseInnerExceptions">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public ErrorFilter(Type exceptionType, IStringMatcher messageMatcher = null, IStringMatcher sourceMatcher = null, bool recurseInnerExceptions=false)
             : base(messageMatcher,sourceMatcher)
         {
@@ -33,6 +46,11 @@ namespace Akka.TestKit.Internal
             _recurseInnerExceptions = recurseInnerExceptions;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
             var error = evt as Error;
@@ -83,6 +101,9 @@ namespace Akka.TestKit.Internal
                    || (_recurseInnerExceptions && IsMatch(logSource, errorMessage, cause.InnerException));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string FilterDescriptiveName
         {
             get
@@ -94,4 +115,3 @@ namespace Akka.TestKit.Internal
         }
     }
 }
-

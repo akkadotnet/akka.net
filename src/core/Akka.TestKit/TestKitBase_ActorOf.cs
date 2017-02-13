@@ -12,6 +12,9 @@ using Akka.Actor.Dsl;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public partial class TestKitBase
     {
         private const IActorRef NoSupervisor = null;
@@ -20,6 +23,7 @@ namespace Akka.TestKit
         /// Create a new actor as child of <see cref="Sys" />.
         /// </summary>
         /// <param name="props">The props configuration object</param>
+        /// <returns>TBD</returns>
         public IActorRef ActorOf(Props props)
         {
             return Sys.ActorOf(props, null);
@@ -30,6 +34,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="props">The props configuration object</param>
         /// <param name="name">The name of the actor.</param>
+        /// <returns>TBD</returns>
         public IActorRef ActorOf(Props props, string name)
         {
             return Sys.ActorOf(props, name);
@@ -39,6 +44,7 @@ namespace Akka.TestKit
         /// Create a new actor as child of <see cref="Sys" />.
         /// </summary>
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
+        /// <returns>TBD</returns>
         public IActorRef ActorOf<TActor>() where TActor : ActorBase, new()
         {
             return Sys.ActorOf(Props.Create<TActor>(), null);
@@ -49,6 +55,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
         /// <param name="name">The name of the actor.</param>
+        /// <returns>TBD</returns>
         public IActorRef ActorOf<TActor>(string name) where TActor : ActorBase, new()
         {
             return Sys.ActorOf(Props.Create<TActor>(), name);
@@ -63,6 +70,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
+        /// <returns>TBD</returns>
         public IActorRef ActorOf<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
         {
             return Sys.ActorOf(Props.Create(factory), null);
@@ -78,6 +86,7 @@ namespace Akka.TestKit
         /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
         /// <param name="name">The name of the actor.</param>
+        /// <returns>TBD</returns>
         public IActorRef ActorOf<TActor>(Expression<Func<TActor>> factory, string name) where TActor : ActorBase
         {
             return Sys.ActorOf(Props.Create(factory), name);
@@ -96,6 +105,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="configure">An action that configures the actor's behavior.</param>
         /// <param name="name">Optional: The name of the actor.</param>
+        /// <returns>TBD</returns>
         public IActorRef ActorOf(Action<IActorDsl, IActorContext> configure, string name = null)
         {
             return ActExtensions.ActorOf(this, configure, name);
@@ -114,6 +124,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="configure">An action that configures the actor's behavior.</param>
         /// <param name="name">Optional: The name of the actor.</param>
+        /// <returns>TBD</returns>
         public IActorRef ActorOf(Action<IActorDsl> configure, string name = null)
         {
             return ActExtensions.ActorOf(this, configure, name);
@@ -140,11 +151,11 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        ///  Creates an <see cref="ActorSelection(string)"/>
-        ///  </summary>
-        /// <param name="anchorRef">The base actor that anchros the <see cref="actorPath"/>.</param>
+        /// Creates an <see cref="ActorSelection(string)"/>
+        /// </summary>
+        /// <param name="anchorRef">The base actor that anchors the <paramref name="actorPath"/>.</param>
         /// <param name="actorPath">The path of the actor(s) we want to select.</param>
-        ///  <returns>An ActorSelection</returns>
+        /// <returns>An ActorSelection</returns>
         public ActorSelection ActorSelection(IActorRef anchorRef, string actorPath)
         {
             return Sys.ActorSelection(anchorRef, actorPath);
@@ -158,6 +169,7 @@ namespace Akka.TestKit
         /// <param name="props">The <see cref="Props"/> object</param>
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
+        /// <returns>TBD</returns>
         public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Props props, IActorRef supervisor, string name = null) where TActor : ActorBase
         {
             return new TestActorRef<TActor>(Sys, props, supervisor, name);
@@ -170,6 +182,7 @@ namespace Akka.TestKit
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
         /// <param name="props">The <see cref="Props"/> object</param>
         /// <param name="name">Optional: The name.</param>
+        /// <returns>TBD</returns>
         public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Props props, string name = null) where TActor : ActorBase
         {
             return new TestActorRef<TActor>(Sys, props, NoSupervisor, name);
@@ -187,6 +200,7 @@ namespace Akka.TestKit
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
+        /// <returns>TBD</returns>
         public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Expression<Func<TActor>> factory, IActorRef supervisor, string name = null) where TActor : ActorBase
         {
             return new TestActorRef<TActor>(Sys, Props.Create(factory), supervisor, name);
@@ -203,6 +217,7 @@ namespace Akka.TestKit
         /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
         /// <param name="name">Optional: The name.</param>
+        /// <returns>TBD</returns>
         public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Expression<Func<TActor>> factory, string name = null) where TActor : ActorBase
         {
             return new TestActorRef<TActor>(Sys, Props.Create(factory), NoSupervisor, name);
@@ -215,6 +230,7 @@ namespace Akka.TestKit
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
+        /// <returns>TBD</returns>
         public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(IActorRef supervisor, string name = null) where TActor : ActorBase, new()
         {
             return new TestActorRef<TActor>(Sys, Props.Create<TActor>(), supervisor, name);
@@ -226,6 +242,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
         /// <param name="name">Optional: The name.</param>
+        /// <returns>TBD</returns>
         public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(string name = null) where TActor : ActorBase, new()
         {
             return new TestActorRef<TActor>(Sys, Props.Create<TActor>(), NoSupervisor, name);
@@ -243,6 +260,7 @@ namespace Akka.TestKit
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        /// <returns>TBD</returns>
         public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Props props, IActorRef supervisor, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>
         {
@@ -259,6 +277,7 @@ namespace Akka.TestKit
         /// <param name="props">The <see cref="Props"/> object</param>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        /// <returns>TBD</returns>
         public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Props props, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>
         {
@@ -277,6 +296,7 @@ namespace Akka.TestKit
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        /// <returns>TBD</returns>
         public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(IActorRef supervisor, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>, new()
         {
@@ -293,6 +313,7 @@ namespace Akka.TestKit
         /// <typeparam name="TData">The type of state data</typeparam>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        /// <returns>TBD</returns>
         public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>, new()
         {
@@ -311,6 +332,7 @@ namespace Akka.TestKit
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        /// <returns>TBD</returns>
         public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Expression<Func<TFsmActor>> factory, IActorRef supervisor, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>
         {
@@ -328,6 +350,7 @@ namespace Akka.TestKit
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TFsmActor"/></param>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        /// <returns>TBD</returns>
         public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Expression<Func<TFsmActor>> factory, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>
         {
@@ -335,4 +358,3 @@ namespace Akka.TestKit
         }
     }
 }
-

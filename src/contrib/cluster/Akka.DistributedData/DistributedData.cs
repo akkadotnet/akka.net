@@ -4,6 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -22,16 +23,25 @@ namespace Akka.DistributedData
         /// <summary>
         /// Returns true if this member is not tagged with the role configured for the replicas.
         /// </summary>
-        public bool IsTerminated => Cluster.Cluster.Get(_system).IsTerminated || (_settings.Role != null && Cluster.Cluster.Get(_system).SelfRoles.Contains(_settings.Role));
+        public bool IsTerminated => Cluster.Cluster.Get(_system).IsTerminated || (!string.IsNullOrEmpty(_settings.Role) && !Cluster.Cluster.Get(_system).SelfRoles.Contains(_settings.Role));
 
         /// <summary>
         /// Actor reference of the <see cref="Akka.DistributedData.Replicator"/>.
         /// </summary>
         public IActorRef Replicator { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static DistributedData Get(ActorSystem system) =>
             system.WithExtension<DistributedData, DistributedDataProvider>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public DistributedData(ExtendedActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(DefaultConfig());
@@ -49,14 +59,25 @@ namespace Akka.DistributedData
                 Replicator = system.ActorOf(Akka.DistributedData.Replicator.Props(_settings), name);
             }
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig() => 
             ConfigurationFactory.FromResource<DistributedData>("Akka.DistributedData.reference.conf");
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class DistributedDataProvider : ExtensionIdProvider<DistributedData>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override DistributedData CreateExtension(ExtendedActorSystem system) => new DistributedData(system);
     }
-
 }

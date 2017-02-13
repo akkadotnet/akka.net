@@ -111,16 +111,32 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// Adds an entry to the map.
-        /// Note that the new `value` will be merged with existing values
-        /// on other nodes and the outcome depends on what `ReplicatedData`
+        /// Note that the new <paramref name="value"/> will be merged with existing values
+        /// on other nodes and the outcome depends on what <see cref="IReplicatedData"/>
         /// type that is used.
         /// 
-        /// Consider using [[#updated]] instead of `put` if you want modify
+        /// Consider using <see cref="AddOrUpdate"/> instead of <see cref="SetItem(Akka.Cluster.Cluster,TKey,TValue)"/> if you want modify
         /// existing entry.
         /// 
-        /// `IllegalArgumentException` is thrown if you try to replace an existing `ORSet`
+        /// <see cref="ArgumentException"/> is thrown if you try to replace an existing <see cref="ORSet{T}"/>
         /// value, because important history can be lost when replacing the `ORSet` and
-        /// undesired effects of merging will occur. Use [[ORMultiMap]] or [[#updated]] instead.
+        /// undesired effects of merging will occur. Use <see cref="ORMultiDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate"/> instead.
+        /// </summary>
+        public ORDictionary<TKey, TValue> SetItem(Cluster.Cluster node, TKey key, TValue value) =>
+            SetItem(node.SelfUniqueAddress, key, value);
+
+        /// <summary>
+        /// Adds an entry to the map.
+        /// Note that the new <paramref name="value"/> will be merged with existing values
+        /// on other nodes and the outcome depends on what <see cref="IReplicatedData"/>
+        /// type that is used.
+        /// 
+        /// Consider using <see cref="AddOrUpdate"/> instead of <see cref="SetItem(UniqueAddress,TKey,TValue)"/> if you want modify
+        /// existing entry.
+        /// 
+        /// <see cref="ArgumentException"/> is thrown if you try to replace an existing <see cref="ORSet{T}"/>
+        /// value, because important history can be lost when replacing the `ORSet` and
+        /// undesired effects of merging will occur. Use <see cref="ORMultiDictionary{TKey,TValue}"/> or <see cref="AddOrUpdate"/> instead.
         /// </summary>
         public ORDictionary<TKey, TValue> SetItem(UniqueAddress node, TKey key, TValue value)
         {
@@ -136,6 +152,15 @@ namespace Akka.DistributedData
         /// If there is no current value for the <paramref name="key"/> the <paramref name="initial"/> value will be
         /// passed to the <paramref name="modify"/> function.
         /// </summary>
+        public ORDictionary<TKey, TValue> AddOrUpdate(Cluster.Cluster node, TKey key, TValue initial,
+            Func<TValue, TValue> modify) => AddOrUpdate(node.SelfUniqueAddress, key, initial, modify);
+
+        /// <summary>
+        /// Replace a value by applying the <paramref name="modify"/> function on the existing value.
+        /// 
+        /// If there is no current value for the <paramref name="key"/> the <paramref name="initial"/> value will be
+        /// passed to the <paramref name="modify"/> function.
+        /// </summary>
         public ORDictionary<TKey, TValue> AddOrUpdate(UniqueAddress node, TKey key, TValue initial,
             Func<TValue, TValue> modify)
         {
@@ -144,6 +169,14 @@ namespace Akka.DistributedData
                 ? new ORDictionary<TKey, TValue>(KeySet.Add(node, key), ValueMap.SetItem(key, modify(value)))
                 : new ORDictionary<TKey, TValue>(KeySet.Add(node, key), ValueMap.SetItem(key, modify(initial)));
         }
+
+        /// <summary>
+        /// Removes an entry from the map.
+        /// Note that if there is a conflicting update on another node the entry will
+        /// not be removed after merge.
+        /// </summary>
+        public ORDictionary<TKey, TValue> Remove(Cluster.Cluster node, TKey key) =>
+            Remove(node.SelfUniqueAddress, key);
 
         /// <summary>
         /// Removes an entry from the map.

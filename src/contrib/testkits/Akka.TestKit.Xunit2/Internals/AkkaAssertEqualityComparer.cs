@@ -55,10 +55,6 @@ namespace Akka.TestKit.Xunit2.Internals
                     return false;
             }
 
-            // Same type?
-            if(!skipTypeCheck && x.GetType() != y.GetType())
-                return false;
-
             // Implements IEquatable<T>?
             var equatable = x as IEquatable<T>;
             if(equatable != null)
@@ -96,6 +92,10 @@ namespace Akka.TestKit.Xunit2.Internals
                         return false;
                 }
             }
+
+            // Same type?
+            if (!skipTypeCheck && x.GetType() != y.GetType())
+                return false;
 
             // Last case, rely on Object.Equals
             return Object.Equals(x, y);

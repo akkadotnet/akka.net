@@ -16,109 +16,211 @@ using Akka.Remote;
 
 namespace Akka.Cluster.Tools.Singleton
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IClusterSingletonMessage { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class HandOverToMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly HandOverToMe Instance = new HandOverToMe();
         private HandOverToMe() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class HandOverInProgress : IClusterSingletonMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly HandOverInProgress Instance = new HandOverInProgress();
         private HandOverInProgress() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class HandOverDone : IClusterSingletonMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly HandOverDone Instance = new HandOverDone();
         private HandOverDone() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class TakeOverFromMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly TakeOverFromMe Instance = new TakeOverFromMe();
         private TakeOverFromMe() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class Cleanup : IClusterSingletonMessage
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Cleanup Instance = new Cleanup();
         private Cleanup() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class StartOldestChangedBuffer
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly StartOldestChangedBuffer Instance = new StartOldestChangedBuffer();
         private StartOldestChangedBuffer() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class HandOverRetry
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int Count;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
         public HandOverRetry(int count)
         {
             Count = count;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class TakeOverRetry
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int Count;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="count">TBD</param>
         public TakeOverRetry(int count)
         {
             Count = count;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public interface IClusterSingletonData { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class Uninitialized : IClusterSingletonData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Uninitialized Instance = new Uninitialized();
         private Uninitialized() { }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class YoungerData : IClusterSingletonData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Address Oldest;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="oldest">TBD</param>
         public YoungerData(Address oldest)
         {
             Oldest = oldest;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class BecomingOldestData : IClusterSingletonData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Address PreviousOldest;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="previousOldest">TBD</param>
         public BecomingOldestData(Address previousOldest)
         {
             PreviousOldest = previousOldest;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class OldestData : IClusterSingletonData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Singleton;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly bool SingletonTerminated;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singleton">TBD</param>
+        /// <param name="singletonTerminated">TBD</param>
         public OldestData(IActorRef singleton, bool singletonTerminated)
         {
             Singleton = singleton;
@@ -126,13 +228,31 @@ namespace Akka.Cluster.Tools.Singleton
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class WasOldestData : IClusterSingletonData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Singleton;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly bool SingletonTerminated;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Address NewOldest;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singleton">TBD</param>
+        /// <param name="singletonTerminated">TBD</param>
+        /// <param name="newOldest">TBD</param>
         public WasOldestData(IActorRef singleton, bool singletonTerminated, Address newOldest)
         {
             Singleton = singleton;
@@ -141,12 +261,26 @@ namespace Akka.Cluster.Tools.Singleton
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class HandingOverData : IClusterSingletonData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Singleton;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef HandOverTo;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singleton">TBD</param>
+        /// <param name="handOverTo">TBD</param>
         public HandingOverData(IActorRef singleton, IActorRef handOverTo)
         {
             Singleton = singleton;
@@ -154,37 +288,108 @@ namespace Akka.Cluster.Tools.Singleton
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    [Serializable]
+    internal sealed class StoppingData : IClusterSingletonData
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly IActorRef Singleton;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singleton">TBD</param>
+        public StoppingData(IActorRef singleton)
+        {
+            Singleton = singleton;
+        }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class EndData : IClusterSingletonData
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly EndData Instance = new EndData();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public EndData()
         {
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class DelayedMemberRemoved
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Member Member;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="member">TBD</param>
         public DelayedMemberRemoved(Member member)
         {
             Member = member;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public enum ClusterSingletonState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         Start,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Oldest,
+        /// <summary>
+        /// TBD
+        /// </summary>
         Younger,
+        /// <summary>
+        /// TBD
+        /// </summary>
         BecomingOldest,
+        /// <summary>
+        /// TBD
+        /// </summary>
         WasOldest,
+        /// <summary>
+        /// TBD
+        /// </summary>
         HandingOver,
+        /// <summary>
+        /// TBD
+        /// </summary>
         TakeOver,
+        /// <summary>
+        /// TBD
+        /// </summary>
+        Stopping,
+        /// <summary>
+        /// TBD
+        /// </summary>
         End
     }
 
@@ -195,8 +400,17 @@ namespace Akka.Cluster.Tools.Singleton
     /// </summary>
     public sealed class ClusterSingletonManagerIsStuck : AkkaException
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         public ClusterSingletonManagerIsStuck(string message) : base(message) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         public ClusterSingletonManagerIsStuck(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
@@ -238,6 +452,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterSingletonManager>("Akka.Cluster.Tools.Singleton.reference.conf");
@@ -249,7 +464,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         /// <param name="singletonProps"><see cref="Actor.Props"/> of the singleton actor instance.</param>
         /// <param name="settings">Cluster singleton manager settings.</param>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public static Props Props(Props singletonProps, ClusterSingletonManagerSettings settings)
         {
             return Props(singletonProps, PoisonPill.Instance, settings);
@@ -266,6 +481,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// perfectly fine <paramref name="terminationMessage"/> if you only need to stop the actor.
         /// </param>
         /// <param name="settings">Cluster singleton manager settings.</param>
+        /// <returns>TBD</returns>
         public static Props Props(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
             return Actor.Props.Create(() => new ClusterSingletonManager(singletonProps, terminationMessage, settings)).WithDeploy(Deploy.Local);
@@ -293,6 +509,15 @@ namespace Akka.Cluster.Tools.Singleton
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singletonProps">TBD</param>
+        /// <param name="terminationMessage">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <returns>TBD</returns>
         public ClusterSingletonManager(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
             var role = settings.Role;
@@ -319,6 +544,9 @@ namespace Akka.Cluster.Tools.Singleton
 
         private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             base.PreStart();
@@ -334,6 +562,9 @@ namespace Akka.Cluster.Tools.Singleton
             _cluster.RegisterOnMemberUp(() => self.Tell(StartOldestChangedBuffer.Instance));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             CancelTimer(CleanupTimer);
@@ -409,6 +640,11 @@ namespace Akka.Cluster.Tools.Singleton
             return GoTo(ClusterSingletonState.HandingOver).Using(new HandingOverData(singleton, handOverTo));
         }
 
+        private State<ClusterSingletonState, IClusterSingletonData> GoToStopping(IActorRef singleton)
+        {
+            singleton.Tell(_terminationMessage);
+            return GoTo(ClusterSingletonState.Stopping).Using(new StoppingData(singleton));
+        }
 
         private void InitializeFSM()
         {
@@ -642,8 +878,21 @@ namespace Akka.Cluster.Tools.Singleton
                 if (e.FsmEvent is TakeOverRetry && wasOldestData != null)
                 {
                     var takeOverRetry = (TakeOverRetry)e.FsmEvent;
-                    if (takeOverRetry.Count <= _maxTakeOverRetries)
+
+                    if (_cluster.IsTerminated
+                        && (wasOldestData.NewOldest == null || takeOverRetry.Count > _maxTakeOverRetries))
                     {
+                        if (wasOldestData.SingletonTerminated)
+                        {
+                            return Stop();
+                        }
+                        else
+                        {
+                            return GoToStopping(wasOldestData.Singleton);
+                        }
+                    }
+                    else if (takeOverRetry.Count <= _maxTakeOverRetries)
+                    { 
                         Log.Info("Retry [{0}], sending TakeOverFromMe to [{1}]", takeOverRetry.Count, wasOldestData.NewOldest);
 
                         if (wasOldestData.NewOldest != null)
@@ -652,12 +901,10 @@ namespace Akka.Cluster.Tools.Singleton
                         SetTimer(TakeOverRetryTimer, new TakeOverRetry(takeOverRetry.Count + 1), _settings.HandOverRetryInterval);
                         return Stay();
                     }
-                    else if (_cluster.IsTerminated)
-                    {
-                        return Stop();
-                    }
                     else
+                    {
                         throw new ClusterSingletonManagerIsStuck(string.Format("Expected hand-over to [{0}] never occured", wasOldestData.NewOldest));
+                    }
                 }
                 else if (e.FsmEvent is HandOverToMe && wasOldestData != null)
                 {
@@ -702,6 +949,20 @@ namespace Akka.Cluster.Tools.Singleton
                         return Stay();
                     }
                 }
+                return null;
+            });
+
+            When(ClusterSingletonState.Stopping, e =>
+            {
+                var terminated = e.FsmEvent as Terminated;
+                var stoppingData = e.StateData as StoppingData;
+                if (terminated != null 
+                    && stoppingData != null 
+                    && terminated.ActorRef.Equals(stoppingData.Singleton))
+                {
+                    return Stop();
+                }
+
                 return null;
             });
 

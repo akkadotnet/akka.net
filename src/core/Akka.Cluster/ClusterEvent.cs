@@ -19,9 +19,10 @@ namespace Akka.Cluster
     /// <summary>
     /// Domain events published to the event bus.
     /// Subscribe with:
-    /// {{{
-    /// Cluster(system).Subscribe(actorRef, typeof(IClusterDomainEvent))
-    /// }}}
+    /// <code>
+    /// var cluster = new Cluster(system);
+    /// cluster.Subscribe(actorRef, typeof(IClusterDomainEvent));
+    /// </code>
     /// </summary>
     public class ClusterEvent
     {
@@ -190,8 +191,8 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Marker interface for membership events.
-        /// Published when the state change is first seen on a node.
+        /// This interface marks a given class as a membership event.
+        /// The event is published when the state change is first seen on a node.
         /// The state change was performed by the leader when there was
         /// convergence on the leader node, i.e. all members had seen previous
         /// state.
@@ -199,13 +200,13 @@ namespace Akka.Cluster
         public interface IMemberEvent : IClusterDomainEvent
         {
             /// <summary>
-            /// TBD
+            /// The node where the event occurred.
             /// </summary>
             Member Member { get; }
         }
 
         /// <summary>
-        /// TBD
+        /// This class provides base functionality for defining state change events for cluster member nodes.
         /// </summary>
         public abstract class MemberStatusChange : IMemberEvent
         {
@@ -215,20 +216,22 @@ namespace Akka.Cluster
             protected readonly Member _member;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MemberStatusChange"/> class.
             /// </summary>
-            /// <param name="member">TBD</param>
-            /// <param name="validStatus">TBD</param>
-            /// <exception cref="ArgumentException">TBD</exception>
+            /// <param name="member">The node that changed state.</param>
+            /// <param name="validStatus">The state that the node changed towards.</param>
+            /// <exception cref="ArgumentException">
+            /// This exception is thrown if the node's current status doesn't match the given status, <paramref name="validStatus"/>.
+            /// </exception>
             protected MemberStatusChange(Member member, MemberStatus validStatus)
             {
                 if (member.Status != validStatus)
-                    throw new ArgumentException(String.Format("Expected {0} state, got: {1}", validStatus, member));
+                    throw new ArgumentException($"Expected {validStatus} state, got: {member}");
                 _member = member;
             }
 
             /// <summary>
-            /// TBD
+            /// The cluster member node that changed status.
             /// </summary>
             public Member Member
             {
@@ -236,10 +239,12 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
             /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             public override bool Equals(object obj)
             {
                 var other = obj as MemberStatusChange;
@@ -248,9 +253,9 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a hash code for this instance.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -262,9 +267,9 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a <see cref="System.String" /> that represents this instance.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
             public override string ToString()
             {
                 return $"{GetType()}(Member={Member})";
@@ -272,54 +277,58 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Member status changed to Joining.
+        /// This class represents a <see cref="MemberStatusChange"/> event where the
+        /// cluster node changed its status to <see cref="MemberStatus.Joining"/>.
         /// </summary>
         public sealed class MemberJoined : MemberStatusChange
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MemberJoined"/> class.
             /// </summary>
-            /// <param name="member">TBD</param>
+            /// <param name="member">The node that changed state.</param>
             public MemberJoined(Member member)
                 : base(member, MemberStatus.Joining) { }
         }
 
         /// <summary>
-        /// Member status changed to Up.
+        /// This class represents a <see cref="MemberStatusChange"/> event where the
+        /// cluster node changed its status to <see cref="MemberStatus.Up"/>.
         /// </summary>
         public sealed class MemberUp : MemberStatusChange
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MemberUp"/> class.
             /// </summary>
-            /// <param name="member">TBD</param>
+            /// <param name="member">The node that changed state.</param>
             public MemberUp(Member member)
                 : base(member, MemberStatus.Up) { }
         }
 
         /// <summary>
-        ///  Member status changed to Leaving.
+        /// This class represents a <see cref="MemberStatusChange"/> event where the
+        /// cluster node changed its status to <see cref="MemberStatus.Leaving"/>.
         /// </summary>
         public sealed class MemberLeft : MemberStatusChange
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MemberJoined"/> class.
             /// </summary>
-            /// <param name="member">TBD</param>
+            /// <param name="member">The node that changed state.</param>
             public MemberLeft(Member member)
                 : base(member, MemberStatus.Leaving) { }
         }
 
         /// <summary>
-        /// Member status changed to <see cref="Akka.Cluster.MemberStatus.Exiting"/> and will be removed
-        /// when all members have seen the `Exiting` status.
+        /// This class represents a <see cref="MemberStatusChange"/> event where the
+        /// cluster node changed its status to <see cref="MemberStatus.Exiting"/>.
+        /// The node is removed when all members have seen the <see cref="MemberStatus.Exiting"/> status.
         /// </summary>
         public sealed class MemberExited : MemberStatusChange
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MemberJoined"/> class.
             /// </summary>
-            /// <param name="member">TBD</param>
+            /// <param name="member">The node that changed state.</param>
             public MemberExited(Member member)
                 : base(member, MemberStatus.Exiting)
             {
@@ -327,18 +336,25 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Member completely removed from the cluster.
-        /// When `previousStatus` is `MemberStatus.Down` the node was removed
-        /// after being detected as unreachable and downed.
-        /// When `previousStatus` is `MemberStatus.Exiting` the node was removed
-        /// after graceful leaving and exiting.
+        /// <para>
+        /// This class represents a <see cref="MemberStatusChange"/> event where the
+        /// cluster node changed its status to <see cref="MemberStatus.Removed"/>.
+        /// </para>
+        /// <para>
+        /// When <see cref="MemberRemoved.PreviousStatus"/> is <see cref="MemberStatus.Down"/>
+        /// the node was removed after being detected as unreachable and downed.
+        /// </para>
+        /// <para>
+        /// When <see cref="MemberRemoved.PreviousStatus"/> is <see cref="MemberStatus.Exiting"/>
+        /// the node was removed after graceful leaving and exiting.
+        /// </para>
         /// </summary>
         public sealed class MemberRemoved : MemberStatusChange
         {
             readonly MemberStatus _previousStatus;
 
             /// <summary>
-            /// TBD
+            /// The status of the node before the state change event.
             /// </summary>
             public MemberStatus PreviousStatus 
             { 
@@ -346,23 +362,28 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MemberRemoved"/> class.
             /// </summary>
-            /// <param name="member">TBD</param>
-            /// <param name="previousStatus">TBD</param>
-            /// <exception cref="ArgumentException">TBD</exception>
+            /// <param name="member">The node that changed state.</param>
+            /// <param name="previousStatus">The state that the node changed from.</param>
+            /// <exception cref="ArgumentException">
+            /// This exception is thrown if the node's current status doesn't match the <see cref="MemberStatus.Removed"/> status.
+            /// </exception>
             public MemberRemoved(Member member, MemberStatus previousStatus)
                 : base(member, MemberStatus.Removed)
             {
-                if (member.Status != MemberStatus.Removed) throw new ArgumentException(String.Format("Expected Removed status, got {0}", member));
+                if (member.Status != MemberStatus.Removed)
+                    throw new ArgumentException($"Expected Removed status, got {member}");
                 _previousStatus = previousStatus;
             }
 
             /// <summary>
-            /// TBD
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
             /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             public override bool Equals(object obj)
             {
                 var other = obj as MemberRemoved;
@@ -371,9 +392,11 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a hash code for this instance.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>
+            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            /// </returns>
             public override int GetHashCode()
             {
                 unchecked

@@ -17,8 +17,16 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// </summary>
     public interface IDistributedPubSubMessage { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class DistributedPubSubExtensionProvider : ExtensionIdProvider<DistributedPubSub>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override DistributedPubSub CreateExtension(ExtendedActorSystem system)
         {
             return new DistributedPubSub(system);
@@ -36,16 +44,29 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly Cluster _cluster;
         private readonly IActorRef _mediatorRef;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static DistributedPubSub Get(ActorSystem system)
         {
             return system.WithExtension<DistributedPubSub, DistributedPubSubExtensionProvider>();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<DistributedPubSub>("Akka.Cluster.Tools.PublishSubscribe.reference.conf");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public DistributedPubSub(ExtendedActorSystem system)
         {
             _system = system;

@@ -82,97 +82,89 @@ namespace Akka.Actor.Internal
             ConfigureActorProducerPipeline();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorSystem"/>
         public override IActorRefProvider Provider { get { return _provider; } }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorSystem"/>
         public override Settings Settings { get { return _settings; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override string Name { get { return _name; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override Serialization.Serialization Serialization { get { return _serialization; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override EventStream EventStream { get { return _eventStream; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override IActorRef DeadLetters { get { return Provider.DeadLetters; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override Dispatchers Dispatchers { get { return _dispatchers; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override IScheduler Scheduler { get { return _scheduler; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override ILoggingAdapter Log { get { return _log; } }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorSystem"/>
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef LookupRoot => _provider.RootGuardian;
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
 
         /// <summary>
-        /// Creates a new system actor.
+        /// Creates a new system actor that lives under the /system guardian.
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="props">The props used to create this actor.</param>
+        /// <param name="name">Optional. The name of this actor.</param>
+        /// <returns>A reference to the underlying actor.</returns>
+        /// <exception cref="InvalidActorNameException">Thrown if the given name is
+        /// invalid or already in use</exception>
+        /// <exception cref="ConfigurationException">Thrown if deployment, dispatcher
+        /// or mailbox configuration is wrong</exception>
         public override IActorRef SystemActorOf(Props props, string name = null)
         {
             return _provider.SystemGuardian.Cell.AttachChild(props, true, name);
         }
 
         /// <summary>
-        /// Creates a new system actor.
+        /// Creates a new system actor that lives under the /system guardian.
         /// </summary>
-        /// <typeparam name="TActor">TBD</typeparam>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">Optional. The name of this actor.</param>
+        /// <returns>A reference to the underlying actor.</returns>
+        /// <exception cref="InvalidActorNameException">Thrown if the given name is
+        /// invalid or already in use</exception>
+        /// <exception cref="ConfigurationException">Thrown if deployment, dispatcher
+        /// or mailbox configuration is wrong</exception>
+        /// <typeparam name="TActor">The type of the actor that will be created. 
+        /// Must have a default constructor declared.</typeparam>
         public override IActorRef SystemActorOf<TActor>(string name = null)
         {
             return _provider.SystemGuardian.Cell.AttachChild(Props.Create<TActor>(), true, name);
         }
 
         /// <summary>
-        /// TBD
+        /// If <c>true</c>, then the <see cref="ActorSystem"/> is attempting to abort.
         /// </summary>
         internal volatile bool Aborting = false;
 
         /// <summary>
-        /// TBD
+        /// Shuts down the <see cref="ActorSystem"/> without all of the usual guarantees,
+        /// i.e. we may not guarantee that remotely deployed actors are properly shut down 
+        /// when we abort.
         /// </summary>
         public override void Abort()
         {
@@ -229,7 +221,7 @@ namespace Akka.Actor.Internal
             {
                 Log.Warning($"NewtonSoftJsonSerializer has been detected as a default serializer. " +
                             $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Hyperion " +
-                            $"(for more info visit: http://getakka.net/docs/Serialization#how-to-setup-wire-as-default-serializer ). " +
+                            $"(for more info visit: http://getakka.net/docs/Serialization#how-to-setup-hyperion-as-default-serializer ). " +
                             $"If you want to suppress this message set HOCON `{configPath}` config flag to on.");
             }
         }

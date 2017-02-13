@@ -12,7 +12,11 @@ namespace Akka.TestKit.Internal.StringMatcher
     /// </summary>
     public interface IStringMatcher
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="s">TBD</param>
+        /// <returns>TBD</returns>
         bool IsMatch(string s);
     }
 }
-

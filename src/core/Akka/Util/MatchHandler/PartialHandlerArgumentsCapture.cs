@@ -1,4 +1,5 @@
-﻿//-----------------------------------------------------------------------
+﻿// --- auto generated: 1/27/2017 10:09:00 PM --- //
+//-----------------------------------------------------------------------
 // <copyright file="PartialHandlerArgumentsCapture.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -10,11 +11,6 @@ using System.Collections.Generic;
 
 namespace Akka.Tools.MatchHandler
 {
-    //public interface IPartialHandler<in T>
-    //{
-    //    bool Handle(T value);
-    //}
-
     /// <summary>
     /// TBD
     /// </summary>
@@ -48,7 +44,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 1);
             _handler = (Func<object, bool>)handler;
         }
 
@@ -74,11 +69,9 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 1);
             _handler = (Func<object, T1, bool>)handler;
             _1 = (T1)arguments[0];
         }
-
         private Func<object, T1, bool> _handler;
         private T1 _1;
         /// <summary>
@@ -103,7 +96,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 2);
             _handler = (Func<object, T1, T2, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -134,7 +126,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 3);
             _handler = (Func<object, T1, T2, T3, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -168,7 +159,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 4);
             _handler = (Func<object, T1, T2, T3, T4, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -205,7 +195,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 5);
             _handler = (Func<object, T1, T2, T3, T4, T5, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -245,7 +234,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 6);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -288,7 +276,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 7);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -334,7 +321,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 8);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, T8, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -383,7 +369,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 9);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -435,7 +420,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 10);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -490,7 +474,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 11);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -548,7 +531,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 12);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -609,7 +591,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 13);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -673,7 +654,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 14);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -740,7 +720,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="arguments">TBD</param>
         public void Initialize(Delegate handler, IReadOnlyList<object> arguments)
         {
-            //CheckParameters(handler, arguments, 15);
             _handler = (Func<object, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>)handler;
             _1 = (T1)arguments[0];
             _2 = (T2)arguments[1];
@@ -777,10 +756,8 @@ namespace Akka.Tools.MatchHandler
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="value">TBD</param>
         /// <returns>TBD</returns>
-        public bool Handle(T message) { return _handler(message, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15); }
+        public bool Handle(T value) { return _handler(value, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15); }
     }
-
 }
-

@@ -218,6 +218,7 @@ FakesAssemblies/
 resetdev.bat
 /src/packages/repositories.config
 /src/.nuget
+/src/.nuget/NuGet.exe
 
 # FAKE build folder
 .fake/
@@ -227,3 +228,6 @@ target/
 
 # API Approval received files
 **/Akka.API.Tests/*.received.txt
+
+# include self-signed test certificate for SSL Tests
+!src/core/Akka.Remote.Tests/Resources/akka-validcert.pfx

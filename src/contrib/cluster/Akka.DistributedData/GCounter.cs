@@ -15,9 +15,16 @@ using Akka.Util;
 
 namespace Akka.DistributedData
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class GCounterKey : Key<GCounter>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
         public GCounterKey(string id) : base(id) { }
     }
 
@@ -40,8 +47,14 @@ namespace Akka.DistributedData
     {
         private static readonly BigInteger Zero = new BigInteger(0);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IImmutableDictionary<UniqueAddress, BigInteger> State { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static GCounter Empty => new GCounter();
 
         /// <summary>
@@ -49,33 +62,65 @@ namespace Akka.DistributedData
         /// </summary>
         public BigInteger Value { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public GCounter() : this(ImmutableDictionary<UniqueAddress, BigInteger>.Empty) { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="state">TBD</param>
         public GCounter(IImmutableDictionary<UniqueAddress, BigInteger> state)
         {
             State = state;
             Value = State.Aggregate(Zero, (v, acc) => v + acc.Value);
         }
+        /// <summary>
+        /// Increment the counter by 1.
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
+        public GCounter Increment(Cluster.Cluster node) => Increment(node.SelfUniqueAddress);
 
         /// <summary>
         /// Increment the counter by 1.
         /// </summary>
-        public GCounter Increment(UniqueAddress node)
-        {
-            return Increment(node, new BigInteger(1));
-        }
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
+        public GCounter Increment(UniqueAddress node) => Increment(node, new BigInteger(1));
 
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
-        public GCounter Increment(UniqueAddress node, ulong delta)
-        {
-            return Increment(node, new BigInteger(delta));
-        }
+        /// <param name="node">TBD</param>
+        /// <param name="delta">TBD</param>
+        /// <returns>TBD</returns>
+        public GCounter Increment(Cluster.Cluster node, ulong delta) => Increment(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
+        /// <param name="node">TBD</param>
+        /// <param name="delta">TBD</param>
+        /// <returns>TBD</returns>
+        public GCounter Increment(UniqueAddress node, ulong delta) => Increment(node, new BigInteger(delta));
+
+        /// <summary>
+        /// Increment the counter with the delta specified. The delta must be zero or positive.
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <param name="delta">TBD</param>
+        /// <returns>TBD</returns>
+        public GCounter Increment(Cluster.Cluster node, BigInteger delta) => Increment(node.SelfUniqueAddress, delta);
+
+        /// <summary>
+        /// Increment the counter with the delta specified. The delta must be zero or positive.
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <param name="delta">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public GCounter Increment(UniqueAddress node, BigInteger delta)
         {
             if (delta < 0) throw new ArgumentException("Can't decrement a GCounter");
@@ -90,6 +135,11 @@ namespace Akka.DistributedData
             else return AssignAncestor(new GCounter(State.SetItem(node, delta)));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public override GCounter Merge(GCounter other)
         {
             if (ReferenceEquals(this, other) || other.IsAncestorOf(this)) return ClearAncestor();
@@ -110,8 +160,19 @@ namespace Akka.DistributedData
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="removedNode">TBD</param>
+        /// <returns>TBD</returns>
         public bool NeedPruningFrom(UniqueAddress removedNode) => State.ContainsKey(removedNode);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="removedNode">TBD</param>
+        /// <param name="collapseInto">TBD</param>
+        /// <returns>TBD</returns>
         public GCounter Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
             BigInteger prunedNodeValue;
@@ -120,19 +181,38 @@ namespace Akka.DistributedData
                 : this;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="removedNode">TBD</param>
+        /// <returns>TBD</returns>
         public GCounter PruningCleanup(UniqueAddress removedNode) => new GCounter(State.Remove(removedNode));
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return State.GetHashCode();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(object obj)
         {
             if (obj is GCounter) return CompareTo((GCounter) obj);
             return -1;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(GCounter other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -140,16 +220,36 @@ namespace Akka.DistributedData
 
             return State.SequenceEqual(other.State);
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj) => obj is GCounter && Equals((GCounter)obj);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public int CompareTo(GCounter other)
         {
             if (ReferenceEquals(other, null)) return 1;
             return Value.CompareTo(other.Value);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString() => $"GCounter({Value})";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="counter">TBD</param>
+        /// <returns>TBD</returns>
         public static implicit operator BigInteger(GCounter counter) => counter.Value;
     }
 }

@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Performance
 
 
         [PerfBenchmark(Description = "Test the performance of the GraphBuilder for a graph with 1000 nested imports",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = TestMode.Measurement, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 5)]
         public void Graph_with_1000_nested_imports() => MaterializationBenchmark.GraphWithNestedImportsBuilder(1000);

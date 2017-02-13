@@ -3,8 +3,14 @@
 ![Akka.NET logo](documentation/icons/AkkaNetLogo.Normal.png)
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/akkadotnet/akka.net?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) <br/>
-[![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/pr)](http://www.issuestats.com/github/akkadotnet/akka.net)
-[![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/issue)](http://www.issuestats.com/github/akkadotnet/akka.net)
+
+## Builds status
+||Windows|Linux (Mono)|
+|:--:|:--:|:--:|
+|Build|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetWindowsBuild/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetWindowsBuild&guest=1)|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_LinuxMonoBuild/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_LinuxMonoBuild&guest=1)|
+|Unit Tests|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetWindowsUnitTests/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetWindowsUnitTests&guest=1)|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetLinuxMonoUnitTests/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetLinuxMonoUnitTests&guest=1)|
+|MultiNode Tests|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetWindowsMultiNodeTests/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetWindowsMultiNodeTests&guest=1)|
+|Perf Tests|[![Build status](http://petabridge-ci.cloudapp.net/app/rest/builds/buildType:AkkaNet_AkkaNetWindowsPerformanceTests/statusIcon)](http://petabridge-ci.cloudapp.net/viewType.html?buildTypeId=AkkaNet_AkkaNetWindowsPerformanceTests&guest=1)||
 
 ## [Akka.NET Current Roadmap](https://petabridge.com/blog/akkadotnet-2016-roadmap/)
 
@@ -39,7 +45,6 @@ PM> Install-Package Akka.FSharp
 
 ### Contributing
 #### Where Can I Contribute?
-***[Issues for the Next Release (v1.1)](https://waffle.io/akkadotnet/akka.net?milestone=Akka.NET%20v1.1)***
 
 [![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues Needing Help Now!)](http://waffle.io/akkadotnet/akka.net)
 <br>

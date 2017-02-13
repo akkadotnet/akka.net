@@ -34,7 +34,7 @@ namespace Akka.Streams.Implementation.IO
         public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int bufferSize, FileMode fileMode)
         {
             if(bufferSize <= 0)
-                throw new ArgumentException("Buffer size muste be > 0");
+                throw new ArgumentException("Buffer size must be > 0");
 
             return Actor.Props.Create(()=> new FileSubscriber(f, completionPromise, bufferSize, fileMode)).WithDeploy(Deploy.Local);
         }

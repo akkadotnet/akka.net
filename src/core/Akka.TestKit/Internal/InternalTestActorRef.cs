@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -28,6 +29,7 @@ namespace Akka.TestKit.Internal
         /// <summary>INTERNAL
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <returns>TBD</returns>
         public static string CreateUniqueName()
         {
             var number = _uniqueNameNumber.GetAndIncrement();
@@ -46,13 +48,25 @@ namespace Akka.TestKit.Internal
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="self">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="dispatcher">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <returns>TBD</returns>
         protected override ActorCell NewActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher,
             IInternalActorRef supervisor)
         {
             return new TestActorCell((ActorSystemImpl)system, self, props, dispatcher, supervisor);
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected TestActorCell GetTestActorCell()
         {
             return (TestActorCell)Cell;
@@ -74,6 +88,10 @@ namespace Akka.TestKit.Internal
             cell.UseThreadContext(() => cell.ReceiveMessageForTest(envelope));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="IllegalActorStateException">TBD</exception>
         public object UnderlyingActor
         {
             get
@@ -116,14 +134,25 @@ namespace Akka.TestKit.Internal
             Cell.Unwatch(subject);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "TestActor[" + Path + "]";
         }
+
         /// <summary>
         /// INTERNAL
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="name">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         public static InternalTestActorRef Create(ActorSystem system, Props props, IActorRef supervisor = null, string name = null)
         {
             if (name == null)
@@ -176,14 +205,28 @@ namespace Akka.TestKit.Internal
             return testActorRef;
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected class TestActorCell : ActorCell
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="system">TBD</param>
+            /// <param name="self">TBD</param>
+            /// <param name="props">TBD</param>
+            /// <param name="dispatcher">TBD</param>
+            /// <param name="parent">TBD</param>
             public TestActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
                 : base(system, self, props, dispatcher, parent)
             {
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="envelope">TBD</param>
             protected override void AutoReceiveMessage(Envelope envelope)
             {
                 if (envelope.Message is InternalGetActor)
@@ -191,15 +234,23 @@ namespace Akka.TestKit.Internal
                 else
                     base.AutoReceiveMessage(envelope);
             }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
             public new object Actor { get { return base.Actor; } }
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class InternalGetActor : IAutoReceivedMessage, IPossiblyHarmful
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly InternalGetActor Instance = new InternalGetActor();
             private InternalGetActor() { }
         }
     }
 }
-

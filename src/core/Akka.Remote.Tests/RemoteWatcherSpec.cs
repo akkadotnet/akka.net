@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -158,17 +159,17 @@ namespace Akka.Remote.Tests
             }
         }
 
-        public RemoteWatcherSpec()
+        public RemoteWatcherSpec(ITestOutputHelper output)
             : base(@"
             akka {
                 loglevel = INFO 
                 log-dead-letters-during-shutdown = false
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                remote.helios.tcp = {
+                remote.dot-netty.tcp = {
                     hostname = localhost
                     port = 0
                 }
-            }")
+            }", output)
         {
             _remoteSystem = ActorSystem.Create("RemoteSystem", Sys.Settings.Config);
             _remoteAddress = _remoteSystem.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;

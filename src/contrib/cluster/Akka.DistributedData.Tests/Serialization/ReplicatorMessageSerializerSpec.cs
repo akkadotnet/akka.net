@@ -25,14 +25,8 @@ namespace Akka.DistributedData.Tests.Serialization
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor {
                 provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                serializers {
-                  wire = ""Akka.Serialization.WireSerializer, Akka.Serialization.Wire""
-                }
-                serialization-bindings {
-                  ""Akka.DistributedData.IReplicatorMessage, Akka.DistributedData"" = wire
-                }
             }
-            akka.remote.helios.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
+            akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
         
         private readonly UniqueAddress _address1 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 1);
         private readonly UniqueAddress _address2 = new UniqueAddress(new Address("akka.tcp", "sys", "other.host.org", 4711), 2);

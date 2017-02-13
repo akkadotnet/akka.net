@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Performance
 
 
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a graph with 1000 imported flows",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
+            RunMode = RunMode.Iterations, TestMode = TestMode.Measurement, NumberOfIterations = 3)]
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 100)]
         public void Graph_with_1000_imported_flows() => GraphWithImportedFlowBuilder(1000).Run(_materializer);

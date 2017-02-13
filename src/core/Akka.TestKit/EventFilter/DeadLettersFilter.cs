@@ -19,12 +19,23 @@ namespace Akka.TestKit
     {
         private readonly Predicate<DeadLetter> _isMatch;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="messageMatcher">TBD</param>
+        /// <param name="sourceMatcher">TBD</param>
+        /// <param name="isMatch">TBD</param>
         public DeadLettersFilter(IStringMatcher messageMatcher, IStringMatcher sourceMatcher, Predicate<DeadLetter> isMatch = null)
             : base(messageMatcher, sourceMatcher)
         {
             _isMatch = isMatch;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool IsMatch(LogEvent evt)
         {
             var warning = evt as Warning;
@@ -39,7 +50,9 @@ namespace Akka.TestKit
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string FilterDescriptiveName { get { return "DeadLetter"; } }
     }
 }
-

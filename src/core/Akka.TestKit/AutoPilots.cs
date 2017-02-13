@@ -29,7 +29,7 @@ namespace Akka.TestKit
         /// <param name="sender">The sender.</param>
         /// <param name="message">The message.</param>
         /// <returns>The <see cref="AutoPilot"/> to be used for the next round</returns>
-        abstract public AutoPilot Run(IActorRef sender, object message);
+        public abstract AutoPilot Run(IActorRef sender, object message);
 
         /// <summary>
         /// When returned by another <see cref="AutoPilot"/> then no
@@ -54,9 +54,19 @@ namespace Akka.TestKit
     /// </summary>
     public sealed class NoAutoPilot : AutoPilot
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static NoAutoPilot Instance = new NoAutoPilot();
 
         private NoAutoPilot() { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             return this;
@@ -69,16 +79,34 @@ namespace Akka.TestKit
     /// </summary>
     public sealed class KeepRunning : AutoPilot
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static KeepRunning Instance = new KeepRunning();
 
-        private KeepRunning(){}
-
+        private KeepRunning(){ }
+        
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="sender">N/A</param>
+        /// <param name="message">N/A</param>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is automatically thrown since calling this function would never occur in normal operation.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             throw new InvalidOperationException("Must not call");
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="sender">TBD</param>
+    /// <param name="message">TBD</param>
+    /// <returns>TBD</returns>
     public delegate AutoPilot AutoPilotDelegate(IActorRef sender, object message);
 
     /// <summary>
@@ -95,15 +123,24 @@ namespace Akka.TestKit
     {
         private readonly AutoPilotDelegate _autoPilotDelegate;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="autoPilotDelegate">TBD</param>
         public DelegateAutoPilot(AutoPilotDelegate autoPilotDelegate)
         {
             _autoPilotDelegate = autoPilotDelegate;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             return _autoPilotDelegate(sender,message);
         }
     }
 }
-

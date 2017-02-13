@@ -16,15 +16,19 @@ using Node = System.String;
 namespace Akka.Cluster
 {
     /// <summary>
+    /// <para>
     /// Representation of a Vector-based clock (counting clock), inspired by Lamport logical clocks.
-    /// 
-    /// {{{
+    /// </para>
+    /// <para>
     /// Reference:
-    ///     1) Leslie Lamport (1978). "Time, clocks, and the ordering of events in a distributed system". Communications of the ACM 21 (7): 558-565.
-    ///    2) Friedemann Mattern (1988). "Virtual Time and Global States of Distributed Systems". Workshop on Parallel and Distributed Algorithms: pp. 215-226
-    /// }}}
-    /// 
+    /// <ol>
+    /// <li>Leslie Lamport (1978). "Time, clocks, and the ordering of events in a distributed system". Communications of the ACM 21 (7): 558-565.</li>
+    /// <li>Friedemann Mattern (1988). "Virtual Time and Global States of Distributed Systems". Workshop on Parallel and Distributed Algorithms: pp. 215-226</li>
+    /// </ol>
+    /// </para>
+    /// <para>
     /// Based on code from the 'vlock' VectorClock library by Coda Hale.
+    /// </para>
     /// </summary>
     public sealed class VectorClock
     {
@@ -92,19 +96,19 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a hash code for this instance.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
             public override int GetHashCode()
             {
                 return _value.GetHashCode();
             }
 
             /// <summary>
-            /// TBD
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
             /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
             public override bool Equals(object obj)
             {
                 var that = obj as Node;
@@ -113,9 +117,9 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a <see cref="System.String" /> that represents this instance.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
             public override string ToString()
             {
                 return _value;
@@ -306,21 +310,26 @@ namespace Akka.Cluster
             return left.IsConcurrentWith(right);
         }
 
-        private readonly static KeyValuePair<Node, long> CmpEndMarker = new KeyValuePair<Node, long>(Node.Create("endmarker"), long.MinValue);
+        private static readonly KeyValuePair<Node, long> CmpEndMarker = new KeyValuePair<Node, long>(Node.Create("endmarker"), long.MinValue);
 
-        /**
-         * Vector clock comparison according to the semantics described by compareTo, with the ability to bail
-         * out early if the we can't reach the Ordering that we are looking for.
-         *
-         * The ordering always starts with Same and can then go to Same, Before or After
-         * If we're on After we can only go to After or Concurrent
-         * If we're on Before we can only go to Before or Concurrent
-         * If we go to Concurrent we exit the loop immediately
-         *
-         * If you send in the ordering FullOrder, you will get a full comparison.
-         */
         /// <summary>
-        /// TBD
+        /// <para>
+        /// Vector clock comparison according to the semantics described by compareTo,
+        /// with the ability to bail out early if the we can't reach the <see cref="Ordering"/>
+        /// that we are looking for.
+        /// </para>
+        /// <para>
+        /// The ordering always starts with <see cref="Ordering.Same"/> and can then go to
+        /// <see cref="Ordering.Same"/>, <see cref="Ordering.Before"/> or <see cref="Ordering.After"/>.
+        /// </para>
+        /// <para>
+        /// <ul>
+        /// <li>If we're on <see cref="Ordering.After"/>, then we can only go to <see cref="Ordering.After"/> or <see cref="Ordering.Concurrent"/>.</li>
+        /// <li>If we're on <see cref="Ordering.Before"/>, then we can only go to <see cref="Ordering.Before"/>Before or <see cref="Ordering.Concurrent"/>.</li>
+        /// <li>If we go to <see cref="Ordering.Concurrent"/>, then we exit the loop immediately></li>
+        /// <li>If you send in the ordering <see cref="Ordering.FullOrder"/>FullOrder, then you will get a full comparison.</li>
+        /// </ul>
+        /// </para>
         /// </summary>
         /// <param name="that">TBD</param>
         /// <param name="order">TBD</param>
@@ -387,30 +396,28 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// <para>
+        /// Compares the current vector clock with the supplied vector clock. The outcome will be one of the following:
+        /// </para>
+        /// <ol>
+        /// <li><![CDATA[ Clock 1 is SAME(==)       as Clock 2 iff for all i c1(i) == c2(i) ]]></li>
+        /// <li><![CDATA[ Clock 1 is BEFORE(<)      Clock 2 iff for all i c1(i) <= c2(i) and there exist a j such that c1(j) < c2(j) ]]></li>
+        /// <li><![CDATA[ Clock 1 is AFTER(>)       Clock 2 iff for all i c1(i) >= c2(i) and there exist a j such that c1(j) > c2(j). ]]></li>
+        /// <li><![CDATA[ Clock 1 is CONCURRENT(<>) to Clock 2 otherwise. ]]></li>
+        /// </ol>
         /// </summary>
-        /// <param name="that">TBD</param>
+        /// <param name="that">The vector clock used to compare against.</param>
         /// <returns>TBD</returns>
         public Ordering CompareTo(VectorClock that)
         {
-            /**
-             * Compare two vector clocks. The outcome will be one of the following:
-             * 
-             * {{{
-             *   1. Clock 1 is SAME (==)       as Clock 2 iff for all i c1(i) == c2(i)
-             *   2. Clock 1 is BEFORE (<)      Clock 2 iff for all i c1(i) <= c2(i) and there exist a j such that c1(j) < c2(j)
-             *   3. Clock 1 is AFTER (>)       Clock 2 iff for all i c1(i) >= c2(i) and there exist a j such that c1(j) > c2(j).
-             *   4. Clock 1 is CONCURRENT (<>) to Clock 2 otherwise.
-             * }}}
-             */
             return CompareOnlyTo(that, Ordering.FullOrder);
         }
 
         /// <summary>
-        /// Merges this VectorClock with another VectorClock. E.g. merges its versioned history.
+        /// Merges the vector clock with another <see cref="VectorClock"/> (e.g. merges its versioned history).
         /// </summary>
-        /// <param name="that">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="that">The vector clock to merge into the current clock.</param>
+        /// <returns>A newly created <see cref="VectorClock"/> with the current vector clock and the given vector clock merged.</returns>
         public VectorClock Merge(VectorClock that)
         {
             var mergedVersions = that.Versions;
@@ -426,10 +433,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Prunes the specified removed node.
+        /// Removes the specified node from the current vector clock.
         /// </summary>
-        /// <param name="removedNode">The removed node.</param>
-        /// <returns>TBD</returns>
+        /// <param name="removedNode">The node that is being removed.</param>
+        /// <returns>A newly created <see cref="VectorClock"/> that has the given node removed.</returns>
         public VectorClock Prune(Node removedNode)
         {
             if (Versions.ContainsKey(removedNode))
@@ -440,13 +447,13 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return String.Format("VectorClock({0})",
-                _versions.Select(p => p.Key + "->" + p.Value).Aggregate((n, t) => n + ", " + t));
+            var versions = _versions.Select(p => p.Key + "->" + p.Value);
+            return $"VectorClock({string.Join(", ", versions)})";
         }
     }
 }

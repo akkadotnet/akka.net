@@ -192,7 +192,8 @@ namespace Akka.Actor
         /// using the `dispatcher` of this actor system as it will have been shut down before the
         /// task completes.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A <see cref="Task"/> that will complete once the actor system has finished terminating
+        /// and all actors are stopped.</returns>
         public abstract Task Terminate();
 
         /// <summary>
@@ -244,10 +245,14 @@ namespace Akka.Actor
         public abstract Task WhenTerminated { get; }
 
         /// <summary>
-        /// TBD
+        /// Permanently stops the target actor.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The actor we wish to stop.</param>
+        /// <remarks>
+        /// Has no effect is the actor is already stopped.
+        /// </remarks>
         public abstract void Stop(IActorRef actor);
+
         private bool _isDisposed; //Automatically initialized to false;
 
         //Destructor:
@@ -305,25 +310,13 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public abstract object RegisterExtension(IExtensionId extension);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IActorRefFactory"/>
         public abstract IActorRef ActorOf(Props props, string name = null);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IActorRefFactory"/>
         public abstract ActorSelection ActorSelection(ActorPath actorPath);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+
+        /// <inheritdoc cref="IActorRefFactory"/>
         public abstract ActorSelection ActorSelection(string actorPath);
 
         /// <summary>

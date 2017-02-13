@@ -82,7 +82,7 @@ namespace Akka.Tests.Configuration
             {
                 StringProperty = "aaa",
                 BoolProperty = true,
-                IntergerArray = new[] {1, 2, 3, 4}
+                IntegerArray = new[] {1, 2, 3, 4}
             };
 
             var config = ConfigurationFactory.FromObject(source);
@@ -90,7 +90,7 @@ namespace Akka.Tests.Configuration
             Assert.Equal("aaa", config.GetString("StringProperty"));
             Assert.Equal(true, config.GetBoolean("BoolProperty"));
 
-            Assert.Equal(new[] {1, 2, 3, 4}, config.GetIntList("IntergerArray").ToArray());
+            Assert.Equal(new[] {1, 2, 3, 4}, config.GetIntList("IntegerArray").ToArray());
         }
 
         [Fact]
@@ -169,7 +169,7 @@ a {
         {
             public string StringProperty { get; set; }
             public bool BoolProperty { get; set; }
-            public int[] IntergerArray { get; set; }
+            public int[] IntegerArray { get; set; }
         }
 
         [Fact]

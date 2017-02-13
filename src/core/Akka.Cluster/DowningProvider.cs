@@ -13,7 +13,7 @@ namespace Akka.Cluster
 {
     /// <summary>
     /// API for plugins that will handle downing of cluster nodes. Concrete plugins must subclass and
-    /// have a public one argument constructor accepting an [[akka.actor.ActorSystem]].
+    /// have a public one argument constructor accepting an <see cref="ActorSystem"/>.
     /// </summary>
     public interface IDowningProvider
     {
