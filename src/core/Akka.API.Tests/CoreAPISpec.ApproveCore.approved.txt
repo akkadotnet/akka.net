@@ -4426,6 +4426,7 @@ namespace Akka.Serialization
     public class NewtonSoftJsonSerializer : Akka.Serialization.Serializer
     {
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public object Serializer { get; }
