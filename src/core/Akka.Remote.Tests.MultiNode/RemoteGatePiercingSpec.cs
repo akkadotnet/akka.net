@@ -47,20 +47,12 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class RemoteGatePiercingMultiNetNode1 : RemoteGatePiercingSpec
-    {
-    }
-
-    public class RemoteGatePiercingMultiNetNode2 : RemoteGatePiercingSpec
-    {
-    }
-
     public class RemoteGatePiercingSpec : MultiNodeSpec
     {
         private readonly RemoteGatePiercingMultiNetSpec _config;
         private readonly Func<RoleName, string, IActorRef> _identify;
 
-        protected RemoteGatePiercingSpec() : this(new RemoteGatePiercingMultiNetSpec())
+        public RemoteGatePiercingSpec() : this(new RemoteGatePiercingMultiNetSpec())
         {
         }
 

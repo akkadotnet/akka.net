@@ -124,7 +124,7 @@ namespace Akka.MultiNodeTestRunner
                     controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
 
-                    foreach (var test in discovery.Tests.Reverse())
+                    foreach(var test in discovery.Tests.Reverse())
                     {
                         if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
                         {
@@ -132,8 +132,7 @@ namespace Akka.MultiNodeTestRunner
                             continue;
                         }
 
-                        // Filtering - check to see if we're supposed to skip this spec or not
-                        if (!string.IsNullOrWhiteSpace(specName) && !test.Value.First().MethodName.Contains(specName))
+                        if(!string.IsNullOrWhiteSpace(specName) && CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName, specName, CompareOptions.IgnoreCase) < 0)
                         {
                             PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
                             continue;
@@ -158,11 +157,13 @@ namespace Akka.MultiNodeTestRunner
                                     nodeTest.TypeName}"" -Dmultinode.test-method=""{nodeTest.MethodName
                                     }"" -Dmultinode.max-nodes={test.Value.Count} -Dmultinode.server-host=""{"localhost"
                                     }"" -Dmultinode.host=""{"localhost"}"" -Dmultinode.index={nodeTest.Node - 1
-                                    } -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={listenPort}";
+                                    } -Dmultinode.role=""{nodeTest.Role
+                                    }"" -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={listenPort}";
                             var nodeIndex = nodeTest.Node;
+                            var nodeRole = nodeTest.Role;
                             //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
                             var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
-                            var logFilePath = Path.Combine(folder.FullName, "node" + nodeIndex + ".txt");
+                            var logFilePath = Path.Combine(folder.FullName, "node" + nodeIndex + "__" + nodeRole + ".txt");
                             var fileActor =
                                 TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
                             process.OutputDataReceived += (sender, eventArgs) =>
@@ -175,13 +176,13 @@ namespace Akka.MultiNodeTestRunner
                             {
                                 if (process.ExitCode == 0)
                                 {
-                                    ReportSpecPassFromExitCode(nodeIndex, closureTest.TestName);
+                                    ReportSpecPassFromExitCode(nodeIndex, nodeRole, closureTest.TestName);
                                 }
                             };
                             
                             process.Start();
                             process.BeginOutputReadLine();
-                            PublishRunnerMessage(string.Format("Started node {0} on pid {1}", nodeTest.Node, process.Id));
+                            PublishRunnerMessage(string.Format("Started node {0} : {1} on pid {2}", nodeIndex, nodeRole, process.Id));
                         }
 
                         foreach (var process in processes)
@@ -260,9 +261,9 @@ namespace Akka.MultiNodeTestRunner
             SinkCoordinator.Tell(tests);
         }
 
-        static void ReportSpecPassFromExitCode(int nodeIndex, string testName)
+        static void ReportSpecPassFromExitCode(int nodeIndex, string nodeRole, string testName)
         {
-            SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, testName + " passed."));
+            SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, nodeRole, testName + " passed."));
         }
 
         static void FinishSpec()

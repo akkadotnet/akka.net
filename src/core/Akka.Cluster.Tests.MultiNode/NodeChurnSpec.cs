@@ -37,11 +37,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class NodeChurnMultiNode1 : NodeChurnSpec { }
-    public class NodeChurnMultiNode2 : NodeChurnSpec { }
-    public class NodeChurnMultiNode3 : NodeChurnSpec { }
-
-    public abstract class NodeChurnSpec : MultiNodeClusterSpec
+    public class NodeChurnSpec : MultiNodeClusterSpec
     {
         private class LogListener : ReceiveActor
         {
@@ -72,7 +68,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
         }
 
-        protected NodeChurnSpec() : this(new NodeChurnConfig())
+        public NodeChurnSpec() : this(new NodeChurnConfig())
         {
         }
 

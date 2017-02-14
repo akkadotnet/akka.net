@@ -20,11 +20,11 @@ namespace Akka.Remote.Tests.MultiNode
 
     #region Spec
 
-    public abstract class RemoteNodeRestartGateSpec : MultiNodeSpec
+    public class RemoteNodeRestartGateSpec : MultiNodeSpec
     {
         private readonly RemoteNodeRestartGateSpecConfig _specConfig;
 
-        protected RemoteNodeRestartGateSpec()
+        public RemoteNodeRestartGateSpec()
             : this(new RemoteNodeRestartGateSpecConfig())
         {
         }
@@ -42,7 +42,7 @@ namespace Akka.Remote.Tests.MultiNode
 
         private IActorRef Identify(RoleName role, string actorName)
         {
-            Sys.ActorSelection(Node(role)/"user"/actorName).Tell(new Identify(actorName));
+            Sys.ActorSelection(Node(role) / "user" / actorName).Tell(new Identify(actorName));
             return ExpectMsg<ActorIdentity>().Subject;
         }
 
@@ -62,7 +62,7 @@ namespace Akka.Remote.Tests.MultiNode
                 EventFilter.Warning(new Regex("address is now gated")).ExpectOne(() =>
                 {
                     RARP.For(Sys).Provider.Transport.ManagementCommand(
-                        new ForceDisassociateExplicitly(Node(_specConfig.Second).Address, DisassociateInfo.Unknown))
+                            new ForceDisassociateExplicitly(Node(_specConfig.Second).Address, DisassociateInfo.Unknown))
                         .Wait(TimeSpan.FromSeconds(3));
                 });
 
@@ -70,16 +70,16 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("gated");
                 TestConductor.Shutdown(_specConfig.Second).Wait();
                 Within(TimeSpan.FromSeconds(10), () =>
-                    {
-                        AwaitAssert(
-                            () =>
-                                {
-                                    Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject")
-                                        .Tell(new Identify("subject"));
-                                    ExpectMsg<ActorIdentity>().Subject.ShouldNotBe(null);
-                                });
-                    });
-                Sys.ActorSelection(new RootActorPath(secondAddress)/"user"/"subject").Tell("shutdown");
+                {
+                    AwaitAssert(
+                        () =>
+                        {
+                            Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject")
+                                .Tell(new Identify("subject"));
+                            ExpectMsg<ActorIdentity>().Subject.ShouldNotBe(null);
+                        });
+                });
+                Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("shutdown");
             }, _specConfig.First);
 
             RunOn(() =>
@@ -109,7 +109,7 @@ namespace Akka.Remote.Tests.MultiNode
                     AwaitAssert(() =>
 
                     {
-                        freshSystem.ActorSelection(new RootActorPath(firstAddress)/"user"/"subject")
+                        freshSystem.ActorSelection(new RootActorPath(firstAddress) / "user" / "subject")
                             .Tell(new Identify("subject"), probe);
                         probe.ExpectMsg<ActorIdentity>();
                     });
@@ -141,18 +141,6 @@ namespace Akka.Remote.Tests.MultiNode
 
     #endregion
 
-    #region Several different variations of the test
-
-    public class RemoteNodeRestartGateMultiNode1 : RemoteNodeRestartGateSpec
-    {
-    }
-
-    public class RemoteNodeRestartGateMultiNode2 : RemoteNodeRestartGateSpec
-    {
-    }
-
-    #endregion
-
     #region Config
 
     public class RemoteNodeRestartGateSpecConfig : MultiNodeConfig
@@ -166,7 +154,7 @@ namespace Akka.Remote.Tests.MultiNode
                 @"akka.loglevel = INFO
                    akka.remote.log-remote-lifecycle-events = INFO
                    akka.remote.retry-gate-closed-for  = 1d"
-                ));
+            ));
             TestTransport = true;
         }
 

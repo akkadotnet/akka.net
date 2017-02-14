@@ -49,15 +49,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             }
         }
 
-        public class ClusterClientStartMultiNode1 : ClusterClientStartSpec { }
-        public class ClusterClientStartMultiNode2 : ClusterClientStartSpec { }
-        public class ClusterClientStartMultiNode3 : ClusterClientStartSpec { }
-
-        public abstract class ClusterClientStartSpec : MultiNodeClusterSpec
+        public class ClusterClientStartSpec : MultiNodeClusterSpec
         {
             private readonly ClusterClientStartSpecConfig _config;
 
-            protected ClusterClientStartSpec() : this(new ClusterClientStartSpecConfig())
+            public ClusterClientStartSpec() : this(new ClusterClientStartSpecConfig())
             {
             }
 

@@ -79,15 +79,11 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
     }
 
-    public class UseRoleIgnoredMultiNode1 : UseRoleIgnoredSpec { }
-    public class UseRoleIgnoredMultiNode2 : UseRoleIgnoredSpec { }
-    public class UseRoleIgnoredMultiNode3 : UseRoleIgnoredSpec { }
-
-    public abstract class UseRoleIgnoredSpec : MultiNodeClusterSpec
+    public class UseRoleIgnoredSpec : MultiNodeClusterSpec
     {
         private readonly UseRoleIgnoredSpecConfig _config;
 
-        protected UseRoleIgnoredSpec() : this(new UseRoleIgnoredSpecConfig())
+        public UseRoleIgnoredSpec() : this(new UseRoleIgnoredSpecConfig())
         {
         }
 
