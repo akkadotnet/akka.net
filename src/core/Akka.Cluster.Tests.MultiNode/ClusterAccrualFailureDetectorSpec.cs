@@ -37,23 +37,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class ClusterAccrualFailureDetectorMultiNode1 : ClusterAccrualFailureDetectorSpec
-    {
-    }
-
-    public class ClusterAccrualFailureDetectorMultiNode2 : ClusterAccrualFailureDetectorSpec
-    {
-    }
-
-    public class ClusterAccrualFailureDetectorMultiNode3 : ClusterAccrualFailureDetectorSpec
-    {
-    }
-
-    public abstract class ClusterAccrualFailureDetectorSpec : MultiNodeClusterSpec
+    public class ClusterAccrualFailureDetectorSpec : MultiNodeClusterSpec
     {
         private readonly ClusterAccrualFailureDetectorMultiSpec _config;
 
-        protected ClusterAccrualFailureDetectorSpec()
+        public ClusterAccrualFailureDetectorSpec()
             : this(new ClusterAccrualFailureDetectorMultiSpec())
         {
             MuteMarkingAsUnreachable();

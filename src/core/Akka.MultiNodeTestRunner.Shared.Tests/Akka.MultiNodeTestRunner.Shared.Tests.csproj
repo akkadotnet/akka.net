@@ -54,8 +54,14 @@
       <HintPath>..\..\packages\xunit.extensibility.execution.2.1.0\lib\net45\xunit.execution.desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="xunit.runner.utility.desktop, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\xunit.runner.utility.2.1.0\lib\net35\xunit.runner.utility.desktop.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MultiNodeTestRunnerDiscovery\DiscoveryCases.cs" />
+    <Compile Include="MultiNodeTestRunnerDiscovery\DiscoverySpec.cs" />
     <Compile Include="NodeDataActorSpec.cs" />
     <Compile Include="NodeMessageHelpers.cs" />
     <Compile Include="ParsingSpec.cs" />
@@ -74,9 +80,17 @@
       <Project>{964F0EC5-FBE6-47C5-8AE6-145114D5DB8C}</Project>
       <Name>Akka.MultiNodeTestRunner.Shared</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Akka.MultiNodeTestRunner\Akka.MultiNodeTestRunner.csproj">
+      <Project>{C1113300-74F1-446A-9914-3020C842EDF1}</Project>
+      <Name>Akka.MultiNodeTestRunner</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.NodeTestRunner\Akka.NodeTestRunner.csproj">
       <Project>{28520F30-2868-4BD3-9CAE-AC27226C24E3}</Project>
       <Name>Akka.NodeTestRunner</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
+      <Project>{E5957C3E-2B1E-469F-A680-7953B4DEA31B}</Project>
+      <Name>Akka.Remote.TestKit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
       <Project>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</Project>

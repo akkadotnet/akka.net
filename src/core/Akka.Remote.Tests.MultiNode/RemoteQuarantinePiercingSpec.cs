@@ -44,16 +44,13 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class RemoteQuarantinePiercingMultiNode1 : RemoteQuarantinePiercingSpec { }
-    public class RemoteQuarantinePiercingMultiNode2 : RemoteQuarantinePiercingSpec { }
-
-    public abstract class RemoteQuarantinePiercingSpec : MultiNodeSpec
+    public class RemoteQuarantinePiercingSpec : MultiNodeSpec
     {
         private readonly RemoteQuarantinePiercingSpecConfig _specConfig;
 
         protected override int InitialParticipantsValueFactory { get; } = 2;
 
-        protected RemoteQuarantinePiercingSpec() : this(new RemoteQuarantinePiercingSpecConfig())
+        public RemoteQuarantinePiercingSpec() : this(new RemoteQuarantinePiercingSpecConfig())
         {
         }
 

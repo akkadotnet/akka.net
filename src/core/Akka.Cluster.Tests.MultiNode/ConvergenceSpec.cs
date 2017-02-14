@@ -43,61 +43,16 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
     
-    public class ConvergenceWithFailureDetectorPuppetMultiNode1 : ConvergenceSpec
+    public class ConvergenceWithFailureDetectorPuppetMultiNode : ConvergenceSpec
     {
-        public ConvergenceWithFailureDetectorPuppetMultiNode1() : base(true)
+        public ConvergenceWithFailureDetectorPuppetMultiNode() : base(true)
         {
         }
     }
 
-    public class ConvergenceWithFailureDetectorPuppetMultiNode2 : ConvergenceSpec
+    public class ConvergenceWithAccrualFailureDetectorMultiNode : ConvergenceSpec
     {
-        public ConvergenceWithFailureDetectorPuppetMultiNode2() : base(true)
-        {
-        }
-    }
-    
-    public class ConvergenceWithFailureDetectorPuppetMultiNode3 : ConvergenceSpec
-    {
-        public ConvergenceWithFailureDetectorPuppetMultiNode3() : base(true)
-        {
-        }
-    }
-    
-    public class ConvergenceWithFailureDetectorPuppetMultiNode4 : ConvergenceSpec
-    {
-        public ConvergenceWithFailureDetectorPuppetMultiNode4() : base(true)
-        {
-        }
-    }
-
-    public class ConvergenceWithAccrualFailureDetectorMultiNode1 : ConvergenceSpec
-    {
-        public ConvergenceWithAccrualFailureDetectorMultiNode1()
-            : base(false)
-        {
-        }
-    }
-
-    public class ConvergenceWithAccrualFailureDetectorMultiNode2 : ConvergenceSpec
-    {
-        public ConvergenceWithAccrualFailureDetectorMultiNode2()
-            : base(false)
-        {
-        }
-    }
-
-    public class ConvergenceWithAccrualFailureDetectorMultiNode3 : ConvergenceSpec
-    {
-        public ConvergenceWithAccrualFailureDetectorMultiNode3()
-            : base(false)
-        {
-        }
-    }
-
-    public class ConvergenceWithAccrualFailureDetectorMultiNode4 : ConvergenceSpec
-    {
-        public ConvergenceWithAccrualFailureDetectorMultiNode4()
+        public ConvergenceWithAccrualFailureDetectorMultiNode()
             : base(false)
         {
         }

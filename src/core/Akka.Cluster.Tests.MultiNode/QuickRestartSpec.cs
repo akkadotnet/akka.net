@@ -38,11 +38,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class QuickRestartMultiNode1 : QuickRestartSpec { }
-    public class QuickRestartMultiNode2 : QuickRestartSpec { }
-    public class QuickRestartMultiNode3 : QuickRestartSpec { }
-
-    public abstract class QuickRestartSpec : MultiNodeClusterSpec
+    public class QuickRestartSpec : MultiNodeClusterSpec
     {
         private readonly QuickRestartSpecConfig _config;
         private readonly Lazy<ImmutableList<Address>> _seedNodes;
@@ -50,7 +46,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         protected override TimeSpan ShutdownTimeout => TimeSpan.FromSeconds(45 * _rounds);
 
-        protected QuickRestartSpec() : this(new QuickRestartSpecConfig())
+        public QuickRestartSpec() : this(new QuickRestartSpecConfig())
         {
 
         }

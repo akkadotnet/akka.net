@@ -278,10 +278,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     {
         private readonly SortedSet<MultiNodeMessage> _eventTimeLine;
 
-        public NodeData(int nodeIndex) : this(nodeIndex, DateTime.UtcNow.Ticks, new List<MultiNodeMessage>()) { }
+        public NodeData(int nodeIndex, string nodeRole) : this(nodeIndex, nodeRole, DateTime.UtcNow.Ticks, new List<MultiNodeMessage>()) { }
 
-        public NodeData(int nodeIndex, long startTime, IEnumerable<MultiNodeMessage> eventTimeLine) 
-            : this(nodeIndex, startTime, eventTimeLine, null, null)
+        public NodeData(int nodeIndex, string nodeRole, long startTime, IEnumerable<MultiNodeMessage> eventTimeLine) 
+            : this(nodeIndex, nodeRole, startTime, eventTimeLine, null, null)
         {
           
         }
@@ -290,10 +290,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// Copy constructor
         /// </summary>
         [JsonConstructor]
-        public NodeData(int nodeIndex, long startTime, IEnumerable<MultiNodeMessage> eventTimeLine, long? endTime,
+        public NodeData(int nodeIndex, string nodeRole, long startTime, IEnumerable<MultiNodeMessage> eventTimeLine, long? endTime,
             bool? passed)
         {
             NodeIndex = nodeIndex;
+            NodeRole = nodeRole;
             StartTime = startTime;
             _eventTimeLine = new SortedSet<MultiNodeMessage>(eventTimeLine ?? new List<MultiNodeMessage>());
             EndTime = endTime;
@@ -304,6 +305,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// The position of this node in the 0...N index of all nodes in the set.
         /// </summary>
         public int NodeIndex { get; private set; }
+
+        /// <summary>
+        /// The Role of this node.
+        /// </summary>
+        public string NodeRole { get; private set; }
 
         /// <summary>
         /// The absolute time tests began for this individual node
@@ -371,7 +377,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             var events = new MultiNodeMessage[_eventTimeLine.Count];
             _eventTimeLine.CopyTo(events);
 
-            return new NodeData(NodeIndex, StartTime, events, EndTime, Passed);
+            return new NodeData(NodeIndex, NodeRole, StartTime, events, EndTime, Passed);
         }
 
         #region Equality
@@ -382,6 +388,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             if (ReferenceEquals(this, other)) return true;
             return _eventTimeLine.SetEquals(other._eventTimeLine)
                 && NodeIndex == other.NodeIndex 
+                && String.Equals(NodeRole, other.NodeRole, StringComparison.Ordinal)
                 && StartTime == other.StartTime 
                 && EndTime == other.EndTime 
                 && Passed.Equals(other.Passed);
@@ -399,7 +406,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         {
             unchecked
             {
-                return (NodeIndex * 397) ^ StartTime.GetHashCode();
+                return (NodeIndex * 397) ^ (NodeRole.GetHashCode() * 397) ^ StartTime.GetHashCode();
             }
         }
 

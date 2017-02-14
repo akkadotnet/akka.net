@@ -45,17 +45,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class JoinSeedNodeMultiNode1 : JoinSeedNodeSpec { }
-    public class JoinSeedNodeMultiNode2 : JoinSeedNodeSpec { }
-    public class JoinSeedNodeMultiNode3 : JoinSeedNodeSpec { }
-    public class JoinSeedNodeMultiNode4 : JoinSeedNodeSpec { }
-    public class JoinSeedNodeMultiNode5 : JoinSeedNodeSpec { }
-
-    public abstract class JoinSeedNodeSpec : MultiNodeClusterSpec
+    public class JoinSeedNodeSpec : MultiNodeClusterSpec
     {
         private readonly JoinSeedNodeConfig _config;
 
-        protected JoinSeedNodeSpec() : this(new JoinSeedNodeConfig()) { }
+        public JoinSeedNodeSpec() : this(new JoinSeedNodeConfig()) { }
 
         protected JoinSeedNodeSpec(JoinSeedNodeConfig config) : base(config)
         {

@@ -32,15 +32,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class NodeLeavingAndExitingAndBeingRemovedNode1 : NodeLeavingAndExitingAndBeingRemovedSpec { }
-    public class NodeLeavingAndExitingAndBeingRemovedNode2 : NodeLeavingAndExitingAndBeingRemovedSpec { }
-    public class NodeLeavingAndExitingAndBeingRemovedNode3 : NodeLeavingAndExitingAndBeingRemovedSpec { }
-
-    public abstract class NodeLeavingAndExitingAndBeingRemovedSpec : MultiNodeClusterSpec
+    public class NodeLeavingAndExitingAndBeingRemovedSpec : MultiNodeClusterSpec
     {
         private readonly NodeLeavingAndExitingAndBeingRemovedSpecConfig _config;
 
-        protected NodeLeavingAndExitingAndBeingRemovedSpec() : this(new NodeLeavingAndExitingAndBeingRemovedSpecConfig())
+        public NodeLeavingAndExitingAndBeingRemovedSpec() : this(new NodeLeavingAndExitingAndBeingRemovedSpecConfig())
         {
         }
 

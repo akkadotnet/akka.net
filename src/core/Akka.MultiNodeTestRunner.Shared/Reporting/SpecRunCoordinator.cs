@@ -52,7 +52,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             foreach (var node in Nodes)
             {
                 var index = node.Node;
-                _nodeActors.Add(index, Context.ActorOf(Props.Create(() => new NodeDataActor(index))));
+                var role = node.Role;
+                _nodeActors.Add(index, Context.ActorOf(Props.Create(() => new NodeDataActor(index, role))));
             }
         }
 
