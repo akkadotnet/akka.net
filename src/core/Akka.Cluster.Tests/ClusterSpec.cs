@@ -9,7 +9,6 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -194,7 +193,7 @@ namespace Akka.Cluster.Tests
             _cluster.LeaveAsync().IsCompleted.Should().BeTrue();
         }
 
-        [Fact(Skip = "This behavior not yet supported.")]
+        [Fact]
         public void A_cluster_must_return_completed_LeaveAsync_task_if_member_already_removed()
         {
             // Join cluster

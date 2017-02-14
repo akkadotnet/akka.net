@@ -264,7 +264,12 @@ namespace Akka.Cluster
         /// <param name="address">TBD</param>
         public void Leave(Address address)
         {
-            ClusterCore.Tell(new ClusterUserAction.Leave(FillLocal(address)));
+            if (FillLocal(address) == SelfAddress)
+            {
+                LeaveSelf();
+            }
+            else
+                ClusterCore.Tell(new ClusterUserAction.Leave(FillLocal(address)));
         }
 
         /// <summary>
@@ -310,8 +315,8 @@ namespace Akka.Cluster
             // Subscribe to MemberRemoved events
             _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() => tcs.TrySetResult(null)));
 
-            // Issue leave from the cluster
-            Leave(SelfAddress);
+            // Send leave message
+            ClusterCore.Tell(new ClusterUserAction.Leave(SelfAddress));
 
             return tcs.Task;
         }
