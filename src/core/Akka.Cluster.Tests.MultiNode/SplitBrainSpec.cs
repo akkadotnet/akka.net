@@ -44,72 +44,16 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class SplitBrainWithFailureDetectorPuppetMultiNode1 : SplitBrainSpec
+    public class SplitBrainWithFailureDetectorPuppetMultiNode : SplitBrainSpec
     {
-        public SplitBrainWithFailureDetectorPuppetMultiNode1() : base(true)
+        public SplitBrainWithFailureDetectorPuppetMultiNode() : base(true)
         {
         }
     }
 
-    public class SplitBrainWithFailureDetectorPuppetMultiNode2 : SplitBrainSpec
+    public class SplitBrainWithAccrualFailureDetectorMultiNode : SplitBrainSpec
     {
-        public SplitBrainWithFailureDetectorPuppetMultiNode2() : base(true)
-        {
-        }
-    }
-
-    public class SplitBrainWithFailureDetectorPuppetMultiNode3 : SplitBrainSpec
-    {
-        public SplitBrainWithFailureDetectorPuppetMultiNode3() : base(true)
-        {
-        }
-    }
-
-    public class SplitBrainWithFailureDetectorPuppetMultiNode4 : SplitBrainSpec
-    {
-        public SplitBrainWithFailureDetectorPuppetMultiNode4() : base(true)
-        {
-        }
-    }
-
-    public class SplitBrainWithFailureDetectorPuppetMultiNode5 : SplitBrainSpec
-    {
-        public SplitBrainWithFailureDetectorPuppetMultiNode5() : base(true)
-        {
-        }
-    }
-
-    public class SplitBrainWithAccrualFailureDetectorMultiNode1 : SplitBrainSpec
-    {
-        public SplitBrainWithAccrualFailureDetectorMultiNode1() : base(false)
-        {
-        }
-    }
-
-    public class SplitBrainWithAccrualFailureDetectorMultiNode2 : SplitBrainSpec
-    {
-        public SplitBrainWithAccrualFailureDetectorMultiNode2() : base(false)
-        {
-        }
-    }
-
-    public class SplitBrainWithAccrualFailureDetectorMultiNode3 : SplitBrainSpec
-    {
-        public SplitBrainWithAccrualFailureDetectorMultiNode3() : base(false)
-        {
-        }
-    }
-
-    public class SplitBrainWithAccrualFailureDetectorMultiNode4 : SplitBrainSpec
-    {
-        public SplitBrainWithAccrualFailureDetectorMultiNode4() : base(false)
-        {
-        }
-    }
-
-    public class SplitBrainWithAccrualFailureDetectorMultiNode5 : SplitBrainSpec
-    {
-        public SplitBrainWithAccrualFailureDetectorMultiNode5() : base(false)
+        public SplitBrainWithAccrualFailureDetectorMultiNode() : base(false)
         {
         }
     }

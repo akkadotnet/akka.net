@@ -26,9 +26,9 @@ namespace Akka.Remote.Tests.MultiNode
             TestTransport = true;
         }
 
-        public RoleName First { get; private set; }
-        public RoleName Second { get; private set; }
-        public RoleName Third { get; private set; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
 
         public class Echo : UntypedActor
         {
@@ -39,18 +39,6 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class AttemptSysMsgRedeliveryMultiNetSpec1 : AttemptSysMsgRedeliverySpec
-    {
-    }
-
-    public class AttemptSysMsgRedeliveryMultiNetSpec2 : AttemptSysMsgRedeliverySpec
-    {
-    }
-
-    public class AttemptSysMsgRedeliveryMultiNetSpec3 : AttemptSysMsgRedeliverySpec
-    {
-    }
-
     public class AttemptSysMsgRedeliverySpec : MultiNodeSpec
     {
         private readonly AttemptSysMsgRedeliveryMultiNetSpec _config;
@@ -59,7 +47,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        public AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliveryMultiNetSpec config) : base(config)
+        protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliveryMultiNetSpec config) : base(config)
         {
             _config = config;
         }

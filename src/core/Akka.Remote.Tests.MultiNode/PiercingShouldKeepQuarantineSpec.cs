@@ -19,8 +19,8 @@ namespace Akka.Remote.Tests.MultiNode
 {
     public class PiercingShouldKeepQuarantineMultiNodeConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
-        public RoleName Second { get; private set; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
 
         public PiercingShouldKeepQuarantineMultiNodeConfig()
         {
@@ -36,19 +36,11 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class PiercingShouldKeepQuarantineMultiNode1 : PiercingShouldKeepQuarantineSpec
-    {
-    }
-
-    public class PiercingShouldKeepQuarantineMultiNode2 : PiercingShouldKeepQuarantineSpec
-    {
-    }
-
-    public abstract class PiercingShouldKeepQuarantineSpec : MultiNodeSpec
+    public class PiercingShouldKeepQuarantineSpec : MultiNodeSpec
     {
         private readonly PiercingShouldKeepQuarantineMultiNodeConfig _config;
 
-        protected PiercingShouldKeepQuarantineSpec() : this(new PiercingShouldKeepQuarantineMultiNodeConfig())
+        public PiercingShouldKeepQuarantineSpec() : this(new PiercingShouldKeepQuarantineMultiNodeConfig())
         {
         }
 

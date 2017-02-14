@@ -35,81 +35,17 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class LeaderElectionWithFailureDetectorPuppetMultiJvmNode1 : LeaderElectionSpec
+    public class LeaderElectionWithFailureDetectorPuppetMultiJvmNode : LeaderElectionSpec
     {
-        public LeaderElectionWithFailureDetectorPuppetMultiJvmNode1()
+        public LeaderElectionWithFailureDetectorPuppetMultiJvmNode()
             : base(true)
         {
         }
     }
 
-    public class LeaderElectionWithFailureDetectorPuppetMultiJvmNode2 : LeaderElectionSpec
+    public class LeaderElectionWithAccrualFailureDetectorMultiJvmNode : LeaderElectionSpec
     {
-        public LeaderElectionWithFailureDetectorPuppetMultiJvmNode2()
-            : base(true)
-        {
-        }
-    }
-
-    public class LeaderElectionWithFailureDetectorPuppetMultiJvmNode3 : LeaderElectionSpec
-    {
-        public LeaderElectionWithFailureDetectorPuppetMultiJvmNode3()
-            : base(true)
-        {
-        }
-    }
-
-    public class LeaderElectionWithFailureDetectorPuppetMultiJvmNode4 : LeaderElectionSpec
-    {
-        public LeaderElectionWithFailureDetectorPuppetMultiJvmNode4()
-            : base(true)
-        {
-        }
-    }
-
-    public class LeaderElectionWithFailureDetectorPuppetMultiJvmNode5 : LeaderElectionSpec
-    {
-        public LeaderElectionWithFailureDetectorPuppetMultiJvmNode5()
-            : base(true)
-        {
-        }
-    }
-
-    public class LeaderElectionWithAccrualFailureDetectorMultiJvmNode1 : LeaderElectionSpec
-    {
-        public LeaderElectionWithAccrualFailureDetectorMultiJvmNode1()
-            : base(false)
-        {
-        }
-    }
-
-    public class LeaderElectionWithAccrualFailureDetectorMultiJvmNode2 : LeaderElectionSpec
-    {
-        public LeaderElectionWithAccrualFailureDetectorMultiJvmNode2()
-            : base(false)
-        {
-        }
-    }
-
-    public class LeaderElectionWithAccrualFailureDetectorMultiJvmNode3 : LeaderElectionSpec
-    {
-        public LeaderElectionWithAccrualFailureDetectorMultiJvmNode3()
-            : base(false)
-        {
-        }
-    }
-
-    public class LeaderElectionWithAccrualFailureDetectorMultiJvmNode4 : LeaderElectionSpec
-    {
-        public LeaderElectionWithAccrualFailureDetectorMultiJvmNode4()
-            : base(false)
-        {
-        }
-    }
-
-    public class LeaderElectionWithAccrualFailureDetectorMultiJvmNode5 : LeaderElectionSpec
-    {
-        public LeaderElectionWithAccrualFailureDetectorMultiJvmNode5()
+        public LeaderElectionWithAccrualFailureDetectorMultiJvmNode()
             : base(false)
         {
         }

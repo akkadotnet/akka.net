@@ -57,23 +57,11 @@ namespace Akka.Cluster.Tests.MultiNode
             TestTransport = true;
         }
         
-        public class InitialHeartbeatMultiNode1 : InitialHeartbeatSpec
-        {
-        }
-
-        public class InitialHeartbeatMultiNode2 : InitialHeartbeatSpec
-        {
-        }
-
-        public class InitialHeartbeatMultiNode3 : InitialHeartbeatSpec
-        {
-        }
-        
-        public abstract class InitialHeartbeatSpec : MultiNodeClusterSpec
+        public class InitialHeartbeatSpec : MultiNodeClusterSpec
         {
             private readonly InitialHeartbeatMultiNodeConfig _config;
 
-            protected InitialHeartbeatSpec() : this(new InitialHeartbeatMultiNodeConfig())
+            public InitialHeartbeatSpec() : this(new InitialHeartbeatMultiNodeConfig())
             {
             }
 

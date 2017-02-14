@@ -44,11 +44,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         }
     }
 
-    public class DistributedPubSubMediatorNode1 : DistributedPubSubMediatorSpec { }
-    public class DistributedPubSubMediatorNode2 : DistributedPubSubMediatorSpec { }
-    public class DistributedPubSubMediatorNode3 : DistributedPubSubMediatorSpec { }
-
-    public abstract class DistributedPubSubMediatorSpec : MultiNodeClusterSpec
+    public class DistributedPubSubMediatorSpec : MultiNodeClusterSpec
     {
         #region setup 
 
@@ -240,7 +236,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new ConcurrentDictionary<string, IActorRef>();
 
-        protected DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
+        public DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
         {
         }
 

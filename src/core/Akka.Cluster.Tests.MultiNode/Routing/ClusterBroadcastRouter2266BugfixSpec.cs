@@ -84,18 +84,15 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
     }
 
-    public class ClusterBroadcastMultiNode1 : ClusterBroadcastGroupSpec { }
-    public class ClusterBroadcastMultiNode2 : ClusterBroadcastGroupSpec { }
-
     /// <summary>
     /// Used to verify that https://github.com/akkadotnet/akka.net/issues/2266 is reproducible and can be fixed
     /// </summary>
-    public abstract class ClusterBroadcastGroupSpec : MultiNodeClusterSpec
+    public class ClusterBroadcastGroupSpec : MultiNodeClusterSpec
     {
         private readonly ClusterBroadcastGroupSpecConfig _config;
         private readonly Lazy<IActorRef> _router;
 
-        protected ClusterBroadcastGroupSpec() : this(new ClusterBroadcastGroupSpecConfig())
+        public ClusterBroadcastGroupSpec() : this(new ClusterBroadcastGroupSpecConfig())
         {
         }
 

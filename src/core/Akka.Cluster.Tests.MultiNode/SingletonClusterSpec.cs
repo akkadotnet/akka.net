@@ -34,30 +34,16 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class SingletonClusterWithFailureDetectorPuppetMultiNode1 : SingletonClusterSpec
+    public class SingletonClusterWithFailureDetectorPuppetMultiNode : SingletonClusterSpec
     {
-        public SingletonClusterWithFailureDetectorPuppetMultiNode1() : base(true)
+        public SingletonClusterWithFailureDetectorPuppetMultiNode() : base(true)
         {
         }
     }
 
-    public class SingletonClusterWithFailureDetectorPuppetMultiNode2 : SingletonClusterSpec
+    public class SingletonClusterWithAccrualFailureDetectorMultiNode : SingletonClusterSpec
     {
-        public SingletonClusterWithFailureDetectorPuppetMultiNode2() : base(true)
-        {
-        }
-    }
-
-    public class SingletonClusterWithAccrualFailureDetectorMultiNode1 : SingletonClusterSpec
-    {
-        public SingletonClusterWithAccrualFailureDetectorMultiNode1() : base(false)
-        {
-        }
-    }
-
-    public class SingletonClusterWithAccrualFailureDetectorMultiNode2 : SingletonClusterSpec
-    {
-        public SingletonClusterWithAccrualFailureDetectorMultiNode2() : base(false)
+        public SingletonClusterWithAccrualFailureDetectorMultiNode() : base(false)
         {
         }
     }

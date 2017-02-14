@@ -41,18 +41,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class LeaderDowningAllOtherNodesSpecNode1 : LeaderDowningAllOtherNodesSpec { }
-    public class LeaderDowningAllOtherNodesSpecNode2 : LeaderDowningAllOtherNodesSpec { }
-    public class LeaderDowningAllOtherNodesSpecNode3 : LeaderDowningAllOtherNodesSpec { }
-    public class LeaderDowningAllOtherNodesSpecNode4 : LeaderDowningAllOtherNodesSpec { }
-    public class LeaderDowningAllOtherNodesSpecNode5 : LeaderDowningAllOtherNodesSpec { }
-    public class LeaderDowningAllOtherNodesSpecNode6 : LeaderDowningAllOtherNodesSpec { }
-
-    public abstract class LeaderDowningAllOtherNodesSpec : MultiNodeClusterSpec
+    public class LeaderDowningAllOtherNodesSpec : MultiNodeClusterSpec
     {
         private readonly LeaderDowningAllOtherNodesConfig _config;
 
-        protected LeaderDowningAllOtherNodesSpec() : this(new LeaderDowningAllOtherNodesConfig())
+        public LeaderDowningAllOtherNodesSpec() : this(new LeaderDowningAllOtherNodesConfig())
         {
         }
 

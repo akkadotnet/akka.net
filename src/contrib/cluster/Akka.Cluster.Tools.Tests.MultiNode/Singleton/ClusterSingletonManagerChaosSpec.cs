@@ -49,15 +49,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         }
     }
 
-    public class ClusterSingletonManagerChaosNode1 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode2 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode3 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode4 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode5 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode6 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode7 : ClusterSingletonManagerChaosSpec { }
-
-    public abstract class ClusterSingletonManagerChaosSpec : MultiNodeClusterSpec
+    public class ClusterSingletonManagerChaosSpec : MultiNodeClusterSpec
     {
         private class EchoStarted
         {
@@ -77,7 +69,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         private readonly ClusterSingletonManagerChaosConfig _config;
 
-        protected ClusterSingletonManagerChaosSpec() : this(new ClusterSingletonManagerChaosConfig())
+        public ClusterSingletonManagerChaosSpec() : this(new ClusterSingletonManagerChaosConfig())
         {
         }
 

@@ -32,10 +32,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class NodeUpMultiNode1 : NodeUpSpec { }
-    public class NodeUpMultiNode2 : NodeUpSpec { }
-
-    public abstract class NodeUpSpec : MultiNodeClusterSpec
+    public class NodeUpSpec : MultiNodeClusterSpec
     {
         private class Listener : UntypedActor
         {
@@ -62,7 +59,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private readonly NodeUpConfig _config;
 
-        protected NodeUpSpec() : this(new NodeUpConfig())
+        public NodeUpSpec() : this(new NodeUpConfig())
         {
         }
 
