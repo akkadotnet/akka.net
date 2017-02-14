@@ -67,15 +67,11 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
     }
 
-    public class ClusterConsistentHashingGroupMultiNode1 : ClusterConsistentHashingGroupSpec { }
-    public class ClusterConsistentHashingGroupMultiNode2 : ClusterConsistentHashingGroupSpec { }
-    public class ClusterConsistentHashingGroupMultiNode3 : ClusterConsistentHashingGroupSpec { }
-
-    public abstract class ClusterConsistentHashingGroupSpec : MultiNodeClusterSpec
+    public class ClusterConsistentHashingGroupSpec : MultiNodeClusterSpec
     {
         private readonly ClusterConsistentHashingGroupSpecConfig _config;
 
-        protected ClusterConsistentHashingGroupSpec()
+        public ClusterConsistentHashingGroupSpec()
             : this(new ClusterConsistentHashingGroupSpecConfig())
         {
 

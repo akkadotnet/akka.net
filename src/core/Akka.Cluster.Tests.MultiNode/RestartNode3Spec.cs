@@ -38,11 +38,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class RestartNode3SpecMultiNode1 : RestartNode3Spec { }
-    public class RestartNode3SpecMultiNode2 : RestartNode3Spec { }
-    public class RestartNode3SpecMultiNode3 : RestartNode3Spec { }
-
-    public abstract class RestartNode3Spec : MultiNodeClusterSpec
+    public class RestartNode3Spec : MultiNodeClusterSpec
     {
         private class Watcher : ReceiveActor
         {
@@ -61,8 +57,8 @@ namespace Akka.Cluster.Tests.MultiNode
         private Lazy<ActorSystem> secondSystem;
         private Lazy<ActorSystem> restartedSecondSystem;
         private static UniqueAddress secondUniqueAddress = null;
-        
-        protected RestartNode3Spec() : this(new RestartNode3SpecConfig())
+
+        public RestartNode3Spec() : this(new RestartNode3SpecConfig())
         {
         }
 

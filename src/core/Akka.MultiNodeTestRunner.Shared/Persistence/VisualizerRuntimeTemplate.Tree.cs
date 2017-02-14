@@ -62,7 +62,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
             var groups = spec.NodeFacts
                 .Select(
                     nf =>
-                        string.Format("{{ id:{0}, content:'Node {0}' }}", nf.Value.NodeIndex))
+                        string.Format("{{ id:{0}, content:'Node {0}:{1}' }}", nf.Value.NodeIndex, nf.Value.NodeRole))
                 .Concat(@"{ id:-1, content:'Misc' }");
 
             return string.Join(",\r\n", groups);

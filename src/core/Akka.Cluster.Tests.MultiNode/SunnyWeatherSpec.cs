@@ -47,13 +47,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class SunnyWeatherNode1 : SunnyWeatherSpec { }
-    public class SunnyWeatherNode2 : SunnyWeatherSpec { }
-    public class SunnyWeatherNode3 : SunnyWeatherSpec { }
-    public class SunnyWeatherNode4 : SunnyWeatherSpec { }
-    public class SunnyWeatherNode5 : SunnyWeatherSpec { }
-
-    public abstract class SunnyWeatherSpec : MultiNodeClusterSpec
+    public class SunnyWeatherSpec : MultiNodeClusterSpec
     {
         private class Listener : UntypedActor
         {
@@ -80,7 +74,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private readonly SunnyWeatherNodeConfig _config;
 
-        protected SunnyWeatherSpec() : this(new SunnyWeatherNodeConfig())
+        public SunnyWeatherSpec() : this(new SunnyWeatherNodeConfig())
         {
         }
 

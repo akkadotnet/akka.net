@@ -14,15 +14,15 @@ namespace Akka.Remote.Tests.MultiNode
 {
     public class LookupRemoteActorMultiNetSpec : MultiNodeConfig
     {
-        public RoleName Master { get; private set; }
-        public RoleName Slave { get; private set; }
+        public RoleName Master { get; }
+        public RoleName Slave { get; }
 
         public LookupRemoteActorMultiNetSpec()
         {
-            CommonConfig = DebugConfig(false);
-
             Master = Role("master");
             Slave = Role("slave");
+
+            CommonConfig = DebugConfig(false);
         }
 
         public class SomeActor : UntypedActor
@@ -37,13 +37,6 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class LookupRemoteActorMultiNetNode1 : LookupRemoteActorSpec
-    {
-    }
-    public class LookupRemoteActorMultiNetNode2 : LookupRemoteActorSpec
-    {
-    }
-
     public class LookupRemoteActorSpec : MultiNodeSpec
     {
         private LookupRemoteActorMultiNetSpec _config;
@@ -53,7 +46,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
 
         }
-        public LookupRemoteActorSpec(LookupRemoteActorMultiNetSpec config)
+        protected LookupRemoteActorSpec(LookupRemoteActorMultiNetSpec config)
             : base(config)
         {
             _config = config;

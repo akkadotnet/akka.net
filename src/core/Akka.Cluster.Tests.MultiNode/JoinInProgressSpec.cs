@@ -41,19 +41,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class JoinInProgressMultiNode1 : JoinInProgressSpec
-    {
-    }
-
-    public class JoinInProgressMultiNode2 : JoinInProgressSpec
-    {
-    }
-
-    public abstract class JoinInProgressSpec : MultiNodeClusterSpec
+    public class JoinInProgressSpec : MultiNodeClusterSpec
     {
         readonly JoinInProgressMultiNodeConfig _config;
 
-        protected JoinInProgressSpec() : this(new JoinInProgressMultiNodeConfig())
+        public JoinInProgressSpec() : this(new JoinInProgressMultiNodeConfig())
         {
         }
 

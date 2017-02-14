@@ -116,11 +116,25 @@ namespace Akka.Remote.TestKit
 
         protected MultiNodeConfig()
         {
-            _myself = new Lazy<RoleName>(() =>
+            var roleName = CommandLine.GetPropertyOrDefault("multinode.role", null);
+
+            if (String.IsNullOrEmpty(roleName))
             {
-                if (MultiNodeSpec.SelfIndex > _roles.Count) throw new ArgumentException("not enough roles declared for this test");
-                return _roles[MultiNodeSpec.SelfIndex];
-            });
+                _myself = new Lazy<RoleName>(() =>
+                {
+                    if (MultiNodeSpec.SelfIndex > _roles.Count) throw new ArgumentException("not enough roles declared for this test");
+                    return _roles[MultiNodeSpec.SelfIndex];
+                });
+            }
+            else
+            {
+                _myself = new Lazy<RoleName>(() =>
+                {
+                    var myself = _roles.FirstOrDefault(r => r.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase));
+                    if (myself == default(RoleName)) throw new ArgumentException($"cannot find {roleName} among configured roles");
+                    return myself;
+                });
+            }
         }
 
         public RoleName Myself

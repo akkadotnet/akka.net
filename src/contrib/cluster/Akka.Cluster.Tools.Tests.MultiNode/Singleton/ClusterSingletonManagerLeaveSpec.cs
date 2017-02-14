@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerLeaveSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -69,11 +69,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         }
     }
 
-    public class ClusterSingletonManagerLeaveNode1 : ClusterSingletonManagerLeaveSpec { }
-    public class ClusterSingletonManagerLeaveNode2 : ClusterSingletonManagerLeaveSpec { }
-    public class ClusterSingletonManagerLeaveNode3 : ClusterSingletonManagerLeaveSpec { }
-
-    public abstract class ClusterSingletonManagerLeaveSpec : MultiNodeClusterSpec
+    public class ClusterSingletonManagerLeaveSpec : MultiNodeClusterSpec
     {
         private readonly ClusterSingletonManagerLeaveSpecConfig _config;
 
@@ -81,7 +77,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
-        protected ClusterSingletonManagerLeaveSpec() : this(new ClusterSingletonManagerLeaveSpecConfig())
+        public ClusterSingletonManagerLeaveSpec() : this(new ClusterSingletonManagerLeaveSpecConfig())
         {
         }
 

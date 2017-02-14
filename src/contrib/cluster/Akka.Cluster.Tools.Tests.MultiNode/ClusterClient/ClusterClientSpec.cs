@@ -219,17 +219,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         #endregion
     }
 
-    public class ClusterClientMultiNode1 : ClusterClientSpec { }
-    public class ClusterClientMultiNode2 : ClusterClientSpec { }
-    public class ClusterClientMultiNode3 : ClusterClientSpec { }
-    public class ClusterClientMultiNode4 : ClusterClientSpec { }
-    public class ClusterClientMultiNode5 : ClusterClientSpec { }
-
-    public abstract class ClusterClientSpec : MultiNodeClusterSpec
+    public class ClusterClientSpec : MultiNodeClusterSpec
     {
         private readonly ClusterClientSpecConfig _config;
 
-        protected ClusterClientSpec() : this(new ClusterClientSpecConfig())
+        public ClusterClientSpec() : this(new ClusterClientSpecConfig())
         {
         }
 

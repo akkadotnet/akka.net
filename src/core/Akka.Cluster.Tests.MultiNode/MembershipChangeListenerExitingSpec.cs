@@ -30,11 +30,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class MembershipChangeListenerExitingMultiNode1 : MembershipChangeListenerExitingSpec { }
-    public class MembershipChangeListenerExitingMultiNode2 : MembershipChangeListenerExitingSpec { }
-    public class MembershipChangeListenerExitingMultiNode3 : MembershipChangeListenerExitingSpec { }
-
-    public abstract class MembershipChangeListenerExitingSpec : MultiNodeClusterSpec
+    public class MembershipChangeListenerExitingSpec : MultiNodeClusterSpec
     {
         private class Watcher : ReceiveActor
         {
@@ -72,7 +68,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private readonly MembershipChangeListenerExitingConfig _config;
 
-        protected MembershipChangeListenerExitingSpec() : this(new MembershipChangeListenerExitingConfig())
+        public MembershipChangeListenerExitingSpec() : this(new MembershipChangeListenerExitingConfig())
         {
         }
 
