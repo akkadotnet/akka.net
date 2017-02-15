@@ -49,20 +49,12 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class RemoteNodeShutdownAndComesBackMultiNetSpecNode1 : RemoteNodeShutdownAndComesBackSpec
-    {
-    }
-
-    public class RemoteNodeShutdownAndComesBackMultiNetSpecNode2 : RemoteNodeShutdownAndComesBackSpec
-    {
-    }
-
     public class RemoteNodeShutdownAndComesBackSpec : MultiNodeSpec
     {
         private readonly RemoteNodeShutdownAndComesBackMultiNetSpec _config;
         private readonly Func<RoleName, string, IActorRef> _identify;
 
-        protected RemoteNodeShutdownAndComesBackSpec() : this(new RemoteNodeShutdownAndComesBackMultiNetSpec())
+        public RemoteNodeShutdownAndComesBackSpec() : this(new RemoteNodeShutdownAndComesBackMultiNetSpec())
         {
         }
 

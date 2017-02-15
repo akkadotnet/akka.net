@@ -47,31 +47,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class ClusterDeathWatchMultiNode1 : ClusterDeathWatchSpec
-    {
-    }
-
-    public class ClusterDeathWatchMultiNode2 : ClusterDeathWatchSpec
-    {
-    }
-
-    public class ClusterDeathWatchMultiNode3 : ClusterDeathWatchSpec
-    {
-    }
-
-    public class ClusterDeathWatchMultiNode4 : ClusterDeathWatchSpec
-    {
-    }
-
-    public class ClusterDeathWatchMultiNode5 : ClusterDeathWatchSpec
-    {
-    }
-
-    public abstract class ClusterDeathWatchSpec : MultiNodeClusterSpec
+    public class ClusterDeathWatchSpec : MultiNodeClusterSpec
     {
         readonly ClusterDeathWatchSpecConfig _config;
 
-        protected ClusterDeathWatchSpec()
+        public ClusterDeathWatchSpec()
             : this(new ClusterDeathWatchSpecConfig())
         {
         }

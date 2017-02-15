@@ -31,15 +31,12 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class JoinWithOfflineSeedNodeSpecNode1 : JoinWithOfflineSeedNodeSpec { }
-    public class JoinWithOfflineSeedNodeSpecNode2 : JoinWithOfflineSeedNodeSpec { }
-
     /// <summary>
     /// Tests to ensure that if we have 2 seed nodes defined and 1 is offline during a <see cref="Cluster.JoinSeedNodes"/>
     /// command, the joining node will still be marked as <see cref="MemberStatus.Up"/> as long as there are no unreachable nodes
     /// within the cluster.
     /// </summary>
-    public abstract class JoinWithOfflineSeedNodeSpec : MultiNodeClusterSpec
+    public class JoinWithOfflineSeedNodeSpec : MultiNodeClusterSpec
     {
         private readonly JoinWithOfflineSeedNodeConfig _config;
 
@@ -53,7 +50,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private Address _verifiedLeader;
 
-        protected JoinWithOfflineSeedNodeSpec() : this(new JoinWithOfflineSeedNodeConfig()) { }
+        public JoinWithOfflineSeedNodeSpec() : this(new JoinWithOfflineSeedNodeConfig()) { }
 
         protected JoinWithOfflineSeedNodeSpec(JoinWithOfflineSeedNodeConfig config) : base(config)
         {

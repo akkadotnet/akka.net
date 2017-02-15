@@ -18,18 +18,21 @@ using Google.ProtocolBuffers;
 namespace Akka.Remote.Transport
 {
     /// <summary>
-    /// Pairs an <see cref="AkkaProtocolTransport"/> with its <see cref="Address"/> binding.
-    /// 
+    /// <para>
+    /// This class represents a pairing of an <see cref="AkkaProtocolTransport"/> with its <see cref="Address"/> binding.
+    /// </para>
+    /// <para>
     /// This is the information that's used to allow external <see cref="ActorSystem"/> messages to address
     /// this system over the network.
+    /// </para>
     /// </summary>
     internal class ProtocolTransportAddressPair
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ProtocolTransportAddressPair"/> class.
         /// </summary>
-        /// <param name="protocolTransport">TBD</param>
-        /// <param name="address">TBD</param>
+        /// <param name="protocolTransport">The protocol transport to pair with the specified <paramref name="address"/>.</param>
+        /// <param name="address">The address to pair with the specified <paramref name="protocolTransport"/>.</param>
         public ProtocolTransportAddressPair(AkkaProtocolTransport protocolTransport, Address address)
         {
             ProtocolTransport = protocolTransport;
@@ -37,12 +40,12 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// The protocol transport part of the pairing.
         /// </summary>
         public AkkaProtocolTransport ProtocolTransport { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The address part of the pairing.
         /// </summary>
         public Address Address { get; private set; }
     }
@@ -340,10 +343,10 @@ namespace Akka.Remote.Transport
         public int Uid { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -357,9 +360,9 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
             unchecked

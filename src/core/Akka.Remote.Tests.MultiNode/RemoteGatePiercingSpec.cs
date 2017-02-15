@@ -26,9 +26,12 @@ namespace Akka.Remote.Tests.MultiNode
       akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 5 
             "));
 
-            NodeConfig(new[] {First, Second}, new[]
+            NodeConfig(new[] { First }, new[]
             {
-                ConfigurationFactory.ParseString("akka.remote.retry-gate-closed-for  = 1 d # Keep it long"),
+                ConfigurationFactory.ParseString("akka.remote.retry-gate-closed-for  = 1 d # Keep it long")
+            });
+            NodeConfig(new[] { Second }, new[]
+            {
                 ConfigurationFactory.ParseString("akka.remote.retry-gate-closed-for  = 1 s # Keep it short")
             });
 
@@ -47,20 +50,12 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class RemoteGatePiercingMultiNetNode1 : RemoteGatePiercingSpec
-    {
-    }
-
-    public class RemoteGatePiercingMultiNetNode2 : RemoteGatePiercingSpec
-    {
-    }
-
     public class RemoteGatePiercingSpec : MultiNodeSpec
     {
         private readonly RemoteGatePiercingMultiNetSpec _config;
         private readonly Func<RoleName, string, IActorRef> _identify;
 
-        protected RemoteGatePiercingSpec() : this(new RemoteGatePiercingMultiNetSpec())
+        public RemoteGatePiercingSpec() : this(new RemoteGatePiercingMultiNetSpec())
         {
         }
 

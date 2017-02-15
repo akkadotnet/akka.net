@@ -22,7 +22,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
             protected override void OnReceive(object message)
             {
-                if(message.Equals("identify"))
+                if (message.Equals("identify"))
                     Sender.Tell(Self);
             }
         }
@@ -46,15 +46,13 @@ namespace Akka.Remote.Tests.MultiNode
 
         #endregion
 
-        readonly RoleName _master;
-        public RoleName Master { get { return _master; } }
-        readonly RoleName _slave;
-        public RoleName Slave { get { return _slave; } }
+        public RoleName Master { get; }
+        public RoleName Slave { get; }
 
         public NewRemoteActorMultiNodeSpecConfig()
         {
-            _master = Role("master");
-            _slave = Role("slave");
+            Master = Role("master");
+            Slave = Role("slave");
 
             CommonConfig =
                 DebugConfig(false)
@@ -70,9 +68,6 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class NewRemoteActorSpecNode1 : NewRemoteActorSpec { }
-    public class NewRemoteActorSpecNode2 : NewRemoteActorSpec { }
-
     public class NewRemoteActorSpec : MultiNodeSpec
     {
         private NewRemoteActorMultiNodeSpecConfig _config;
@@ -82,7 +77,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        public NewRemoteActorSpec(NewRemoteActorMultiNodeSpecConfig config) : base(config)
+        protected NewRemoteActorSpec(NewRemoteActorMultiNodeSpecConfig config) : base(config)
         {
             _config = config;
         }

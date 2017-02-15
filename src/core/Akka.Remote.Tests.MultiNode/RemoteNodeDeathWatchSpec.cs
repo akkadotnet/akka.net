@@ -63,7 +63,9 @@ namespace Akka.Remote.Tests.MultiNode
         {
             public static Ack Instance { get; } = new Ack();
 
-            private Ack() { }
+            private Ack()
+            {
+            }
         }
 
         /// <summary>
@@ -534,38 +536,14 @@ namespace Akka.Remote.Tests.MultiNode
 
     #region Several different variations of the test
 
-    public class RemoteNodeDeathWatchFastMultiNetNode1 : RemoteNodeDeathWatchFastSpec
-    {
-    }
-
-    public class RemoteNodeDeathWatchFastMultiNetNode2 : RemoteNodeDeathWatchFastSpec
-    {
-    }
-
-    public class RemoteNodeDeathWatchFastMultiNetNode3 : RemoteNodeDeathWatchFastSpec
-    {
-    }
-
-    public abstract class RemoteNodeDeathWatchFastSpec : RemoteNodeDeathWatchSpec
+    public class RemoteNodeDeathWatchFastSpec : RemoteNodeDeathWatchSpec
     {
         protected override string Scenario { get; } = "fast";
 
         protected override Action Sleep { get; } = () => Thread.Sleep(100);
     }
 
-    public class RemoteNodeDeathWatchSlowMultiNetNode1 : RemoteNodeDeathWatchSlowSpec
-    {
-    }
-
-    public class RemoteNodeDeathWatchSlowMultiNetNode2 : RemoteNodeDeathWatchSlowSpec
-    {
-    }
-
-    public class RemoteNodeDeathWatchSlowMultiNetNode3 : RemoteNodeDeathWatchSlowSpec
-    {
-    }
-
-    public abstract class RemoteNodeDeathWatchSlowSpec : RemoteNodeDeathWatchSpec
+    public class RemoteNodeDeathWatchSlowSpec : RemoteNodeDeathWatchSpec
     {
         protected override string Scenario { get; } = "slow";
 

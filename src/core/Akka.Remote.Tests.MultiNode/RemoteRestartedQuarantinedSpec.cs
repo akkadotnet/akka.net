@@ -54,16 +54,12 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class RemoteRestartedQuarantinedMultiNode1 : RemoteRestartedQuarantinedSpec { }
-
-    public class RemoteRestartedQuarantinedMultiNode2 : RemoteRestartedQuarantinedSpec { }
-
-    public abstract class RemoteRestartedQuarantinedSpec : MultiNodeSpec
+    public class RemoteRestartedQuarantinedSpec : MultiNodeSpec
     {
         private readonly RemoteRestartedQuarantinedMultiNetSpec _config;
         private readonly Func<RoleName, string, Tuple<int, IActorRef>> _identifyWithUid;
 
-        protected RemoteRestartedQuarantinedSpec()
+        public RemoteRestartedQuarantinedSpec()
             : this(new RemoteRestartedQuarantinedMultiNetSpec())
         {
         }

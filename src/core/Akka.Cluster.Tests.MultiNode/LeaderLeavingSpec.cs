@@ -50,23 +50,11 @@ akka.cluster.publish-stats-interval = 25 s")
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
         }
 
-        public class ALeaderLeavingMultiNode1 : LeaderLeavingSpec
-        {
-        }
-
-        public class ALeaderLeavingMultiNode2 : LeaderLeavingSpec
-        {
-        }
-
-        public class ALeaderLeavingMultiNode3 : LeaderLeavingSpec
-        {
-        }
-
-        public abstract class LeaderLeavingSpec : MultiNodeClusterSpec
+        public class LeaderLeavingSpec : MultiNodeClusterSpec
         {
             private readonly LeaderLeavingSpecConfig _config;
 
-            protected LeaderLeavingSpec()
+            public LeaderLeavingSpec()
                 : this(new LeaderLeavingSpecConfig())
             {
             }

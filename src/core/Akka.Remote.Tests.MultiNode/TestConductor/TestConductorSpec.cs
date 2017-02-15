@@ -35,10 +35,7 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
         }
     }
 
-    public class TestConductorSpecNode1 : TestConductorSpec { }
-    public class TestConductorSpecNode2 : TestConductorSpec { }
-
-    public abstract class TestConductorSpec : MultiNodeSpec
+    public class TestConductorSpec : MultiNodeSpec
     {
         private TestConductorSpecConfig _config;
 

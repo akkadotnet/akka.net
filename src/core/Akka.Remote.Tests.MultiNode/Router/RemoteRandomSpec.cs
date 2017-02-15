@@ -42,16 +42,11 @@ namespace Akka.Remote.Tests.MultiNode.Router
         }
     }
 
-    public class RemoteRandomMultiNode1 : RemoteRandomSpec { }
-    public class RemoteRandomMultiNode2 : RemoteRandomSpec { }
-    public class RemoteRandomMultiNode3 : RemoteRandomSpec { }
-    public class RemoteRandomMultiNode4 : RemoteRandomSpec { }
-
-    public abstract class RemoteRandomSpec : MultiNodeSpec
+    public class RemoteRandomSpec : MultiNodeSpec
     {
         private readonly RemoteRandomMultiNodeConfig _config;
 
-        protected RemoteRandomSpec() : this(new RemoteRandomMultiNodeConfig())
+        public RemoteRandomSpec() : this(new RemoteRandomMultiNodeConfig())
         {
         }
 

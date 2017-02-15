@@ -26,10 +26,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// </summary>
         protected readonly int NodeIndex;
 
-        public NodeDataActor(int nodeIndex)
+        /// <summary>
+        /// The Role of this node.
+        /// </summary>
+        protected readonly string NodeRole;
+
+        public NodeDataActor(int nodeIndex, string nodeRole)
         {
             NodeIndex = nodeIndex;
-            NodeData = new NodeData(nodeIndex);
+            NodeRole = nodeRole;
+            NodeData = new NodeData(nodeIndex, nodeRole);
             SetReceive();
         }
 
