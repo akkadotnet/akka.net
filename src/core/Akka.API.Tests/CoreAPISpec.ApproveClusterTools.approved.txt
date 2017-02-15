@@ -667,6 +667,22 @@ namespace Akka.Cluster.Tools.Client
             public object Message { get; }
             public string Path { get; }
         }
+        public sealed class SetUnhandledMessagesMediator
+        {
+            public SetUnhandledMessagesMediator(Akka.Actor.IActorRef actorRef) { }
+            public Akka.Actor.IActorRef ActorRef { get; }
+        }
+        public sealed class Subscribe
+        {
+            public Subscribe(string topic, string group = null) { }
+            public string Group { get; }
+            public string Topic { get; }
+        }
+        public sealed class Unsubscribe
+        {
+            public Unsubscribe(Akka.Cluster.Tools.Client.ClusterClient.Subscribe subscribe) { }
+            public Akka.Cluster.Tools.Client.ClusterClient.Subscribe Subscribe { get; }
+        }
     }
     public sealed class ClusterClientReceptionist : Akka.Actor.IExtension
     {
