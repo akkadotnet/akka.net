@@ -26,9 +26,12 @@ namespace Akka.Remote.Tests.MultiNode
       akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 5 
             "));
 
-            NodeConfig(new[] {First, Second}, new[]
+            NodeConfig(new[] { First }, new[]
             {
-                ConfigurationFactory.ParseString("akka.remote.retry-gate-closed-for  = 1 d # Keep it long"),
+                ConfigurationFactory.ParseString("akka.remote.retry-gate-closed-for  = 1 d # Keep it long")
+            });
+            NodeConfig(new[] { Second }, new[]
+            {
                 ConfigurationFactory.ParseString("akka.remote.retry-gate-closed-for  = 1 s # Keep it short")
             });
 
