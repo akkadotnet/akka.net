@@ -4427,6 +4427,7 @@ namespace Akka.Serialization
     {
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.NewtonSoftJsonSerializerSettings settings) { }
         public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public object Serializer { get; }
@@ -4445,6 +4446,15 @@ namespace Akka.Serialization
             public override object ReadJson(Newtonsoft.Json.JsonReader reader, System.Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer) { }
             public override void WriteJson(Newtonsoft.Json.JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer) { }
         }
+    }
+    public sealed class NewtonSoftJsonSerializerSettings
+    {
+        public static readonly Akka.Serialization.NewtonSoftJsonSerializerSettings Default;
+        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preverveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters) { }
+        public System.Collections.Generic.IEnumerable<System.Type> Converters { get; }
+        public bool EncodeTypeNames { get; }
+        public bool PreserveObjectReferences { get; }
+        public static Akka.Serialization.NewtonSoftJsonSerializerSettings Create(Akka.Configuration.Config config) { }
     }
     public class NullSerializer : Akka.Serialization.Serializer
     {

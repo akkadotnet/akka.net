@@ -21,6 +21,11 @@ namespace Akka.Serialization
     /// </summary>
     public class HyperionSerializer : Serializer
     {
+        /// <summary>
+        /// Settings used for an underlying Hyperion serializer implementation.
+        /// </summary>
+        public readonly HyperionSerializerSettings Settings;
+
         private readonly Hyperion.Serializer _serializer;
 
         /// <summary>
@@ -50,6 +55,7 @@ namespace Akka.Serialization
         public HyperionSerializer(ExtendedActorSystem system, HyperionSerializerSettings settings)
             : base(system)
         {
+            this.Settings = settings;
             var akkaSurrogate =
                 Surrogate
                 .Create<ISurrogated, ISurrogate>(
@@ -69,18 +75,12 @@ namespace Akka.Serialization
         /// <summary>
         /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
         /// </summary>
-        public override int Identifier
-        {
-            get { return -5; }
-        }
+        public override int Identifier => -5;
 
         /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
         /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return false; }
-        }
+        public override bool IncludeManifest => false;
 
         /// <summary>
         /// Serializes the given object into a byte array
@@ -127,20 +127,36 @@ namespace Akka.Serialization
         }
     }
 
+    /// <summary>
+    /// A typed settings class for a <see cref="HyperionSerializer"/>.
+    /// </summary>
     public sealed class HyperionSerializerSettings
     {
+        /// <summary>
+        /// Default settings used by <see cref="HyperionSerializer"/> when no config has been specified.
+        /// </summary>
         public static readonly HyperionSerializerSettings Default = new HyperionSerializerSettings(
             preserveObjectReferences: true,
             versionTolerance: true,
             knownTypesProvider: typeof(NoKnownTypes));
 
+        /// <summary>
+        /// Creates a new instance of <see cref="HyperionSerializerSettings"/> using provided HOCON config.
+        /// Config can contain several key-values, that are mapped to a class fields:
+        /// 1. `preserve-object-references` (boolean) mapped to <see cref="PreserveObjectReferences"/>
+        /// 2. `version-tolerance` (boolean) mapped to <see cref="VersionTolerance"/>
+        /// 3. `known-types-provider` (fully qualified type name) mapped to <see cref="KnownTypesProvider"/>
+        /// </summary>
+        /// <exception cref="ArgumentNullException">Raised when <paramref name="config"/> was not provided.</exception>
+        /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
+        /// <param name="config"></param>
+        /// <returns></returns>
         public static HyperionSerializerSettings Create(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "HyperionSerializerSettings require a config, default path: `akka.serializers.hyperion`");
 
-            var type = Type.GetType(config.GetString("known-types-provider"), true);
-            if (!typeof(IKnownTypesProvider).IsAssignableFrom(type)) 
-                throw new ArgumentException($"Known types provider must implement an interface {typeof(IKnownTypesProvider).FullName}", nameof(config));
+            var typeName = config.GetString("known-types-provider");
+            var type = !string.IsNullOrEmpty(typeName) ? Type.GetType(typeName, true) : null;
 
             return new HyperionSerializerSettings(
                 preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
@@ -148,12 +164,41 @@ namespace Akka.Serialization
                 knownTypesProvider: type);
         }
 
+        /// <summary>
+        /// When true, it tells <see cref="HyperionSerializer"/> to keep 
+        /// track of references in serialized/deserialized object graph.
+        /// </summary>
         public readonly bool PreserveObjectReferences;
+
+        /// <summary>
+        /// When true, it tells <see cref="HyperionSerializer"/> to encode 
+        /// a list of currently serialized fields into type manifest.
+        /// </summary>
         public readonly bool VersionTolerance;
+
+        /// <summary>
+        /// A type implementing <see cref="IKnownTypesProvider"/>, that will 
+        /// be used when <see cref="HyperionSerializer"/> is being constructed 
+        /// to provide a list of message types that are supposed to be known 
+        /// implicitly by all communicating parties. Implementing class must 
+        /// provide either a default constructor or a constructor taking 
+        /// <see cref="ExtendedActorSystem"/> as its only parameter.
+        /// </summary>
         public readonly Type KnownTypesProvider;
 
+        /// <summary>
+        /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
+        /// </summary>
+        /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
+        /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
+        /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
+        /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
         public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider)
         {
+            knownTypesProvider = knownTypesProvider ?? typeof(NoKnownTypes);
+            if (!typeof(IKnownTypesProvider).IsAssignableFrom(knownTypesProvider))
+                throw new ArgumentException($"Known types provider must implement an interface {typeof(IKnownTypesProvider).FullName}");
+
             PreserveObjectReferences = preserveObjectReferences;
             VersionTolerance = versionTolerance;
             KnownTypesProvider = knownTypesProvider;
