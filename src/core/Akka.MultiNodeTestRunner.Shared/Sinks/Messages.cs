@@ -104,40 +104,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// <summary>
     /// Message for an individual node participating in a spec
     /// </summary>
-    public class LogMessageForNode
-    {
-        public LogMessageForNode(int nodeIndex, string nodeRole, string message, LogLevel level, DateTime when, string logSource)
-        {
-            LogSource = logSource;
-            When = when;
-            Level = level;
-            Message = message;
-            NodeIndex = nodeIndex;
-            NodeRole = nodeRole;
-        }
-
-        public int NodeIndex { get; private set; }
-        public string NodeRole { get; private set; }
-
-        public DateTime When { get; private set; }
-
-        public string Message { get; private set; }
-
-        public string LogSource { get; private set; }
-
-        public LogLevel Level { get; private set; }
-
-        public override string ToString()
-        {
-            return string.Format("[NODE{1}:{2}][{0}][{3}][{4}]: {5}", When, NodeIndex, NodeRole,
-                Level.ToString().Replace("Level", "").ToUpperInvariant(), LogSource,
-                Message);
-        }
-    }
-
-    /// <summary>
-    /// Message for an individual node participating in a spec
-    /// </summary>
     public class LogMessageForTestRunner
     {
         public LogMessageForTestRunner(string message, LogLevel level, DateTime when, string logSource)
