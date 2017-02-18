@@ -109,13 +109,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             base.HandleEndSpec(endSpec);
         }
 
-        protected override void HandleNodeMessage(LogMessageForNode logMessage)
-        {
-            WriteNodeMessage(logMessage);
-
-            base.HandleNodeMessage(logMessage);
-        }
-
         protected override void HandleNodeMessageFragment(LogMessageFragmentForNode logMessage)
         {
             WriteNodeMessage(logMessage);
@@ -166,13 +159,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
 
         private void WriteRunnerMessage(LogMessageForTestRunner nodeMessage)
-        {
-            Console.ForegroundColor = ColorForLogLevel(nodeMessage.Level);
-            Console.WriteLine(nodeMessage.ToString());
-            Console.ResetColor();
-        }
-
-        private void WriteNodeMessage(LogMessageForNode nodeMessage)
         {
             Console.ForegroundColor = ColorForLogLevel(nodeMessage.Level);
             Console.WriteLine(nodeMessage.ToString());
