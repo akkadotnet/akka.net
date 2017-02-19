@@ -62,6 +62,9 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         public readonly int LeastShardAllocationMaxSimultaneousRebalance;
+        public readonly string EntityRecoveryStrategy;
+        public readonly TimeSpan EntityRecoveryConstantRateStrategyFrequency;
+        public readonly int EntityRecoveryConstantRateStrategyNumberOfEntities;
 
         /// <summary>
         /// TBD
@@ -88,8 +91,14 @@ namespace Akka.Cluster.Sharding
             TimeSpan rebalanceInterval,
             int snapshotAfter,
             int leastShardAllocationRebalanceThreshold,
-            int leastShardAllocationMaxSimultaneousRebalance)
+            int leastShardAllocationMaxSimultaneousRebalance,
+            string entityRecoveryStrategy,
+            TimeSpan entityRecoveryConstantRateStrategyFrequency,
+            int entityRecoveryConstantRateStrategyNumberOfEntities)
         {
+            if (entityRecoveryStrategy != "all" && entityRecoveryStrategy != "constant")
+                throw new ArgumentException($"Unknown 'entity-recovery-strategy' [{entityRecoveryStrategy}], valid values are 'all' or 'constant'");
+
             CoordinatorFailureBackoff = coordinatorFailureBackoff;
             RetryInterval = retryInterval;
             BufferSize = bufferSize;
@@ -101,6 +110,9 @@ namespace Akka.Cluster.Sharding
             SnapshotAfter = snapshotAfter;
             LeastShardAllocationRebalanceThreshold = leastShardAllocationRebalanceThreshold;
             LeastShardAllocationMaxSimultaneousRebalance = leastShardAllocationMaxSimultaneousRebalance;
+            EntityRecoveryStrategy = entityRecoveryStrategy;
+            EntityRecoveryConstantRateStrategyFrequency = entityRecoveryConstantRateStrategyFrequency;
+            EntityRecoveryConstantRateStrategyNumberOfEntities = entityRecoveryConstantRateStrategyNumberOfEntities;
         }
     }
 
@@ -178,7 +190,10 @@ namespace Akka.Cluster.Sharding
                 rebalanceInterval: config.GetTimeSpan("rebalance-interval"),
                 snapshotAfter: config.GetInt("snapshot-after"),
                 leastShardAllocationRebalanceThreshold: config.GetInt("least-shard-allocation-strategy.rebalance-threshold"),
-                leastShardAllocationMaxSimultaneousRebalance: config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance"));
+                leastShardAllocationMaxSimultaneousRebalance: config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance"),
+                entityRecoveryStrategy: config.GetString("entity-recovery-strategy"),
+                entityRecoveryConstantRateStrategyFrequency: config.GetTimeSpan("entity-recovery-constant-rate-strategy.frequency"),
+                entityRecoveryConstantRateStrategyNumberOfEntities: config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities"));
 
             var coordinatorSingletonSettings = ClusterSingletonManagerSettings.Create(singletonConfig);
             var role = config.GetString("role");

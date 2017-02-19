@@ -255,6 +255,7 @@
     <Compile Include="Pattern\BackoffSupervisorBase.cs" />
     <Compile Include="Pattern\CircuitBreaker.cs" />
     <Compile Include="Pattern\CircuitBreakerState.cs" />
+    <Compile Include="Pattern\FutureTimeoutSupport.cs" />
     <Compile Include="Pattern\OpenCircuitException.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
