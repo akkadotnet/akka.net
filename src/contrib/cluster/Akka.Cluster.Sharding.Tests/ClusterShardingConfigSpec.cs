@@ -50,6 +50,10 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal(10, config.GetInt("least-shard-allocation-strategy.rebalance-threshold"));
             Assert.Equal(3, config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance"));
 
+            Assert.Equal("all", config.GetString("entity-recovery-strategy"));
+            Assert.Equal(TimeSpan.FromMilliseconds(100), config.GetTimeSpan("entity-recovery-constant-rate-strategy.frequency"));
+            Assert.Equal(5, config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities"));
+
             var singletonConfig = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
 
             Assert.NotNull(singletonConfig);

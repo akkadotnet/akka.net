@@ -56,6 +56,11 @@ namespace Akka.Cluster.Sharding.Tests
                   shard-start-timeout = 5s
                   entity-restart-backoff = 1s
                   rebalance-interval = 2 s
+                  entity-recovery-strategy = ""all""
+                  entity-recovery-constant-rate-strategy {{
+                    frequency = 1 ms
+                    number-of-entities = 1
+                  }}
                   least-shard-allocation-strategy {
                     rebalance-threshold = 2
                     max-simultaneous-rebalance = 1
