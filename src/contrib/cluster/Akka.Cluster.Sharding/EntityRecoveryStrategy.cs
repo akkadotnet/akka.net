@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Pattern;
 
 namespace Akka.Cluster.Sharding
 {
@@ -52,10 +51,15 @@ namespace Akka.Cluster.Sharding
 
         public override IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities)
         {
-            return entities.Grouped(numberOfEntities).Aggregate(
-                Tuple.Create(frequency, ImmutableHashSet<Task<IImmutableSet<EntityId>>>.Empty),
-                (accumulated, next) => Tuple.Create(accumulated.Item1 + frequency, accumulated.Item2.Add(ScheduleEntities(accumulated.Item1, next.ToImmutableHashSet())))
-            ).Item2;
+            var stamp = frequency;
+            var builder = ImmutableHashSet<Task<IImmutableSet<EntityId>>>.Empty.ToBuilder();
+            foreach (var bucket in entities.Grouped(numberOfEntities))
+            {
+                var scheduled = ScheduleEntities(stamp, bucket.ToImmutableHashSet());
+                builder.Add(scheduled);
+                stamp += frequency;
+            }
+            return builder.ToImmutable();
         }
 
         private Task<IImmutableSet<EntityId>> ScheduleEntities(TimeSpan interval, IImmutableSet<EntityId> entityIds)
