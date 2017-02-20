@@ -60,7 +60,32 @@ namespace Akka.Cluster.Sharding
 
         private Task<IImmutableSet<EntityId>> ScheduleEntities(TimeSpan interval, IImmutableSet<EntityId> entityIds)
         {
-            return FutureTimeoutSupport.After(interval, actorSystem.Scheduler, () => Task.FromResult(entityIds));
+            return After(interval, actorSystem.Scheduler, () => Task.FromResult(entityIds));
+        }
+
+        /// <summary>
+        /// Returns a Task that will be completed with the success or failure of the provided value after the specified duration.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="value">TBD</param>
+        /// <param name="timeout">TBD</param>
+        /// <param name="scheduler">TBD</param>
+        private static Task<T> After<T>(TimeSpan timeout, IScheduler scheduler, Func<Task<T>> value)
+        {
+            var promise = new TaskCompletionSource<T>();
+
+            scheduler.Advanced.ScheduleOnce(timeout, () =>
+            {
+                value().ContinueWith(t =>
+                {
+                    if (t.IsFaulted || t.IsCanceled)
+                        promise.SetCanceled();
+                    else
+                        promise.SetResult(t.Result);
+                });
+            });
+
+            return promise.Task;
         }
     }
 
