@@ -73,7 +73,6 @@
     <Compile Include="AllAtOnceEntityRecoveryStrategySpec.cs" />
     <Compile Include="ClusterShardingConfigSpec.cs" />
     <Compile Include="ClusterShardingMessageSerializerSpec.cs" />
-    <Compile Include="ClusterShardingSpec.cs" />
     <Compile Include="ConstantRateEntityRecoveryStrategySpec.cs" />
     <Compile Include="LeastShardAllocationStrategySpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
