@@ -56,7 +56,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         {
             Receive<BeginNewSpec>(spec => HandleNewSpec(spec));
             Receive<EndSpec>(endspec => HandleEndSpec(endspec));
-            Receive<LogMessageForNode>(node => HandleNodeMessage(node));
             Receive<LogMessageFragmentForNode>(node => HandleNodeMessageFragment(node));
             Receive<LogMessageForTestRunner>(node => HandleRunnerMessage(node));
             Receive<NodeCompletedSpecWithSuccess>(success => HandleNodeSpecPass(success));
@@ -77,8 +76,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected abstract void HandleNewSpec(BeginNewSpec newSpec);
 
         protected abstract void HandleEndSpec(EndSpec endSpec);
-
-        protected abstract void HandleNodeMessage(LogMessageForNode logMessage);
 
         /// <summary>
         /// Used for truncated messages (happens when there's a line break during standard I/O redirection from child nodes)
