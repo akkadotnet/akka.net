@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
 
 namespace Akka.Serialization
@@ -75,6 +76,7 @@ namespace Akka.Serialization
 
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
+            var serializerSettingsConfig = system.Settings.Config.GetConfig("akka.actor.serialization-settings");
             var namedSerializers = new Dictionary<string, Serializer>();
             foreach (var kvp in serializersConfig)
             {
@@ -86,7 +88,11 @@ namespace Akka.Serialization
                     continue;
                 }
 
-                var serializer = (Serializer)Activator.CreateInstance(serializerType, system);
+                var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
+
+                var serializer = serializerConfig != null
+                    ? (Serializer)Activator.CreateInstance(serializerType, system, serializerConfig)
+                    : (Serializer)Activator.CreateInstance(serializerType, system);
                 _serializers.Add(serializer.Identifier, serializer);
                 namedSerializers.Add(kvp.Key, serializer);
             }

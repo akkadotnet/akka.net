@@ -8,9 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -19,6 +21,90 @@ using Newtonsoft.Json.Serialization;
 
 namespace Akka.Serialization
 {
+    /// <summary>
+    /// A typed settings for a <see cref="NewtonSoftJsonSerializer"/> class.
+    /// </summary>
+    public sealed class NewtonSoftJsonSerializerSettings
+    {
+        /// <summary>
+        /// A default instance of <see cref="NewtonSoftJsonSerializerSettings"/> used when no custom configuration has been provided.
+        /// </summary>
+        public static readonly NewtonSoftJsonSerializerSettings Default = new NewtonSoftJsonSerializerSettings(
+            encodeTypeNames: true,
+            preverveObjectReferences: true,
+            converters: Enumerable.Empty<Type>());
+        
+        /// <summary>
+        /// Creates a new instance of the <see cref="NewtonSoftJsonSerializerSettings"/> based on a provided <paramref name="config"/>.
+        /// Config may define several key-values:
+        /// 1. `encode-type-names` (boolean) mapped to <see cref="EncodeTypeNames"/>
+        /// 2. `preserve-object-references` (boolean) mapped to <see cref="PreserveObjectReferences"/>
+        /// 3. `converters` (type list) mapped to <see cref="Converters"/>. They must implement <see cref="JsonConverter"/> and define either default constructor or constructor taking <see cref="ExtendedActorSystem"/> as its only parameter.
+        /// </summary>
+        /// <exception cref="ArgumentNullException">Raised when no <paramref name="config"/> was provided.</exception>
+        /// <exception cref="ArgumentException">Raised when types defined in `converters` list didn't inherit <see cref="JsonConverter"/>.</exception>
+        public static NewtonSoftJsonSerializerSettings Create(Config config)
+        {
+            if (config == null)
+                throw new ArgumentNullException(nameof(config), $"{nameof(NewtonSoftJsonSerializerSettings)} config was not provided");
+
+            return new NewtonSoftJsonSerializerSettings(
+                encodeTypeNames: config.GetBoolean("encode-type-names", true),
+                preverveObjectReferences: config.GetBoolean("preserve-object-references", true),
+                converters: GetConverterTypes(config));
+        }
+
+        private static IEnumerable<Type> GetConverterTypes(Config config)
+        {
+            var converterNames = config.GetStringList("converters");
+
+            if (converterNames != null)
+                foreach (var converterName in converterNames)
+                {
+                    var type = Type.GetType(converterName, true);
+                    if (!typeof(JsonConverter).IsAssignableFrom(type))
+                        throw new ArgumentException($"Type {type} doesn't inherit from a {typeof(JsonConverter)}.");
+
+                    yield return type;
+                }
+        }
+
+        /// <summary>
+        /// When true, serializer will encode a type names into serialized json $type field. This must be true 
+        /// if <see cref="NewtonSoftJsonSerializer"/> is a default serializer in order to support polymorphic 
+        /// deserialization.
+        /// </summary>
+        public bool EncodeTypeNames { get; }
+
+        /// <summary>
+        /// When true, serializer will track a reference dependencies in serialized object graph. This must be 
+        /// true if <see cref="NewtonSoftJsonSerializer"/>.
+        /// </summary>
+        public bool PreserveObjectReferences { get; }
+
+        /// <summary>
+        /// A collection of an aditional converter types to be applied to a <see cref="NewtonSoftJsonSerializer"/>.
+        /// Converters must inherit from <see cref="JsonConverter"/> class and implement a default constructor.
+        /// </summary>
+        public IEnumerable<Type> Converters { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="NewtonSoftJsonSerializerSettings"/>.
+        /// </summary>
+        /// <param name="encodeTypeNames">Determines if a special `$type` field should be emitted into serialized JSON. Must be true if corresponding serializer is used as default.</param>
+        /// <param name="preverveObjectReferences">Determines if object references should be tracked within serialized object graph. Must be true if corresponding serialize is used as default.</param>
+        /// <param name="converters">A list of types implementing a <see cref="JsonConverter"/> to support custom types serialization.</param>
+        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preverveObjectReferences, IEnumerable<Type> converters)
+        {
+            if (converters == null)
+                throw new ArgumentNullException(nameof(converters), $"{nameof(NewtonSoftJsonSerializerSettings)} requires a sequence of converters.");
+
+            EncodeTypeNames = encodeTypeNames;
+            PreserveObjectReferences = preverveObjectReferences;
+            Converters = converters;
+        }
+    }
+
     /// <summary>
     /// This is a special <see cref="Serializer"/> that serializes and deserializes javascript objects only.
     /// These objects need to be in the JavaScript Object Notation (JSON) format.
@@ -32,6 +118,7 @@ namespace Akka.Serialization
         /// TBD
         /// </summary>
         public JsonSerializerSettings Settings { get { return _settings; } }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -42,22 +129,58 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer. </param>
         public NewtonSoftJsonSerializer(ExtendedActorSystem system)
+            : this(system, NewtonSoftJsonSerializerSettings.Default)
+        {
+        }
+
+        public NewtonSoftJsonSerializer(ExtendedActorSystem system, Config config)
+            : this(system, NewtonSoftJsonSerializerSettings.Create(config))
+        {
+        }
+
+
+        public NewtonSoftJsonSerializer(ExtendedActorSystem system, NewtonSoftJsonSerializerSettings settings)
             : base(system)
         {
+            var converters = settings.Converters
+                .Select(type => CreateConverter(type, system))
+                .ToList();
+
+            converters.Add(new SurrogateConverter(this));
+            converters.Add(new DiscriminatedUnionConverter());
+
             _settings = new JsonSerializerSettings
             {
-                PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-                Converters = new List<JsonConverter> { new SurrogateConverter(this), new DiscriminatedUnionConverter() },
+                PreserveReferencesHandling = settings.PreserveObjectReferences 
+                    ? PreserveReferencesHandling.Objects 
+                    : PreserveReferencesHandling.None,
+                Converters = converters,
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
                 MissingMemberHandling = MissingMemberHandling.Ignore,
                 ObjectCreationHandling = ObjectCreationHandling.Replace, //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                TypeNameHandling = TypeNameHandling.All,
-                ContractResolver = new AkkaContractResolver(),
+                TypeNameHandling = settings.EncodeTypeNames
+                    ? TypeNameHandling.All 
+                    : TypeNameHandling.None,
+                ContractResolver = new AkkaContractResolver()
             };
 
             _serializer = JsonSerializer.Create(_settings);
+        }
+
+        private static JsonConverter CreateConverter(Type converterType, ExtendedActorSystem actorSystem)
+        {
+            var ctor = converterType.GetConstructors()
+                .FirstOrDefault(c =>
+                {
+                    var parameters = c.GetParameters();
+                    return parameters.Length == 1 && parameters[0].ParameterType == typeof(ExtendedActorSystem);
+                });
+
+            return ctor == null 
+                ? (JsonConverter)Activator.CreateInstance(converterType)
+                : (JsonConverter)Activator.CreateInstance(converterType, actorSystem);
         }
 
         /// <summary>
