@@ -113,6 +113,15 @@ namespace Akka.Pattern
             string childName,
             TimeSpan minBackoff,
             TimeSpan maxBackoff,
+            double randomFactor) : this(childProps, childName, minBackoff, maxBackoff, new AutoReset(minBackoff), randomFactor, Actor.SupervisorStrategy.DefaultStrategy)
+        {
+        }
+
+        public BackoffSupervisor(
+            Props childProps,
+            string childName,
+            TimeSpan minBackoff,
+            TimeSpan maxBackoff,
             IBackoffReset reset,
             double randomFactor,
             SupervisorStrategy strategy) : base(childProps, childName, reset)
@@ -125,25 +134,7 @@ namespace Akka.Pattern
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
-            var oneForOne = _strategy as OneForOneStrategy;
-            if (oneForOne != null)
-            {
-                return new OneForOneStrategy(
-                    oneForOne.MaxNumberOfRetries,
-                    oneForOne.WithinTimeRangeMilliseconds,
-                    ex =>
-                    {
-                        // TODO: StackOverflowException here
-                        // var defaultDirective = base.SupervisorStrategyInternal.Decider?.Decide(ex) ?? Directive.Escalate;
-                        var defaultDirective = Directive.Escalate;
-
-                        return _strategy.Decider?.Decide(ex) ?? defaultDirective;
-                    });
-            }
-            else
-            {
-                return _strategy;
-            }
+            return _strategy;
         }
 
         protected override bool Receive(object message)

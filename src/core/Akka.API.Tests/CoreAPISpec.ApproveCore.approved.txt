@@ -3736,6 +3736,7 @@ namespace Akka.Pattern
     }
     public sealed class BackoffSupervisor : Akka.Pattern.BackoffSupervisorBase
     {
+        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
         public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
         public static Akka.Actor.Props Props(Akka.Pattern.BackoffOptions options) { }
