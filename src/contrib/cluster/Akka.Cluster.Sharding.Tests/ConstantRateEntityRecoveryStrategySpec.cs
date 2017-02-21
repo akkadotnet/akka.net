@@ -6,7 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -28,8 +31,26 @@ namespace Akka.Cluster.Sharding.Tests
         public void ConstantRateEntityRecoveryStrategySpec_must_recover_entities()
         {
             var entities = ImmutableHashSet.Create<EntityId>("1", "2", "3", "4", "5");
+            var startTime = DateTime.UtcNow;
+            var resultWithTimes = strategy.RecoverEntities(entities)
+                .Select(async bucketTask => new KeyValuePair<IImmutableSet<string>, TimeSpan>(await bucketTask, DateTime.UtcNow - startTime))
+                .ToArray();
 
-            // TODO: https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/test/scala/akka/cluster/sharding/ConstantRateEntityRecoveryStrategySpec.scala
+            var result = Task.WhenAll(resultWithTimes).Result.OrderBy(pair => pair.Value).ToArray();
+            result.Length.Should().Be(3);
+
+            var scheduledEntities = result.Select(pair => pair.Key).ToArray();
+            scheduledEntities[0].Count.Should().Be(2);
+            scheduledEntities[1].Count.Should().Be(2);
+            scheduledEntities[2].Count.Should().Be(1);
+            scheduledEntities.SelectMany(s => s).Should().Equal(entities);
+
+            var timesMillis = result.Select(pair => pair.Value.TotalMilliseconds).ToArray();
+
+            // scheduling will not happen too early
+            timesMillis[0].Should().BeApproximately(1400, 500);
+            timesMillis[1].Should().BeApproximately(2400, 500);
+            timesMillis[2].Should().BeApproximately(3400, 500);
         }
 
         [Fact]
