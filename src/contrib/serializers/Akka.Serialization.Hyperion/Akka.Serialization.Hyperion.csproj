@@ -41,11 +41,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HyperionSerializer.cs" />
+    <Compile Include="IKnownTypesProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Serialization.Hyperion.nuspec" />
     <None Include="packages.config" />
+    <None Include="reference.conf" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">

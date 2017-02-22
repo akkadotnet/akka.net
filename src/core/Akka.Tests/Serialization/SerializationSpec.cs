@@ -541,37 +541,87 @@ namespace Akka.Tests.Serialization
             Sys.Serialization.FindSerializerFor(123).GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
         }
 
+        [Fact]
+        public void Can_apply_a_config_based_serializer_by_the_binding()
+        {
+            var dummy = (DummySerializer)Sys.Serialization.FindSerializerFor("dummy");
+            dummy.Config.ShouldBe(null);
+
+            var dummy2 = (DummyConfigurableSerializer) Sys.Serialization.GetSerializerById(-7);
+            dummy2.Config.ShouldNotBe(null);
+            dummy2.Config.GetString("test-key").ShouldBe("test value");
+        }
 
         public SerializationSpec():base(GetConfig())
         {
         }
 
-        private static string GetConfig()
-        {
-            return @"
+        private static string GetConfig() => @"
+            akka.actor {
+                serializers {
+                    dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
+                    dummy2 = """ + typeof(DummyConfigurableSerializer).AssemblyQualifiedName + @"""
+                }
 
-akka.actor {
-    serializers {
-        dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
-    }
-
-    serialization-bindings {
-      ""System.String"" = dummy
-    }
-}
-";
-        }
+                serialization-bindings {
+                  ""System.String"" = dummy
+                }
+                serialization-settings {
+                    dummy2 {
+                        test-key = ""test value""
+                    }
+                }
+            }";
 
         public class DummySerializer : Serializer
         {
-            public DummySerializer(ExtendedActorSystem system) : base(system)
+            public readonly Config Config;
+
+            public DummySerializer(ExtendedActorSystem system) 
+                : base(system)
             {
             }
 
-            public override int Identifier
+            public DummySerializer(ExtendedActorSystem system, Config config) 
+                : base(system)
             {
-                get { return -5; }
+                Config = config;
             }
+
+            public override int Identifier => -6;
+
+            public override bool IncludeManifest
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+            public override byte[] ToBinary(object obj)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override object FromBinary(byte[] bytes, Type type)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public class DummyConfigurableSerializer : Serializer
+        {
+            public readonly Config Config;
+
+            public DummyConfigurableSerializer(ExtendedActorSystem system)
+                : base(system)
+            {
+            }
+
+            public DummyConfigurableSerializer(ExtendedActorSystem system, Config config)
+                : base(system)
+            {
+                Config = config;
+            }
+
+            public override int Identifier => -7;
 
             public override bool IncludeManifest
             {
