@@ -79,6 +79,7 @@
     <Otherwise />
   </Choose>
   <ItemGroup>
+    <Compile Include="ActorRefProvidersConfigSpec.cs" />
     <Compile Include="AutoDownSpec.cs" />
     <Compile Include="ClusterConfigSpec.cs" />
     <Compile Include="ClusterDeployerSpec.cs" />

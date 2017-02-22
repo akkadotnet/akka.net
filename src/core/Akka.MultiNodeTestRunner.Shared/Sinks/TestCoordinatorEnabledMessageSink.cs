@@ -80,17 +80,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             }
         }
 
-        protected override void HandleNodeMessage(LogMessageForNode logMessage)
-        {
-            if (UseTestCoordinator)
-            {
-                var nodeMessage = new MultiNodeLogMessage(logMessage.When.Ticks, logMessage.Message,
-                logMessage.NodeIndex, logMessage.NodeRole, logMessage.LogSource, logMessage.Level);
-
-                TestCoordinatorActorRef.Tell(nodeMessage);
-            }
-        }
-
         protected override void HandleRunnerMessage(LogMessageForTestRunner node)
         {
             if (UseTestCoordinator)

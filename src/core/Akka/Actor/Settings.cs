@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -62,7 +63,7 @@ namespace Akka.Actor
             System = system;
             
             ConfigVersion = Config.GetString("akka.version");
-            ProviderClass = Config.GetString("akka.actor.provider");
+            ProviderClass = GetProviderClass(Config.GetString("akka.actor.provider"));
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
@@ -120,6 +121,17 @@ namespace Akka.Actor
                 final val Daemonicity: Boolean = getBoolean("akka.daemonic")                
                 final val DefaultVirtualNodesFactor: Int = getInt("akka.actor.deployment.default.virtual-nodes-factor")
              */
+        }
+
+        private static string GetProviderClass(string provider)
+        {
+            switch (provider)
+            {
+                case "local": return typeof(LocalActorRefProvider).FullName;
+                case "remote": return "Akka.Remote.RemoteActorRefProvider, Akka.Remote";
+                case "cluster": return "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster";
+                default: return provider;
+            }
         }
 
         /// <summary>
