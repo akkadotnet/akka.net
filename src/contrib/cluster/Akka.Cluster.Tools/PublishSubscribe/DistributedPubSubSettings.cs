@@ -71,28 +71,28 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// The mediator starts on members tagged with this role. Uses all if undefined.
         /// </summary>
-        public readonly string Role;
+        public string Role { get; }
 
         /// <summary>
         /// The routing logic to use for <see cref="DistributedPubSubMediator.Send"/>.
         /// </summary>
-        public readonly RoutingLogic RoutingLogic;
+        public RoutingLogic RoutingLogic { get; }
 
         /// <summary>
         /// How often the <see cref="DistributedPubSubMediator"/> should send out gossip information
         /// </summary>
-        public readonly TimeSpan GossipInterval;
+        public TimeSpan GossipInterval { get; }
 
         /// <summary>
         /// Removed entries are pruned after this duration.
         /// </summary>
-        public readonly TimeSpan RemovedTimeToLive;
+        public TimeSpan RemovedTimeToLive { get; }
 
         /// <summary>
         /// Maximum number of elements to transfer in one message when synchronizing the registries. 
         /// Next chunk will be transferred in next round of gossip.
         /// </summary>
-        public readonly int MaxDeltaElements;
+        public int MaxDeltaElements { get; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="DistributedPubSubSettings" />.

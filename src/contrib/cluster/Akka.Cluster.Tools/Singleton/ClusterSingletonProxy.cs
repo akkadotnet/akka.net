@@ -147,7 +147,7 @@ namespace Akka.Cluster.Tools.Singleton
                 });
         }
 
-        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
         /// <summary>
         /// TBD
@@ -155,7 +155,7 @@ namespace Akka.Cluster.Tools.Singleton
         protected override void PreStart()
         {
             CancelTimer();
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
         /// <summary>

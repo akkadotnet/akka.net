@@ -189,7 +189,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ImmutableList<string> ContactPoints;
+            public ImmutableList<string> ContactPoints { get; }
 
             /// <summary>
             /// TBD

@@ -110,7 +110,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly int Count;
+        public int Count { get; }
 
         /// <summary>
         /// TBD
@@ -131,7 +131,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly int Count;
+        public int Count { get; }
 
         /// <summary>
         /// TBD
@@ -212,12 +212,12 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Singleton;
+        public IActorRef Singleton { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly bool SingletonTerminated;
-
+        public bool SingletonTerminated { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -239,11 +239,13 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Singleton;
+        public IActorRef Singleton { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly bool SingletonTerminated;
+        public bool SingletonTerminated { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -269,14 +271,16 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class HandingOverData : IClusterSingletonData
     {
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Singleton;
+        public IActorRef Singleton { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef HandOverTo;
+        public IActorRef HandOverTo { get; }
 
         /// <summary>
         /// TBD
@@ -299,7 +303,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Singleton;
+        public IActorRef Singleton { get; }
 
         /// <summary>
         /// TBD
@@ -321,13 +325,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// TBD
         /// </summary>
         public static readonly EndData Instance = new EndData();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public EndData()
-        {
-        }
+        private EndData() { }
     }
 
     /// <summary>
@@ -339,7 +337,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Member Member;
+        public Member Member { get; }
 
         /// <summary>
         /// TBD
@@ -415,20 +413,20 @@ namespace Akka.Cluster.Tools.Singleton
     /// Eventually it will reach a stable state and can continue, and that is simplified 
     /// by starting over with a clean state. Parent supervisor should typically restart the actor, i.e. default decision.
     /// </summary>
-    public sealed class ClusterSingletonManagerIsStuck : AkkaException
+    public sealed class ClusterSingletonManagerIsStuckException : AkkaException
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ClusterSingletonManagerIsStuck"/> class.
+        /// Initializes a new instance of the <see cref="ClusterSingletonManagerIsStuckException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ClusterSingletonManagerIsStuck(string message) : base(message) { }
+        public ClusterSingletonManagerIsStuckException(string message) : base(message) { }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ClusterSingletonManagerIsStuck"/> class.
+        /// Initializes a new instance of the <see cref="ClusterSingletonManagerIsStuckException"/> class.
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        public ClusterSingletonManagerIsStuck(SerializationInfo info, StreamingContext context) : base(info, context)
+        public ClusterSingletonManagerIsStuckException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }
@@ -543,7 +541,7 @@ namespace Akka.Cluster.Tools.Singleton
         {
             var role = settings.Role;
             if (!string.IsNullOrEmpty(role) && !_cluster.SelfRoles.Contains(role))
-                throw new ArgumentException(string.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
+                throw new ArgumentException($"This cluster member [{_cluster.SelfAddress}] doesn't have the role [{role}]");
 
             _singletonProps = singletonProps;
             _terminationMessage = terminationMessage;
@@ -583,7 +581,7 @@ namespace Akka.Cluster.Tools.Singleton
         protected override void PreStart()
         {
             // subscribe to cluster changes, re-subscribe when restart
-            _cluster.Subscribe(Self, typeof(ClusterEvent.MemberRemoved));
+            _cluster.Subscribe(Self, typeof(ClusterEvent.MemberExited), typeof(ClusterEvent.MemberRemoved));
 
             SetTimer(CleanupTimer, Cleanup.Instance, TimeSpan.FromMinutes(1.0), repeat: true);
 
@@ -868,7 +866,7 @@ namespace Akka.Cluster.Tools.Singleton
                     }
                     else
                     {
-                        throw new ClusterSingletonManagerIsStuck(string.Format("Becoming singleton oldest was stuck because previous oldest [{0}] is unresponsive", becomingOldest.PreviousOldest));
+                        throw new ClusterSingletonManagerIsStuckException($"Becoming singleton oldest was stuck because previous oldest [{becomingOldest.PreviousOldest}] is unresponsive");
                     }
                 }
                 else return null;
@@ -967,7 +965,7 @@ namespace Akka.Cluster.Tools.Singleton
                     }
                     else
                     {
-                        throw new ClusterSingletonManagerIsStuck(string.Format("Expected hand-over to [{0}] never occured", wasOldestData.NewOldest));
+                        throw new ClusterSingletonManagerIsStuckException($"Expected hand-over to [{wasOldestData.NewOldest}] never occured");
                     }
                 }
                 else if (e.FsmEvent is HandOverToMe && wasOldestData != null)

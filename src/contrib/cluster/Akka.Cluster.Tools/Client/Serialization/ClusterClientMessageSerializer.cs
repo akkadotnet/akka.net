@@ -26,7 +26,7 @@ namespace Akka.Cluster.Tools.Client.Serialization
         /// <summary>
         /// TBD
         /// </summary>
-        public const int BufferSize = 1024 * 4;
+        private const int BufferSize = 1024 * 4;
 
         private const string ContactsManifest = "A";
         private const string GetContactsManifest = "B";
@@ -66,9 +66,9 @@ namespace Akka.Cluster.Tools.Client.Serialization
         public override byte[] ToBinary(object obj)
         {
             if (obj is ClusterReceptionist.Contacts) return Compress(ContactsToProto(obj as ClusterReceptionist.Contacts));
-            if(obj is ClusterReceptionist.GetContacts) return EmptyBytes;
-            if(obj is ClusterReceptionist.Heartbeat) return EmptyBytes;
-            if(obj is ClusterReceptionist.HeartbeatRsp) return EmptyBytes;
+            if (obj is ClusterReceptionist.GetContacts) return EmptyBytes;
+            if (obj is ClusterReceptionist.Heartbeat) return EmptyBytes;
+            if (obj is ClusterReceptionist.HeartbeatRsp) return EmptyBytes;
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
