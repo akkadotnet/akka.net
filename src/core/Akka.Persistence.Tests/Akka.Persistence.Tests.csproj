@@ -118,6 +118,7 @@
     <Compile Include="SnapshotSpec.cs" />
   </ItemGroup>
  
+
   <ItemGroup>
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />

@@ -120,6 +120,7 @@
     <Compile Include="VectorClockSpec.cs" />
   </ItemGroup>
  
+
   <ItemGroup>
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />

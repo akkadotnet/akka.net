@@ -22,3 +22,4 @@ using System.Runtime.InteropServices;
 [assembly: Guid("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
 
 [assembly: InternalsVisibleTo("Akka.Persistence.Tests")]
+[assembly: InternalsVisibleTo("Akka.Persistence.TestKit")]
