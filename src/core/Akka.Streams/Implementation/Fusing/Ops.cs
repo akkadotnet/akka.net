@@ -2719,7 +2719,7 @@ namespace Akka.Streams.Implementation.Fusing
             //       AND
             // - timer fired OR group is full
             private bool _groupClosed;
-            private bool _groupEmitted;
+            private bool _groupEmitted = true;
             private bool _finished;
             private int _elements;
 
