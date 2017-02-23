@@ -19,7 +19,6 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
         public SqliteJournalSerializationSpec(ITestOutputHelper output)
             : base(CreateSpecConfig("Filename=file:serialization-journal-" + Counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteJournalSerializationSpec", output)
         {
-            SqlitePersistence.Get(Sys);
         }
 
         private static Config CreateSpecConfig(string connectionString)

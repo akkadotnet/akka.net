@@ -19,7 +19,6 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
         public SqliteSnapshotStoreSerializationSpec(ITestOutputHelper output)
             : base(CreateSpecConfig("Filename=file:serialization-snapshot-" + Counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteSnapshotStoreSerializationSpec", output)
         {
-            SqlitePersistence.Get(Sys);
         }
 
         private static Config CreateSpecConfig(string connectionString)

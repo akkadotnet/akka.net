@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Fsm;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,19 +42,19 @@ namespace Akka.Persistence.TCK.Serialization
             probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(atLeastOnceDeliverySnapshot));
         }
 
-        [Fact(Skip = "Not implemented yet")]
+        [Fact]
         public virtual void SnapshotStore_should_serialize_PersistentFSMSnapshot()
         {
-            //var probe = CreateTestProbe();
+            var probe = CreateTestProbe();
 
-            //var persistentFSMSnapshot = new PersistentFSMSnapshot<string>("mystate", "mydata", TimeSpan.FromDays(4));
+            var persistentFSMSnapshot = new PersistentFSM.PersistentFSMSnapshot<string>("mystate", "mydata", TimeSpan.FromDays(4));
 
-            //var metadata = new SnapshotMetadata(Pid, 2);
-            //SnapshotStore.Tell(new SaveSnapshot(metadata, persistentFSMSnapshot), probe.Ref);
-            //probe.ExpectMsg<SaveSnapshotSuccess>();
+            var metadata = new SnapshotMetadata(Pid, 2);
+            SnapshotStore.Tell(new SaveSnapshot(metadata, persistentFSMSnapshot), probe.Ref);
+            probe.ExpectMsg<SaveSnapshotSuccess>();
 
-            //SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
-            //probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(persistentFSMSnapshot));
+            SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
+            probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(persistentFSMSnapshot));
         }
     }
 }

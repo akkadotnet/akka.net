@@ -5,9 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Fsm;
 using Akka.Util;
 using Xunit;
 using Xunit.Abstractions;
@@ -45,24 +47,24 @@ namespace Akka.Persistence.TCK.Serialization
             probe.ExpectMsg<RecoverySuccess>();
         }
 
-        [Fact(Skip = "Not implemented yet")]
+        [Fact]
         public virtual void Journal_should_serialize_StateChangeEvent()
         {
-            //var probe = CreateTestProbe();
-            //var stateChangeEvent = new StateChangeEvent("init", TimeSpan.FromSeconds(342));
+            var probe = CreateTestProbe();
+            var stateChangeEvent = new PersistentFSM.StateChangeEvent("init", TimeSpan.FromSeconds(342));
 
-            //var messages = new List<AtomicWrite>
-            //{
-            //    new AtomicWrite(new Persistent(stateChangeEvent, 1, Pid))
-            //};
+            var messages = new List<AtomicWrite>
+            {
+                new AtomicWrite(new Persistent(stateChangeEvent, 1, Pid))
+            };
 
-            //Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
-            //probe.ExpectMsg<WriteMessagesSuccessful>();
-            //probe.ExpectMsg<WriteMessageSuccess>(m => m.ActorInstanceId == ActorInstanceId && m.Persistent.PersistenceId == Pid);
+            Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
+            probe.ExpectMsg<WriteMessagesSuccessful>();
+            probe.ExpectMsg<WriteMessageSuccess>(m => m.ActorInstanceId == ActorInstanceId && m.Persistent.PersistenceId == Pid);
 
-            //Journal.Tell(new ReplayMessages(0, 1, long.MaxValue, Pid, probe.Ref));
-            //probe.ExpectMsg<ReplayedMessage>();
-            //probe.ExpectMsg<RecoverySuccess>();
+            Journal.Tell(new ReplayMessages(0, 1, long.MaxValue, Pid, probe.Ref));
+            probe.ExpectMsg<ReplayedMessage>();
+            probe.ExpectMsg<RecoverySuccess>();
         }
     }
 }
