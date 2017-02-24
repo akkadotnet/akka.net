@@ -37,6 +37,7 @@ namespace Akka.Actor
             var phases = CoordinatedShutdown.PhasesFromConfig(conf);
             var coord = new CoordinatedShutdown(system, phases);
             CoordinatedShutdown.InitPhaseActorSystemTerminate(system, conf, coord);
+            CoordinatedShutdown.InitClrHook(system, conf, coord);
             return coord;
         }
     }
@@ -175,17 +176,22 @@ namespace Akka.Actor
         /// ITNERNAL API
         /// </summary>
         internal readonly List<string> OrderedPhases;
+
+        private readonly ConcurrentBag<Func<Task<bool>>> _clrShutdownTasks = new ConcurrentBag<Func<Task<bool>>>();
         private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<bool>>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<bool>>>>>();
         private readonly AtomicBoolean _runStarted = new AtomicBoolean(false);
+        private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
         private readonly TaskCompletionSource<bool> _runPromise = new TaskCompletionSource<bool>();
+        private readonly TaskCompletionSource<bool> _hooksRunPromise = new TaskCompletionSource<bool>();
 
         private volatile bool _runningClrHook = false;
-        private readonly AtomicReference<CountdownEvent> _clrHooksLatch = new AtomicReference<CountdownEvent>(new CountdownEvent(0));
 
         /// <summary>
         /// INTERNAL API
+        /// 
+        /// Signals when CLR shutdown hooks have been completed
         /// </summary>
-        internal CountdownEvent ClrHooksLatch => _clrHooksLatch.Value;
+        internal Task<bool> ClrShutdownTask => _hooksRunPromise.Task;
 
         /// <summary>
         /// Add a task to a phase. It doesn't remove previously added tasks.
@@ -228,6 +234,62 @@ namespace Akka.Actor
                     AddTask(phase, taskName, task); // CAS failed, retry
                 }
             }
+        }
+
+        /// <summary>
+        /// Add a shutdown hook that will execute when the CLR process begins
+        /// its shutdown sequence, invoked via <see cref="AppDomain.ProcessExit"/>.
+        /// 
+        /// Added hooks may run in any order concurrently, but they are run before
+        /// the Akka.NET internal shutdown hooks execute.
+        /// </summary>
+        /// <param name="hook">A task that will be executed during shutdown.</param>
+        public void AddClrShutdownHook(Func<Task<bool>> hook)
+        {
+            if (!_clrHooksStarted)
+            {
+                _clrShutdownTasks.Add(hook);
+            }
+        }
+
+
+        /// <summary>
+        /// INTERNAL API
+        /// 
+        /// Should only be called directly by the <see cref="AppDomain.ProcessExit"/> event
+        /// in production.
+        /// 
+        /// Safe to call multiple times, but hooks will only be run once.
+        /// </summary>
+        /// <returns>Returns a <see cref="Task"/> that will be completed once the process exits.</returns>
+        private Task<bool> RunClrHooks()
+        {
+            if (_clrHooksStarted.CompareAndSet(false, true))
+            {
+                Task.WhenAll(_clrShutdownTasks.Select(hook =>
+                {
+                    try
+                    {
+                        var t = hook();
+                        return t;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Error occurred while executing CLR shutdown hook");
+                        return TaskEx.FromException<bool>(ex);
+                    }
+                })).ContinueWith(tr =>
+                {
+                    if (tr.IsFaulted || tr.IsCanceled)
+                        _hooksRunPromise.SetException(tr.Exception.Flatten());
+                    else
+                    {
+                        _hooksRunPromise.SetResult(tr.Result.All(x => x));
+                    }
+                });
+            }
+
+            return ClrShutdownTask;
         }
 
         /// <summary>
@@ -477,7 +539,7 @@ namespace Akka.Actor
         internal static void InitPhaseActorSystemTerminate(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
             var terminateActorSystem = conf.GetBoolean("terminate-actor-system");
-            var exitClr = conf.GetBoolean("exit-clr"); //not used right now
+            var exitClr = conf.GetBoolean("exit-clr");
             if (terminateActorSystem || exitClr)
             {
                 coord.AddTask(PhaseActorSystemTerminate, "terminate-system", () =>
@@ -519,6 +581,47 @@ namespace Akka.Actor
                     {
                         return TaskEx.Completed;
                     }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Initializes the CLR hook
+        /// </summary>
+        /// <param name="system">The actor system for this extension.</param>
+        /// <param name="conf">The HOCON configuration.</param>
+        /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
+        internal static void InitClrHook(ActorSystem system, Config conf, CoordinatedShutdown coord)
+        {
+            var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook");
+            if (runByClrShutdownHook)
+            {
+                // run all hooks during termination sequence
+                AppDomain.CurrentDomain.ProcessExit += (sender, args) =>
+                {
+                    // have to block, because if this method exits the process exits.
+                    coord.RunClrHooks().Wait(coord.TotalTimeout);
+                };
+
+                coord.AddClrShutdownHook(() =>
+                {
+                    coord._runningClrHook = true;
+                    return Task.Run(() =>
+                    {
+                        if (!system.WhenTerminated.IsCompleted)
+                        {
+                            coord.Log.Info("Starting coordinated shutdown from CLR termination hook.");
+                            try
+                            {
+                                coord.Run().Wait(coord.TotalTimeout);
+                            }
+                            catch (Exception ex)
+                            {
+                                coord.Log.Warning("CoordinatedShutdown from CLR shutdown failed: {0}", ex.Message);
+                            }
+                        }
+                        return true;
+                    });
                 });
             }
         }
