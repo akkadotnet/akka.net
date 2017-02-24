@@ -488,6 +488,16 @@ namespace Akka.Actor
         public override int CompareTo(Akka.Actor.ActorPath other) { }
         public override Akka.Actor.ActorPath WithUid(long uid) { }
     }
+    public sealed class CoordinatedShutdown : Akka.Actor.IExtension
+    {
+        public CoordinatedShutdown() { }
+        public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
+    }
+    public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
+    {
+        public CoordinatedShutdownExtension() { }
+        public override Akka.Actor.CoordinatedShutdown CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
     public class DateTimeOffsetNowTimeProvider : Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider
     {
         public System.TimeSpan HighResMonotonicClock { get; }

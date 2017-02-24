@@ -928,13 +928,15 @@ namespace Akka.Cluster
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// Actor used to power the guts of the Akka.Cluster membership and gossip protocols.
     /// </summary>
     internal class ClusterCoreDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly Cluster _cluster;
         /// <summary>
-        /// TBD
+        /// The current self-unique address.
         /// </summary>
         protected readonly UniqueAddress SelfUniqueAddress;
         private const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 5;
@@ -1031,9 +1033,7 @@ namespace Akka.Cluster
         readonly ICancelable _leaderActionsTaskCancellable;
         readonly ICancelable _publishStatsTaskTaskCancellable;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
         {
             Context.System.EventStream.Subscribe(Self, typeof(QuarantinedEvent));
@@ -1058,9 +1058,7 @@ namespace Akka.Cluster
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
             Context.System.EventStream.Unsubscribe(Self);
@@ -1256,19 +1254,13 @@ namespace Akka.Cluster
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void OnReceive(object message)
         {
             Uninitialized(message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc cref="ActorBase.Unhandled"/>
         protected override void Unhandled(object message)
         {
             if (message is InternalClusterAction.ITick || message is GossipEnvelope || message is GossipStatus)
@@ -1286,7 +1278,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Begins the joining process.
         /// </summary>
         public void InitJoin()
         {
@@ -1303,9 +1295,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to join this node or one or more seed nodes.
         /// </summary>
-        /// <param name="newSeedNodes">TBD</param>
+        /// <param name="newSeedNodes">The list of seed nod we're attempting to join.</param>
         public void JoinSeedNodes(ImmutableList<Address> newSeedNodes)
         {
             if (!newSeedNodes.IsEmpty)
@@ -1339,7 +1331,7 @@ namespace Akka.Cluster
         /// A `Join(selfUniqueAddress)` command is sent to the node to join,
         /// which will reply with a `Welcome` message.
         /// </summary>
-        /// <param name="address">TBD</param>
+        /// <param name="address">The address of the node we're going to join.</param>
         /// <exception cref="InvalidOperationException">Join can only be done from an empty state</exception>
         public void Join(Address address)
         {
@@ -1379,7 +1371,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Stops the seed node process after the cluster has started.
         /// </summary>
         public void StopSeedNodeProcess()
         {

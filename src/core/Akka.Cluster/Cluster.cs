@@ -73,11 +73,12 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The settings for the cluster.
         /// </summary>
         public ClusterSettings Settings { get; }
+
         /// <summary>
-        /// TBD
+        /// The current unique address for the cluster, which includes the UID.
         /// </summary>
         public UniqueAddress SelfUniqueAddress { get; }
 
@@ -299,7 +300,7 @@ namespace Akka.Cluster
         /// The status of the unreachable member must be changed to <see cref="MemberStatus.Down"/>, which can be done with
         /// this method.
         /// </summary>
-        /// <param name="address">TBD</param>
+        /// <param name="address">The address of the node we're going to mark as <see cref="MemberStatus.Down"/></param>
         public void Down(Address address)
         {
             ClusterCore.Tell(new ClusterUserAction.Down(FillLocal(address)));
@@ -334,8 +335,8 @@ namespace Akka.Cluster
         /// Generates the remote actor path by replacing the <see cref="ActorPath.Address"/> in the RootActorPath for the given
         /// ActorRef with the cluster's <see cref="SelfAddress"/>, unless address' host is already defined
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">An <see cref="IActorRef"/> belonging to the current node.</param>
+        /// <returns>The absolute remote <see cref="ActorPath"/> of <see cref="actorRef"/>.</returns>
         public ActorPath RemotePathOf(IActorRef actorRef)
         {
             var path = actorRef.Path;
@@ -382,21 +383,23 @@ namespace Akka.Cluster
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
         /// <summary>
-        /// TBD
+        /// The underlying <see cref="ActorSystem"/> supported by this plugin.
         /// </summary>
         public ExtendedActorSystem System { get; }
 
         private Lazy<IDowningProvider> _downingProvider;
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
+
         /// <summary>
         /// TBD
         /// </summary>
         internal ClusterReadView ReadView { get { return _readView; } }
 
         private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
+
         /// <summary>
-        /// TBD
+        /// The set of failure detectors used for monitoring one or more nodes in the cluster.
         /// </summary>
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
 

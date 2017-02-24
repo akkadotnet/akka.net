@@ -1,0 +1,526 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="CoordinatedShutdown.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Akka.Configuration;
+using Akka.Event;
+using Akka.Util;
+using Akka.Util.Internal;
+using static Akka.Pattern.FutureTimeoutSupport;
+using static Akka.Util.Internal.TaskEx;
+
+namespace Akka.Actor
+{
+    /// <summary>
+    /// Used to register the <see cref="CoordinatedShutdown"/> extension with a given <see cref="ActorSystem"/>.
+    /// </summary>
+    public sealed class CoordinatedShutdownExtension : ExtensionIdProvider<CoordinatedShutdown>
+    {
+        /// <summary>
+        /// Creates a new instance of the <see cref="CoordinatedShutdown"/> extension.
+        /// </summary>
+        /// <param name="system">The extended actor system.</param>
+        /// <returns>A coordinated shutdown plugin.</returns>
+        public override CoordinatedShutdown CreateExtension(ExtendedActorSystem system)
+        {
+            var conf = system.Settings.Config.GetConfig("akka.coordinated-shutdown");
+            var phases = CoordinatedShutdown.PhasesFromConfig(conf);
+            var coord = new CoordinatedShutdown(system, phases);
+            CoordinatedShutdown.InitPhaseActorSystemTerminate(system, conf, coord);
+            return coord;
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class Phase
+    {
+        /// <summary>
+        /// Creates a new <see cref="Phase"/>
+        /// </summary>
+        /// <param name="dependsOn">The list of other phases this phase depends upon.</param>
+        /// <param name="timeout">A timeout value for any tasks running during this phase.</param>
+        /// <param name="recover">When set to <c>true</c>, this phase can recover from a faulted state during shutdown.</param>
+        public Phase(ImmutableHashSet<string> dependsOn, TimeSpan timeout, bool recover)
+        {
+            DependsOn = dependsOn ?? ImmutableHashSet<string>.Empty;
+            Timeout = timeout;
+            Recover = recover;
+        }
+
+        /// <summary>
+        /// The names of other <see cref="Phase"/>s this phase depends upon.
+        /// </summary>
+        public ImmutableHashSet<string> DependsOn { get; }
+
+        /// <summary>
+        /// The amount of time this phase is allowed to run.
+        /// </summary>
+        public TimeSpan Timeout { get; }
+
+        /// <summary>
+        /// If <c>true</c>, this phase has the ability to recover during a faulted state.
+        /// </summary>
+        public bool Recover { get; }
+
+        private bool Equals(Phase other)
+        {
+            return DependsOn.SetEquals(other.DependsOn)
+                && Timeout.Equals(other.Timeout)
+                && Recover == other.Recover;
+        }
+
+        /// <inheritdoc cref="object.Equals(object)"/>
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is Phase && Equals((Phase)obj);
+        }
+
+        /// <inheritdoc cref="object.GetHashCode"/>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = DependsOn?.GetHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ Timeout.GetHashCode();
+                hashCode = (hashCode * 397) ^ Recover.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        /// <inheritdoc cref="object.ToString"/>
+        public override string ToString()
+        {
+            return $"DependsOn=[{string.Join(",", DependsOn)}], Timeout={Timeout}, Recover={Recover}";
+        }
+    }
+
+    /// <summary>
+    /// An <see cref="ActorSystem"/> extension used to help coordinate and sequence shutdown activities
+    /// during graceful termination of actor systems, plugins, and so forth.
+    /// </summary>
+    public sealed class CoordinatedShutdown : IExtension
+    {
+        /// <summary>
+        /// Initializes a new <see cref="CoordinatedShutdown"/> instance.
+        /// </summary>
+        /// <param name="system">Access to the <see cref="ExtendedActorSystem"/>.</param>
+        /// <param name="phases">The list of <see cref="Phase"/>s provided by the HOCON configuration.</param>
+        public CoordinatedShutdown(ExtendedActorSystem system, Dictionary<string, Phase> phases)
+        {
+            System = system;
+            Phases = phases;
+            Log = Logging.GetLogger(System, GetType());
+            _knownPhases = new HashSet<string>(Phases.Keys.Concat(Phases.Values.SelectMany(x => x.DependsOn)));
+            OrderedPhases = TopologicalSort(Phases);
+        }
+
+        /// <summary>
+        /// Retreives the <see cref="CoordinatedShutdown"/> extension for the current <see cref="ActorSystem"/>
+        /// </summary>
+        /// <param name="sys">The current actor system.</param>
+        /// <returns>A <see cref="CoordinatedShutdown"/> instance.</returns>
+        public static CoordinatedShutdown Get(ActorSystem sys)
+        {
+            return sys.WithExtension<CoordinatedShutdown, CoordinatedShutdownExtension>();
+        }
+
+        public const string PhaseBeforeServiceUnbind = "before-service-unbind";
+        public const string PhaseServiceUnbind = "service-unbind";
+        public const string PhaseServiceRequestsDone = "service-requests-done";
+        public const string PhaseServiceStop = "service-stop";
+        public const string PhaseBeforeClusterShutdown = "before-cluster-shutdown";
+        public const string PhaseClusterShardingShutdownRegion = "cluster-sharding-shutdown-region";
+        public const string PhaseClusterLeave = "cluster-leave";
+        public const string PhaseClusterExiting = "cluster-exiting";
+        public const string PhaseClusterExitingDone = "cluster-exiting-done";
+        public const string PhaseClusterShutdown = "cluster-shutdown";
+        public const string PhaseBeforeActorSystemTerminate = "before-actor-system-terminate";
+        public const string PhaseActorSystemTerminate = "actor-system-terminate";
+
+        /// <summary>
+        /// The <see cref="ActorSystem"/>
+        /// </summary>
+        public ExtendedActorSystem System { get; }
+
+        /// <summary>
+        /// The set of named <see cref="Phase"/>s that will be executed during coordinated shutdown.
+        /// </summary>
+        public Dictionary<string, Phase> Phases { get; }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal ILoggingAdapter Log { get; }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        private readonly HashSet<string> _knownPhases;
+
+        /// <summary>
+        /// ITNERNAL API
+        /// </summary>
+        internal readonly List<string> OrderedPhases;
+        private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<bool>>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<bool>>>>>();
+        private readonly AtomicBoolean _runStarted = new AtomicBoolean(false);
+        private readonly TaskCompletionSource<bool> _runPromise = new TaskCompletionSource<bool>();
+
+        private volatile bool _runningClrHook = false;
+        private readonly AtomicReference<CountdownEvent> _clrHooksLatch = new AtomicReference<CountdownEvent>(new CountdownEvent(0));
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal CountdownEvent ClrHooksLatch => _clrHooksLatch.Value;
+
+        /// <summary>
+        /// Add a task to a phase. It doesn't remove previously added tasks.
+        /// 
+        /// Tasks added to the same phase are executed in parallel without any
+        /// ordering assumptions. Next phase will not start until all tasks of
+        /// previous phase have completed.
+        /// </summary>
+        /// <param name="phase">The phase to add this task to.</param>
+        /// <param name="taskName">The name of the task to add to this phase.</param>
+        /// <param name="task">The delegate that produces a <see cref="Task"/> that will be executed.</param>
+        /// <remarks>
+        /// Tasks should typically be registered as early as possible after system
+        /// startup. When running the <see cref="CoordinatedShutdown"/> tasks that have been
+        /// registered will be performed but tasks that are added too late will not be run.
+        /// 
+        /// 
+        /// It is possible to add a task to a later phase from within a task in an earlier phase
+        /// and it will be performed.
+        /// </remarks>
+        public void AddTask(string phase, string taskName, Func<Task<bool>> task)
+        {
+            if (!_knownPhases.Contains(phase))
+                throw new ConfigurationException($"Unknown phase [{phase}], known phases [{string.Join(",", _knownPhases)}]. " +
+                    "All phases (along with their optional dependencies) must be defined in configuration.");
+
+            ImmutableList<Tuple<string, Func<Task<bool>>>> current;
+            if (!_tasks.TryGetValue(phase, out current))
+            {
+                if (!_tasks.TryAdd(phase,
+                    ImmutableList<Tuple<string, Func<Task<bool>>>>.Empty.Add(Tuple.Create(taskName, task))))
+                {
+                    AddTask(phase, taskName, task); // CAS failed, retry
+                }
+            }
+            else
+            {
+                if (!_tasks.TryUpdate(phase, current.Add(Tuple.Create(taskName, task)), current))
+                {
+                    AddTask(phase, taskName, task); // CAS failed, retry
+                }
+            }
+        }
+
+        /// <summary>
+        /// Run tasks of all phases including and after the given phase.
+        /// </summary>
+        /// <param name="fromPhase">Optional. The phase to start the run from.</param>
+        /// <returns>A task that is completed when all such tasks have been completed, or
+        /// there is failure when <see cref="Phase.Recover"/> is disabled.</returns>
+        /// <remarks>
+        /// It is safe to call this method multiple times. It will only run once.
+        /// </remarks>
+        public Task<bool> Run(string fromPhase = null)
+        {
+            if (_runStarted.CompareAndSet(false, true))
+            {
+                var debugEnabled = Log.IsDebugEnabled;
+                Func<List<string>, Task<bool>> loop = null;
+                loop = remainingPhases =>
+                {
+                    var phase = remainingPhases.FirstOrDefault();
+                    if (phase == null)
+                        return TaskEx.Completed;
+                    var remaining = remainingPhases.Skip(1).ToList();
+                    Task<bool> phaseResult = null;
+                    ImmutableList<Tuple<string, Func<Task<bool>>>> phaseTasks;
+                    if (!_tasks.TryGetValue(phase, out phaseTasks))
+                    {
+                        if (debugEnabled)
+                            Log.Debug("Performing phase [{0}] with [0] tasks.", phase);
+                        phaseResult = TaskEx.Completed;
+                    }
+                    else
+                    {
+                        if (debugEnabled)
+                            Log.Debug("Performing phase [{0}] with [{1}] tasks: [{2}]", phase,
+                                phaseTasks.Count, string.Join(",", phaseTasks.Select(x => x.Item1)));
+
+                        // note that tasks within same phase are performed in parallel
+                        var recoverEnabled = Phases[phase].Recover;
+                        var result = Task.WhenAll<bool>(phaseTasks.Select(x =>
+                        {
+                            var taskName = x.Item1;
+                            var task = x.Item2;
+                            try
+                            {
+                                // need to begin execution of task
+                                var r = task();
+
+                                if (recoverEnabled)
+                                {
+                                    return r.ContinueWith(tr =>
+                                    {
+                                        if(tr.IsCanceled || tr.IsFaulted)
+                                            Log.Warning("Task [{0}] failed in phase [{1}]: {2}", taskName, phase,
+                                                tr.Exception?.Flatten().Message);
+                                        return true;
+                                    });
+                                }
+
+
+                                return r;
+                            }
+                            catch (Exception ex)
+                            {
+                                // in case task.Start() throws
+                                if (recoverEnabled)
+                                {
+                                    Log.Warning("Task [{0}] failed in phase [{1}]: {2}", taskName, phase, ex.Message);
+                                    return TaskEx.Completed;
+                                }
+
+                                return TaskEx.FromException<bool>(ex);
+                            }
+                        })).ContinueWith(tr => tr.Result.All(x => x));
+                        var timeout = Phases[phase].Timeout;
+                        var deadLine = MonotonicClock.Elapsed + timeout;
+                        Task<bool> timeoutFunction = null;
+                        try
+                        {
+                            timeoutFunction = After(timeout, System.Scheduler, () =>
+                            {
+                                if (phase == CoordinatedShutdown.PhaseActorSystemTerminate &&
+                                    MonotonicClock.ElapsedHighRes < deadLine)
+                                {
+                                    // too early, i.e. triggered by system termination
+                                    return result;
+                                } else if (result.IsCompleted)
+                                {
+                                    return TaskEx.Completed;
+                                }
+                                else if (recoverEnabled)
+                                {
+                                    Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phase, timeout);
+                                    return TaskEx.Completed;
+                                }
+                                else
+                                {
+                                    return
+                                    TaskEx.FromException<bool>(
+                                        new TimeoutException(
+                                            $"Coordinated shutdown phase[{phase}] timed out after {timeout}"));
+                                }
+                            });
+                        }
+                        catch (SchedulerException)
+                        {
+                            // The call to `after` threw SchedulerException, triggered by system termination
+                            timeoutFunction = result;
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // The call to `after` threw SchedulerException, triggered by Scheduler being in unset state
+                            timeoutFunction = result;
+                        }
+
+                        phaseResult = Task.WhenAny<bool>(result, timeoutFunction).Unwrap();
+                    }
+
+                    if (!remaining.Any())
+                        return phaseResult;
+                    return phaseResult.ContinueWith(tr =>
+                    {
+                        // force any exceptions to be rethrown so next phase stops
+                        // and so failure gets propagated back to caller
+                        var r = tr.Result; 
+                        return loop(remaining);
+                    }).Unwrap();
+                };
+
+                var runningPhases = (fromPhase == null
+                    ? OrderedPhases // all
+                    : OrderedPhases.From(fromPhase)).ToList();
+
+                var done = loop(runningPhases);
+                done.ContinueWith(tr =>
+                {
+                    if(!tr.IsFaulted && !tr.IsCanceled)
+                        _runPromise.SetResult(tr.Result);
+                    else
+                    {
+                        // ReSharper disable once PossibleNullReferenceException
+                        _runPromise.SetException(tr.Exception.Flatten());
+                    }
+                });
+            }
+            return _runPromise.Task;
+        }
+
+        /// <summary>
+        /// The configured timeout for a given <see cref="Phase"/>.
+        /// </summary>
+        /// <param name="phase">The name of the phase.</param>
+        /// <returns>Returns the timeout if ti exists.</returns>
+        /// <exception cref="ArgumentException">Thrown if <see cref="phase"/> doesn't exist in the set of registered phases.</exception>
+        public TimeSpan Timeout(string phase)
+        {
+            Phase p;
+            if (Phases.TryGetValue(phase, out p))
+            {
+                return p.Timeout;
+            }
+            throw new ArgumentException($"Unknown phase [{phase}]. All phases must be defined in configuration.");
+        }
+
+        /// <summary>
+        /// The sum of timeouts of all phases that have some task.
+        /// </summary>
+        public TimeSpan TotalTimeout
+        {
+            get { return _tasks.Keys.Aggregate(TimeSpan.Zero, (span, s) => span.Add(Timeout(s))); }
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <param name="config">The HOCON configuration for the <see cref="CoordinatedShutdown"/></param>
+        /// <returns>A map of all of the phases of the shutdown.</returns>
+        internal static Dictionary<string, Phase> PhasesFromConfig(Config config)
+        {
+            var defaultPhaseTimeout = config.GetString("default-phase-timeout");
+            var phasesConf = config.GetConfig("phases");
+            var defaultPhaseConfig = ConfigurationFactory.ParseString($"timeout = {defaultPhaseTimeout}" + @"
+                recover = true
+                depends-on = []
+            ");
+
+            return phasesConf.Root.GetObject().Unwrapped.ToDictionary(x => x.Key, v =>
+             {
+                 var c = phasesConf.GetConfig(v.Key).WithFallback(defaultPhaseConfig);
+                 var dependsOn = c.GetStringList("depends-on").ToImmutableHashSet();
+                 var timeout = c.GetTimeSpan("timeout", allowInfinite: false);
+                 var recover = c.GetBoolean("recover");
+                 return new Phase(dependsOn, timeout, recover);
+             });
+        }
+
+        /// <summary>
+        /// INTERNAL API: https://en.wikipedia.org/wiki/Topological_sorting
+        /// </summary>
+        /// <param name="phases">The set of phases to sort.</param>
+        /// <returns>A topologically sorted list of phases.</returns>
+        internal static List<string> TopologicalSort(Dictionary<string, Phase> phases)
+        {
+            var result = new List<string>();
+            // in case dependent phase is not defined as key
+            var unmarked = new HashSet<string>(phases.Keys.Concat(phases.Values.SelectMany(x => x.DependsOn)));
+            var tempMark = new HashSet<string>(); // for detecting cycles
+
+            Action<string> depthFirstSearch = null;
+            depthFirstSearch = u =>
+            {
+                if (tempMark.Contains(u))
+                    throw new ArgumentException("Cycle detected in graph of phases. It must be a DAG. " +
+                                                $"phase [{u}] depepends transitively on itself. All dependencies: {phases}");
+                if (unmarked.Contains(u))
+                {
+                    tempMark.Add(u);
+                    Phase p;
+                    if (phases.TryGetValue(u, out p) && p.DependsOn.Any())
+                    {
+                        p.DependsOn.ForEach(depthFirstSearch);
+                    }
+                    unmarked.Remove(u); //permanent mark
+                    tempMark.Remove(u);
+                    result = new[] { u }.Concat(result).ToList();
+                }
+            };
+
+            while (unmarked.Any())
+            {
+                depthFirstSearch(unmarked.Head());
+            }
+
+            result.Reverse();
+            return result;
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// 
+        /// Primes the <see cref="CoordinatedShutdown"/> with the default phase for
+        /// <see cref="ActorSystem.Terminate"/>
+        /// </summary>
+        /// <param name="system">The actor system for this extension.</param>
+        /// <param name="conf">The HOCON configuration.</param>
+        /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
+        internal static void InitPhaseActorSystemTerminate(ActorSystem system, Config conf, CoordinatedShutdown coord)
+        {
+            var terminateActorSystem = conf.GetBoolean("terminate-actor-system");
+            var exitClr = conf.GetBoolean("exit-clr"); //not used right now
+            if (terminateActorSystem || exitClr)
+            {
+                coord.AddTask(PhaseActorSystemTerminate, "terminate-system", () =>
+                {
+                    if (exitClr && terminateActorSystem)
+                    {
+                        // In case ActorSystem shutdown takes longer than the phase timeout,
+                        // exit the JVM forcefully anyway.
+
+                        // We must spawn a separate Task to not block current thread,
+                        // since that would have blocked the shutdown of the ActorSystem.
+                        var timeout = coord.Timeout(PhaseActorSystemTerminate);
+                        return Task.Run(() =>
+                        {
+                            if (!system.WhenTerminated.Wait(timeout) && !coord._runningClrHook)
+                            {
+                                Environment.Exit(0);
+                            }
+                            return true;
+                        });
+                    }
+
+                    if (terminateActorSystem)
+                    {
+                        return system.Terminate().ContinueWith(tr =>
+                        {
+                            if (exitClr && !coord._runningClrHook)
+                            {
+                                Environment.Exit(0);
+                            }
+                            return true;
+                        });
+                    } else if (exitClr)
+                    {
+                        Environment.Exit(0);
+                        return TaskEx.Completed;
+                    }
+                    else
+                    {
+                        return TaskEx.Completed;
+                    }
+                });
+            }
+        }
+    }
+}
