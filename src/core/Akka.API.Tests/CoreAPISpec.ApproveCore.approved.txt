@@ -1337,6 +1337,16 @@ namespace Akka.Actor
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
+    public sealed class Phase
+    {
+        public Phase(System.Collections.Immutable.ImmutableHashSet<string> dependsOn, System.TimeSpan timeout, bool recover) { }
+        public System.Collections.Immutable.ImmutableHashSet<string> DependsOn { get; }
+        public bool Recover { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public class static PipeToSupport
     {
         public static System.Threading.Tasks.Task PipeTo<T>(this System.Threading.Tasks.Task<T> taskToPipe, Akka.Actor.ICanTell recipient, Akka.Actor.IActorRef sender = null, System.Func<T, object> success = null, System.Func<System.Exception, object> failure = null) { }
@@ -3830,6 +3840,10 @@ namespace Akka.Pattern
         public T WithSyncCircuitBreaker<T>(System.Func<T> body) { }
     }
     public interface IBackoffReset { }
+    public class static FutureTimeoutSupport
+    {
+        public static System.Threading.Tasks.Task<T> After<T>(System.TimeSpan duration, Akka.Actor.IScheduler scheduler, System.Func<System.Threading.Tasks.Task<T>> value) { }
+    }
     public class IllegalStateException : Akka.Actor.AkkaException
     {
         public IllegalStateException(string message) { }
@@ -5182,6 +5196,12 @@ namespace Akka.Util.Internal
     {
         public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values) { }
         public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values, System.Action<System.Text.StringBuilder, T, int> valueAppender) { }
+    }
+    public class static TaskEx
+    {
+        public static readonly System.Threading.Tasks.Task<bool> Completed;
+        public static System.Threading.Tasks.Task FromException(System.Exception ex) { }
+        public static System.Threading.Tasks.Task<T> FromException<T>(System.Exception ex) { }
     }
     public class static TaskExtensions
     {
