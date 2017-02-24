@@ -490,8 +490,26 @@ namespace Akka.Actor
     }
     public sealed class CoordinatedShutdown : Akka.Actor.IExtension
     {
-        public CoordinatedShutdown() { }
+        public const string PhaseActorSystemTerminate = "actor-system-terminate";
+        public const string PhaseBeforeActorSystemTerminate = "before-actor-system-terminate";
+        public const string PhaseBeforeClusterShutdown = "before-cluster-shutdown";
+        public const string PhaseBeforeServiceUnbind = "before-service-unbind";
+        public const string PhaseClusterExiting = "cluster-exiting";
+        public const string PhaseClusterExitingDone = "cluster-exiting-done";
+        public const string PhaseClusterLeave = "cluster-leave";
+        public const string PhaseClusterShardingShutdownRegion = "cluster-sharding-shutdown-region";
+        public const string PhaseClusterShutdown = "cluster-shutdown";
+        public const string PhaseServiceRequestsDone = "service-requests-done";
+        public const string PhaseServiceStop = "service-stop";
+        public const string PhaseServiceUnbind = "service-unbind";
+        public CoordinatedShutdown(Akka.Actor.ExtendedActorSystem system, System.Collections.Generic.Dictionary<string, Akka.Actor.Phase> phases) { }
+        public System.Collections.Generic.Dictionary<string, Akka.Actor.Phase> Phases { get; }
+        public Akka.Actor.ExtendedActorSystem System { get; }
+        public System.TimeSpan TotalTimeout { get; }
+        public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<bool>> task) { }
         public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
+        public System.Threading.Tasks.Task<bool> Run(string fromPhase = null) { }
+        public System.TimeSpan Timeout(string phase) { }
     }
     public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
     {
