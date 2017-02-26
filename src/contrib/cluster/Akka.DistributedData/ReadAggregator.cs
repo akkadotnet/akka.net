@@ -67,10 +67,10 @@ namespace Akka.DistributedData
         protected override bool Receive(object message) => message.Match()
             .With<ReadResult>(x =>
             {
-                if (_result != null && x.Envelope != null) _result = _result.Merge(x.Envelope.Data);
-                else if (_result == null && x.Envelope != null) _result = x.Envelope;
-                else if (_result != null && x.Envelope == null) _result = _result;
-                else _result = null;
+                if (x.Envelope != null)
+                {
+                    _result = _result?.Merge(x.Envelope) ?? x.Envelope;
+                }
 
                 Remaining = Remaining.Remove(Sender.Path.Address);
                 if (Remaining.Count == DoneWhenRemainingSize) Reply(true);
@@ -133,9 +133,10 @@ namespace Akka.DistributedData
         public override bool Equals(object obj) => obj != null && obj is ReadLocal;
 
         public override string ToString() => "ReadLocal";
+        public override int GetHashCode() => nameof(ReadLocal).GetHashCode();
     }
 
-    public sealed class ReadFrom : IReadConsistency
+    public sealed class ReadFrom : IReadConsistency, IEquatable<ReadFrom>
     {
         public int N { get; }
 
@@ -147,16 +148,27 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object obj) => obj is ReadFrom && Equals((ReadFrom) obj);
+
+        public bool Equals(ReadFrom other)
         {
-            var other = obj as ReadFrom;
-            return other != null && (N == other.N && Timeout.Equals(other.Timeout));
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return N == other.N && Timeout.Equals(other.Timeout);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (N * 397) ^ Timeout.GetHashCode();
+            }
         }
 
         public override string ToString() => $"ReadFrom({N})";
     }
 
-    public sealed class ReadMajority : IReadConsistency
+    public sealed class ReadMajority : IReadConsistency, IEquatable<ReadMajority>
     {
         public TimeSpan Timeout { get; }
         public int MinCapacity { get; }
@@ -169,14 +181,28 @@ namespace Akka.DistributedData
 
         public override bool Equals(object obj)
         {
-            var other = obj as ReadMajority;
-            return other != null && Timeout == other.Timeout && MinCapacity == other.MinCapacity;
+            return obj is ReadMajority && Equals((ReadMajority) obj);
         }
 
         public override string ToString() => "ReadMajority";
+
+        public bool Equals(ReadMajority other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Timeout.Equals(other.Timeout) && MinCapacity == other.MinCapacity;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Timeout.GetHashCode() * 397) ^ MinCapacity;
+            }
+        }
     }
 
-    public sealed class ReadAll : IReadConsistency
+    public sealed class ReadAll : IReadConsistency, IEquatable<ReadAll>
     {
         public TimeSpan Timeout { get; }
 
@@ -187,10 +213,21 @@ namespace Akka.DistributedData
 
         public override bool Equals(object obj)
         {
-            var other = obj as ReadAll;
-            return other != null && Timeout == other.Timeout;
+            return obj is ReadAll && Equals((ReadAll) obj);
         }
 
         public override string ToString() => "ReadAll";
+
+        public bool Equals(ReadAll other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Timeout.Equals(other.Timeout);
+        }
+
+        public override int GetHashCode()
+        {
+            return Timeout.GetHashCode();
+        }
     }
 }

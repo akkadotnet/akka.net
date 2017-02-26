@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.ExceptionServices;
+using System.Runtime.Serialization;
 using Akka.Actor;
 
 namespace Akka.DistributedData
@@ -820,7 +821,7 @@ namespace Akka.DistributedData
         }
 
         [Serializable]
-        public sealed class DataDeleted : Exception, IDeleteResponse, IEquatable<DataDeleted>
+        public sealed class DataDeleted : Exception, IDeleteResponse, IGetResponse, IUpdateResponse, IEquatable<DataDeleted>
         {
             public IKey Key { get; }
             public object Request { get; }
@@ -846,6 +847,18 @@ namespace Akka.DistributedData
             public override bool Equals(object obj) => obj is DataDeleted && Equals((DataDeleted)obj);
 
             public override int GetHashCode() => Key.GetHashCode();
+            public bool IsFound => false;
+            public bool IsFailure => true;
+
+            public T Get<T>(IKey<T> key) where T : IReplicatedData
+            {
+                throw new DataDeletedException($"Data for key '{Key}' has been deleted and is not longer accessible");
+            }
+
+            public void ThrowOnFailure()
+            {
+                throw new DataDeletedException($"Data for key '{Key}' has been deleted and is not longer accessible");
+            }
         }
 
         /// <summary>
@@ -900,6 +913,17 @@ namespace Akka.DistributedData
         }
 
         #endregion
+    }
+
+    public class DataDeletedException : Exception
+    {
+        public DataDeletedException(string message) : base(message)
+        {
+        }
+
+        protected DataDeletedException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
     }
 
     public interface IReplicatorMessage { }

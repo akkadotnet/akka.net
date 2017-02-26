@@ -99,17 +99,17 @@ namespace Akka.DistributedData.Tests.MultiNode
         public void ReplicatorSpecTests()
         {
             Cluster_CRDT_should_work_in_single_node_cluster();
-            //Cluster_CRDT_should_merge_the_update_with_existing_value();
-            //Cluster_CRDT_should_reply_with_ModifyFailure_if_exception_is_thrown_by_modify_function();
-            //Cluster_CRDT_should_replicate_values_to_new_node();
-            //Cluster_CRDT_should_work_in_2_node_cluster();
-            //Cluster_CRDT_should_be_replicated_after_successful_update();
-            //Cluster_CRDT_should_converge_after_partition();
-            //Cluster_CRDT_should_support_majority_quorum_write_and_read_with_3_nodes_with_1_unreachable();
-            //Cluster_CRDT_should_converge_after_many_concurrent_updates();
-            //Cluster_CRDT_should_read_repair_happens_before_GetSuccess();
-            //Cluster_CRDT_should_check_that_remote_update_and_local_update_both_cause_a_change_event_to_emit_with_the_merged_data();
-            //Cluster_CRDT_should_avoid_duplicate_change_events_for_same_data();
+            Cluster_CRDT_should_merge_the_update_with_existing_value();
+            Cluster_CRDT_should_reply_with_ModifyFailure_if_exception_is_thrown_by_modify_function();
+            Cluster_CRDT_should_replicate_values_to_new_node();
+            Cluster_CRDT_should_work_in_2_node_cluster();
+            Cluster_CRDT_should_be_replicated_after_successful_update();
+            Cluster_CRDT_should_converge_after_partition();
+            Cluster_CRDT_should_support_majority_quorum_write_and_read_with_3_nodes_with_1_unreachable();
+            Cluster_CRDT_should_converge_after_many_concurrent_updates();
+            Cluster_CRDT_should_read_repair_happens_before_GetSuccess();
+            Cluster_CRDT_should_check_that_remote_update_and_local_update_both_cause_a_change_event_to_emit_with_the_merged_data();
+            Cluster_CRDT_should_avoid_duplicate_change_events_for_same_data();
         }
 
         public void Cluster_CRDT_should_work_in_single_node_cluster()
