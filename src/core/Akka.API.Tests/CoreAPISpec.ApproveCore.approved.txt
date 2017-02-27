@@ -3721,29 +3721,69 @@ namespace Akka.IO
 }
 namespace Akka.Pattern
 {
-    public class BackoffSupervisor : Akka.Actor.UntypedActor
+    public class static Backoff
+    {
+        public static Akka.Pattern.BackoffOptions OnFailure(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Pattern.BackoffOptions OnStop(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+    }
+    public abstract class BackoffOptions
+    {
+        protected BackoffOptions() { }
+        public abstract Akka.Pattern.BackoffOptions WithAutoReset(System.TimeSpan resetBackoff);
+        public abstract Akka.Pattern.BackoffOptions WithDefaultStoppingStrategy();
+        public abstract Akka.Pattern.BackoffOptions WithManualReset();
+        public abstract Akka.Pattern.BackoffOptions WithSupervisorStrategy(Akka.Actor.OneForOneStrategy supervisorStrategy);
+    }
+    public sealed class BackoffSupervisor : Akka.Pattern.BackoffSupervisorBase
     {
         public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
-        protected override void OnReceive(object message) { }
-        protected override void PreStart() { }
+        public BackoffSupervisor(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, Akka.Pattern.IBackoffReset reset, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
+        public static Akka.Actor.Props Props(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public static Akka.Actor.Props Props(Akka.Pattern.BackoffOptions options) { }
+        public static Akka.Actor.Props PropsWithSupervisorStrategy(Akka.Actor.Props childProps, string childName, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, Akka.Actor.SupervisorStrategy strategy) { }
+        protected override bool Receive(object message) { }
+        protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
         public sealed class CurrentChild
         {
-            public readonly Akka.Actor.IActorRef Ref;
             public CurrentChild(Akka.Actor.IActorRef @ref) { }
+            public Akka.Actor.IActorRef Ref { get; }
         }
         public sealed class GetCurrentChild
         {
             public static readonly Akka.Pattern.BackoffSupervisor.GetCurrentChild Instance;
         }
+        public sealed class GetRestartCount
+        {
+            public static readonly Akka.Pattern.BackoffSupervisor.GetRestartCount Instance;
+        }
+        public sealed class Reset
+        {
+            public static readonly Akka.Pattern.BackoffSupervisor.Reset Instance;
+        }
         public sealed class ResetRestartCount : Akka.Event.IDeadLetterSuppression
         {
-            public readonly int Current;
             public ResetRestartCount(int current) { }
+            public int Current { get; }
+        }
+        public sealed class RestartCount
+        {
+            public RestartCount(int count) { }
+            public int Count { get; }
         }
         public sealed class StartChild : Akka.Event.IDeadLetterSuppression
         {
             public static readonly Akka.Pattern.BackoffSupervisor.StartChild Instance;
         }
+    }
+    public abstract class BackoffSupervisorBase : Akka.Actor.ActorBase
+    {
+        protected Akka.Actor.IActorRef Child { get; set; }
+        protected string ChildName { get; }
+        protected Akka.Actor.Props ChildProps { get; }
+        protected Akka.Pattern.IBackoffReset Reset { get; }
+        protected int RestartCountN { get; set; }
+        protected bool HandleBackoff(object message) { }
+        protected override void PreStart() { }
     }
     public class CircuitBreaker
     {
@@ -3761,6 +3801,7 @@ namespace Akka.Pattern
         public void WithSyncCircuitBreaker(System.Action body) { }
         public T WithSyncCircuitBreaker<T>(System.Func<T> body) { }
     }
+    public interface IBackoffReset { }
     public class IllegalStateException : Akka.Actor.AkkaException
     {
         public IllegalStateException(string message) { }

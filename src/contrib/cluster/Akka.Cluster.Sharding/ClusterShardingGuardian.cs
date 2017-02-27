@@ -167,9 +167,8 @@ namespace Akka.Cluster.Sharding
                     var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
                     var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
                     var coordinatorProps = PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy);
-                    var singletonProps = Props.Create(() => new BackoffSupervisor(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2)).WithDeploy(Deploy.Local);
+                    var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2).WithDeploy(Deploy.Local);
                     var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
-
                     var shardCoordinatorSingleton = Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings), coordinatorSingletonManagerName);
                 }
 
