@@ -422,6 +422,25 @@ namespace Akka.Cluster
             /// The member's address
             /// </summary>
             public UniqueAddress Address { get; }
+
+            private bool Equals(ExitingConfirmed other)
+            {
+                return Address.Equals(other.Address);
+            }
+
+            /// <inheritdoc cref="object.Equals(object)"/>
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is ExitingConfirmed && Equals((ExitingConfirmed) obj);
+            }
+
+            /// <inheritdoc cref="object.GetHashCode"/>
+            public override int GetHashCode()
+            {
+                return Address.GetHashCode();
+            }
         }
 
         /// <summary>
@@ -913,7 +932,7 @@ namespace Akka.Cluster
 
         protected override void PostStop()
         {
-            _clusterPromise.SetResult(Done.Instance);
+            _clusterPromise.TrySetResult(Done.Instance);
             if (_settings.RunCoordinatedShutdownWhenDown)
             {
                 // run the last phases if the node was downed (not leaving)
@@ -1931,7 +1950,7 @@ namespace Akka.Cluster
             {
                 _latestGossip = winningGossip.Seen(SelfUniqueAddress);
             }
-            
+
             AssertLatestGossip();
 
             // for all new joining nodes we remove them from the failure detector
@@ -1977,7 +1996,7 @@ namespace Akka.Cluster
                 // the leaving process. Meanwhile the gossip state is not marked as seen.
                 _exitingTasksInProgress = true;
                 _log.Info("Exiting, starting coordinated shutdown.");
-                _selfExiting.SetResult(Done.Instance);
+                _selfExiting.TrySetResult(Done.Instance);
                 _coordShutdown.Run();
             }
 
@@ -2214,6 +2233,10 @@ namespace Akka.Cluster
                     .Where(m => Gossip.RemoveUnreachableWithMemberStatus.Contains(m.Status))
                     .ToImmutableHashSet();
 
+            var removedExitingConfirmed =
+                _exitingConfirmed.Where(x => localGossip.GetMember(x).Status == MemberStatus.Exiting)
+                .ToImmutableHashSet();
+
             var changedMembers = localMembers.Select(m =>
             {
                 var upNumber = 0;
@@ -2246,21 +2269,26 @@ namespace Akka.Cluster
                 return null;
             }).Where(m => m != null).ToImmutableSortedSet();
 
-            if (!removedUnreachable.IsEmpty || !changedMembers.IsEmpty)
+            if (!removedUnreachable.IsEmpty || !removedExitingConfirmed.IsEmpty || !changedMembers.IsEmpty)
             {
                 // handle changes
 
                 // replace changed members
                 var newMembers = changedMembers
                     .Union(localMembers)
-                    .Except(removedUnreachable);
+                    .Except(removedUnreachable)
+                    .Where(x => !removedExitingConfirmed.Contains(x.UniqueAddress))
+                    .ToImmutableSortedSet();
 
                 // removing REMOVED nodes from the `seen` table
-                var removed = removedUnreachable.Select(u => u.UniqueAddress).ToImmutableHashSet();
+                var removed = removedUnreachable.Select(u => u.UniqueAddress)
+                    .ToImmutableHashSet()
+                    .Union(removedExitingConfirmed);
                 var newSeen = localSeen.Except(removed);
                 // removing REMOVED nodes from the `reachability` table
                 var newReachability = localOverview.Reachability.Remove(removed);
                 var newOverview = localOverview.Copy(seen: newSeen, reachability: newReachability);
+
                 // Clear the VectorClock when member is removed. The change made by the leader is stamped
                 // and will propagate as is if there are no other changes on other nodes.
                 // If other concurrent changes on other nodes (e.g. join) the pruning is also
@@ -2271,7 +2299,20 @@ namespace Akka.Cluster
                 });
                 var newGossip = localGossip.Copy(members: newMembers, overview: newOverview, version: newVersion);
 
+                if (!_exitingTasksInProgress && newGossip.GetMember(SelfUniqueAddress).Status == MemberStatus.Exiting)
+                {
+                    // Leader is moving itself from Leaving to Exiting.
+                    // ExitingCompleted will be received via CoordinatedShutdown to continue
+                    // the leaving process. Meanwhile the gossip state is not marked as seen.
+
+                    _exitingTasksInProgress = true;
+                    _log.Info("Exiting (leader), starting coordinated shutdown.");
+                    _selfExiting.TrySetResult(Done.Instance);
+                    _coordShutdown.Run();
+                }
+
                 UpdateLatestGossip(newGossip);
+                _exitingConfirmed = new HashSet<UniqueAddress>(_exitingConfirmed.Except(removedExitingConfirmed));
 
                 // log status changes
                 foreach (var m in changedMembers)
@@ -2284,22 +2325,12 @@ namespace Akka.Cluster
                     _log.Info("Leader is removing {0} node [{1}]", status, m.Address);
                 }
 
-                Publish(_latestGossip);
-
-                if (_latestGossip.GetMember(SelfUniqueAddress).Status == MemberStatus.Exiting)
+                foreach (var m in removedExitingConfirmed)
                 {
-                    // Leader is moving itself from Leaving to Exiting. Let others know (best effort)
-                    // before shutdown. Otherwise they will not see the Exiting state change
-                    // and there will not be convergence until they have detected this node as
-                    // unreachable and the required downing has finished. They will still need to detect
-                    // unreachable, but Exiting unreachable will be removed without downing, i.e.
-                    // normally the leaving of a leader will be graceful without the need
-                    // for downing. However, if those final gossip messages never arrive it is
-                    // alright to require the downing, because that is probably caused by a
-                    // network failure anyway.
-                    SendGossipRandom(NumberOfGossipsBeforeShutdownWhenLeaderExits);
-                    Shutdown();
+                    _log.Info("Leader is removing confirmed Exiting node [{0}]", m.Address);
                 }
+
+                Publish(_latestGossip);
             }
         }
 
@@ -2377,7 +2408,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Returns <c>true</c> if this is a one node cluster. <c>false</c> otherwise.
         /// </summary>
         public bool IsSingletonCluster
         {
@@ -2400,7 +2431,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Gossips latest gossip to a node.
         /// </summary>
-        /// <param name="node">TBD</param>
+        /// <param name="node">The address of the node we want to send gossip to.</param>
         public void GossipTo(UniqueAddress node)
         {
             if (ValidNodeForGossip(node))
@@ -2451,17 +2482,27 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Updates the local gossip with the latest received from over the network.
         /// </summary>
-        /// <param name="newGossip">TBD</param>
+        /// <param name="newGossip">The new gossip to merge with our own.</param>
         public void UpdateLatestGossip(Gossip newGossip)
         {
             // Updating the vclock version for the changes
             var versionedGossip = newGossip.Increment(_vclockNode);
-            // Nobody else have seen this gossip but us
-            var seenVersionedGossip = versionedGossip.OnlySeen(SelfUniqueAddress);
-            // Update the state with the new gossip
-            _latestGossip = seenVersionedGossip;
+
+            // Don't mark gossip state as seen while exiting is in progress, e.g.
+            // shutting down singleton actors. This delays removal of the member until
+            // the exiting tasks have been completed.
+            if (_exitingTasksInProgress)
+                _latestGossip = versionedGossip.ClearSeen();
+            else
+            {
+                // Nobody else has seen this gossip but us
+                var seenVersionedGossip = versionedGossip.OnlySeen(SelfUniqueAddress);
+
+                // Update the state with the new gossip
+                _latestGossip = seenVersionedGossip;
+            }
             AssertLatestGossip();
         }
 
