@@ -381,6 +381,7 @@ namespace Akka.Remote
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ResendBufferCapacityReachedException"/> class.
         /// </summary>
@@ -390,6 +391,7 @@ namespace Akka.Remote
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -405,7 +407,7 @@ namespace Akka.Remote
                 "The resend states between two systems are compromised and cannot be recovered") { }
     }
 
-    #endregion
+#endregion
 
     /// <summary>
     /// Implements an immutable resend buffer that buffers messages until they have been acknowledged. Properly removes messages
@@ -494,7 +496,7 @@ namespace Akka.Remote
             return $"[{nonAcked}]";
         }
 
-        #region Copy methods
+#region Copy methods
 
         /// <summary>
         /// TBD
@@ -508,7 +510,7 @@ namespace Akka.Remote
             return new AckedSendBuffer<T>(Capacity, maxSeq ?? MaxSeq) { Nacked = nacked ?? Nacked.ToArray().ToList(), NonAcked = nonAcked ?? NonAcked.ToArray().ToList() };
         }
 
-        #endregion
+#endregion
     }
 
     /// <summary>
@@ -668,7 +670,7 @@ namespace Akka.Remote
             return Copy(mergedLastDelivered, SeqNo.Max(this.CumulativeAck, other.CumulativeAck), Buf);
         }
 
-        #region Copy methods
+#region Copy methods
 
         /// <summary>
         /// TBD
@@ -682,7 +684,7 @@ namespace Akka.Remote
             return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? new SortedSet<T>(Buf, Comparer));
         }
 
-        #endregion
+#endregion
     }
 }
 

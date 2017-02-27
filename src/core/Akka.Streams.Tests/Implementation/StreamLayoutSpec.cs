@@ -240,6 +240,7 @@ namespace Akka.Streams.Tests.Implementation
             CheckMaterialized(runnable);
         }
 
+#if !CORECLR
         [Fact(Skip = "We can't catch a StackOverflowException")]
         public void StreamLayout_should_fail_fusing_when_value_computation_is_too_complex()
         {
@@ -249,6 +250,7 @@ namespace Akka.Streams.Tests.Implementation
                     (flow, i) => flow.MapMaterializedValue(x => x + i));
             g.Invoking(flow => Streams.Fusing.Aggressive(flow)).ShouldThrow<StackOverflowException>();
         }
+#endif
 
         [Fact]
         public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()

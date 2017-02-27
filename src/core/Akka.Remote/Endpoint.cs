@@ -188,6 +188,7 @@ namespace Akka.Remote
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public EndpointException(string message, Exception cause = null) : base(message, cause) { }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="EndpointException"/> class.
         /// </summary>
@@ -197,6 +198,7 @@ namespace Akka.Remote
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -359,14 +361,14 @@ namespace Akka.Remote
         }
     }
 
-    #endregion
+#endregion
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
     internal class ReliableDeliverySupervisor : ReceiveActor
     {
-        #region Internal message classes
+#region Internal message classes
 
         /// <summary>
         /// TBD
@@ -404,7 +406,7 @@ namespace Akka.Remote
             private TooLongIdle() { }
         }
 
-        #endregion
+#endregion
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
@@ -526,7 +528,7 @@ namespace Akka.Remote
             return new SeqNo(tmp);
         }
 
-        #region ActorBase methods and Behaviors
+#region ActorBase methods and Behaviors
 
         /// <summary>
         /// TBD
@@ -749,9 +751,9 @@ namespace Akka.Remote
             ReceiveAny(o => { }); // ignore
         }
 
-        #endregion
+#endregion
 
-        #region Static methods and Internal Message Types
+#region Static methods and Internal Message Types
 
         /// <summary>
         /// TBD
@@ -822,7 +824,7 @@ namespace Akka.Remote
                     .WithDispatcher(dispatcher);
         }
 
-        #endregion
+#endregion
 
         // Extracted this method to solve a compiler issue with `Receive<TooLongIdle>`
         private void HandleTooLongIdle()
@@ -872,7 +874,7 @@ namespace Akka.Remote
             }
         }
 
-        #region Writer create
+#region Writer create
 
         private IActorRef CreateWriter()
         {
@@ -887,7 +889,7 @@ namespace Akka.Remote
             return writer;
         }
 
-        #endregion
+#endregion
 
     }
 
@@ -941,7 +943,7 @@ namespace Akka.Remote
             Settings = settings;
         }
 
-        #region Event publishing methods
+#region Event publishing methods
 
         /// <summary>
         /// TBD
@@ -973,7 +975,7 @@ namespace Akka.Remote
             }
         }
 
-        #endregion
+#endregion
 
     }
 
@@ -1058,7 +1060,7 @@ namespace Akka.Remote
 
         private readonly IRemoteMetrics _remoteMetrics;
 
-        #region ActorBase methods
+#region ActorBase methods
 
         /// <summary>
         /// TBD
@@ -1136,9 +1138,9 @@ namespace Akka.Remote
             EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
         }
 
-        #endregion
+#endregion
 
-        #region Receives
+#region Receives
 
         private void Initializing()
         {
@@ -1273,9 +1275,9 @@ namespace Akka.Remote
             }
         }
 
-        #endregion
+#endregion
 
-        #region Internal methods
+#region Internal methods
 
         private Deadline NewAckDeadline()
         {
@@ -1570,9 +1572,9 @@ namespace Akka.Remote
             ScheduleBackoffTimer();
         }
 
-        #endregion
+#endregion
 
-        #region Static methods and Internal messages
+#region Static methods and Internal messages
 
         // These settings are not configurable because wrong configuration will break the auto-tuning
         private const int SendBufferBatchSize = 5;
@@ -1796,7 +1798,7 @@ namespace Akka.Remote
 
         private const string AckIdleTimerName = "AckIdleTimer";
 
-        #endregion
+#endregion
 
     }
 
@@ -1851,7 +1853,7 @@ namespace Akka.Remote
         private readonly RemoteActorRefProvider _provider;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
 
-        #region ActorBase overrides
+#region ActorBase overrides
 
         /// <summary>
         /// TBD
@@ -1931,11 +1933,11 @@ namespace Akka.Remote
             ReceiveAny(o => { }); // ignore
         }
 
-        #endregion
+#endregion
 
 
 
-        #region Lifecycle event handlers
+#region Lifecycle event handlers
 
         private void SaveState()
         {
@@ -2023,9 +2025,9 @@ namespace Akka.Remote
             }
         }
 
-        #endregion
+#endregion
 
-        #region Static members
+#region Static members
 
         /// <summary>
         /// TBD
@@ -2061,6 +2063,6 @@ namespace Akka.Remote
                             .WithDispatcher(settings.Dispatcher);
         }
 
-        #endregion
+#endregion
     }
 }

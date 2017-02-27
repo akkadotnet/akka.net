@@ -12,11 +12,6 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Akka.Cluster.Tools")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyProduct("Akka.Cluster.Tools")]
-[assembly: AssemblyCulture("")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools.Tests.MultiNode")]
 

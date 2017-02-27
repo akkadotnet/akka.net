@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if FSCHECK
 using System.Linq;
 using System.Text;
 using Akka.IO;
@@ -87,6 +87,7 @@ namespace Akka.Tests.Util
             Prop.ForAll((string s) => ByteString.FromString(s, Encoding.UTF8).DecodeString(Encoding.UTF8) == (s ?? "")) // TODO: What should we do with null string?
                 .QuickCheckThrowOnFailure();
         }
+
         [Fact]
         public void A_ByteString_must_behave_as_expected_when_compacting()
         {
@@ -120,3 +121,4 @@ namespace Akka.Tests.Util
         }
     }
 }
+#endif

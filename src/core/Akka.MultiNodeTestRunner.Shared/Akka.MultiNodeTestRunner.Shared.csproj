@@ -1,106 +1,39 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{964F0EC5-FBE6-47C5-8AE6-145114D5DB8C}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.MultiNodeTestRunner.Shared</RootNamespace>
-    <AssemblyName>Akka.MultiNodeTestRunner.Shared</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
+    <AssemblyTitle>Akka.MultiNodeTestRunner.Shared</AssemblyTitle>
+    <TargetFrameworks>net452</TargetFrameworks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <LangVersion>5</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="Microsoft.CSharp" />
+    <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="..\..\SharedAssemblyInfo.cs">
-      <Link>Properties\SharedAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="ExitCodeContainer.cs" />
-    <Compile Include="NodeTest.cs" />
-    <Compile Include="Persistence\EnumerableExtensions.cs" />
-    <Compile Include="Persistence\FileNameGenerator.cs" />
-    <Compile Include="Persistence\IPersistentTestRunStore.cs" />
-    <Compile Include="Persistence\IRetrievableTestRunStore.cs" />
-    <Compile Include="Persistence\JsonPersistentTestRunStore.cs" />
-    <Compile Include="Persistence\TimelineItem.cs" />
-    <Compile Include="Persistence\TimelineItemFactory.cs" />
-    <Compile Include="Persistence\VisualizerRuntimeTemplate.Tree.cs" />
-    <Compile Include="Persistence\VisualizerPersistentTestRunStore.cs" />
+    <Compile Include="**\*.cs" Exclude="Persistence\VisualizerRuntimeTemplate.cs" />
     <Compile Include="Persistence\VisualizerRuntimeTemplate.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>VisualizerRuntimeTemplate.tt</DependentUpon>
     </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Sinks\ConsoleMessageSinkActor.cs" />
-    <Compile Include="Sinks\FileSystemAppenderActor.cs" />
-    <Compile Include="Sinks\FileSystemMessageSinkActor.cs" />
-    <Compile Include="Sinks\IMessageSink.cs" />
-    <Compile Include="Reporting\MultiNodeMessage.cs" />
-    <Compile Include="Reporting\TestRunTree.cs" />
-    <Compile Include="Sinks\Messages.cs" />
-    <Compile Include="Sinks\MessageSink.cs" />
-    <Compile Include="Sinks\MessageSinkActor.cs" />
-    <Compile Include="Reporting\NodeDataActor.cs" />
-    <Compile Include="Reporting\SpecRunCoordinator.cs" />
-    <Compile Include="Sinks\SinkCoordinator.cs" />
-    <Compile Include="Sinks\TestCoordinatorEnabledMessageSink.cs" />
-    <Compile Include="Reporting\TestRunCoordinator.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Akka\Akka.csproj">
-      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
-      <Name>Akka</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Persistence\VisualizerRuntimeTemplate.tt">
       <Generator>TextTemplatingFilePreprocessor</Generator>
       <LastGenOutput>VisualizerRuntimeTemplate.cs</LastGenOutput>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <DefineConstants>$(DefineConstants);</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
 </Project>

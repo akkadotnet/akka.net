@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Collections.Immutable;
 using System.Net;
@@ -616,3 +616,4 @@ namespace Akka.Streams.Implementation.IO
         public override string ToString() => $"TCP-to {_remoteAddress}";
     }
 }
+#endif

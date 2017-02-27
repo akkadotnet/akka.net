@@ -49,6 +49,7 @@ namespace Akka.Persistence.Snapshot
             {
             }
 
+#if SERIALIZATION
             /// <summary>
             /// Initializes a new instance of the <see cref="NoSnapshotStoreException"/> class.
             /// </summary>
@@ -57,6 +58,7 @@ namespace Akka.Persistence.Snapshot
             protected NoSnapshotStoreException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
+#endif
         }
 
         /// <summary>

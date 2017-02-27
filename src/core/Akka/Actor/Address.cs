@@ -22,7 +22,10 @@ namespace Akka.Actor
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
-    public sealed class Address : ICloneable, IEquatable<Address>, ISurrogated
+    public sealed class Address : IEquatable<Address>, ISurrogated
+#if CLONEABLE
+        , ICloneable
+#endif
     {
         /// <summary>
         /// Pseudo address for all systems

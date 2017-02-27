@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
@@ -85,3 +85,4 @@ namespace Akka.IO
         }
     }
 }
+#endif

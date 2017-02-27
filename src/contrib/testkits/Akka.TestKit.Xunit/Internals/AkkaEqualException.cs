@@ -33,6 +33,7 @@ namespace Akka.TestKit.Xunit.Internals
             _args = args;
         }
 
+#if SERIALIZATION
         /// <summary>
         /// TBD
         /// </summary>
@@ -42,7 +43,7 @@ namespace Akka.TestKit.Xunit.Internals
             : base(info, context)
         {
         }
-
+#endif
         /// <summary>
         /// TBD
         /// </summary>
