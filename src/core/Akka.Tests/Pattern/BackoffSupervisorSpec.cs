@@ -209,7 +209,7 @@ namespace Akka.Tests.Pattern
                 });
 
                 // TODO: this Thread.Sleep should be removed
-                Thread.Sleep(1000);
+                Thread.Sleep(500);
 
                 supervisor.Tell("hello");
                 ExpectMsg("hello");

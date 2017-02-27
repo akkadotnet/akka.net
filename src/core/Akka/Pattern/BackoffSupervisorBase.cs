@@ -11,6 +11,9 @@ using System;
 
 namespace Akka.Pattern
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class BackoffSupervisorBase : ActorBase
     {
         internal BackoffSupervisorBase(Props childProps, string childName, IBackoffReset reset)

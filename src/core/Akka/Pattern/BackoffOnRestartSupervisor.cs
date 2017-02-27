@@ -39,11 +39,7 @@ namespace Akka.Pattern
             return new OneForOneStrategy(_strategy.MaxNumberOfRetries, _strategy.WithinTimeRangeMilliseconds,
                 ex =>
                 {
-                    // TODO: StackOverflowException here
-                    //var defaultDirective = base.SupervisorStrategyInternal.AsInstanceOf<OneForOneStrategy>().Decider?.Decide(ex) ?? Directive.Escalate;
-                    var defaultDirective = Directive.Escalate;
-
-                    var directive = _strategy.Decider?.Decide(ex) ?? defaultDirective;
+                    var directive = _strategy.Decider?.Decide(ex) ?? Actor.SupervisorStrategy.DefaultStrategy.Decider.Decide(ex);
 
                     // Whatever the final Directive is, we will translate all Restarts
                     // to our own Restarts, which involves stopping the child.

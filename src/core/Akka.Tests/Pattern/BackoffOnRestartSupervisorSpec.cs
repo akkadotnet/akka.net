@@ -136,8 +136,8 @@ namespace Akka.Tests.Pattern
                     {
                         return Directive.Stop;
                     }
-                    // TODO: should restart be there?
-                    return Directive.Restart;
+
+                    return SupervisorStrategy.DefaultStrategy.Decider.Decide(ex);
                 }));
 
             return BackoffSupervisor.Props(options);
@@ -232,8 +232,7 @@ namespace Akka.Tests.Pattern
                         return Directive.Stop;
                     }
 
-                    // TODO: why Restart?
-                    return Directive.Restart;
+                    return SupervisorStrategy.DefaultStrategy.Decider.Decide(ex);
                 }));
             var supervisor = Sys.ActorOf(BackoffSupervisor.Props(options));
 
@@ -307,8 +306,7 @@ namespace Akka.Tests.Pattern
                         return Directive.Stop;
                     }
 
-                    // TODO: why Restart?
-                    return Directive.Restart;
+                    return SupervisorStrategy.DefaultStrategy.Decider.Decide(ex);
                 }));
             var supervisor = Sys.ActorOf(BackoffSupervisor.Props(options));
 
