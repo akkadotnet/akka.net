@@ -182,6 +182,7 @@
     <Compile Include="MatchHandler\MatchExpressionBuilder_CreateArgumentValuesArray_Tests.cs" />
     <Compile Include="MatchHandler\MatchHandlerBuilderTests.cs" />
     <Compile Include="MatchHandler\PartialActionBuilderTests.cs" />
+    <Compile Include="Pattern\BackoffOnRestartSupervisorSpec.cs" />
     <Compile Include="Pattern\BackoffSupervisorSpec.cs" />
     <Compile Include="Pattern\CircuitBreakerSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -197,6 +198,7 @@
     <Compile Include="Routing\ScatterGatherFirstCompletedSpec.cs" />
     <Compile Include="Routing\SmallestMailboxSpec.cs" />
     <Compile Include="Routing\TailChoppingSpec.cs" />
+    <Compile Include="Serialization\NewtonsoftJsonConfigSpec.cs" />
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="TestUtils\Comparable.cs" />
     <Compile Include="TestUtils\PropsWithName.cs" />
