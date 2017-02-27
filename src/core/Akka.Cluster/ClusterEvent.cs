@@ -545,23 +545,20 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates that the <see cref="Cluster"/> plugin is shutting down.
         /// </summary>
-        public sealed class ClusterShuttingDown : IClusterDomainEvent
+        public sealed class ClusterShuttingDown : IClusterDomainEvent, IDeadLetterSuppression
         {
             private ClusterShuttingDown()
             {
             }
 
             /// <summary>
-            /// TBD
+            /// Singleton instance.
             /// </summary>
             public static readonly IClusterDomainEvent Instance = new ClusterShuttingDown();
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc cref="object.ToString"/>
             public override string ToString()
             {
                 return "ClusterShuttingDown";
@@ -975,6 +972,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Used for checking convergence when we don't have any information from the cluster daemon.
+        /// </summary>
+        private static readonly HashSet<UniqueAddress> EmptySet = new HashSet<UniqueAddress>();
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="oldGossip">TBD</param>
@@ -988,9 +990,9 @@ namespace Akka.Cluster
                 return ImmutableList<SeenChanged>.Empty;
             }
 
-            var newConvergence = newGossip.Convergence(selfUniqueAddress);
+            var newConvergence = newGossip.Convergence(selfUniqueAddress, EmptySet);
             var newSeenBy = newGossip.SeenBy;
-            if (!newConvergence.Equals(oldGossip.Convergence(selfUniqueAddress)) || !newSeenBy.SequenceEqual(oldGossip.SeenBy))
+            if (!newConvergence.Equals(oldGossip.Convergence(selfUniqueAddress, EmptySet)) || !newSeenBy.SequenceEqual(oldGossip.SeenBy))
             {
                 return ImmutableList.Create(new SeenChanged(newConvergence, newSeenBy.Select(s => s.Address).ToImmutableHashSet()));
             }

@@ -167,8 +167,8 @@ namespace Akka.Cluster.Tests
 
             // current node should be marked as leaving, but not removed yet
             AwaitCondition(() => _cluster.State.Members
-                .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving, 
-                TimeSpan.FromSeconds(10), 
+                .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving,
+                TimeSpan.FromSeconds(10),
                 message: "Failed to observe node as Leaving.");
 
             // can't run this inside Within block
@@ -180,7 +180,7 @@ namespace Akka.Cluster.Tests
 
                 LeaderActions(); // Leaving --> Exiting
                 AwaitCondition(() => _cluster.State.Members
-                   .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting, 
+                   .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting,
                    TimeSpan.FromSeconds(10), message: "Failed to observe node as Exiting.");
 
                 LeaderActions(); // Exiting --> Removed
@@ -235,6 +235,34 @@ namespace Akka.Cluster.Tests
             TestActor.Path.Address.Host.Should().BeNull();
             _cluster.RemotePathOf(TestActor).Uid.Should().Be(TestActor.Path.Uid);
             _cluster.RemotePathOf(TestActor).Address.Should().Be(_selfAddress);
+        }
+
+        [Fact]
+        public void A_cluster_must_leave_via_CoordinatedShutdownRun()
+        {
+            var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
+                akka.actor.provider = ""cluster""
+                akka.remote.dot-netty.tcp.port = 0
+            ").WithFallback(Sys.Settings.Config));
+
+            try
+            {
+                var probe = CreateTestProbe(sys2);
+                Cluster.Get(sys2).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
+                probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
+                Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
+                probe.ExpectMsg<ClusterEvent.MemberUp>();
+
+                CoordinatedShutdown.Get(sys2).Run();
+
+                probe.ExpectMsg<ClusterEvent.MemberLeft>();
+                probe.ExpectMsg<ClusterEvent.MemberExited>();
+                probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+            }
+            finally
+            {
+                Shutdown(sys2);
+            }
         }
     }
 }
