@@ -273,7 +273,7 @@ namespace Akka.Tests.Actor
             co.AddTask("a", "a1", () =>
             {
                 TestActor.Tell("A");
-                return TaskEx.FromException<bool>(new ApplicationException("boom"));
+                return TaskEx.FromException<Done>(new ApplicationException("boom"));
             });
 
             co.AddTask("a", "a2", () =>
@@ -286,7 +286,7 @@ namespace Akka.Tests.Actor
             co.AddTask("b", "b1", () =>
             {
                 TestActor.Tell("B");
-                return new TaskCompletionSource<bool>().Task; // never completed
+                return new TaskCompletionSource<Done>().Task; // never completed
             });
 
             co.AddTask("c", "c1", () =>
@@ -315,7 +315,7 @@ namespace Akka.Tests.Actor
             co.AddTask("b", "b1", () =>
             {
                 TestActor.Tell("B");
-                return new TaskCompletionSource<bool>().Task; // never completed
+                return new TaskCompletionSource<Done>().Task; // never completed
             });
 
             co.AddTask("c", "c1", () =>
@@ -396,7 +396,6 @@ namespace Akka.Tests.Actor
         {
             var shutdownSystem = CoordinatedShutdown.Get(Sys).Run();
             shutdownSystem.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
-            shutdownSystem.Result.Should().BeTrue();
 
             Sys.WhenTerminated.IsCompleted.Should().BeTrue();
         }

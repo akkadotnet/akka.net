@@ -177,12 +177,12 @@ namespace Akka.Actor
         /// </summary>
         internal readonly List<string> OrderedPhases;
 
-        private readonly ConcurrentBag<Func<Task<bool>>> _clrShutdownTasks = new ConcurrentBag<Func<Task<bool>>>();
-        private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<bool>>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<bool>>>>>();
+        private readonly ConcurrentBag<Func<Task<Done>>> _clrShutdownTasks = new ConcurrentBag<Func<Task<Done>>>();
+        private readonly ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<Done>>>>> _tasks = new ConcurrentDictionary<string, ImmutableList<Tuple<string, Func<Task<Done>>>>>();
         private readonly AtomicBoolean _runStarted = new AtomicBoolean(false);
         private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
-        private readonly TaskCompletionSource<bool> _runPromise = new TaskCompletionSource<bool>();
-        private readonly TaskCompletionSource<bool> _hooksRunPromise = new TaskCompletionSource<bool>();
+        private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _hooksRunPromise = new TaskCompletionSource<Done>();
 
         private volatile bool _runningClrHook = false;
 
@@ -191,7 +191,7 @@ namespace Akka.Actor
         /// 
         /// Signals when CLR shutdown hooks have been completed
         /// </summary>
-        internal Task<bool> ClrShutdownTask => _hooksRunPromise.Task;
+        internal Task<Done> ClrShutdownTask => _hooksRunPromise.Task;
 
         /// <summary>
         /// Add a task to a phase. It doesn't remove previously added tasks.
@@ -212,17 +212,17 @@ namespace Akka.Actor
         /// It is possible to add a task to a later phase from within a task in an earlier phase
         /// and it will be performed.
         /// </remarks>
-        public void AddTask(string phase, string taskName, Func<Task<bool>> task)
+        public void AddTask(string phase, string taskName, Func<Task<Done>> task)
         {
             if (!_knownPhases.Contains(phase))
                 throw new ConfigurationException($"Unknown phase [{phase}], known phases [{string.Join(",", _knownPhases)}]. " +
                     "All phases (along with their optional dependencies) must be defined in configuration.");
 
-            ImmutableList<Tuple<string, Func<Task<bool>>>> current;
+            ImmutableList<Tuple<string, Func<Task<Done>>>> current;
             if (!_tasks.TryGetValue(phase, out current))
             {
                 if (!_tasks.TryAdd(phase,
-                    ImmutableList<Tuple<string, Func<Task<bool>>>>.Empty.Add(Tuple.Create(taskName, task))))
+                    ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
                 {
                     AddTask(phase, taskName, task); // CAS failed, retry
                 }
@@ -244,7 +244,7 @@ namespace Akka.Actor
         /// the Akka.NET internal shutdown hooks execute.
         /// </summary>
         /// <param name="hook">A task that will be executed during shutdown.</param>
-        public void AddClrShutdownHook(Func<Task<bool>> hook)
+        public void AddClrShutdownHook(Func<Task<Done>> hook)
         {
             if (!_clrHooksStarted)
             {
@@ -262,7 +262,7 @@ namespace Akka.Actor
         /// Safe to call multiple times, but hooks will only be run once.
         /// </summary>
         /// <returns>Returns a <see cref="Task"/> that will be completed once the process exits.</returns>
-        private Task<bool> RunClrHooks()
+        private Task<Done> RunClrHooks()
         {
             if (_clrHooksStarted.CompareAndSet(false, true))
             {
@@ -276,7 +276,7 @@ namespace Akka.Actor
                     catch (Exception ex)
                     {
                         Log.Error(ex, "Error occurred while executing CLR shutdown hook");
-                        return TaskEx.FromException<bool>(ex);
+                        return TaskEx.FromException<Done>(ex);
                     }
                 })).ContinueWith(tr =>
                 {
@@ -284,7 +284,7 @@ namespace Akka.Actor
                         _hooksRunPromise.SetException(tr.Exception.Flatten());
                     else
                     {
-                        _hooksRunPromise.SetResult(tr.Result.All(x => x));
+                        _hooksRunPromise.SetResult(Done.Instance);
                     }
                 });
             }
@@ -301,20 +301,20 @@ namespace Akka.Actor
         /// <remarks>
         /// It is safe to call this method multiple times. It will only run once.
         /// </remarks>
-        public Task<bool> Run(string fromPhase = null)
+        public Task<Done> Run(string fromPhase = null)
         {
             if (_runStarted.CompareAndSet(false, true))
             {
                 var debugEnabled = Log.IsDebugEnabled;
-                Func<List<string>, Task<bool>> loop = null;
+                Func<List<string>, Task<Done>> loop = null;
                 loop = remainingPhases =>
                 {
                     var phase = remainingPhases.FirstOrDefault();
                     if (phase == null)
                         return TaskEx.Completed;
                     var remaining = remainingPhases.Skip(1).ToList();
-                    Task<bool> phaseResult = null;
-                    ImmutableList<Tuple<string, Func<Task<bool>>>> phaseTasks;
+                    Task<Done> phaseResult = null;
+                    ImmutableList<Tuple<string, Func<Task<Done>>>> phaseTasks;
                     if (!_tasks.TryGetValue(phase, out phaseTasks))
                     {
                         if (debugEnabled)
@@ -329,7 +329,7 @@ namespace Akka.Actor
 
                         // note that tasks within same phase are performed in parallel
                         var recoverEnabled = Phases[phase].Recover;
-                        var result = Task.WhenAll<bool>(phaseTasks.Select(x =>
+                        var result = Task.WhenAll<Done>(phaseTasks.Select(x =>
                         {
                             var taskName = x.Item1;
                             var task = x.Item2;
@@ -345,7 +345,7 @@ namespace Akka.Actor
                                         if(tr.IsCanceled || tr.IsFaulted)
                                             Log.Warning("Task [{0}] failed in phase [{1}]: {2}", taskName, phase,
                                                 tr.Exception?.Flatten().Message);
-                                        return true;
+                                        return Done.Instance;
                                     });
                                 }
 
@@ -361,12 +361,17 @@ namespace Akka.Actor
                                     return TaskEx.Completed;
                                 }
 
-                                return TaskEx.FromException<bool>(ex);
+                                return TaskEx.FromException<Done>(ex);
                             }
-                        })).ContinueWith(tr => tr.Result.All(x => x));
+                        })).ContinueWith(tr =>
+                        {
+                            // forces downstream error propagation if recover is disabled
+                            var force = tr.Result;
+                            return Done.Instance;
+                        });
                         var timeout = Phases[phase].Timeout;
                         var deadLine = MonotonicClock.Elapsed + timeout;
-                        Task<bool> timeoutFunction = null;
+                        Task<Done> timeoutFunction = null;
                         try
                         {
                             timeoutFunction = After(timeout, System.Scheduler, () =>
@@ -388,7 +393,7 @@ namespace Akka.Actor
                                 else
                                 {
                                     return
-                                    TaskEx.FromException<bool>(
+                                    TaskEx.FromException<Done>(
                                         new TimeoutException(
                                             $"Coordinated shutdown phase[{phase}] timed out after {timeout}"));
                                 }
@@ -405,7 +410,7 @@ namespace Akka.Actor
                             timeoutFunction = result;
                         }
 
-                        phaseResult = Task.WhenAny<bool>(result, timeoutFunction).Unwrap();
+                        phaseResult = Task.WhenAny<Done>(result, timeoutFunction).Unwrap();
                     }
 
                     if (!remaining.Any())
@@ -558,7 +563,7 @@ namespace Akka.Actor
                             {
                                 Environment.Exit(0);
                             }
-                            return true;
+                            return Done.Instance;
                         });
                     }
 
@@ -570,7 +575,7 @@ namespace Akka.Actor
                             {
                                 Environment.Exit(0);
                             }
-                            return true;
+                            return Done.Instance;
                         });
                     } else if (exitClr)
                     {
@@ -620,7 +625,7 @@ namespace Akka.Actor
                                 coord.Log.Warning("CoordinatedShutdown from CLR shutdown failed: {0}", ex.Message);
                             }
                         }
-                        return true;
+                        return Done.Instance;
                     });
                 });
             }

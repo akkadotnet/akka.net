@@ -207,6 +207,7 @@
     <Compile Include="Dispatch\PinnedDispatcher.cs" />
     <Compile Include="Dispatch\SysMsg\ISystemMessage.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
+    <Compile Include="Done.cs" />
     <Compile Include="Event\ActorEventBus.cs" />
     <Compile Include="Event\AddressTerminatedTopic.cs" />
     <Compile Include="Event\BusLogging.cs" />

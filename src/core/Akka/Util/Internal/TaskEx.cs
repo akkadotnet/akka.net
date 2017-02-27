@@ -14,7 +14,7 @@ namespace Akka.Util.Internal
         /// <summary>
         /// A completed task
         /// </summary>
-        public static readonly Task<bool> Completed = Task.FromResult(true);
+        public static readonly Task<Done> Completed = Task.FromResult(Done.Instance);
 
         /// <summary>
         /// Creates a failed <see cref="Task"/>
@@ -23,7 +23,7 @@ namespace Akka.Util.Internal
         /// <returns>A failed task.</returns>
         public static Task FromException(Exception ex)
         {
-            var c = new TaskCompletionSource<bool>();
+            var c = new TaskCompletionSource<Done>();
             c.SetException(ex);
             return c.Task;
         }

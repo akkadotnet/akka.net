@@ -822,10 +822,13 @@ namespace Akka.Cluster
         private readonly ClusterSettings _settings;
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
+        private readonly TaskCompletionSource<Done> _clusterPromise = new TaskCompletionSource<Done>();
+
         /// <summary>
-        /// TBD
+        /// Creates a new instance of the ClusterDaemon
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings that will be used for the <see cref="Cluster"/>.</param>
         public ClusterDaemon(ClusterSettings settings)
         {
             // Important - don't use Cluster(context.system) in constructor because that would
@@ -857,11 +860,41 @@ namespace Akka.Cluster
             });
         }
 
+        private void AddCoordinatedLeave()
+        {
+            var sys = Context.System;
+            var self = Self;
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterLeave, "leave", () =>
+            {
+                if (Cluster.Get(sys).IsTerminated)
+                {
+                    return Task.FromResult(Done.Instance);
+                }
+                else
+                {
+                    var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterLeave);
+                    return self.Ask<Done>(CoordinatedShutdownLeave.LeaveReq.Instance, timeout);
+                }
+            });
+
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterLeave, "wait-shutdown", () => _clusterPromise.Task);
+        }
+
         private void CreateChildren()
         {
             _coreSupervisor = Context.ActorOf(Props.Create<ClusterCoreSupervisor>(), "core");
 
             Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>(), "heartbeatReceiver");
+        }
+
+        protected override void PostStop()
+        {
+            _clusterPromise.SetResult(Done.Instance);
+            if (_settings.RunCoordinatedShutdownWhenDown)
+            {
+                // run the last phases if the node was downed (not leaving)
+                _coordShutdown.Run(CoordinatedShutdown.PhaseClusterShutdown);
+            }
         }
     }
 
