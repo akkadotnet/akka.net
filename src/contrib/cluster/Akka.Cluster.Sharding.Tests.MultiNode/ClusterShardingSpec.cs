@@ -296,12 +296,12 @@ namespace Akka.Cluster.Sharding.Tests
             foreach (var typeName in typeNames)
             {
                 var rebalanceEnabled = string.Equals(typeName, "rebalancing", StringComparison.InvariantCultureIgnoreCase);
-                var singletonProps = Props.Create(() => new BackoffSupervisor(
+                var singletonProps = BackoffSupervisor.Props(
                     CoordinatorProps(typeName, rebalanceEnabled),
                     "coordinator",
                     TimeSpan.FromSeconds(5),
                     TimeSpan.FromSeconds(5),
-                    0.1)).WithDeploy(Deploy.Local);
+                    0.1).WithDeploy(Deploy.Local);
 
                 Sys.ActorOf(ClusterSingletonManager.Props(
                     singletonProps,
