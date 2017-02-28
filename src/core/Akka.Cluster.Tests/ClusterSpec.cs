@@ -160,6 +160,9 @@ namespace Akka.Cluster.Tests
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
                 akka.remote.dot-netty.tcp.port = 0
+                akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
+                akka.coordinated-shutdown.terminate-actor-system = off
+                akka.cluster.run-coordinated-shutdown-when-down = off
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
             var probe = CreateTestProbe(sys2);
@@ -233,6 +236,9 @@ namespace Akka.Cluster.Tests
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
                 akka.remote.dot-netty.tcp.port = 0
+                akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
+                akka.coordinated-shutdown.terminate-actor-system = off
+                akka.cluster.run-coordinated-shutdown-when-down = off
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
             try
