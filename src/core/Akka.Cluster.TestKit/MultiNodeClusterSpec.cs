@@ -52,11 +52,14 @@ namespace Akka.Cluster.TestKit
                     periodic-tasks-initial-delay        = 300 ms
                     publish-stats-interval              = 0 s # always, when it happens
                     failure-detector.heartbeat-interval = 500 ms
+                    run-coordinated-shutdown-when-down = off
                 }
                 akka.loglevel = INFO
                 akka.log-dead-letters = off
                 akka.log-dead-letters-during-shutdown = off
                 #akka.remote.log-remote-lifecycle-events = off
+                akka.coordinated-shutdown.run-by-jvm-shutdown-hook = off
+                akka.coordinated-shutdown.terminate-actor-system = off
                 #akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
                 akka.test {
                     single-expect-default = 15 s
