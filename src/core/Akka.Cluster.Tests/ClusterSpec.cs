@@ -24,8 +24,10 @@ namespace Akka.Cluster.Tests
               auto-down-unreachable-after = 0s
               periodic-tasks-initial-delay = 120 s
               publish-stats-interval = 0 s # always, when it happens
+              run-coordinated-shutdown-when-down = off
             }
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+            akka.coordinated-shutdown.terminate-actor-system = off
             akka.remote.log-remote-lifecycle-events = off
             akka.remote.dot-netty.tcp.port = 0";
 
