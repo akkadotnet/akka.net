@@ -889,11 +889,12 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two <see cref="Gossip"/> instances and uses them to publish the appropriate <see cref="IMemberEvent"/>
+        /// for any given change to the membership of the current cluster.
         /// </summary>
-        /// <param name="oldGossip">TBD</param>
-        /// <param name="newGossip">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="oldGossip">The previous gossip instance.</param>
+        /// <param name="newGossip">The new gossip instance.</param>
+        /// <returns>A possibly empty set of membership events to be published to all subscribers.</returns>
         internal static ImmutableList<IMemberEvent> DiffMemberEvents(Gossip oldGossip, Gossip newGossip)
         {
             if (newGossip.Equals(oldGossip))
@@ -907,7 +908,9 @@ namespace Akka.Cluster
                 .GroupBy(m => m.UniqueAddress);
 
             var changedMembers = membersGroupedByAddress
-                .Where(g => g.Count() == 2 && (g.First().Status != g.Skip(1).First().Status || g.First().UpNumber != g.Skip(1).First().UpNumber))
+                .Where(g => g.Count() == 2 
+                && (g.First().Status != g.Skip(1).First().Status 
+                    || g.First().UpNumber != g.Skip(1).First().UpNumber))
                 .Select(g => g.First());
 
             var memberEvents = CollectMemberEvents(newMembers.Union(changedMembers));

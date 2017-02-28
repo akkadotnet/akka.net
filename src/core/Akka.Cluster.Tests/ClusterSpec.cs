@@ -243,7 +243,7 @@ namespace Akka.Cluster.Tests
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
                 akka.remote.dot-netty.tcp.port = 0
-            ").WithFallback(Sys.Settings.Config));
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
             try
             {

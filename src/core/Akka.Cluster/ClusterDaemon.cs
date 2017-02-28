@@ -450,6 +450,9 @@ namespace Akka.Cluster
         {
             private ExitingCompleted() { }
 
+            /// <summary>
+            /// Singleton instance
+            /// </summary>
             public static readonly ExitingCompleted Instance = new ExitingCompleted();
         }
 
@@ -920,7 +923,7 @@ namespace Akka.Cluster
                 }
             });
 
-            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterLeave, "wait-shutdown", () => _clusterPromise.Task);
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShutdown, "wait-shutdown", () => _clusterPromise.Task);
         }
 
         private void CreateChildren()
@@ -1111,6 +1114,7 @@ namespace Akka.Cluster
         private void AddCoordinatedLeave()
         {
             var sys = Context.System;
+            var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () => _selfExiting.Task);
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExitingDone, "exiting-completed", () =>
             {
@@ -1119,7 +1123,7 @@ namespace Akka.Cluster
                 else
                 {
                     var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExitingDone);
-                    return Self.Ask(InternalClusterAction.ExitingCompleted.Instance, timeout).ContinueWith(tr => Done.Instance);
+                    return self.Ask(InternalClusterAction.ExitingCompleted.Instance, timeout).ContinueWith(tr => Done.Instance);
                 }
             });
         }
@@ -1419,6 +1423,11 @@ namespace Akka.Cluster
                 var joinSeedNodes = message as InternalClusterAction.JoinSeedNodes;
                 _log.Info("Trying to join seed nodes [{0}] when already part of a cluster, ignoring",
                     joinSeedNodes.SeedNodes.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b));
+            }
+            else if (message is InternalClusterAction.ExitingConfirmed)
+            {
+                var c = (InternalClusterAction.ExitingConfirmed) message;
+                ReceiveExitingConfirmed(c.Address);
             }
             else if (ReceiveExitingCompleted(message)) { }
             else
