@@ -27,7 +27,7 @@ namespace Akka.Cluster
     public class ClusterEvent
     {
         /// <summary>
-        /// TBD
+        /// The mode for getting the current state of the cluster upon first subscribing.
         /// </summary>
         public enum SubscriptionInitialStateMode
         {
@@ -46,13 +46,14 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Get the initial state as a <see cref="CurrentClusterState"/> message.
         /// </summary>
         public static readonly SubscriptionInitialStateMode InitialStateAsSnapshot =
             SubscriptionInitialStateMode.InitialStateAsSnapshot;
 
         /// <summary>
-        /// TBD
+        /// Get the current state of the cluster played back as a series of <see cref="IMemberEvent"/>
+        /// and <see cref="IReachabilityEvent"/> messages.
         /// </summary>
         public static readonly SubscriptionInitialStateMode InitialStateAsEvents =
             SubscriptionInitialStateMode.InitialStateAsEvents;
@@ -63,7 +64,7 @@ namespace Akka.Cluster
         public interface IClusterDomainEvent { }
 
         /// <summary>
-        /// TBD
+        /// A snapshot of the current state of the <see cref="Cluster"/>
         /// </summary>
         public sealed class CurrentClusterState
         {
@@ -74,7 +75,7 @@ namespace Akka.Cluster
             private readonly ImmutableDictionary<string, Address> _roleLeaderMap;
 
             /// <summary>
-            /// TBD
+            /// Creates a new instance of the current cluster state.
             /// </summary>
             public CurrentClusterState() : this(
                 ImmutableSortedSet<Member>.Empty,
@@ -85,13 +86,13 @@ namespace Akka.Cluster
             {}
 
             /// <summary>
-            /// TBD
+            /// Creates a new instance of the current cluster state.
             /// </summary>
-            /// <param name="members">TBD</param>
-            /// <param name="unreachable">TBD</param>
-            /// <param name="seenBy">TBD</param>
-            /// <param name="leader">TBD</param>
-            /// <param name="roleLeaderMap">TBD</param>
+            /// <param name="members">The current members of the cluster.</param>
+            /// <param name="unreachable">The unreachable members of the cluster.</param>
+            /// <param name="seenBy">The set of nodes who have seen us.</param>
+            /// <param name="leader">The leader of the cluster.</param>
+            /// <param name="roleLeaderMap">The list of role leaders.</param>
             public CurrentClusterState(
                 ImmutableSortedSet<Member> members,
                 ImmutableHashSet<Member> unreachable,

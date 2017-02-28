@@ -155,41 +155,29 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void A_cluster_must_complete_LeaveAsync_task_upon_being_removed()
         {
-            _cluster.Join(_selfAddress);
-            LeaderActions(); // Joining -> Up
+            var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
+                akka.actor.provider = ""cluster""
+                akka.remote.dot-netty.tcp.port = 0
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
-            _cluster.Subscribe(TestActor, new[] { typeof(ClusterEvent.MemberRemoved) });
+            var probe = CreateTestProbe(sys2);
+            Cluster.Get(sys2).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
+            probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
 
-            // first, is in response to the subscription
-            ExpectMsg<ClusterEvent.CurrentClusterState>();
+            Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
+            probe.ExpectMsg<ClusterEvent.MemberUp>();
 
-            var leaveTask = _cluster.LeaveAsync();
+            var leaveTask = Cluster.Get(sys2).LeaveAsync();
 
-            // current node should be marked as leaving, but not removed yet
-            AwaitCondition(() => _cluster.State.Members
-                .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving,
-                TimeSpan.FromSeconds(10),
-                message: "Failed to observe node as Leaving.");
+            leaveTask.IsCompleted.Should().BeFalse();
+            probe.ExpectMsg<ClusterEvent.MemberLeft>();
+            probe.ExpectMsg<ClusterEvent.MemberExited>();
+            probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+            leaveTask.IsCompleted.Should().BeTrue();
 
-            // can't run this inside Within block
-            ExpectNoMsg();
-
-            Within(TimeSpan.FromSeconds(10), () =>
-            {
-                leaveTask.IsCompleted.Should().BeFalse();
-
-                LeaderActions(); // Leaving --> Exiting
-                AwaitCondition(() => _cluster.State.Members
-                   .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting,
-                   TimeSpan.FromSeconds(10), message: "Failed to observe node as Exiting.");
-
-                LeaderActions(); // Exiting --> Removed
-                ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
-                leaveTask.IsCompleted.Should().BeTrue();
-            });
 
             // A second call for LeaveAsync should complete immediately
-            _cluster.LeaveAsync().IsCompleted.Should().BeTrue();
+            Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
         }
 
         [Fact]
@@ -316,7 +304,7 @@ namespace Akka.Cluster.Tests
                 probe.ExpectMsg<ClusterEvent.MemberUp>();
 
                 Cluster.Get(sys3).Down(Cluster.Get(sys3).SelfAddress);
-                
+
                 probe.ExpectMsg<ClusterEvent.MemberRemoved>();
                 AwaitCondition(() => sys3.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys3).IsTerminated.Should().BeTrue();
