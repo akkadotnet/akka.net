@@ -216,7 +216,7 @@ namespace Akka.Cluster
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
         /// </summary>
-        /// <param name="address">TBD</param>
+        /// <param name="address">The address of the node we want to join.</param>
         public void Join(Address address)
         {
             ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
@@ -262,7 +262,7 @@ namespace Akka.Cluster
         /// this process it might still be necessary to set the node's status to <see cref="MemberStatus.Down"/> in order
         /// to complete the removal.
         /// </summary>
-        /// <param name="address">TBD</param>
+        /// <param name="address">The address of the node leaving the cluster.</param>
         public void Leave(Address address)
         {
             ClusterCore.Tell(new ClusterUserAction.Leave(FillLocal(address)));

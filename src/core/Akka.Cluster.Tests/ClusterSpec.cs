@@ -283,7 +283,7 @@ namespace Akka.Cluster.Tests
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
                 probe.ExpectMsg<ClusterEvent.MemberExited>();
                 // TODO: race condition can occur when ActorSystem terminates, which kills this probe
-                // before MemberRemoved event can be delivered. This is normal behavior.
+                // before MemberRemoved event can be delivered, so it deadletters instead.
                 //probe.ExpectMsg<ClusterEvent.MemberRemoved>(); 
                 AwaitCondition(() => sys2.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys2).IsTerminated.Should().BeTrue();
