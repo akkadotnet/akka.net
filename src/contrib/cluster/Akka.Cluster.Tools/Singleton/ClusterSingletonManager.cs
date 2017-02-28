@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -18,7 +19,7 @@ using Akka.Util.Internal;
 namespace Akka.Cluster.Tools.Singleton
 {
     /// <summary>
-    /// TBD
+    /// Control messages used for the cluster singleton
     /// </summary>
     public interface IClusterSingletonMessage { }
 
@@ -351,6 +352,21 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Used for graceful termination as part of <see cref="CoordinatedShutdown"/>.
+    /// </summary>
+    internal sealed class SelfExiting
+    {
+        private SelfExiting() { }
+
+        /// <summary>
+        /// Singleton instance
+        /// </summary>
+        public static readonly SelfExiting Instance = new SelfExiting();
+    }
+
+    /// <summary>
     /// TBD
     /// </summary>
     [Serializable]
@@ -511,6 +527,9 @@ namespace Akka.Cluster.Tools.Singleton
         private readonly UniqueAddress _selfUniqueAddress;
         private ILoggingAdapter _log;
 
+        private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
+        private readonly TaskCompletionSource<Done> _memberExitingProgress = new TaskCompletionSource<Done>();
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -542,21 +561,29 @@ namespace Akka.Cluster.Tools.Singleton
             _maxTakeOverRetries = Math.Max(1, _maxHandOverRetries - 3);
 
             _selfUniqueAddress = _cluster.SelfUniqueAddress;
+            SetupCoordinatedShutdown();
 
             InitializeFSM();
         }
 
+        private void SetupCoordinatedShutdown()
+        {
+            var self = Self;
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-singleton-exiting", () => _memberExitingProgress.Task);
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "singleton-exiting-2", () =>
+            {
+                var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
+                return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+            });
+        }
+
         private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
         {
-            base.PreStart();
-
             // subscribe to cluster changes, re-subscribe when restart
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.MemberExited), typeof(ClusterEvent.MemberRemoved) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.MemberRemoved));
 
             SetTimer(CleanupTimer, Cleanup.Instance, TimeSpan.FromMinutes(1.0), repeat: true);
 
@@ -566,13 +593,12 @@ namespace Akka.Cluster.Tools.Singleton
             _cluster.RegisterOnMemberUp(() => self.Tell(StartOldestChangedBuffer.Instance));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
             CancelTimer(CleanupTimer);
             _cluster.Unsubscribe(Self);
+            _memberExitingProgress.TrySetResult(Done.Instance);
             base.PostStop();
         }
 
@@ -612,8 +638,7 @@ namespace Akka.Cluster.Tools.Singleton
         {
             var newOldest = handOverTo?.Path.Address;
             Log.Info("Singleton terminated, hand-over done [{0} -> {1}]", _cluster.SelfAddress, newOldest);
-            handOverTo?.Tell(HandOverDone.Instance);
-
+            _memberExitingProgress.TrySetResult(Done.Instance);
             if (_removed.ContainsKey(_cluster.SelfUniqueAddress))
             {
                 Log.Info("Self removed, stopping ClusterSingletonManager");
@@ -898,6 +923,13 @@ namespace Akka.Cluster.Tools.Singleton
                 {
                     return Stay().Using(new OldestData(oldestData.Singleton, true));
                 }
+                else if (e.FsmEvent is SelfExiting)
+                {
+                    SelfMemberExited();
+                    // complete _memberExitingProgress when HandOverDone
+                    Sender.Tell(Done.Instance);
+                    return Stay();
+                }
                 else return null;
             });
 
@@ -910,7 +942,7 @@ namespace Akka.Cluster.Tools.Singleton
                 {
                     var takeOverRetry = (TakeOverRetry)e.FsmEvent;
 
-                    if (_cluster.IsTerminated
+                    if ((_cluster.IsTerminated || _selfExited)
                         && (wasOldestData.NewOldest == null || takeOverRetry.Count > _maxTakeOverRetries))
                     {
                         if (wasOldestData.SingletonTerminated)
@@ -923,7 +955,7 @@ namespace Akka.Cluster.Tools.Singleton
                         }
                     }
                     else if (takeOverRetry.Count <= _maxTakeOverRetries)
-                    { 
+                    {
                         Log.Info("Retry [{0}], sending TakeOverFromMe to [{1}]", takeOverRetry.Count, wasOldestData.NewOldest);
 
                         if (wasOldestData.NewOldest != null)
@@ -959,6 +991,13 @@ namespace Akka.Cluster.Tools.Singleton
                 {
                     return Stay().Using(new WasOldestData(wasOldestData.Singleton, true, wasOldestData.NewOldest));
                 }
+                else if (e.FsmEvent is SelfExiting)
+                {
+                    SelfMemberExited();
+                    // complete _memberExitingProgress when HandOverDone
+                    Sender.Tell(Done.Instance);
+                    return Stay();
+                }
                 return null;
             });
 
@@ -973,11 +1012,20 @@ namespace Akka.Cluster.Tools.Singleton
                     {
                         return HandleHandOverDone(handingOverData.HandOverTo);
                     }
+
                     if (e.FsmEvent is HandOverToMe
                         && handingOverData.HandOverTo.Equals(Sender))
                     {
                         // retry
                         Sender.Tell(HandOverInProgress.Instance);
+                        return Stay();
+                    }
+
+                    if (e.FsmEvent is SelfExiting)
+                    {
+                        SelfMemberExited();
+                        // complete _memberExitingProgress when HandOverDone
+                        Sender.Tell(Done.Instance);
                         return Stay();
                     }
                 }
@@ -988,8 +1036,8 @@ namespace Akka.Cluster.Tools.Singleton
             {
                 var terminated = e.FsmEvent as Terminated;
                 var stoppingData = e.StateData as StoppingData;
-                if (terminated != null 
-                    && stoppingData != null 
+                if (terminated != null
+                    && stoppingData != null
                     && terminated.ActorRef.Equals(stoppingData.Singleton))
                 {
                     return Stop();
@@ -1013,15 +1061,12 @@ namespace Akka.Cluster.Tools.Singleton
             {
                 var removed = e.FsmEvent as ClusterEvent.MemberRemoved;
                 if (e.FsmEvent is ClusterEvent.CurrentClusterState) return Stay();
-                if (e.FsmEvent is ClusterEvent.MemberExited)
+                if (e.FsmEvent is SelfExiting)
                 {
-                    var m = ((ClusterEvent.MemberExited)e.FsmEvent).Member;
-                    if (m.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
-                    {
-                        _selfExited = true;
-                        Log.Info("Exited [{0}]", m.Address);
-                    }
-
+                    SelfMemberExited();
+                    // complete _memberExitingProgress when HandOverDone
+                    _memberExitingProgress.TrySetResult(Done.Instance);
+                    Sender.Tell(Done.Instance);
                     return Stay();
                 }
                 if (removed != null && removed.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress) && !_selfExited)
@@ -1079,6 +1124,12 @@ namespace Akka.Cluster.Tools.Singleton
             });
 
             StartWith(ClusterSingletonState.Start, Uninitialized.Instance);
+        }
+
+        private void SelfMemberExited()
+        {
+            _selfExited = true;
+            Log.Info("Exited [{0}]", _cluster.SelfAddress);
         }
 
         private void ScheduleDelayedMemberRemoved(Member member)
