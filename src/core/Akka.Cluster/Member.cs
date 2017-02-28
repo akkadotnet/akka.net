@@ -56,12 +56,12 @@ namespace Akka.Cluster
         internal int UpNumber { get; }
 
         /// <summary>
-        /// TBD
+        /// The status of the current member.
         /// </summary>
         public MemberStatus Status { get; }
 
         /// <summary>
-        /// TBD
+        /// The set of roles for the current member. Can be empty.
         /// </summary>
         public ImmutableHashSet<string> Roles { get; }
 

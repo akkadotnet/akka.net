@@ -2203,9 +2203,13 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// If akka.cluster.min-rn-of-members or akka.cluster.roles.[rolename].min-nr-of-members is set,
+        /// this function will check to see if that threshold is met.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// <c>true</c> if the setting isn't enabled or is satisfied. 
+        /// <c>false</c> is the setting is enabled and unsatisfied.
+        /// </returns>
         public bool IsMinNrOfMembersFulfilled()
         {
             return _latestGossip.Members.Count >= _cluster.Settings.MinNrOfMembers
@@ -2528,9 +2532,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Publishes gossip to other nodes in the cluster.
         /// </summary>
-        /// <param name="newGossip">TBD</param>
+        /// <param name="newGossip">The new gossip to share.</param>
         public void Publish(Gossip newGossip)
         {
             _publisher.Tell(new InternalClusterAction.PublishChanges(newGossip));
@@ -2941,20 +2945,17 @@ namespace Akka.Cluster
             });
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
         {
             _cluster.Subscribe(Self, To);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
-            if (_status == MemberStatus.Removed)
+            // execute MemberRemoved hooks if we are shutting down
+            if (_targetStatus == MemberStatus.Removed)
                 Done();
             _cluster.Unsubscribe(Self);
         }

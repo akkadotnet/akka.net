@@ -158,8 +158,8 @@ namespace Akka.Cluster
             /// <summary>
             /// Get address of current leader, if any, within the role set
             /// </summary>
-            /// <param name="role">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="role">The role we wish to check.</param>
+            /// <returns>The address of the node who is the real leader, if any. Otherwise <c>null</c>.</returns>
             public Address RoleLeader(string role)
             {
                 return _roleLeaderMap.GetOrElse(role, null);
@@ -1020,7 +1020,9 @@ namespace Akka.Cluster
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    /// 
+    /// Publishes <see cref="ClusterEvent"/>s out to all subscribers.
     /// </summary>
     internal sealed class ClusterDomainEventPublisher : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
@@ -1028,7 +1030,7 @@ namespace Akka.Cluster
         private readonly UniqueAddress _selfUniqueAddress = Cluster.Get(Context.System).SelfUniqueAddress;
 
         /// <summary>
-        /// TBD
+        /// Default constructor for ClusterDomainEventPublisher.
         /// </summary>
         public ClusterDomainEventPublisher()
         {
@@ -1043,19 +1045,13 @@ namespace Akka.Cluster
             Receive<InternalClusterAction.PublishEvent>(evt => Publish(evt));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc cref="ActorBase.PreRestart"/>
         protected override void PreRestart(Exception reason, object message)
         {
             // don't postStop when restarted, no children to stop
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
             // publish the final removed state before shutting down
