@@ -1,9 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿// <copyright file="ClusterSingletonRestartSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+
+using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -16,9 +20,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 {
     public class ClusterSingletonRestartSpec : AkkaSpec
     {
-        private readonly ActorSystem sys1;
-        private readonly ActorSystem sys2;
-        private ActorSystem sys3 = null;
+        private readonly ActorSystem _sys1;
+        private readonly ActorSystem _sys2;
+        private ActorSystem _sys3 = null;
 
         public ClusterSingletonRestartSpec() : base(@"
               akka.loglevel = INFO
@@ -31,8 +35,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 }
               }")
         {
-            sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
         }
 
         public void Join(ActorSystem from, ActorSystem to)
@@ -59,65 +63,65 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [Fact]
         public void Restarting_cluster_node_with_same_hostname_and_port_must_handover_to_next_oldest()
         {
-            Join(sys1, sys1);
-            Join(sys2, sys1);
+            Join(_sys1, _sys1);
+            Join(_sys2, _sys1);
 
-            var proxy2 = sys2.ActorOf(
-                ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(sys2)), "proxy2");
+            var proxy2 = _sys2.ActorOf(
+                ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys2)), "proxy2");
 
             Within(TimeSpan.FromSeconds(5), () =>
             {
                 AwaitAssert(() =>
                 {
-                    var probe = CreateTestProbe(sys2);
+                    var probe = CreateTestProbe(_sys2);
                     proxy2.Tell("hello", probe.Ref);
                     probe.ExpectMsg("hello", TimeSpan.FromSeconds(1));
                 });
             });
 
-            Shutdown(sys1);
+            Shutdown(_sys1);
             // it will be downed by the join attempts of the new incarnation
 
             // ReSharper disable once PossibleInvalidOperationException
-            var sys1Port = Cluster.Get(sys1).SelfAddress.Port.Value;
+            var sys1Port = Cluster.Get(_sys1).SelfAddress.Port.Value;
             var sys3Config = ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=" + sys1Port)
-                .WithFallback(sys1.Settings.Config);
-            sys3 = ActorSystem.Create(sys1.Name, sys3Config);
+                .WithFallback(_sys1.Settings.Config);
+            _sys3 = ActorSystem.Create(_sys1.Name, sys3Config);
 
-            Join(sys3, sys2);
+            Join(_sys3, _sys2);
 
             Within(TimeSpan.FromSeconds(5), () =>
             {
                 AwaitAssert(() =>
                 {
-                    var probe = CreateTestProbe(sys2);
+                    var probe = CreateTestProbe(_sys2);
                     proxy2.Tell("hello2", probe.Ref);
                     probe.ExpectMsg("hello2", TimeSpan.FromSeconds(1));
                 });
             });
 
-            Cluster.Get(sys2).Leave(Cluster.Get(sys2).SelfAddress);
+            Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
 
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 AwaitAssert(() =>
                 {
-                    Cluster.Get(sys3)
+                    Cluster.Get(_sys3)
                         .State.Members.Select(x => x.UniqueAddress)
                         .Should()
-                        .Equal(Cluster.Get(sys3).SelfUniqueAddress);
+                        .Equal(Cluster.Get(_sys3).SelfUniqueAddress);
                 });
             });
 
             var proxy3 =
-                sys3.ActorOf(ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(sys3)),
+                _sys3.ActorOf(ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys3)),
                     "proxy3");
 
             Within(TimeSpan.FromSeconds(5), () =>
             {
                 AwaitAssert(() =>
                 {
-                    var probe = CreateTestProbe(sys3);
+                    var probe = CreateTestProbe(_sys3);
                     proxy3.Tell("hello3", probe.Ref);
                     probe.ExpectMsg("hello3", TimeSpan.FromSeconds(1));
                 });
@@ -126,10 +130,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         protected override void AfterTermination()
         {
-            Shutdown(sys1);
-            Shutdown(sys2);
-            if(sys3 != null)
-                Shutdown(sys3);
+            Shutdown(_sys1);
+            Shutdown(_sys2);
+            if(_sys3 != null)
+                Shutdown(_sys3);
         }
 
         /// <summary>
