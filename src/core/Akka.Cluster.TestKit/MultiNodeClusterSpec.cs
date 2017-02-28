@@ -58,7 +58,7 @@ namespace Akka.Cluster.TestKit
                 akka.log-dead-letters = off
                 akka.log-dead-letters-during-shutdown = off
                 #akka.remote.log-remote-lifecycle-events = off
-                akka.coordinated-shutdown.run-by-jvm-shutdown-hook = off
+                akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
                 #akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
                 akka.test {
