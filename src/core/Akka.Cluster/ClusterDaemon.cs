@@ -2020,17 +2020,17 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Sends gossip and schedules two future intervals for more gossip
         /// </summary>
         public void GossipTick()
         {
             SendGossip();
             if (IsGossipSpeedupNeeded())
             {
-                _cluster.Scheduler.ScheduleOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks / 3), Self,
-                    InternalClusterAction.GossipSpeedupTick.Instance);
-                _cluster.Scheduler.ScheduleOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks * 2 / 3), Self,
-                    InternalClusterAction.GossipSpeedupTick.Instance);
+                _cluster.Scheduler.ScheduleTellOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks / 3), Self,
+                    InternalClusterAction.GossipSpeedupTick.Instance, ActorRefs.NoSender);
+                _cluster.Scheduler.ScheduleTellOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks * 2 / 3), Self,
+                    InternalClusterAction.GossipSpeedupTick.Instance, ActorRefs.NoSender);
             }
         }
 

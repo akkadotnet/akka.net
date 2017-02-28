@@ -178,8 +178,8 @@ namespace Akka.Cluster.Tests
             probe.ExpectMsg<ClusterEvent.MemberLeft>();
             probe.ExpectMsg<ClusterEvent.MemberExited>();
             probe.ExpectMsg<ClusterEvent.MemberRemoved>();
-            leaveTask.IsCompleted.Should().BeTrue();
 
+            AwaitCondition(() => leaveTask.IsCompleted);
 
             // A second call for LeaveAsync should complete immediately
             Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
