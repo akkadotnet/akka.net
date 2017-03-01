@@ -69,6 +69,7 @@
     <Compile Include="Query\SqliteAllPersistenceIdsSpec.cs" />
     <Compile Include="Query\SqliteEventsByPersistenceIdSpec.cs" />
     <Compile Include="SqliteConfigSpec.cs" />
+    <Compile Include="SqliteJournalConnectionFailureSpec.cs" />
     <Compile Include="SqliteJournalQuerySpec.cs" />
     <Compile Include="SqliteJournalSpec.cs" />
     <Compile Include="SqliteSnapshotStoreSpec.cs" />

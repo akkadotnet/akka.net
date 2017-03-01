@@ -69,8 +69,16 @@ namespace Akka.Persistence.Sqlite.Journal
         /// </summary>
         protected override void PreStart()
         {
-            ConnectionContext.Remember(GetConnectionString());
-            base.PreStart();
+            try
+            {
+                ConnectionContext.Remember(GetConnectionString());
+                base.PreStart();
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Failure creating DbConnection");
+                throw;
+            }
         }
 
         /// <summary>

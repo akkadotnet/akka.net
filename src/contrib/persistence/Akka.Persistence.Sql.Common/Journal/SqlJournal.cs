@@ -304,8 +304,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public DbConnection CreateDbConnection()
         {
-            var connectionString = GetConnectionString();
-            return CreateDbConnection(connectionString);
+            try
+            {
+                var connectionString = GetConnectionString();
+                return CreateDbConnection(connectionString);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Failure creating DbConnection");
+                throw;
+            }
         }
 
         /// <summary>
