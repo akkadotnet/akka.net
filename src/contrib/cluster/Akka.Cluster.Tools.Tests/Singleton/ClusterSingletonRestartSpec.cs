@@ -26,10 +26,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 return true;
             }
 
-            public static Props Props()
-            {
-                return Actor.Props.Create<EchoActor>();
-            }
+            public static Props Props = Props.Create(() => new EchoActor());
         }
 
         private readonly ActorSystem _sys1;
@@ -48,8 +45,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             return ConfigurationFactory.ParseString(@"
               akka.loglevel = INFO
               akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+              akka.cluster.auto-down-unreachable-after = 2s
               akka.remote {{
-                helios.tcp {{
+                dot-netty.tcp {{
                   hostname = ""127.0.0.1""
                   port = 0
                 }}
@@ -60,7 +58,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private void Join(ActorSystem from, ActorSystem to)
         {
             from.ActorOf(ClusterSingletonManager.Props(
-                singletonProps: EchoActor.Props(),
+                singletonProps: EchoActor.Props,
                 terminationMessage: PoisonPill.Instance,
                 settings: ClusterSingletonManagerSettings.Create(from)),
                 name: "echo");
@@ -69,13 +67,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             {
                 AwaitAssert(() =>
                 {
-                    var m1 = Cluster.Get(from).State.Members;
-                    var sa = Cluster.Get(from).SelfUniqueAddress;
                     Cluster.Get(from).Join(Cluster.Get(to).SelfAddress);
-                    Cluster.Get(from).State.Members.Select(c => c.UniqueAddress)
-                        .Should().Contain(Cluster.Get(from).SelfUniqueAddress);
-                    Cluster.Get(from).State.Members.Select(c => c.Status)
-                        .Should().BeEquivalentTo(ImmutableHashSet.Create(MemberStatus.Up));
+                    Cluster.Get(from).State.Members.Select(c => c.UniqueAddress).Should().Contain(Cluster.Get(from).SelfUniqueAddress);
+                    Cluster.Get(from).State.Members.Select(x => x.Status).ToImmutableHashSet().Should().Equal(ImmutableHashSet.Create(MemberStatus.Up));
                 });
             });
         }
