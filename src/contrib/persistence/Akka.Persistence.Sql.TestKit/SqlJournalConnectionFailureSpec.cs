@@ -25,8 +25,8 @@ namespace Akka.Persistence.Sql.TestKit
         {
             EventFilter.Exception<Exception>().ExpectOne(() =>
             {
-                var perf = Sys.ActorOf(Props.Create(() => new ReceiveAnyPersistentActor("persistent-test-actor")));
-                perf.Tell("save");
+                var pref = Sys.ActorOf(Props.Create(() => new ReceiveAnyPersistentActor("persistent-test-actor")));
+                pref.Tell("save");
             });
 
             ExpectNoMsg();

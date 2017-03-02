@@ -72,6 +72,7 @@
     <Compile Include="SqliteJournalConnectionFailureSpec.cs" />
     <Compile Include="SqliteJournalQuerySpec.cs" />
     <Compile Include="SqliteJournalSpec.cs" />
+    <Compile Include="SqliteSnapshotStoreConnectionFailureSpec.cs" />
     <Compile Include="SqliteSnapshotStoreSpec.cs" />
   </ItemGroup>
   <ItemGroup>

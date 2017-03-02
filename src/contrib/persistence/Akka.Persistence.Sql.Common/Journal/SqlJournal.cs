@@ -301,7 +301,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
             catch (Exception e)
             {
-                return new Failure { Exception = e };
+                return new Failure {Exception = e};
             }
         }
 

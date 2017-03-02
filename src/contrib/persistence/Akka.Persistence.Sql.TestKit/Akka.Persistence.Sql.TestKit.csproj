@@ -84,6 +84,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SqlJournalConnectionFailureSpec.cs" />
     <Compile Include="SqlJournalQuerySpec.cs" />
+    <Compile Include="SqlSnapshotConnectionFailureSpec.cs" />
     <Compile Include="TestActor.cs" />
   </ItemGroup>
   <ItemGroup>
