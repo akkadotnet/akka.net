@@ -5,13 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Persistence.Sql.TestKit;
+using Akka.Util.Internal;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests
 {
     public class SqliteJournalConnectionFailureSpec : SqlJournalConnectionFailureSpec
     {
-
         public SqliteJournalConnectionFailureSpec(ITestOutputHelper output) : base(CreateSpecConfig(DefaultInvalidConnectionString), output)
         {
         }

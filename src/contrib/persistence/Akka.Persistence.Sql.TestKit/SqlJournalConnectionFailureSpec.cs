@@ -21,11 +21,11 @@ namespace Akka.Persistence.Sql.TestKit
         }
 
         [Fact]
-        public void SqlJournal_should_throw_visible_exception_upon_connection_failure()
+        public void Persistent_actor_should_throw_exception_upon_connection_failure()
         {
-            EventFilter.Error("Failure creating DbConnection").ExpectOne(() =>
+            EventFilter.Exception<Exception>().ExpectOne(() =>
             {
-                var perf = Sys.ActorOf(Props.Create(() => new ReceiveAnyPersistentActor("test-persistent-actor")));
+                var perf = Sys.ActorOf(Props.Create(() => new ReceiveAnyPersistentActor("persistent-test-actor")));
                 perf.Tell("save");
             });
 
