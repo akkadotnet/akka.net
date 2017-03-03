@@ -9,6 +9,7 @@ using Akka.Actor;
 using Akka.DistributedData.Internal;
 using System;
 using System.Collections.Immutable;
+using Akka.Event;
 
 namespace Akka.DistributedData
 {
@@ -39,28 +40,28 @@ namespace Akka.DistributedData
             _write = new Write(key.Id, envelope);
             _gotLocalStoreReply = !durable;
             _gotNackFrom =ImmutableHashSet<Address>.Empty;
+            DoneWhenRemainingSize = GetDoneWhenRemainingSize();
         }
 
         protected bool IsDone => _gotLocalStoreReply && (Remaining.Count <= DoneWhenRemainingSize || (Remaining.Except(_gotNackFrom).Count == 0) || NotEnoughNodes);
 
         protected bool NotEnoughNodes => DoneWhenRemainingSize < 0 || Nodes.Count < DoneWhenRemainingSize;
 
-        protected override int DoneWhenRemainingSize
+        protected override int DoneWhenRemainingSize { get; } 
+
+        private int GetDoneWhenRemainingSize()
         {
-            get
+            if (_consistency is WriteTo) return Nodes.Count - ((WriteTo) _consistency).N - 1;
+            else if (_consistency is WriteAll) return 0;
+            else if (_consistency is WriteMajority)
             {
-                if (_consistency is WriteTo) return Nodes.Count - ((WriteTo) _consistency).N - 1;
-                else if (_consistency is WriteAll) return 0;
-                else if (_consistency is WriteMajority)
-                {
-                    var consistency = (WriteMajority) _consistency;
-                    var N = Nodes.Count + 1;
-                    var w = CalculateMajorityWithMinCapacity(consistency.MinCapacity, N);
-                    return N - w;
-                }
-                else if (_consistency is WriteLocal) throw new ArgumentException("WriteAggregator does not support WriteLocal");
-                else throw new ArgumentException("Invalid consistency level");
+                var consistency = (WriteMajority) _consistency;
+                var N = Nodes.Count + 1;
+                var w = CalculateMajorityWithMinCapacity(consistency.MinCapacity, N);
+                return N - w;
             }
+            else if (_consistency is WriteLocal) throw new ArgumentException("WriteAggregator does not support WriteLocal");
+            else throw new ArgumentException("Invalid consistency level");
         }
 
         protected virtual Address SenderAddress => Sender.Path.Address;
@@ -106,7 +107,9 @@ namespace Akka.DistributedData
         {
             var notEnoughNodes = NotEnoughNodes;
             var isDelete = _envelope.Data is DeletedData;
+            var done = DoneWhenRemainingSize;
             var isSuccess = Remaining.Count <= DoneWhenRemainingSize && !notEnoughNodes;
+            Context.GetLogger().Debug("remaining: {0}, done when: {1}", Remaining.Count, done);
             var isTimeoutOrNotEnoughNodes = isTimeout || notEnoughNodes || _gotNackFrom.Count == 0;
 
             object reply;

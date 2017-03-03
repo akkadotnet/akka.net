@@ -50,26 +50,26 @@ namespace Akka.DistributedData
 
         private ImmutableHashSet<Address> _nodes = ImmutableHashSet<Address>.Empty;
 
-        private IImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
-        private IImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
-        private IImmutableSet<UniqueAddress> _tombstonedNodes = ImmutableHashSet<UniqueAddress>.Empty;
+        private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
+        private ImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
+        private ImmutableHashSet<UniqueAddress> _tombstonedNodes = ImmutableHashSet<UniqueAddress>.Empty;
 
         private Address _leader = null;
         private bool IsLeader => _leader != null && _leader == _selfAddress;
 
         private long _previousClockTime;
         private long _allReachableClockTime = 0;
-        private IImmutableSet<Address> _unreachable = ImmutableHashSet<Address>.Empty;
+        private ImmutableHashSet<Address> _unreachable = ImmutableHashSet<Address>.Empty;
 
-        private IImmutableDictionary<string, Tuple<DataEnvelope, ByteString>> _dataEntries = ImmutableDictionary<string, Tuple<DataEnvelope, ByteString>>.Empty;
-        private IImmutableSet<string> _changed = ImmutableHashSet<string>.Empty;
+        private ImmutableDictionary<string, Tuple<DataEnvelope, ByteString>> _dataEntries = ImmutableDictionary<string, Tuple<DataEnvelope, ByteString>>.Empty;
+        private ImmutableHashSet<string> _changed = ImmutableHashSet<string>.Empty;
 
         private long _statusCount = 0;
         private int _statusTotChunks = 0;
 
-        private readonly Dictionary<string, ISet<IActorRef>> _subscribers = new Dictionary<string, ISet<IActorRef>>();
-        private readonly Dictionary<string, ISet<IActorRef>> _newSubscribers = new Dictionary<string, ISet<IActorRef>>();
-        private IImmutableDictionary<string, IKey> _subscriptionKeys = ImmutableDictionary<string, IKey>.Empty;
+        private readonly Dictionary<string, HashSet<IActorRef>> _subscribers = new Dictionary<string, HashSet<IActorRef>>();
+        private readonly Dictionary<string, HashSet<IActorRef>> _newSubscribers = new Dictionary<string, HashSet<IActorRef>>();
+        private ImmutableDictionary<string, IKey> _subscriptionKeys = ImmutableDictionary<string, IKey>.Empty;
 
         private readonly ILoggingAdapter _log;
 
@@ -163,7 +163,7 @@ namespace Akka.DistributedData
             .With<Read>(r => ReceiveRead(r.Key))
             .With<Write>(w => ReceiveWrite(w.Key, w.Envelope))
             .With<ReadRepair>(rr => ReceiveReadRepair(rr.Key, rr.Envelope))
-            .With<FlushChanges>(x => ReceiveFlushChanges())
+            .With<FlushChanges>(_ => ReceiveFlushChanges())
             .With<GossipTick>(_ => ReceiveGossipTick())
             .With<ClockTick>(c => ReceiveClockTick())
             .With<Internal.Status>(s => ReceiveStatus(s.Digests, s.Chunk, s.TotalChunks))
@@ -264,7 +264,7 @@ namespace Akka.DistributedData
 
         private void ReceiveRead(string key) => Sender.Tell(new ReadResult(GetData(key)));
 
-        private bool MatchingRole(Member m) => _settings.Role != null && m.HasRole(_settings.Role);
+        private bool MatchingRole(Member m) => string.IsNullOrEmpty(_settings.Role) || m.HasRole(_settings.Role);
 
         private bool IsLocalSender() => !Sender.Path.Address.HasGlobalScope;
 
@@ -530,7 +530,7 @@ namespace Akka.DistributedData
             {
                 foreach (var key in _changed)
                 {
-                    ISet<IActorRef> subs;
+                    HashSet<IActorRef> subs;
                     if (_subscribers.TryGetValue(key, out subs))
                         Notify(key, subs);
                 }
@@ -543,7 +543,7 @@ namespace Akka.DistributedData
                 foreach (var kvp in _newSubscribers)
                 {
                     Notify(kvp.Key, kvp.Value);
-                    ISet<IActorRef> set;
+                    HashSet<IActorRef> set;
                     if (!_subscribers.TryGetValue(kvp.Key, out set))
                     {
                         set = new HashSet<IActorRef>();
@@ -695,8 +695,11 @@ namespace Akka.DistributedData
 
         private void ReceiveSubscribe(IKey key, IActorRef subscriber)
         {
-            ISet<IActorRef> set;
-            if (!_subscribers.TryGetValue(key.Id, out set)) set = new HashSet<IActorRef>();
+            HashSet<IActorRef> set;
+            if (!_newSubscribers.TryGetValue(key.Id, out set))
+            {
+                _newSubscribers[key.Id] = set = new HashSet<IActorRef>();
+            }
             set.Add(subscriber);
 
             if (!_subscriptionKeys.ContainsKey(key.Id))
@@ -707,7 +710,7 @@ namespace Akka.DistributedData
 
         private void ReceiveUnsubscribe(IKey key, IActorRef subscriber)
         {
-            ISet<IActorRef> set;
+            HashSet<IActorRef> set;
             if (_subscribers.TryGetValue(key.Id, out set) && set.Remove(subscriber) && set.Count == 0)
                 _subscribers.Remove(key.Id);
 
@@ -742,7 +745,7 @@ namespace Akka.DistributedData
 
                 foreach (var k in keys1)
                 {
-                    ISet<IActorRef> set;
+                    HashSet<IActorRef> set;
                     if (_subscribers.TryGetValue(k, out set) && set.Remove(terminated) && set.Count == 0)
                         _subscribers.Remove(k);
                 }
@@ -753,7 +756,7 @@ namespace Akka.DistributedData
 
                 foreach (var k in keys2)
                 {
-                    ISet<IActorRef> set;
+                    HashSet<IActorRef> set;
                     if (_newSubscribers.TryGetValue(k, out set) && set.Remove(terminated) && set.Count == 0)
                         _newSubscribers.Remove(k);
                 }

@@ -9,6 +9,7 @@ using Akka.Actor;
 using Akka.DistributedData.Internal;
 using System;
 using System.Collections.Immutable;
+using Akka.Event;
 
 namespace Akka.DistributedData
 {
@@ -34,23 +35,23 @@ namespace Akka.DistributedData
             _replyTo = replyTo;
             _result = localValue;
             _read = new Read(key.Id);
+            DoneWhenRemainingSize = GetDoneWhenRemainingSize();
         }
 
-        protected override int DoneWhenRemainingSize
+        protected override int DoneWhenRemainingSize { get; }
+
+        private int GetDoneWhenRemainingSize()
         {
-            get
+            if (_consistency is ReadFrom) return Nodes.Count - ((ReadFrom) _consistency).N - 1;
+            else if (_consistency is ReadAll) return 0;
+            else if (_consistency is ReadMajority)
             {
-                if (_consistency is ReadFrom) return Nodes.Count - ((ReadFrom) _consistency).N - 1;
-                else if (_consistency is ReadAll) return 0;
-                else if (_consistency is ReadMajority)
-                {
-                    var N = Nodes.Count + 1;
-                    var w = CalculateMajorityWithMinCapacity(((ReadMajority) _consistency).MinCapacity, N);
-                    return N - w;
-                }
-                else if (_consistency is ReadLocal) throw new ArgumentException("ReadAggregator does not support ReadLocal");
-                else throw new ArgumentException("Invalid consistency level");
+                var ncount = Nodes.Count + 1;
+                var w = CalculateMajorityWithMinCapacity(((ReadMajority) _consistency).MinCapacity, ncount);
+                return ncount - w;
             }
+            else if (_consistency is ReadLocal) throw new ArgumentException("ReadAggregator does not support ReadLocal");
+            else throw new ArgumentException("Invalid consistency level");
         }
 
         protected override void PreStart()
@@ -73,7 +74,9 @@ namespace Akka.DistributedData
                 }
 
                 Remaining = Remaining.Remove(Sender.Path.Address);
-                if (Remaining.Count == DoneWhenRemainingSize) Reply(true);
+                var done = DoneWhenRemainingSize;
+                Context.GetLogger().Debug("remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done, _result);
+                if (Remaining.Count == done) Reply(true);
             })
             .With<SendToSecondary>(x =>
             {

@@ -30,16 +30,16 @@ namespace Akka.DistributedData.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.actor.provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.loglevel = INFO
-                akka.log-dead-letters-during-shutdown = off
+                akka.actor.provider = cluster
+                akka.loglevel = DEBUG
+                akka.log-dead-letters-during-shutdown = on
             ").WithFallback(DistributedData.DefaultConfig());
 
             TestTransport = true;
         }
     }
 
-    public abstract class ReplicatorSpec : MultiNodeSpec
+    public class ReplicatorSpec : MultiNodeSpec
     {
         private readonly ReplicatorSpecConfig _config;
         private readonly Cluster.Cluster _cluster;
@@ -71,7 +71,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         private int afterCounter = 0;
 
-        protected ReplicatorSpec()
+        public ReplicatorSpec()
             : this(new ReplicatorSpecConfig())
         { }
 
@@ -226,7 +226,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         public void Cluster_CRDT_should_replicate_values_to_new_node()
         {
             Join(_config.Second, _config.First);
-
+            
             RunOn(() =>
                 Within(TimeSpan.FromSeconds(10), () =>
                     AwaitAssert(() =>
@@ -235,6 +235,28 @@ namespace Akka.DistributedData.Tests.MultiNode
                         ExpectMsg(new Replicator.ReplicaCount(2));
                     })),
             _config.First, _config.Second);
+
+            EnterBarrier("2-nodes");
+
+            RunOn(() =>
+            {
+                var changedProbe = CreateTestProbe();
+                _replicator.Tell(Dsl.Subscribe(KeyA, changedProbe.Ref));
+                // "A" should be replicated via gossip to the new node
+                Within(TimeSpan.FromSeconds(5), () =>
+                    AwaitAssert(() =>
+                    {
+                        //TODO: received message is NotFound(A) instead of GetSuccess
+                        // for some reason result is returned before CRDT gets replicated
+                        _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
+                        var c = ExpectMsg<Replicator.GetSuccess>(g => Equals(g.Key, KeyA)).Get(KeyA);
+                        c.Value.ShouldBe(6);
+                    }));
+                var c2 = changedProbe.FishForMessage<Replicator.GetSuccess>(g => Equals(g.Key, KeyA)).Get(KeyA);
+                c2.Value.ShouldBe(6);
+            }, _config.Second);
+
+            EnterBarrierAfterTestStep();
         }
 
         public void Cluster_CRDT_should_work_in_2_node_cluster()
@@ -450,7 +472,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         public void Cluster_CRDT_should_support_majority_quorum_write_and_read_with_3_nodes_with_1_unreachable()
         {
-            Join(_config.First, _config.Third);
+            Join(_config.Third, _config.First);
 
             RunOn(() =>
             {
@@ -465,7 +487,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, x => x.Increment(_cluster.SelfUniqueAddress, 50)));
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, x => x.Increment(_cluster, 50)));
                 ExpectMsg(new Replicator.UpdateSuccess(KeyE, null));
             }, _config.First, _config.Second, _config.Third);
 
@@ -698,17 +720,12 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         private void Join(RoleName from, RoleName to)
         {
-            RunOn(() => _cluster.Join(Node(to).Address), from);
+            RunOn(() =>
+            {
+                _cluster.Join(Node(to).Address);
+            }, from);
             EnterBarrier(from.Name + "-joined");
         }
     }
-
-    public class ReplicatorSpecNode1 : ReplicatorSpec
-    { }
-
-    public class ReplicatorSpecNode2 : ReplicatorSpec
-    { }
-
-    public class ReplicatorSpecNode3 : ReplicatorSpec
-    { }
+    
 }

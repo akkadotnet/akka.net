@@ -65,9 +65,8 @@ namespace Akka.DistributedData
         protected static int CalculateMajorityWithMinCapacity(int minCapacity, int numberOfNodes)
         {
             if (numberOfNodes <= minCapacity) return numberOfNodes;
-
-            var majority = numberOfNodes / 2 + 1;
-            return majority <= minCapacity ? minCapacity : majority;
+            
+            return Math.Max(minCapacity, numberOfNodes / 2 + 1);
         }
 
         protected override void PostStop()

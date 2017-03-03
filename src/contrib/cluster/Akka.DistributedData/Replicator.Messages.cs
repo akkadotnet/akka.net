@@ -46,7 +46,7 @@ namespace Akka.DistributedData
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(this, other)) return true;
 
-                return Equals(Keys, other.Keys);
+                return Keys.SetEquals(other.Keys);
             }
 
             public override int GetHashCode() => Keys.GetHashCode();

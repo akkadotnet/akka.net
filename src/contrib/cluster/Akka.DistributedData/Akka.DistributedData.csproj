@@ -118,7 +118,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.DistributedData.nuspec" />
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
   <ItemGroup />
