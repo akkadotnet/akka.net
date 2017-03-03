@@ -244,7 +244,7 @@ namespace Akka.Actor
         /// the Akka.NET internal shutdown hooks execute.
         /// </summary>
         /// <param name="hook">A task that will be executed during shutdown.</param>
-        public void AddClrShutdownHook(Func<Task<Done>> hook)
+        internal void AddClrShutdownHook(Func<Task<Done>> hook)
         {
             if (!_clrHooksStarted)
             {
