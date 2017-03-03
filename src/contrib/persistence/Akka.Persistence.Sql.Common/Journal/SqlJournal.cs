@@ -282,19 +282,26 @@ namespace Akka.Persistence.Sql.Common.Journal
                 .WasHandled;
         }
 
-        private async Task<AllPersistenceIds> Initialize()
+        private async Task<object> Initialize()
         {
-            using (var connection = CreateDbConnection())
+            try
             {
-                await connection.OpenAsync();
-
-                if (_settings.AutoInitialize)
+                using (var connection = CreateDbConnection())
                 {
-                    await QueryExecutor.CreateTablesAsync(connection, _pendingRequestsCancellation.Token);
-                }
+                    await connection.OpenAsync();
 
-                var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, _pendingRequestsCancellation.Token);
-                return new AllPersistenceIds(ids);
+                    if (_settings.AutoInitialize)
+                    {
+                        await QueryExecutor.CreateTablesAsync(connection, _pendingRequestsCancellation.Token);
+                    }
+
+                    var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, _pendingRequestsCancellation.Token);
+                    return new AllPersistenceIds(ids);
+                }
+            }
+            catch (Exception e)
+            {
+                return new Failure {Exception = e};
             }
         }
 
