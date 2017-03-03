@@ -49,7 +49,7 @@ namespace Akka.Cluster
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsEvents;
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsSnapshot;
         public ClusterEvent() { }
-        public sealed class ClusterShuttingDown : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        public sealed class ClusterShuttingDown : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
         {
             public static readonly Akka.Cluster.ClusterEvent.IClusterDomainEvent Instance;
             public override string ToString() { }
@@ -178,6 +178,7 @@ namespace Akka.Cluster
         public int ReduceGossipDifferentViewProbability { get; }
         public System.Nullable<System.TimeSpan> RetryUnsuccessfulJoinAfter { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
+        public bool RunCoordinatedShutdownWhenDown { get; }
         public System.TimeSpan SchedulerTickDuration { get; }
         public int SchedulerTicksPerWheel { get; }
         public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
