@@ -14,11 +14,12 @@ using System.IO;
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.DistributedData.Durable;
 using Akka.Event;
 using Akka.Serialization;
 using LightningDB;
 
-namespace Akka.DistributedData.Durable
+namespace Akka.DistributedData.LightningDB
 {
     /// <summary>
     /// An actor implementing the durable store for the Distributed Data <see cref="Replicator"/>

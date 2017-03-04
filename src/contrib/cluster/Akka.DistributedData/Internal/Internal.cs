@@ -401,21 +401,21 @@ namespace Akka.DistributedData.Internal
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class DataEnvelope : IEquatable<DataEnvelope>, IReplicatorMessage
+    public sealed class DataEnvelope : IEquatable<DataEnvelope>, IReplicatorMessage
     {
         /// <summary>
         /// TBD
         /// </summary>
-        internal static DataEnvelope DeletedEnvelope => new DataEnvelope(DeletedData.Instance);
+        public static DataEnvelope DeletedEnvelope => new DataEnvelope(DeletedData.Instance);
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal IReplicatedData Data { get; }
+        public IReplicatedData Data { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        internal IImmutableDictionary<UniqueAddress, PruningState> Pruning { get; }
+        public IImmutableDictionary<UniqueAddress, PruningState> Pruning { get; }
 
         /// <summary>
         /// TBD

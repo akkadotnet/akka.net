@@ -35,10 +35,12 @@ namespace Akka.DistributedData
             var durableConfig = config.GetConfig("durable");
             var durableKeys = durableConfig.GetStringList("keys");
             Props durableStoreProps = Props.Empty;
+            var durableStoreTypeName = durableConfig.GetString("store-actor-class");
+            var isDurableStoreConfigured = !string.IsNullOrEmpty(durableStoreTypeName);
             if (durableKeys.Count != 0)
             {
-                var durableStoreType = Type.GetType(durableConfig.GetString("store-actor-class"));
-                if (durableStoreType == null)
+                Type durableStoreType;
+                if (!isDurableStoreConfigured || (durableStoreType = Type.GetType(durableStoreTypeName)) == null)
                 {
                     throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` must be set when `akka.cluster.distributed-data.durable.keys` have been configured.");
                 }
@@ -58,6 +60,12 @@ namespace Akka.DistributedData
                 pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live"),
                 durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live"));
         }
+
+        /// <summary>
+        /// Determines if a durable store has been configured and is used. If configuration has defined some 
+        /// durable keys, this field must be true.
+        /// </summary>
+        public bool IsDurable => !Equals(DurableStoreProps, Props.Empty);
 
         /// <summary>
         /// Replicas are running on members tagged with this role. All members are used if undefined.

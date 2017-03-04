@@ -20,7 +20,7 @@ namespace Akka.DistributedData.Durable
     /// should be used to signal success or failure of the operation to the contained
     /// <see cref="StoreReply.ReplyTo"/> actor.
     /// </summary>
-    internal sealed class Store
+    public sealed class Store
     {
         public readonly string Key;
         public readonly DurableDataEnvelope Data;
@@ -34,7 +34,7 @@ namespace Akka.DistributedData.Durable
         }
     }
 
-    internal sealed class StoreReply
+    public sealed class StoreReply
     {
         public readonly object SuccessMessage;
         public readonly object FailureMessage;
@@ -57,7 +57,7 @@ namespace Akka.DistributedData.Durable
     /// If the `LoadAll` fails it can throw `LoadFailedException` and the `Replicator` supervisor
     /// will stop itself and the durable store.
     /// </summary>
-    internal sealed class LoadAll : IEquatable<LoadAll>
+    public sealed class LoadAll : IEquatable<LoadAll>
     {
         public static readonly LoadAll Instance = new LoadAll();
         private LoadAll() { }
@@ -65,7 +65,7 @@ namespace Akka.DistributedData.Durable
         public override bool Equals(object obj) => obj is LoadAll;
     }
 
-    internal sealed class LoadData
+    public sealed class LoadData
     {
         public readonly ImmutableDictionary<string, DurableDataEnvelope> Data;
 
@@ -75,7 +75,7 @@ namespace Akka.DistributedData.Durable
         }
     }
 
-    internal sealed class LoadAllCompleted : IEquatable<LoadAllCompleted>
+    public sealed class LoadAllCompleted : IEquatable<LoadAllCompleted>
     {
         public static readonly LoadAllCompleted Instance = new LoadAllCompleted();
         private LoadAllCompleted() { }
@@ -83,7 +83,7 @@ namespace Akka.DistributedData.Durable
         public override bool Equals(object obj) => obj is LoadAllCompleted;
     }
 
-    internal sealed class LoadFailedException : AkkaException
+    public sealed class LoadFailedException : AkkaException
     {
         public LoadFailedException(string message) : base(message)
         {
@@ -98,7 +98,7 @@ namespace Akka.DistributedData.Durable
         }
     }
 
-    internal sealed class DurableDataEnvelope : IReplicatorMessage, IEquatable<DurableDataEnvelope>
+    public sealed class DurableDataEnvelope : IReplicatorMessage, IEquatable<DurableDataEnvelope>
     {
         public readonly DataEnvelope Data;
 

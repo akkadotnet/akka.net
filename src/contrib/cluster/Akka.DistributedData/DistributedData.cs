@@ -31,6 +31,11 @@ namespace Akka.DistributedData
         public IActorRef Replicator { get; }
 
         /// <summary>
+        /// Checks if a durable store for this extension is configured and in use.
+        /// </summary>
+        public bool IsDurable => _settings.IsDurable;
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="system">TBD</param>
