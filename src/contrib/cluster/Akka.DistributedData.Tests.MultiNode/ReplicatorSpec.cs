@@ -31,7 +31,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.actor.provider = cluster
-                akka.loglevel = DEBUG
+                akka.loglevel = INFO
                 akka.log-dead-letters-during-shutdown = on
             ").WithFallback(DistributedData.DefaultConfig());
 
@@ -252,7 +252,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         var c = ExpectMsg<Replicator.GetSuccess>(g => Equals(g.Key, KeyA)).Get(KeyA);
                         c.Value.ShouldBe(6);
                     }));
-                var c2 = changedProbe.FishForMessage<Replicator.GetSuccess>(g => Equals(g.Key, KeyA)).Get(KeyA);
+                var c2 = changedProbe.ExpectMsg<Replicator.Changed>(g => Equals(g.Key, KeyA)).Get(KeyA);
                 c2.Value.ShouldBe(6);
             }, _config.Second);
 
@@ -345,17 +345,18 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance));
                 var c30 = ExpectMsg<Replicator.GetSuccess>(c => Equals(c.Key, KeyC)).Get(KeyC);
                 c30.Value.ShouldBe(30);
+                changedProbe.ExpectMsg<Replicator.Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(30);
 
                 // replicate with gossip after WriteLocal
                 _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
                 ExpectMsg(new Replicator.UpdateSuccess(KeyC, null));
                 changedProbe.ExpectMsg<Replicator.Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(31);
 
-                _replicator.Tell(Dsl.Delete(KeyY, WriteLocal.Instance));
-                ExpectMsg(new Replicator.DeleteSuccess(KeyY));
+                _replicator.Tell(Dsl.Delete(KeyY, WriteLocal.Instance, 777));
+                ExpectMsg(new Replicator.DeleteSuccess(KeyY, 777));
 
                 _replicator.Tell(Dsl.Get(KeyZ, _readMajority));
-                changedProbe.ExpectMsg<Replicator.Changed>(c => Equals(c.Key, KeyZ)).Get(KeyZ).Value.ShouldBe(30);
+                ExpectMsg<Replicator.GetSuccess>(c => Equals(c.Key, KeyZ)).Get(KeyZ).Value.ShouldBe(30);
             }, _config.Second);
 
             EnterBarrier("update-c31");
@@ -408,7 +409,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         {
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster.SelfUniqueAddress, 40)));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 40)));
                 ExpectMsg(new Replicator.UpdateSuccess(KeyD, null));
 
                 TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both)
@@ -423,9 +424,9 @@ namespace Akka.DistributedData.Tests.MultiNode
                 var c40 = ExpectMsg<Replicator.GetSuccess>(g => Equals(g.Key, KeyD)).Get(KeyD);
                 c40.Value.ShouldBe(40);
 
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty.Increment(_cluster.SelfUniqueAddress, 1), _writeTwo, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty.Increment(_cluster, 1), _writeTwo, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new Replicator.UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new Replicator.UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
             }, _config.First, _config.Second);
 
@@ -433,8 +434,9 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 for (int i = 1; i <= 30; i++)
                 {
-                    var keydn = new GCounterKey("D" + i);
-                    _replicator.Tell(Dsl.Update(keydn, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, i)));
+                    var n = i;
+                    var keydn = new GCounterKey("D" + n);
+                    _replicator.Tell(Dsl.Update(keydn, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, n)));
                     ExpectMsg(new Replicator.UpdateSuccess(keydn, null));
                 }
             }, _config.First);

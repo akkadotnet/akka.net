@@ -26,7 +26,7 @@ namespace Akka.DistributedData
         private readonly Write _write;
         private readonly bool _durable;
         private bool _gotLocalStoreReply;
-        private IImmutableSet<Address> _gotNackFrom;
+        private ImmutableHashSet<Address> _gotNackFrom;
 
         public WriteAggregator(IKey key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable)
             : base(nodes, unreachable, consistency.Timeout)
@@ -51,7 +51,7 @@ namespace Akka.DistributedData
 
         private int GetDoneWhenRemainingSize()
         {
-            if (_consistency is WriteTo) return Nodes.Count - ((WriteTo) _consistency).N - 1;
+            if (_consistency is WriteTo) return Nodes.Count - (((WriteTo) _consistency).N - 1);
             else if (_consistency is WriteAll) return 0;
             else if (_consistency is WriteMajority)
             {
@@ -110,7 +110,7 @@ namespace Akka.DistributedData
             var done = DoneWhenRemainingSize;
             var isSuccess = Remaining.Count <= DoneWhenRemainingSize && !notEnoughNodes;
             Context.GetLogger().Debug("remaining: {0}, done when: {1}", Remaining.Count, done);
-            var isTimeoutOrNotEnoughNodes = isTimeout || notEnoughNodes || _gotNackFrom.Count == 0;
+            var isTimeoutOrNotEnoughNodes = isTimeout || notEnoughNodes || _gotNackFrom.IsEmpty;
 
             object reply;
             if (isSuccess && isDelete) reply = new Replicator.DeleteSuccess(_key, _req);

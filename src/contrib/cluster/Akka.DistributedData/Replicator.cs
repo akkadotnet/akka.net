@@ -613,21 +613,25 @@ namespace Akka.DistributedData
 
         private ActorSelection Replica(Address address) => Context.ActorSelection(Self.Path.ToStringWithAddress(address));
 
-        private bool IsOtherDifferent(String key, ByteString otherDigest)
+        private bool IsOtherDifferent(string key, ByteString otherDigest)
         {
             var d = GetDigest(key);
-            return d != NotFoundDigest && d != otherDigest;
+            return !Equals(d, NotFoundDigest) && !Equals(d, otherDigest);
         }
 
         private void ReceiveStatus(IImmutableDictionary<string, ByteString> otherDigests, int chunk, int totChunks)
         {
             if (_log.IsDebugEnabled)
-                _log.Debug("Received gossip status from {0}, chunk {1} of {2} containing {3}", Sender.Path.Address, chunk, totChunks, string.Join(", ", otherDigests.Keys));
+                _log.Debug("Received gossip status from [{0}], chunk {1}/{2} containing [{3}]", Sender.Path.Address, chunk + 1, totChunks, string.Join(", ", otherDigests.Keys));
+
+            // if no data was send we do nothing
+            if (otherDigests.Count == 0)
+                return;
 
             var otherDifferentKeys = otherDigests
                 .Where(x => IsOtherDifferent(x.Key, x.Value))
                 .Select(x => x.Key)
-                .ToArray();
+                .ToImmutableHashSet();
 
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
@@ -645,7 +649,7 @@ namespace Akka.DistributedData
             if (keys.Length != 0)
             {
                 if (_log.IsDebugEnabled)
-                    _log.Debug("Sending gossip to {0}, containing {1}", Sender.Path.Address, string.Join(", ", keys));
+                    _log.Debug("Sending gossip to [{0}], containing [{1}]", Sender.Path.Address, string.Join(", ", keys));
 
                 var g = new Gossip(keys.Select(k => new KeyValuePair<string, DataEnvelope>(k, GetData(k))).ToImmutableDictionary(), otherDifferentKeys.Any());
                 Sender.Tell(g);
@@ -666,10 +670,10 @@ namespace Akka.DistributedData
         {
             if (Context.System.Log.IsDebugEnabled)
             {
-                Context.System.Log.Debug("Received gossip from {0}, containing {1}", Sender.Path.Address, String.Join(", ", updatedData.Keys));
+                Context.System.Log.Debug("Received gossip from [{0}], containing [{1}]", Sender.Path.Address, String.Join(", ", updatedData.Keys));
             }
-            var replyData = ImmutableDictionary<String, DataEnvelope>.Empty;
-            foreach (var d in replyData)
+            var replyData = ImmutableDictionary<String, DataEnvelope>.Empty.ToBuilder();
+            foreach (var d in updatedData)
             {
                 var key = d.Key;
                 var envelope = d.Value;
@@ -680,16 +684,16 @@ namespace Akka.DistributedData
                     var data = GetData(key);
                     if (data != null)
                     {
-                        if (hadData || data.Pruning.Any())
+                        if (hadData || data.Pruning.Count != 0)
                         {
-                            replyData = replyData.SetItem(key, data);
+                            replyData.Add(key, data);
                         }
                     }
                 }
             }
-            if (sendBack && replyData.Any())
+            if (sendBack && replyData.Count != 0)
             {
-                Sender.Tell(new Gossip(replyData, false));
+                Sender.Tell(new Gossip(replyData.ToImmutable(), false));
             }
         }
 
@@ -827,8 +831,8 @@ namespace Akka.DistributedData
                 {
                     var key = x.Key;
                     var envelope = x.Value.Item1;
-                    var data = x.Value.Item1.Data;
-                    var pruning = x.Value.Item1.Pruning;
+                    var data = envelope.Data;
+                    var pruning = envelope.Pruning;
                     if (data is IRemovedNodePruning)
                     {
                         var z = pruning[removed];

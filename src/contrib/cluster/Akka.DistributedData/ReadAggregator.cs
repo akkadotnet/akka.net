@@ -42,7 +42,7 @@ namespace Akka.DistributedData
 
         private int GetDoneWhenRemainingSize()
         {
-            if (_consistency is ReadFrom) return Nodes.Count - ((ReadFrom) _consistency).N - 1;
+            if (_consistency is ReadFrom) return Nodes.Count - (((ReadFrom) _consistency).N - 1);
             else if (_consistency is ReadAll) return 0;
             else if (_consistency is ReadMajority)
             {
