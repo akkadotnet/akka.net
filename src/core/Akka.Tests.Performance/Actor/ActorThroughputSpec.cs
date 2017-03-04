@@ -59,6 +59,9 @@ namespace Akka.Tests.Performance.Actor
                 if (++_currentMessages == _maxExpectedMessages)
                     _resetEvent.Set();
             }
+
+            public static Props Props(Counter counter, long maxExpectedMessages, ManualResetEventSlim resetEvent) => Akka.Actor.Props.Create(
+                () => new BenchmarkActorBasePatternMatchActor(counter, maxExpectedMessages, resetEvent));
         }
 
         internal class BenchmarkUntypedActor : UntypedActor
@@ -111,6 +114,9 @@ namespace Akka.Tests.Performance.Actor
                 if (++_currentMessages == _maxExpectedMessages)
                     _resetEvent.Set();
             }
+
+            public static Props Props(Counter counter, long maxExpectedMessages, ManualResetEventSlim resetEvent) => Akka.Actor.Props.Create(
+                () => new BenchmarkUntypedActor(counter, maxExpectedMessages, resetEvent));
         }
 
         internal class BenchmarkReceiveActor : ReceiveActor
@@ -139,6 +145,9 @@ namespace Akka.Tests.Performance.Actor
                 if (++_currentMessages == _maxExpectedMessages)
                     _resetEvent.Set();
             }
+
+            public static Props Props(Counter counter, long maxExpectedMessages, ManualResetEventSlim resetEvent) => Akka.Actor.Props.Create(
+                () => new BenchmarkReceiveActor(counter, maxExpectedMessages, resetEvent));
         }
 
         /// <summary>
@@ -206,9 +215,9 @@ namespace Akka.Tests.Performance.Actor
             _mailboxThroughput = context.GetCounter(MailboxCounterName);
             System = ActorSystem.Create($"{GetType().Name}{Counter.GetAndIncrement()}");
 
-            _actorBasePatternMatchActorRef = System.ActorOf(Props.Create(() => new BenchmarkActorBasePatternMatchActor(_mailboxThroughput, MailboxMessageCount, _resetEvent)));
-            _untypedActorRef = System.ActorOf(Props.Create(() => new BenchmarkUntypedActor(_mailboxThroughput, MailboxMessageCount, _resetEvent)));
-            _receiveActorRef = System.ActorOf(Props.Create(() => new BenchmarkReceiveActor(_mailboxThroughput, MailboxMessageCount, _resetEvent)));
+            _actorBasePatternMatchActorRef = System.ActorOf(BenchmarkActorBasePatternMatchActor.Props(_mailboxThroughput, MailboxMessageCount * 3, _resetEvent));
+            _untypedActorRef = System.ActorOf(BenchmarkUntypedActor.Props(_mailboxThroughput, MailboxMessageCount * 3, _resetEvent));
+            _receiveActorRef = System.ActorOf(BenchmarkReceiveActor.Props(_mailboxThroughput, MailboxMessageCount * 3, _resetEvent));
             _minimalActorRef = new BenchmarkMinimalActorRef(_mailboxThroughput, MailboxMessageCount, _resetEvent);
         }
 

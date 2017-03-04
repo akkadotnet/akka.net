@@ -28,6 +28,8 @@ namespace Akka.Tests.Performance.Actor
                     .With<bool>(b => { })
                     .WasHandled;
             }
+
+            public static Props Props { get; } = Props.Create(() => new MemoryActorBasePatternMatchActor());
         }
 
         internal class MemoryUntypedActor : UntypedActor
@@ -39,6 +41,8 @@ namespace Akka.Tests.Performance.Actor
                 if (message is bool) return;
                 Unhandled(message);
             }
+
+            public static Props Props { get; } = Props.Create(() => new MemoryUntypedActor());
         }
 
         internal class MemoryReceiveActor : ReceiveActor
@@ -49,6 +53,8 @@ namespace Akka.Tests.Performance.Actor
                 Receive<int>(i => { });
                 Receive<bool>(b => { });
             }
+
+            public static Props Props { get; } = Props.Create(() => new MemoryReceiveActor());
         }
         #endregion
 
@@ -58,10 +64,6 @@ namespace Akka.Tests.Performance.Actor
 
         private const string CreateThroughputCounter = "ActorCreateThroughput";
         private const int ActorCreateNumber = 10000;
-
-        private static readonly Props ActorBasePatternMatchProps = Props.Create(() => new MemoryActorBasePatternMatchActor());
-        private static readonly Props UntypedActorProps = Props.Create(() => new MemoryUntypedActor());
-        private static readonly Props ReceiveActorProps = Props.Create(() => new MemoryReceiveActor());
         
         [PerfSetup]
         public void Setup(BenchmarkContext context)
@@ -77,7 +79,7 @@ namespace Akka.Tests.Performance.Actor
         {
             for (var i = 0; i < ActorCreateNumber; i++)
             {
-                _system.ActorOf(ActorBasePatternMatchProps);
+                _system.ActorOf(MemoryActorBasePatternMatchActor.Props);
                 _createActorThroughput.Increment();
             }
         }
@@ -89,7 +91,7 @@ namespace Akka.Tests.Performance.Actor
         {
             for (var i = 0; i < ActorCreateNumber; i++)
             {
-                _system.ActorOf(UntypedActorProps);
+                _system.ActorOf(MemoryUntypedActor.Props);
                 _createActorThroughput.Increment();
             }
         }
@@ -101,7 +103,7 @@ namespace Akka.Tests.Performance.Actor
         {
             for (var i = 0; i < ActorCreateNumber; i++)
             {
-                _system.ActorOf(ReceiveActorProps);
+                _system.ActorOf(MemoryReceiveActor.Props);
                 _createActorThroughput.Increment();
             }
         }
