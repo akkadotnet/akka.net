@@ -11,6 +11,12 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
 namespace Akka.Cluster
 {
+    public sealed class AutoDowning : Akka.Cluster.IDowningProvider
+    {
+        public AutoDowning(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.Props DowningActorProps { get; }
+        public System.TimeSpan DownRemovalMargin { get; }
+    }
     public class Cluster : Akka.Actor.IExtension
     {
         public Cluster(Akka.Actor.Internal.ActorSystemImpl system) { }
