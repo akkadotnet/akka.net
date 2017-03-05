@@ -36,28 +36,8 @@ See [Fault Tolerance](xref:fault-tolerance).
 ### Location Transparency
 Everything in Akka is designed to work in a distributed environment: all interactions of actors use pure message passing and everything is asynchronous.
 
-Clustering support is currently in beta. [See here for details](https://github.com/akkadotnet/akka.net/pull/400).
-
 ### Persistence
-Akka.Persistence is currently in beta and is under very active development. [Follow the development and learn more here](https://github.com/Horusiath/akka.net/tree/akka-persistence/src/core/Akka.Persistence).
-
-<!--
-TODO
-Messages received by an actor can optionally be persisted and replayed when the actor is started or restarted. This allows actors to recover their state, even after the CLR crashes or when being migrated to another node.
-
-You can find more details in the respective chapter for Java or Scala.
-
--->
-
-<!--
-TODO
-## C# and F# APIs
-Akka has both a C# Documentation and a F# Documentation. -->
+State changes experienced by an actor can optionally be persisted and replayed when the actor is started or restarted. This allows actors to recover their state, even after JVM crashes or when being migrated to another node.
 
 ## Commercial Support
 Akka.NET is supported by [Petabridge, a company making distributed, realtime computing easy for .NET developers](http://petabridge.com).
-
-<!--
-TODO
-## Akka can be used in two different ways
--->

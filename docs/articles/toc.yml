@@ -150,6 +150,8 @@
     href: clustering/cluster-client.md
   - name: Cluster Sharding
     href: clustering/cluster-sharding.md
+  - name: Distributed Data
+    href: clustering/distributed-data.md
 - name: Utilities
   items:
   - name: Event Bus
