@@ -855,29 +855,37 @@ namespace Akka.Cluster.Tools.Singleton
                 if (e.FsmEvent is OldestChangedBuffer.OldestChanged && oldestData != null)
                 {
                     var oldestChanged = (OldestChangedBuffer.OldestChanged)e.FsmEvent;
-                    Log.Info("Oldest observed OldestChanged: [{0} -> {1}]", _cluster.SelfAddress, oldestChanged.Oldest.Address);
-
                     _oldestChangedReceived = true;
+                    Log.Info("Oldest observed OldestChanged: [{0} -> {1}]", _cluster.SelfAddress, oldestChanged.Oldest?.Address);
                     if (oldestChanged.Oldest != null)
                     {
                         if (oldestChanged.Oldest.Equals(_cluster.SelfUniqueAddress))
+                        {
+                            // already oldest
                             return Stay();
+                        }
                         else if (!_selfExited && _removed.ContainsKey(oldestChanged.Oldest))
+                        {
+                            // The member removal was not completed and the old removed node is considered
+                            // oldest again. Safest is to terminate the singleton instance and goto Younger.
+                            // This node will become oldest again when the other is removed again.
                             return GoToHandingOver(oldestData.Singleton, oldestData.SingletonTerminated, null);
+                        }
                         else
                         {
                             // send TakeOver request in case the new oldest doesn't know previous oldest
                             Peer(oldestChanged.Oldest.Address).Tell(TakeOverFromMe.Instance);
-                            SetTimer(TakeOverRetryTimer, new TakeOverRetry(1), _settings.HandOverRetryInterval);
+                            SetTimer(TakeOverRetryTimer, new TakeOverRetry(1), _settings.HandOverRetryInterval, repeat: false);
                             return GoTo(ClusterSingletonState.WasOldest)
-                                    .Using(new WasOldestData(oldestData.Singleton, oldestData.SingletonTerminated, oldestChanged.Oldest));
+                                .Using(new WasOldestData(oldestData.Singleton, oldestData.SingletonTerminated,
+                                    oldestChanged.Oldest));
                         }
                     }
                     else
                     {
                         // new oldest will initiate the hand-over
-                        SetTimer(TakeOverRetryTimer, new TakeOverRetry(1), _settings.HandOverRetryInterval);
-                        return GoTo(ClusterSingletonState.WasOldest).Using(new WasOldestData(oldestData.Singleton, oldestData.SingletonTerminated, null));
+                        SetTimer(TakeOverRetryTimer, new TakeOverRetry(1), _settings.HandOverRetryInterval, repeat: false);
+                        return GoTo(ClusterSingletonState.WasOldest).Using(new WasOldestData(oldestData.Singleton, oldestData.SingletonTerminated, newOldest: null));
                     }
                 }
                 else if (e.FsmEvent is HandOverToMe && oldestData != null)

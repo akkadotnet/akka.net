@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
-    public class ClusterSingletonRestartSpec : AkkaSpec
+    public sealed class ClusterSingletonRestartSpec : AkkaSpec
     {
         public class EchoActor : ActorBase
         {
@@ -26,7 +26,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 return true;
             }
 
-            public static Props Props = Props.Create(() => new EchoActor());
+            public static Props Props { get; } = Props.Create(() => new EchoActor());
         }
 
         private readonly ActorSystem _sys1;
@@ -45,7 +45,6 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             return ConfigurationFactory.ParseString(@"
               akka.loglevel = INFO
               akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-              akka.cluster.auto-down-unreachable-after = 2s
               akka.remote {{
                 dot-netty.tcp {{
                   hostname = ""127.0.0.1""
@@ -97,7 +96,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             _sys3 = ActorSystem.Create(
                 Sys.Name,
-                ConfigurationFactory.ParseString($"akka.remote.helios.tcp.port={Cluster.Get(_sys1).SelfAddress.Port}").WithFallback(Sys.Settings.Config));
+                ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.port={Cluster.Get(_sys1).SelfAddress.Port}").WithFallback(Sys.Settings.Config));
             Join(_sys3, _sys2);
 
             Within(5.Seconds(), () =>
