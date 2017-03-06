@@ -59,6 +59,7 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public TimeSpan DownRemovalMargin => Cluster.Get(_system).Settings.DownRemovalMargin;
+
         /// <summary>
         /// TBD
         /// </summary>
