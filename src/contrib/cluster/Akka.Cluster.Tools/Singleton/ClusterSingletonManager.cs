@@ -582,7 +582,7 @@ namespace Akka.Cluster.Tools.Singleton
         protected override void PreStart()
         {
             // subscribe to cluster changes, re-subscribe when restart
-            _cluster.Subscribe(Self, typeof(ClusterEvent.MemberExited), typeof(ClusterEvent.MemberRemoved));
+            _cluster.Subscribe(Self, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.MemberExited), typeof(ClusterEvent.MemberRemoved));
 
             SetTimer(CleanupTimer, Cleanup.Instance, TimeSpan.FromMinutes(1.0), repeat: true);
 
@@ -1060,7 +1060,6 @@ namespace Akka.Cluster.Tools.Singleton
             WhenUnhandled(e =>
             {
                 var removed = e.FsmEvent as ClusterEvent.MemberRemoved;
-                if (e.FsmEvent is ClusterEvent.CurrentClusterState) return Stay();
                 if (e.FsmEvent is SelfExiting)
                 {
                     SelfMemberExited();

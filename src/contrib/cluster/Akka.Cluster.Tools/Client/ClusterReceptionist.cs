@@ -625,9 +625,20 @@ namespace Akka.Cluster.Tools.Client
                 _log.Debug("ClientResponseTunnel for client [{0}] stopped due to inactivity", _client.Path);
                 Context.Stop(Self);
             }
-            else _client.Tell(message, ActorRefs.NoSender);
+            else
+            {
+                _client.Tell(message, ActorRefs.NoSender);
+                if (IsAsk())
+                    Context.Stop(Self);
+            }
 
             return true;
+        }
+
+        private bool IsAsk()
+        {
+            var pathElements = _client.Path.Elements;
+            return pathElements.Count == 2 && pathElements[0] == "temp" && pathElements.Last().StartsWith("$");
         }
     }
 }

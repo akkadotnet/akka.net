@@ -155,8 +155,10 @@ namespace Akka.Cluster.Tools.Singleton
 
         private void Add(Member member)
         {
+            // replace, it's possible that the upNumber is changed
             if (MatchingRole(member))
                 TrackChanges(() => _membersByAge = _membersByAge.Add(member));
+
         }
 
         private void Remove(Member member)
