@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -2671,10 +2672,25 @@ namespace Akka.Cluster
     internal class OnMemberStatusChangedListener : ReceiveActor
     {
         private readonly Action _callback;
+        private readonly MemberStatus _status;
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly Cluster _cluster;
-        private readonly MemberStatus _targetStatus;
 
+        private Type To
+        {
+            get
+            {
+                switch (_status)
+                {
+                    case MemberStatus.Up:
+                        return typeof(ClusterEvent.MemberUp);
+                    case MemberStatus.Removed:
+                        return typeof(ClusterEvent.MemberRemoved);
+                    default:
+                        throw new ArgumentException($"Expected Up or Removed in OnMemberStatusChangedListener, got [{_status}]");
+                }
+            }
+        }
 
         /// <summary>
         /// TBD
@@ -2683,8 +2699,8 @@ namespace Akka.Cluster
         /// <param name="targetStatus">TBD</param>
         public OnMemberStatusChangedListener(Action callback, MemberStatus targetStatus)
         {
-            _targetStatus = targetStatus;
             _callback = callback;
+            _status = targetStatus;
             _cluster = Cluster.Get(Context.System);
 
             Receive<ClusterEvent.CurrentClusterState>(state =>
@@ -2711,11 +2727,7 @@ namespace Akka.Cluster
         /// </summary>
         protected override void PreStart()
         {
-            var type = _targetStatus == MemberStatus.Up
-                ? typeof(ClusterEvent.MemberUp)
-                : typeof(ClusterEvent.MemberRemoved);
-
-            _cluster.Subscribe(Self, new[] { type });
+            _cluster.Subscribe(Self, To);
         }
 
         /// <summary>
@@ -2723,7 +2735,7 @@ namespace Akka.Cluster
         /// </summary>
         protected override void PostStop()
         {
-            if (_targetStatus == MemberStatus.Removed)
+            if (_status == MemberStatus.Removed)
                 Done();
             _cluster.Unsubscribe(Self);
         }
@@ -2736,7 +2748,7 @@ namespace Akka.Cluster
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "[{0}] callback failed with [{1}]", _targetStatus, ex.Message);
+                _log.Error(ex, "[{0}] callback failed with [{1}]", To.Name, ex.Message);
             }
             finally
             {
@@ -2746,7 +2758,7 @@ namespace Akka.Cluster
 
         private bool IsTriggered(Member m)
         {
-            return m.UniqueAddress == _cluster.SelfUniqueAddress && m.Status == _targetStatus;
+            return m.UniqueAddress == _cluster.SelfUniqueAddress && m.Status == _status;
         }
     }
 
