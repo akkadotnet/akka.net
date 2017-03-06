@@ -66,13 +66,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 _testActorRef.Tell("postStop");
             }
+
+            public static Props Props(IActorRef testActorRef) 
+                => Actor.Props.Create(() => new Echo(testActorRef));
         }
     }
 
     public class ClusterSingletonManagerLeaveSpec : MultiNodeClusterSpec
     {
         private readonly ClusterSingletonManagerLeaveSpecConfig _config;
-
         private readonly Lazy<IActorRef> _echoProxy;
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
@@ -103,7 +105,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         private IActorRef CreateSingleton()
         {
             return Sys.ActorOf(ClusterSingletonManager.Props(
-                singletonProps: Props.Create(() => new ClusterSingletonManagerLeaveSpecConfig.Echo(TestActor)),
+                singletonProps: ClusterSingletonManagerLeaveSpecConfig.Echo.Props(TestActor),
                 terminationMessage: "stop",
                 settings: ClusterSingletonManagerSettings.Create(Sys)),
                 name: "echo");
@@ -169,7 +171,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 var p = CreateTestProbe();
                 var firstAddress = Node(_config.First).Address;
-                p.Within(10.Seconds(), () =>
+                p.Within(15.Seconds(), () =>
                 {
                     p.AwaitAssert(() =>
                     {
@@ -205,6 +207,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
+                // TODO: this slould be 5 seconds, like Scala
                 ExpectMsg("stop", 10.Seconds());
                 ExpectMsg("postStop");
             }, _config.Third);
