@@ -75,7 +75,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 Within(TimeSpan.FromSeconds(10), () => AwaitAssert(() =>
                 {
                     _replicator.Tell(Dsl.GetReplicaCount);
-                    ExpectMsg(new Replicator.ReplicaCount(_nodes.Count));
+                    ExpectMsg(new ReplicaCount(_nodes.Count));
                 }));
             }, _nodes.ToArray());
 
@@ -100,11 +100,11 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Update(key, ORSet<int>.Empty, WriteLocal.Instance, i, x => x.Add(_cluster.SelfUniqueAddress, i)), writeProbe.Ref);
                     return writeProbe.ReceiveOne(TimeSpan.FromSeconds(3));
                 }).ToArray();
-                var successWriteAcks = writeAcks.OfType<Replicator.UpdateSuccess>().ToArray();
-                var failureWriteAcks = writeAcks.OfType<Replicator.IUpdateFailure>().ToArray();
+                var successWriteAcks = writeAcks.OfType<UpdateSuccess>().ToArray();
+                var failureWriteAcks = writeAcks.OfType<IUpdateFailure>().ToArray();
                 successWriteAcks.Select(x => (int)x.Request).ShouldBe(MyData.ToArray());
                 successWriteAcks.Length.ShouldBe(MyData.Count());
-                failureWriteAcks.ShouldBe(new Replicator.IUpdateFailure[0]);
+                failureWriteAcks.ShouldBe(new IUpdateFailure[0]);
                 (successWriteAcks.Length + failureWriteAcks.Length).ShouldBe(MyData.Count());
 
                 // eventually all nodes will have the data
@@ -114,7 +114,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     {
                         var readProbe = CreateTestProbe();
                         _replicator.Tell(Dsl.Get(key, ReadLocal.Instance), readProbe.Ref);
-                        var result = readProbe.ExpectMsg<Replicator.GetSuccess>(g => Equals(g.Key, key)).Get(key);
+                        var result = readProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, key)).Get(key);
                         result.Elements.ShouldBe(_expectedData);
                     });
                 });
@@ -138,11 +138,11 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Update(key, ORSet<int>.Empty, writeMajority, i, x => x.Add(_cluster.SelfUniqueAddress, i)), writeProbe.Ref);
                     return writeProbe.ReceiveOne(_timeout.Add(TimeSpan.FromSeconds(1)));
                 }).ToArray();
-                var successWriteAcks = writeAcks.OfType<Replicator.UpdateSuccess>().ToArray();
-                var failureWriteAcks = writeAcks.OfType<Replicator.IUpdateFailure>().ToArray();
+                var successWriteAcks = writeAcks.OfType<UpdateSuccess>().ToArray();
+                var failureWriteAcks = writeAcks.OfType<IUpdateFailure>().ToArray();
                 successWriteAcks.Select(x => (int)x.Request).ShouldBe(MyData.ToArray());
                 successWriteAcks.Length.ShouldBe(MyData.Count());
-                failureWriteAcks.ShouldBe(new Replicator.IUpdateFailure[0]);
+                failureWriteAcks.ShouldBe(new IUpdateFailure[0]);
                 (successWriteAcks.Length + failureWriteAcks.Length).ShouldBe(MyData.Count());
 
                 EnterBarrier("data-written-2");
@@ -150,7 +150,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 // read from majority of nodes, which is enough to retrieve all data
                 var readProbe = CreateTestProbe();
                 _replicator.Tell(Dsl.Get(key, readMajority), readProbe.Ref);
-                var result = readProbe.ExpectMsg<Replicator.GetSuccess>(g => Equals(g.Key, key)).Get(key);
+                var result = readProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, key)).Get(key);
                 result.Elements.ShouldBe(_expectedData);
             }, _nodes.ToArray());
 
@@ -188,11 +188,11 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Update(key, ORSet<int>.Empty, WriteLocal.Instance, i, x => x.Add(_cluster.SelfUniqueAddress, i)), writeProbe.Ref);
                     return writeProbe.ReceiveOne(TimeSpan.FromSeconds(3));
                 }).ToArray();
-                var successWriteAcks = writeAcks.OfType<Replicator.UpdateSuccess>().ToArray();
-                var failureWriteAcks = writeAcks.OfType<Replicator.IUpdateFailure>().ToArray();
+                var successWriteAcks = writeAcks.OfType<UpdateSuccess>().ToArray();
+                var failureWriteAcks = writeAcks.OfType<IUpdateFailure>().ToArray();
                 successWriteAcks.Select(x => (int)x.Request).ShouldBe(MyData.ToArray());
                 successWriteAcks.Length.ShouldBe(MyData.Count());
-                failureWriteAcks.ShouldBe(new Replicator.IUpdateFailure[0]);
+                failureWriteAcks.ShouldBe(new IUpdateFailure[0]);
                 (successWriteAcks.Length + failureWriteAcks.Length).ShouldBe(MyData.Count());
 
                 EnterBarrier("partition-healed-3");
@@ -202,7 +202,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 {
                     var readProbe = CreateTestProbe();
                     _replicator.Tell(Dsl.Get(key, ReadLocal.Instance), readProbe.Ref);
-                    var result = readProbe.ExpectMsg<Replicator.GetSuccess>(g => Equals(g.Key, key)).Get(key);
+                    var result = readProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, key)).Get(key);
                     result.Elements.ShouldBe(_expectedData);
                 }));
             }, _nodes.ToArray());
@@ -241,21 +241,21 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Update(key, ORSet<int>.Empty, writeMajority, i, x => x.Add(_cluster.SelfUniqueAddress, i)), writeProbe.Ref);
                     return writeProbe.ReceiveOne(_timeout.Add(TimeSpan.FromSeconds(1)));
                 }).ToArray();
-                var successWriteAcks = writeAcks.OfType<Replicator.UpdateSuccess>().ToArray();
-                var failureWriteAcks = writeAcks.OfType<Replicator.IUpdateFailure>().ToArray();
+                var successWriteAcks = writeAcks.OfType<UpdateSuccess>().ToArray();
+                var failureWriteAcks = writeAcks.OfType<IUpdateFailure>().ToArray();
 
                 RunOn(() =>
                 {
                     successWriteAcks.Select(x => (int)x.Request).ShouldBe(MyData.ToArray());
                     successWriteAcks.Length.ShouldBe(MyData.Count());
-                    failureWriteAcks.ShouldBe(new Replicator.IUpdateFailure[0]);
+                    failureWriteAcks.ShouldBe(new IUpdateFailure[0]);
                 }, N1, N4, N5);
 
                 RunOn(() =>
                 {
                     // without delays all could teoretically have been written before the blackhole
                     if (_delayMillis != 0)
-                        failureWriteAcks.ShouldNotBe(new Replicator.IUpdateFailure[0]);
+                        failureWriteAcks.ShouldNotBe(new IUpdateFailure[0]);
                 }, N2, N3);
 
                 (successWriteAcks.Length + failureWriteAcks.Length).ShouldBe(MyData.Count());
@@ -267,7 +267,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 {
                     var readProbe = CreateTestProbe();
                     _replicator.Tell(Dsl.Get(key, readMajority), readProbe.Ref);
-                    var result = readProbe.ExpectMsg<Replicator.GetSuccess>(g => Equals(g.Key, key)).Get(key);
+                    var result = readProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, key)).Get(key);
                     result.Elements.ShouldBe(_expectedData);
                 }, N2, N3);
 
@@ -279,7 +279,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 {
                     var readProbe = CreateTestProbe();
                     _replicator.Tell(Dsl.Get(key, ReadLocal.Instance), readProbe.Ref);
-                    var result = readProbe.ExpectMsg<Replicator.GetSuccess>(g => Equals(g.Key, key)).Get(key);
+                    var result = readProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, key)).Get(key);
                     result.Elements.ShouldBe(_expectedData);
                 }));
             }, _nodes.ToArray());

@@ -18,12 +18,12 @@ namespace Akka.DistributedData
         /// <summary>
         /// TBD
         /// </summary>
-        public static Replicator.GetKeyIds GetKeyIds => Replicator.GetKeyIds.Instance;
+        public static GetKeyIds GetKeyIds => GetKeyIds.Instance;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static Replicator.GetReplicaCount GetReplicaCount => Replicator.GetReplicaCount.Instance;
+        public static GetReplicaCount GetReplicaCount => GetReplicaCount.Instance;
 
         /// <summary>
         /// TBD
@@ -33,8 +33,8 @@ namespace Akka.DistributedData
         /// <param name="consistency">TBD</param>
         /// <param name="modify">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Update Update<T>(IKey<T> key, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
-            new Replicator.Update(key, consistency, data => modify((T)data));
+        public static Update Update<T>(IKey<T> key, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
+            new Update(key, consistency, data => modify((T)data));
 
         /// <summary>
         /// TBD
@@ -45,8 +45,8 @@ namespace Akka.DistributedData
         /// <param name="consistency">TBD</param>
         /// <param name="modify">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
-            new Replicator.Update(key, initial, consistency, data => modify((T)data));
+        public static Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
+            new Update(key, initial, consistency, data => modify((T)data));
 
         /// <summary>
         /// TBD
@@ -58,8 +58,8 @@ namespace Akka.DistributedData
         /// <param name="request">TBD</param>
         /// <param name="modify">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, object request, Func<T, T> modify) where T : IReplicatedData =>
-            new Replicator.Update(key, initial, consistency, data => modify((T)data), request);
+        public static Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, object request, Func<T, T> modify) where T : IReplicatedData =>
+            new Update(key, initial, consistency, data => modify((T)data), request);
         
         /// <summary>
         /// TBD
@@ -69,8 +69,8 @@ namespace Akka.DistributedData
         /// <param name="consistency">TBD</param>
         /// <param name="request">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Get Get<T>(IKey<T> key, IReadConsistency consistency, object request = null) where T : IReplicatedData =>
-            new Replicator.Get(key, consistency, request);
+        public static Get Get<T>(IKey<T> key, IReadConsistency consistency, object request = null) where T : IReplicatedData =>
+            new Get(key, consistency, request);
 
         /// <summary>
         /// TBD
@@ -79,8 +79,8 @@ namespace Akka.DistributedData
         /// <param name="key">TBD</param>
         /// <param name="consistency">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Delete Delete<T>(IKey<T> key, IWriteConsistency consistency, object request = null) where T: IReplicatedData =>
-            new Replicator.Delete(key, consistency, request);
+        public static Delete Delete<T>(IKey<T> key, IWriteConsistency consistency, object request = null) where T: IReplicatedData =>
+            new Delete(key, consistency, request);
 
         /// <summary>
         /// TBD
@@ -89,8 +89,8 @@ namespace Akka.DistributedData
         /// <param name="key">TBD</param>
         /// <param name="subscriberRef">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Subscribe Subscribe<T>(IKey<T> key, IActorRef subscriberRef) where T : IReplicatedData =>
-            new Replicator.Subscribe(key, subscriberRef);
+        public static Subscribe Subscribe<T>(IKey<T> key, IActorRef subscriberRef) where T : IReplicatedData =>
+            new Subscribe(key, subscriberRef);
 
         /// <summary>
         /// TBD
@@ -99,7 +99,7 @@ namespace Akka.DistributedData
         /// <param name="key">TBD</param>
         /// <param name="subscriberRef">TBD</param>
         /// <returns>TBD</returns>
-        public static Replicator.Unsubscribe Unsubscribe<T>(IKey<T> key, IActorRef subscriberRef) where T : IReplicatedData =>
-            new Replicator.Unsubscribe(key, subscriberRef);
+        public static Unsubscribe Unsubscribe<T>(IKey<T> key, IActorRef subscriberRef) where T : IReplicatedData =>
+            new Unsubscribe(key, subscriberRef);
     }
 }

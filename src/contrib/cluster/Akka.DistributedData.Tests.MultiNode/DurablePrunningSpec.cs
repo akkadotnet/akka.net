@@ -70,23 +70,23 @@ namespace Akka.DistributedData.Tests.MultiNode
             Within(TimeSpan.FromSeconds(5), () => AwaitAssert(() =>
             {
                 replicator.Tell(Dsl.GetReplicaCount);
-                ExpectMsg(new Replicator.ReplicaCount(4));
+                ExpectMsg(new ReplicaCount(4));
                 replicator2.Tell(Dsl.GetReplicaCount, probe2.Ref);
-                probe2.ExpectMsg(new Replicator.ReplicaCount(4));
+                probe2.ExpectMsg(new ReplicaCount(4));
             }));
 
             replicator.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
-            ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
+            ExpectMsg(new UpdateSuccess(keyA, null));
 
             replicator2.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster2, 2)), probe2.Ref);
-            probe2.ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
+            probe2.ExpectMsg(new UpdateSuccess(keyA, null));
 
             EnterBarrier("updates-done");
 
             Within(TimeSpan.FromSeconds(10), () => AwaitAssert(() =>
             {
                 replicator.Tell(Dsl.Get(keyA, new ReadAll(TimeSpan.FromSeconds(1))));
-                var counter1 = ExpectMsg<Replicator.GetSuccess>().Get(keyA);
+                var counter1 = ExpectMsg<GetSuccess>().Get(keyA);
                 counter1.Value.ShouldBe(10);
                 counter1.State.Count.ShouldBe(4);
             }));
@@ -94,7 +94,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             Within(TimeSpan.FromSeconds(10), () => AwaitAssert(() =>
             {
                 replicator2.Tell(Dsl.Get(keyA, new ReadAll(TimeSpan.FromSeconds(1))), probe2.Ref);
-                var counter2 = probe2.ExpectMsg<Replicator.GetSuccess>().Get(keyA);
+                var counter2 = probe2.ExpectMsg<GetSuccess>().Get(keyA);
                 counter2.Value.ShouldBe(10);
                 counter2.State.Count.ShouldBe(4);
             }));
@@ -105,7 +105,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             Within(TimeSpan.FromSeconds(15), () => AwaitAssert(() =>
             {
                 replicator.Tell(Dsl.GetReplicaCount);
-                ExpectMsg(new Replicator.ReplicaCount(3));
+                ExpectMsg(new ReplicaCount(3));
             }));
             EnterBarrier("removed");
 
@@ -117,7 +117,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 AwaitAssert(() =>
                 {
                     replicator.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                    var counter3 = ExpectMsg<Replicator.GetSuccess>().Get(keyA);
+                    var counter3 = ExpectMsg<GetSuccess>().Get(keyA);
                     var value = counter3.Value;
                     values = values.Add((int) value);
                     value.ShouldBe(10);
@@ -143,7 +143,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         replicator3.Tell(Dsl.Get(keyA, ReadLocal.Instance), probe3.Ref);
-                        var counter4 = probe3.ExpectMsg<Replicator.GetSuccess>().Get(keyA);
+                        var counter4 = probe3.ExpectMsg<GetSuccess>().Get(keyA);
                         var value = counter4.Value;
                         values.Add((int) value);
                         value.ShouldBe(10);
@@ -154,7 +154,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                 // after merging with others
                 replicator3.Tell(Dsl.Get(keyA, new ReadAll(RemainingOrDefault)));
-                var counter5 = ExpectMsg<Replicator.GetSuccess>().Get(keyA);
+                var counter5 = ExpectMsg<GetSuccess>().Get(keyA);
                 counter5.Value.ShouldBe(10);
                 counter5.State.Count.ShouldBe(3);
 
@@ -162,7 +162,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             EnterBarrier("sys3-started");
 
             replicator.Tell(Dsl.Get(keyA, new ReadAll(RemainingOrDefault)));
-            var counter6 = ExpectMsg<Replicator.GetSuccess>().Get(keyA);
+            var counter6 = ExpectMsg<GetSuccess>().Get(keyA);
             counter6.Value.ShouldBe(10);
             counter6.State.Count.ShouldBe(3);
 

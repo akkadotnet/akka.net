@@ -95,12 +95,12 @@ namespace Akka.DistributedData
             }
             else if (ok && _result == null)
             {
-                _replyTo.Tell(new Replicator.NotFound(_key, _req), Context.Parent);
+                _replyTo.Tell(new NotFound(_key, _req), Context.Parent);
                 Context.Stop(Self);
             }
             else
             {
-                _replyTo.Tell(new Replicator.GetFailure(_key, _req), Context.Parent);
+                _replyTo.Tell(new GetFailure(_key, _req), Context.Parent);
                 Context.Stop(Self);
             }
         }
@@ -109,8 +109,8 @@ namespace Akka.DistributedData
             .With<ReadRepairAck>(x =>
             {
                 var reply = envelope.Data is DeletedData
-                    ? (object)new Replicator.DataDeleted(_key, null)
-                    : new Replicator.GetSuccess(_key, _req, envelope.Data);
+                    ? (object)new DataDeleted(_key, null)
+                    : new GetSuccess(_key, _req, envelope.Data);
                 _replyTo.Tell(reply, Context.Parent);
                 Context.Stop(Self);
             })

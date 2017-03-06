@@ -649,7 +649,7 @@ namespace Akka.DistributedData
             if (keys.Length != 0)
             {
                 if (_log.IsDebugEnabled)
-                    _log.Debug("Sending gossip to [{0}], containing [{1}]", Sender.Path.Address, string.Join(", ", keys));
+                    _log.Debug("Sending gossip to [{0}], ", Sender.Path.Address, string.Join(", ", keys));
 
                 var g = new Gossip(keys.Select(k => new KeyValuePair<string, DataEnvelope>(k, GetData(k))).ToImmutableDictionary(), otherDifferentKeys.Any());
                 Sender.Tell(g);

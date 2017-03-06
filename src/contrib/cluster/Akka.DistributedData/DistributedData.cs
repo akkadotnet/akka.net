@@ -85,4 +85,17 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public override DistributedData CreateExtension(ExtendedActorSystem system) => new DistributedData(system);
     }
+
+    public static class DistributedDataExtensions
+    {
+        /// <summary>
+        /// Returns th <see cref="DistributedData"/> extension configured for provided 
+        /// <paramref name="system"/>. Configuration is supplied automatically from HOCON 
+        /// config under the path: `akka.cluster.distributed-data`
+        /// </summary>
+        public static DistributedData DistributedData(this ActorSystem system)
+        {
+            return Akka.DistributedData.DistributedData.Get(system);
+        }
+    }
 }

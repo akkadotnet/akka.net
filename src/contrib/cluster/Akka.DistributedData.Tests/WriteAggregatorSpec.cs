@@ -85,7 +85,7 @@ namespace Akka.DistributedData.Tests
             probe.LastSender.Tell(WriteAck.Instance);
             probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteAck.Instance);
-            ExpectMsg(new Replicator.UpdateSuccess(Key, null));
+            ExpectMsg(new UpdateSuccess(Key, null));
             Watch(aggregator);
             ExpectTerminated(aggregator);
         }
@@ -105,7 +105,7 @@ namespace Akka.DistributedData.Tests
             probe.LastSender.Tell(WriteAck.Instance);
             probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteAck.Instance);
-            ExpectMsg(new Replicator.UpdateSuccess(Key, null));
+            ExpectMsg(new UpdateSuccess(Key, null));
             Watch(aggregator);
             ExpectTerminated(aggregator);
         }
@@ -124,7 +124,7 @@ namespace Akka.DistributedData.Tests
             // no reply
             probe.ExpectMsg<Write>();
             // no reply
-            ExpectMsg(new Replicator.UpdateTimeout(Key, null));
+            ExpectMsg(new UpdateTimeout(Key, null));
             Watch(aggregator);
             ExpectTerminated(aggregator);
         }

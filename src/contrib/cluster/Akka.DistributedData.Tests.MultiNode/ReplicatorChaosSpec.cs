@@ -67,7 +67,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 AwaitAssert(() =>
                 {
                     _replicator.Tell(Dsl.GetReplicaCount);
-                    ExpectMsg(new Replicator.ReplicaCount(5));
+                    ExpectMsg(new ReplicaCount(5));
                 });
             });
 
@@ -79,7 +79,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
                     _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster.SelfUniqueAddress, 1)));
                 }
-                ReceiveN(15).Select(x => x.GetType()).ToImmutableHashSet().ShouldBe(new[] { typeof(Replicator.UpdateSuccess) });
+                ReceiveN(15).Select(x => x.GetType()).ToImmutableHashSet().ShouldBe(new[] { typeof(UpdateSuccess) });
             }, First);
 
             RunOn(() =>
@@ -90,40 +90,40 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                 ReceiveN(3).ToImmutableHashSet().ShouldBe(new[]
                 {
-                    new Replicator.UpdateSuccess(KeyA, null),
-                    new Replicator.UpdateSuccess(KeyB, null),
-                    new Replicator.UpdateSuccess(KeyC, null)
+                    new UpdateSuccess(KeyA, null),
+                    new UpdateSuccess(KeyB, null),
+                    new UpdateSuccess(KeyC, null)
                 });
 
                 _replicator.Tell(Dsl.Update(KeyE, GSet<string>.Empty, WriteLocal.Instance, x => x.Add("e1").Add("e2")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyE, null));
+                ExpectMsg(new UpdateSuccess(KeyE, null));
 
                 _replicator.Tell(Dsl.Update(KeyF, ORSet<string>.Empty, WriteLocal.Instance, x => x
                     .Add(_cluster.SelfUniqueAddress, "e1")
                     .Add(_cluster.SelfUniqueAddress, "e2")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyF, null));
+                ExpectMsg(new UpdateSuccess(KeyF, null));
             }, Second);
 
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 40)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyD, null));
+                ExpectMsg(new UpdateSuccess(KeyD, null));
 
                 _replicator.Tell(Dsl.Update(KeyE, GSet<string>.Empty, WriteLocal.Instance, x => x.Add("e2").Add("e3")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyE, null));
+                ExpectMsg(new UpdateSuccess(KeyE, null));
 
                 _replicator.Tell(Dsl.Update(KeyF, ORSet<string>.Empty, WriteLocal.Instance, x => x
                     .Add(_cluster.SelfUniqueAddress, "e2")
                     .Add(_cluster.SelfUniqueAddress, "e3")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyF, null));
+                ExpectMsg(new UpdateSuccess(KeyF, null));
             }, Fourth);
 
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Update(KeyX, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 50)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyX, null));
+                ExpectMsg(new UpdateSuccess(KeyX, null));
                 _replicator.Tell(Dsl.Delete(KeyX, WriteLocal.Instance));
-                ExpectMsg(new Replicator.DeleteSuccess(KeyX));
+                ExpectMsg(new DeleteSuccess(KeyX));
             }, Fifth);
 
             EnterBarrier("initial-updates-done");
@@ -156,25 +156,25 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 1)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyA, null));
+                ExpectMsg(new UpdateSuccess(KeyA, null));
             }, First);
 
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 2)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyA, null));
+                ExpectMsg(new UpdateSuccess(KeyA, null));
 
                 _replicator.Tell(Dsl.Update(KeyE, GSet<string>.Empty, new WriteTo(2, _timeout), x => x.Add("e4")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyE, null));
+                ExpectMsg(new UpdateSuccess(KeyE, null));
 
                 _replicator.Tell(Dsl.Update(KeyF, ORSet<string>.Empty, new WriteTo(2, _timeout), x => x.Remove(_cluster.SelfUniqueAddress, "e2")));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyF, null));
+                ExpectMsg(new UpdateSuccess(KeyF, null));
             }, Third);
 
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster.SelfUniqueAddress, 1)));
-                ExpectMsg(new Replicator.UpdateSuccess(KeyD, null));
+                ExpectMsg(new UpdateSuccess(KeyD, null));
             }, Fourth);
 
             EnterBarrier("update-during-split");
@@ -241,7 +241,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             Within(TimeSpan.FromSeconds(10), () => AwaitAssert(() =>
             {
                 _replicator.Tell(Dsl.Get(key, ReadLocal.Instance));
-                var g = ExpectMsg<Replicator.GetSuccess>().Get(key);
+                var g = ExpectMsg<GetSuccess>().Get(key);
                 object value;
                 if (g is GCounter) value = ((GCounter)g).Value;
                 else if (g is PNCounter) value = ((PNCounter)g).Value;
@@ -260,7 +260,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 AwaitAssert(() =>
                 {
                     _replicator.Tell(Dsl.Get(key, ReadLocal.Instance));
-                    ExpectMsg(new Replicator.DataDeleted(key));
+                    ExpectMsg(new DataDeleted(key));
                 });
             });
         }

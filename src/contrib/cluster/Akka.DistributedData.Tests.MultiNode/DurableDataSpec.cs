@@ -112,20 +112,20 @@ namespace Akka.DistributedData.Tests.MultiNode
                    AwaitAssert(() =>
                    {
                        r.Tell(Dsl.GetReplicaCount);
-                       ExpectMsg(new Replicator.ReplicaCount(1));
+                       ExpectMsg(new ReplicaCount(1));
                    });
                });
 
                 r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                ExpectMsg(new Replicator.NotFound(keyA, null));
+                ExpectMsg(new NotFound(keyA, null));
 
                 r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
                 r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
                 r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
 
-                ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
-                ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
-                ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
+                ExpectMsg(new UpdateSuccess(keyA, null));
+                ExpectMsg(new UpdateSuccess(keyA, null));
+                ExpectMsg(new UpdateSuccess(keyA, null));
 
                 Watch(r);
                 Sys.Stop(r);
@@ -136,7 +136,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                 // note that it will stash the commands until loading completed
                 r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                ExpectMsg<Replicator.GetSuccess>().Get(keyA).Value.ShouldBe(3);
+                ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3);
 
                 Watch(r2);
                 Sys.Stop(r2);
@@ -157,25 +157,25 @@ namespace Akka.DistributedData.Tests.MultiNode
                 AwaitAssert(() =>
                 {
                     r.Tell(Dsl.GetReplicaCount);
-                    ExpectMsg(new Replicator.ReplicaCount(2));
+                    ExpectMsg(new ReplicaCount(2));
                 });
             });
 
             EnterBarrier("both-initialized");
 
             r.Tell(Dsl.Update(keyA, GCounter.Empty, writeTwo, c => c.Increment(cluster)));
-            ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
+            ExpectMsg(new UpdateSuccess(keyA, null));
 
             r.Tell(Dsl.Update(keyC, ORSet<string>.Empty, writeTwo, c => c.Add(cluster, Myself.Name)));
-            ExpectMsg(new Replicator.UpdateSuccess(keyC, null));
+            ExpectMsg(new UpdateSuccess(keyC, null));
 
             EnterBarrier("update-done-" + testStepCounter);
 
             r.Tell(Dsl.Get(keyA, readTwo));
-            ExpectMsg<Replicator.GetSuccess>().Get(keyA).Value.ShouldBe(2);
+            ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2);
 
             r.Tell(Dsl.Get(keyC, readTwo));
-            ExpectMsg<Replicator.GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
+            ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
 
             EnterBarrier("values-verified-" + testStepCounter);
 
@@ -188,14 +188,14 @@ namespace Akka.DistributedData.Tests.MultiNode
             AwaitAssert(() =>
             {
                 r2.Tell(Dsl.GetKeyIds);
-                ExpectMsg<Replicator.GetKeysIdsResult>().Keys.ShouldNotBe(ImmutableHashSet<string>.Empty);
+                ExpectMsg<GetKeysIdsResult>().Keys.ShouldNotBe(ImmutableHashSet<string>.Empty);
             });
 
             r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-            ExpectMsg<Replicator.GetSuccess>().Get(keyA).Value.ShouldBe(2);
+            ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2);
 
             r2.Tell(Dsl.Get(keyC, ReadLocal.Instance));
-            ExpectMsg<Replicator.GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
+            ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
 
             EnterBarrierAfterTestStep();
         }
@@ -207,18 +207,18 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 r.Tell(Dsl.Update(keyC, ORSet<string>.Empty, WriteLocal.Instance, c => c.Add(cluster, Myself.Name)));
-                ExpectMsg(new Replicator.UpdateSuccess(keyC, null));
+                ExpectMsg(new UpdateSuccess(keyC, null));
             }, first);
 
             RunOn(() =>
             {
                 r.Tell(Dsl.Subscribe(keyC, TestActor));
-                ExpectMsg<Replicator.Changed>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.Create(first.Name));
+                ExpectMsg<Changed>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.Create(first.Name));
 
                 // must do one more roundtrip to be sure that it keyB is stored, since Changed might have
                 // been sent out before storage
                 r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
-                ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
+                ExpectMsg(new UpdateSuccess(keyA, null));
 
                 Watch(r);
                 Sys.Stop(r);
@@ -229,11 +229,11 @@ namespace Akka.DistributedData.Tests.MultiNode
                 AwaitAssert(() =>
                 {
                     r2.Tell(Dsl.GetKeyIds);
-                    ExpectMsg<Replicator.GetKeysIdsResult>().Keys.ShouldNotBe(ImmutableHashSet<string>.Empty);
+                    ExpectMsg<GetKeysIdsResult>().Keys.ShouldNotBe(ImmutableHashSet<string>.Empty);
                 });
 
                 r2.Tell(Dsl.Get(keyC, ReadLocal.Instance));
-                ExpectMsg<Replicator.GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.Create(first.Name));
+                ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.Create(first.Name));
 
             }, second);
 
@@ -258,22 +258,22 @@ namespace Akka.DistributedData.Tests.MultiNode
                             AwaitAssert(() =>
                             {
                                 r.Tell(Dsl.GetReplicaCount);
-                                ExpectMsg(new Replicator.ReplicaCount(1));
+                                ExpectMsg(new ReplicaCount(1));
                             });
                         });
 
                         r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                        ExpectMsg(new Replicator.NotFound(keyA, null));
+                        ExpectMsg(new NotFound(keyA, null));
 
                         r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
                         r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
                         r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
                         r.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
 
-                        ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
-                        ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
-                        ExpectMsg(new Replicator.UpdateSuccess(keyA, null));
-                        ExpectMsg(new Replicator.UpdateSuccess(keyB, null));
+                        ExpectMsg(new UpdateSuccess(keyA, null));
+                        ExpectMsg(new UpdateSuccess(keyA, null));
+                        ExpectMsg(new UpdateSuccess(keyA, null));
+                        ExpectMsg(new UpdateSuccess(keyB, null));
 
                         Watch(r);
                         sys1.Stop(r);
@@ -295,20 +295,20 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                         // it should be possible to update while loading is in progress
                         r2.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(Cluster.Cluster.Get(sys2))));
-                        ExpectMsg(new Replicator.UpdateSuccess(keyB, null));
+                        ExpectMsg(new UpdateSuccess(keyB, null));
 
                         // wait until all loaded
                         AwaitAssert(() =>
                         {
                             r2.Tell(Dsl.GetKeyIds);
-                            ExpectMsg<Replicator.GetKeysIdsResult>().Keys.ShouldBe(ImmutableHashSet.CreateRange(new [] { keyA.Id, keyB.Id }));   
+                            ExpectMsg<GetKeysIdsResult>().Keys.ShouldBe(ImmutableHashSet.CreateRange(new [] { keyA.Id, keyB.Id }));   
                         });
 
                         r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                        ExpectMsg<Replicator.GetSuccess>().Get(keyA).Value.ShouldBe(3);
+                        ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3);
 
                         r2.Tell(Dsl.Get(keyB, ReadLocal.Instance));
-                        ExpectMsg<Replicator.GetSuccess>().Get(keyB).Value.ShouldBe(2);
+                        ExpectMsg<GetSuccess>().Get(keyB).Value.ShouldBe(2);
                     }
                 }
                 finally
@@ -343,7 +343,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                             "replicator-" + testStepCounter);
 
                 r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, "a", c => c.Increment(cluster)));
-                ExpectMsg(new Replicator.StoreFailure(keyA, "a"));
+                ExpectMsg(new StoreFailure(keyA, "a"));
             }, first);
             EnterBarrierAfterTestStep();
         }
