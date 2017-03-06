@@ -5111,7 +5111,6 @@ namespace Akka.Util.Internal
     {
         public static System.Collections.Generic.IDictionary<TKey, TValue> AddAndReturn<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
         public static void AddOrSet<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
-        public static System.Collections.Generic.IEnumerable<TOut> AlternateSelectMany<TIn, TOut>(this System.Collections.Generic.IEnumerable<TIn> self, System.Func<TIn, System.Collections.Generic.IEnumerable<TOut>> evenSelector, System.Func<TIn, System.Collections.Generic.IEnumerable<TOut>> oddSelector) { }
         public static T AsInstanceOf<T>(this object self) { }
         public static string BetweenDoubleQuotes(this string self) { }
         public static System.Collections.Generic.IEnumerable<T> Concat<T>(this System.Collections.Generic.IEnumerable<T> enumerable, T item) { }
@@ -5123,6 +5122,7 @@ namespace Akka.Util.Internal
         public static string Join(this System.Collections.Generic.IEnumerable<string> self, string separator) { }
         public static System.TimeSpan Max(this System.TimeSpan @this, System.TimeSpan other) { }
         public static System.TimeSpan Min(this System.TimeSpan @this, System.TimeSpan other) { }
+        [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Util.Internal.Extensions.<SplitDottedPathHonouringQuotes>d__3))]
         public static System.Collections.Generic.IEnumerable<string> SplitDottedPathHonouringQuotes(this string path) { }
         public static System.Collections.Generic.IEnumerable<T> TakeRight<T>(this System.Collections.Generic.IEnumerable<T> self, int n) { }
     }
