@@ -4931,20 +4931,6 @@ namespace Akka.Util
         public void SetPriorityCalculator(System.Func<object, int> priorityCalculator) { }
         public override string ToString() { }
     }
-    [System.Diagnostics.DebuggerDisplayAttribute("Count={Count}")]
-    public class MonoConcurrentQueue<T> : System.Collections.Concurrent.IProducerConsumerCollection<T>, System.Collections.Generic.IEnumerable<T>, System.Collections.ICollection, System.Collections.IEnumerable
-    {
-        public MonoConcurrentQueue() { }
-        public MonoConcurrentQueue(System.Collections.Generic.IEnumerable<T> collection) { }
-        public int Count { get; }
-        public bool IsEmpty { get; }
-        public void CopyTo(T[] array, int index) { }
-        public void Enqueue(T item) { }
-        public System.Collections.Generic.IEnumerator<T> GetEnumerator() { }
-        public T[] ToArray() { }
-        public bool TryDequeue(out T result) { }
-        public bool TryPeek(out T result) { }
-    }
     public class static MurmurHash
     {
         public const uint StartMagicA = 2505324423u;
