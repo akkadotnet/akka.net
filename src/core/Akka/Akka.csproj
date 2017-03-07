@@ -340,7 +340,6 @@
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\Internal\IAtomicCounter.cs" />
     <Compile Include="Util\ListPriorityQueue.cs" />
-    <Compile Include="Util\MonoConcurrentQueue.cs" />
     <Compile Include="Util\MurmurHash.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
     <Compile Include="PatternMatch.cs" />
