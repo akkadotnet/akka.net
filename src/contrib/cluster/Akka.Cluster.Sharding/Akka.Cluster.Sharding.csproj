@@ -59,6 +59,7 @@
     <Compile Include="ClusterSharding.cs" />
     <Compile Include="ClusterShardingGuardian.cs" />
     <Compile Include="ClusterShardingSettings.cs" />
+    <Compile Include="EntityRecoveryStrategy.cs" />
     <Compile Include="PersistentShard.cs" />
     <Compile Include="PersistentShardCoordinator.cs" />
     <Compile Include="PersistentShardCoordinator.Messages.cs" />
