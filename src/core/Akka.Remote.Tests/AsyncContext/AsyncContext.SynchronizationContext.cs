@@ -43,7 +43,7 @@ namespace Nito.AsyncEx
             /// <param name="state">The object passed to the delegate.</param>
             public override void Post(SendOrPostCallback d, object state)
             {
-                _context.Enqueue(_context._taskFactory.Run(() => d(state)), true);
+                _context.Enqueue(_context._taskFactory.StartNew(() => d(state)), true);
             }
 
             /// <summary>
@@ -59,7 +59,7 @@ namespace Nito.AsyncEx
                 }
                 else
                 {
-                    var task = _context._taskFactory.Run(() => d(state));
+                    var task = _context._taskFactory.StartNew(() => d(state));
                     task.WaitAndUnwrapException();
                 }
             }

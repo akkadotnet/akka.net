@@ -129,7 +129,7 @@ namespace Nito.AsyncEx
 
             using (var context = new AsyncContext())
             {
-                var task = context._taskFactory.Run(action);
+                var task = context._taskFactory.StartNew(action);
                 context.Execute();
                 task.WaitAndUnwrapException();
             }
@@ -147,7 +147,7 @@ namespace Nito.AsyncEx
 
             using (var context = new AsyncContext())
             {
-                var task = context._taskFactory.Run(action);
+                var task = context._taskFactory.StartNew(action);
                 context.Execute();
                 return task.WaitAndUnwrapException();
             }
@@ -166,7 +166,7 @@ namespace Nito.AsyncEx
             using (var context = new AsyncContext())
             {
                 context.OperationStarted();
-                var task = context._taskFactory.Run(action).ContinueWith(t =>
+                var task = context._taskFactory.StartNew(action).ContinueWith(t =>
                 {
                     context.OperationCompleted();
                     t.WaitAndUnwrapException();
@@ -191,13 +191,13 @@ namespace Nito.AsyncEx
             using (var context = new AsyncContext())
             {
                 context.OperationStarted();
-                var task = context._taskFactory.Run(action).ContinueWith(t =>
+                var task = context._taskFactory.StartNew(action).ContinueWith(t =>
                 {
                     context.OperationCompleted();
                     return t.WaitAndUnwrapException();
                 }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, context._taskScheduler);
                 context.Execute();
-                return task.WaitAndUnwrapException();
+                return task.WaitAndUnwrapException().Result;
             }
             // ReSharper restore AccessToDisposedClosure
         }
