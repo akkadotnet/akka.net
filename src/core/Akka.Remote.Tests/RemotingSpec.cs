@@ -165,6 +165,20 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
+        public async Task Ask_does_not_deadlock()
+        {
+            // see https://github.com/akkadotnet/akka.net/issues/2546
+
+            // the configure await causes the continuation (== the second ask) to be scheduled on the HELIOS worker thread
+            var msg = await here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).ConfigureAwait(false);
+            Assert.Equal("pong", msg.Item1);
+
+            // the .Result here blocks the helios worker thread, deadlocking the whole system.
+            var msg2 = here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5)).Result;
+            Assert.Equal("pong", msg2.Item1);
+        }
+
+        [Fact]
         public void Remoting_must_not_send_remote_recreated_actor_with_same_name()
         {
             var echo = remoteSystem.ActorOf(Props.Create(() => new Echo1()), "otherEcho1");
