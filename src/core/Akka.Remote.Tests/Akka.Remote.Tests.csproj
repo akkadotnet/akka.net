@@ -163,7 +163,6 @@
     <Compile Include="AsyncContext\SingleDisposable %28of T%29.cs" />
     <Compile Include="AsyncContext\SynchronizationContextSwitcher.cs" />
     <Compile Include="AsyncContext\SynchronousTaskExtensions.cs.cs" />
-    <Compile Include="SynchronizationContextHelper.cs" />
     <Compile Include="Transport\BackwardCompatibilitySpec.cs" />
     <Compile Include="DeadlineFailureDetectorSpec.cs" />
     <Compile Include="EndpointRegistrySpec.cs" />
