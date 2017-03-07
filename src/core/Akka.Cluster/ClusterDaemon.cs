@@ -2955,7 +2955,7 @@ namespace Akka.Cluster
         protected override void PostStop()
         {
             // execute MemberRemoved hooks if we are shutting down
-            if (_targetStatus == MemberStatus.Removed)
+            if (_status == MemberStatus.Removed)
                 Done();
             _cluster.Unsubscribe(Self);
         }
