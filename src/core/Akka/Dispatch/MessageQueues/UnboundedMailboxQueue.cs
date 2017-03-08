@@ -6,12 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-#if MONO
-using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
-#else
 using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
-
-#endif
 
 namespace Akka.Dispatch.MessageQueues
 {
@@ -23,11 +18,7 @@ namespace Akka.Dispatch.MessageQueues
         /// <inheritdoc cref="IMessageQueue"/>
         public bool HasMessages
         {
-#if MONO
-            get { return _queue.Count > 0; }
-#else
             get { return !_queue.IsEmpty; }
-#endif
         }
 
         /// <inheritdoc cref="IMessageQueue"/>

@@ -1624,17 +1624,3 @@ namespace Akka.Remote.Transport
         public Akka.Actor.Address Sender { get; }
     }
 }
-namespace Akka.Remote.Transport.AkkaIO
-{
-    public class AkkaIOTransport : Akka.Remote.Transport.Transport
-    {
-        public static readonly string Protocal;
-        public AkkaIOTransport(Akka.Actor.ActorSystem system, Akka.Configuration.Config config) { }
-        public override long MaximumPayloadBytes { get; }
-        public override string SchemeIdentifier { get; }
-        public override System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress) { }
-        public override bool IsResponsibleFor(Akka.Actor.Address remote) { }
-        public override System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen() { }
-        public override System.Threading.Tasks.Task<bool> Shutdown() { }
-    }
-}

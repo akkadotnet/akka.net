@@ -248,7 +248,7 @@ namespace Akka.Dispatch
         protected MessageDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
-            Config = config;
+            Config = new CachingConfig(config);
         }
 
         /// <summary>
