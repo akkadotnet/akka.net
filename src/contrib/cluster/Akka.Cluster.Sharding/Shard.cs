@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
 {
@@ -95,8 +96,27 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// When initialising a shard with remember entities enabled the following message is used to restart 
+        /// batches of entity actors at a time.
         /// </summary>
+        [Serializable]
+        protected internal sealed class RestartEntities : IShardCommand
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IImmutableSet<EntityId> Entries;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="entries">TBD</param>
+            public RestartEntities(IImmutableSet<EntityId> entries)
+            {
+                Entries = entries;
+            }
+        }
+
         internal protected abstract class StateChange
         {
             /// <summary>
@@ -532,9 +552,9 @@ namespace Akka.Cluster.Sharding
 
         private void HandleShardCommand(IShardCommand message)
         {
-            var restart = message as RestartEntity;
-            if (restart != null)
-                GetEntity(restart.EntityId);
+            message.Match()
+                .With<RestartEntity>(restartEntity => GetEntity(restartEntity.EntityId))
+                .With<RestartEntities>(restartEntities => restartEntities.Entries.ForEach(entityId => GetEntity(entityId)));
         }
 
         private void HandleShardRegionCommand(IShardRegionCommand message)
