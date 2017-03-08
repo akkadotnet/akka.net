@@ -244,7 +244,7 @@ namespace Akka.DistributedData
             var req = message.Request;
             var localValue = GetData(key.Id);
 
-            _log.Debug("Received get for key {0}, local value {1}", key.Id, localValue);
+            _log.Debug("Received get for key {0}, local value {1}, consistency: {2}", key.Id, localValue, consistency);
 
             if (IsLocalGet(consistency))
             {
@@ -267,9 +267,7 @@ namespace Akka.DistributedData
         private void ReceiveRead(string key) => Sender.Tell(new ReadResult(GetData(key)));
 
         private bool MatchingRole(Member m) => string.IsNullOrEmpty(_settings.Role) || m.HasRole(_settings.Role);
-
-        private bool IsLocalSender() => !Sender.Path.Address.HasGlobalScope;
-
+        
         private bool IsDurable(string key) => _durableKeys.Contains(key) || (_durableWildcards.Count > 0 && _durableWildcards.Any(key.StartsWith));
 
         private void ReceiveUpdate(IKey key, Func<IReplicatedData, IReplicatedData> modify, IWriteConsistency consistency, object request)
@@ -641,9 +639,9 @@ namespace Akka.DistributedData
             var otherKeys = otherDigests.Keys.ToImmutableHashSet();
             var myKeys = (totChunks == 1
                 ? _dataEntries.Keys
-                : _dataEntries.Keys.Where(x => x.GetHashCode() % totChunks == chunk))
+                : _dataEntries.Keys.Where(x => Math.Abs(x.GetHashCode()) % totChunks == chunk))
                 .ToImmutableHashSet();
-
+            
             var otherMissingKeys = myKeys.Except(otherKeys);
 
             var keys = otherDifferentKeys
@@ -656,7 +654,7 @@ namespace Akka.DistributedData
                 if (_log.IsDebugEnabled)
                     _log.Debug("Sending gossip to [{0}]: {1}", Sender.Path.Address, string.Join(", ", keys));
 
-                var g = new Gossip(keys.Select(k => new KeyValuePair<string, DataEnvelope>(k, GetData(k))).ToImmutableDictionary(), otherDifferentKeys.Any());
+                var g = new Gossip(keys.Select(k => new KeyValuePair<string, DataEnvelope>(k, GetData(k))).ToImmutableDictionary(), !otherDifferentKeys.IsEmpty);
                 Sender.Tell(g);
             }
 

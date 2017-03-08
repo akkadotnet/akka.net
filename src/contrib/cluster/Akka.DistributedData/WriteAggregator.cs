@@ -68,7 +68,7 @@ namespace Akka.DistributedData
 
         protected override void PreStart()
         {
-            foreach (var n in PrimaryAndSecondaryNodes.Value.Item1) Replica(n).Tell(_write);
+            foreach (var n in PrimaryNodes) Replica(n).Tell(_write);
 
             if (IsDone) Reply(isTimeout: false);
         }
@@ -97,7 +97,7 @@ namespace Akka.DistributedData
             })
             .With<SendToSecondary>(x =>
             {
-                foreach (var n in PrimaryAndSecondaryNodes.Value.Item2)
+                foreach (var n in SecondaryNodes)
                     Replica(n).Tell(_write);
             })
             .With<ReceiveTimeout>(x => Reply(isTimeout: true))
@@ -109,7 +109,7 @@ namespace Akka.DistributedData
             var isDelete = _envelope.Data is DeletedData;
             var done = DoneWhenRemainingSize;
             var isSuccess = Remaining.Count <= DoneWhenRemainingSize && !notEnoughNodes;
-            Context.GetLogger().Debug("remaining: {0}, done when: {1}", Remaining.Count, done);
+            Log.Debug("remaining: {0}, done when: {1}", Remaining.Count, done);
             var isTimeoutOrNotEnoughNodes = isTimeout || notEnoughNodes || _gotNackFrom.IsEmpty;
 
             object reply;
@@ -129,7 +129,7 @@ namespace Akka.DistributedData
         TimeSpan Timeout { get; }
     }
 
-    public class WriteLocal : IWriteConsistency
+    public sealed class WriteLocal : IWriteConsistency
     {
         public static readonly WriteLocal Instance = new WriteLocal();
 
@@ -145,7 +145,7 @@ namespace Akka.DistributedData
         public override string ToString() => "WriteLocal";
     }
 
-    public class WriteTo : IWriteConsistency
+    public sealed class WriteTo : IWriteConsistency
     {
         public int N { get; }
 
@@ -165,10 +165,10 @@ namespace Akka.DistributedData
             return other != null && (N == other.N && Timeout == other.Timeout);
         }
 
-        public override string ToString() => $"WriteTo({N})";
+        public override string ToString() => $"WriteTo({N}, timeout={Timeout})";
     }
 
-    public class WriteMajority : IWriteConsistency
+    public sealed class WriteMajority : IWriteConsistency
     {
         public TimeSpan Timeout { get; }
         public int MinCapacity { get; }
@@ -185,10 +185,10 @@ namespace Akka.DistributedData
             return other != null && Timeout == other.Timeout && MinCapacity == other.MinCapacity;
         }
 
-        public override string ToString() => "WriteMajority";
+        public override string ToString() => $"WriteMajority(timeout={Timeout})";
     }
 
-    public class WriteAll : IWriteConsistency
+    public sealed class WriteAll : IWriteConsistency
     {
         public TimeSpan Timeout { get; }
 
@@ -203,6 +203,6 @@ namespace Akka.DistributedData
             return other != null && Timeout == other.Timeout;
         }
 
-        public override string ToString() => "WriteAll";
+        public override string ToString() => $"WriteAll(timeout={Timeout})";
     }
 }

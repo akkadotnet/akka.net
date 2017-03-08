@@ -9,6 +9,7 @@ using Akka.Actor;
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Event;
 using Akka.Util;
 
 namespace Akka.DistributedData
@@ -30,9 +31,17 @@ namespace Akka.DistributedData
 
         private readonly ICancelable _sendToSecondarySchedule;
         private readonly ICancelable _timeoutSchedule;
+
+        private ILoggingAdapter _log;
+
+        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+
         protected abstract int DoneWhenRemainingSize { get; }
 
-        protected Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>> PrimaryAndSecondaryNodes;
+        private readonly Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>> _primaryAndSecondaryNodes;
+
+        protected IImmutableSet<Address> PrimaryNodes => _primaryAndSecondaryNodes.Value.Item1;
+        protected IImmutableSet<Address> SecondaryNodes => _primaryAndSecondaryNodes.Value.Item2;
 
         protected IImmutableSet<Address> Remaining;
 
@@ -45,7 +54,7 @@ namespace Akka.DistributedData
             Remaining = Nodes;
             _sendToSecondarySchedule = Context.System.Scheduler.ScheduleTellOnceCancelable((int)Timeout.TotalMilliseconds / 5, Self, SendToSecondary.Instance, Self);
             _timeoutSchedule = Context.System.Scheduler.ScheduleTellOnceCancelable(Timeout, Self, ReceiveTimeout.Instance, Self);
-            PrimaryAndSecondaryNodes = new Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>>(() =>
+            _primaryAndSecondaryNodes = new Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>>(() =>
             {
                 var primarySize = Nodes.Count - DoneWhenRemainingSize;
                 if(primarySize >= nodes.Count)

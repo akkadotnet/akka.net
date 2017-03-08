@@ -71,6 +71,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         private int afterCounter = 0;
 
+        private readonly RoleName _first;
+        private readonly RoleName _second;
+        private readonly RoleName _third;
+
         public ReplicatorSpec()
             : this(new ReplicatorSpecConfig())
         { }
@@ -79,6 +83,9 @@ namespace Akka.DistributedData.Tests.MultiNode
             : base(config)
         {
             _config = config;
+            _first = config.First;
+            _second = config.Second;
+            _third = config.Third;
             _cluster = Cluster.Cluster.Get(Sys);
             var settings = ReplicatorSettings.Create(Sys)
                 .WithGossipInterval(TimeSpan.FromSeconds(1.0))
@@ -114,7 +121,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         public void Cluster_CRDT_should_work_in_single_node_cluster()
         {
-            Join(_config.First, _config.First);
+            Join(_first, _first);
 
             RunOn(() =>
             {
@@ -185,7 +192,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                 _replicator.Tell(Dsl.GetKeyIds);
                 ExpectMsg(new GetKeysIdsResult(ImmutableHashSet<string>.Empty.Add("A")));
-            }, _config.First);
+            }, _first);
 
             EnterBarrierAfterTestStep();
         }
@@ -202,7 +209,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 ExpectMsg(new UpdateSuccess(KeyJ, null));
                 _replicator.Tell(new Get(KeyJ, ReadLocal.Instance));
                 ExpectMsg<GetSuccess>(x => x.Data.Equals(new GSet<string>(new[] { "a", "b", "c" }.ToImmutableHashSet())));
-            }, _config.First);
+            }, _first);
 
             EnterBarrierAfterTestStep();
         }
@@ -218,14 +225,14 @@ namespace Akka.DistributedData.Tests.MultiNode
                 };
                 _replicator.Tell(new Update(KeyA, GCounter.Empty, WriteLocal.Instance, update));
                 ExpectMsg<ModifyFailure>(x => x.Cause.Equals(exception));
-            }, _config.First);
+            }, _first);
 
             EnterBarrierAfterTestStep();
         }
 
         public void Cluster_CRDT_should_replicate_values_to_new_node()
         {
-            Join(_config.Second, _config.First);
+            Join(_second, _first);
 
             RunOn(() =>
                 Within(TimeSpan.FromSeconds(10), () =>
@@ -234,7 +241,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         _replicator.Tell(Dsl.GetReplicaCount);
                         ExpectMsg(new ReplicaCount(2));
                     })),
-            _config.First, _config.Second);
+            _first, _second);
 
             EnterBarrier("2-nodes");
 
@@ -254,7 +261,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     }));
                 var c2 = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, KeyA)).Get(KeyA);
                 c2.Value.ShouldBe(6);
-            }, _config.Second);
+            }, _second);
 
             EnterBarrierAfterTestStep();
         }
@@ -264,11 +271,11 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 // start with 20 on both nodes
-                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 20)));
+                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 20)));
                 ExpectMsg(new UpdateSuccess(KeyB, null));
 
                 // add 1 on both nodes using WriteTwo
-                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeTwo, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new UpdateSuccess(KeyB, null));
 
                 // the total, after replication should be 42
@@ -278,14 +285,14 @@ namespace Akka.DistributedData.Tests.MultiNode
                     var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyB)).Get(KeyB);
                     c.Value.ShouldBe(42);
                 });
-            }, _config.First, _config.Second);
+            }, _first, _second);
 
             EnterBarrier("update-42");
 
             RunOn(() =>
             {
                 // add 1 on both nodes using WriteAll
-                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeAll, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeAll, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new UpdateSuccess(KeyB, null));
 
                 // the total, after replication should be 44
@@ -295,14 +302,14 @@ namespace Akka.DistributedData.Tests.MultiNode
                     var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyB)).Get(KeyB);
                     c.Value.ShouldBe(44);
                 });
-            }, _config.First, _config.Second);
+            }, _first, _second);
 
             EnterBarrier("update-44");
 
             RunOn(() =>
             {
                 // add 1 on both nodes using WriteMajority
-                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeMajority, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                _replicator.Tell(Dsl.Update(KeyB, GCounter.Empty, _writeMajority, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new UpdateSuccess(KeyB, null));
 
                 // the total, after replication should be 46
@@ -312,7 +319,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyB)).Get(KeyB);
                     c.Value.ShouldBe(46);
                 });
-            }, _config.First, _config.Second);
+            }, _first, _second);
 
             EnterBarrierAfterTestStep();
         }
@@ -323,20 +330,20 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Subscribe(KeyC, changedProbe.Ref));
-            }, _config.First, _config.Second);
+            }, _first, _second);
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, _writeTwo, x => x.Increment(_cluster.SelfUniqueAddress, 30)));
+                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 30)));
                 ExpectMsg(new UpdateSuccess(KeyC, null));
                 changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(30);
 
-                _replicator.Tell(Dsl.Update(KeyY, GCounter.Empty, _writeTwo, x => x.Increment(_cluster.SelfUniqueAddress, 30)));
+                _replicator.Tell(Dsl.Update(KeyY, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 30)));
                 ExpectMsg(new UpdateSuccess(KeyY, null));
 
-                _replicator.Tell(Dsl.Update(KeyZ, GCounter.Empty, _writeMajority, x => x.Increment(_cluster.SelfUniqueAddress, 30)));
+                _replicator.Tell(Dsl.Update(KeyZ, GCounter.Empty, _writeMajority, x => x.Increment(_cluster, 30)));
                 ExpectMsg(new UpdateSuccess(KeyZ, null));
-            }, _config.First);
+            }, _first);
 
             EnterBarrier("update-c30");
 
@@ -348,7 +355,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(30);
 
                 // replicate with gossip after WriteLocal
-                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new UpdateSuccess(KeyC, null));
                 changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(31);
 
@@ -357,7 +364,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                 _replicator.Tell(Dsl.Get(KeyZ, _readMajority));
                 ExpectMsg<GetSuccess>(c => Equals(c.Key, KeyZ)).Get(KeyZ).Value.ShouldBe(30);
-            }, _config.Second);
+            }, _second);
 
             EnterBarrier("update-c31");
 
@@ -377,7 +384,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     });
                 });
                 changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(31);
-            }, _config.First);
+            }, _first);
 
             EnterBarrier("verified-c31");
 
@@ -388,7 +395,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 var c31 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyC)).Get(KeyC);
                 c31.Value.ShouldBe(31);
 
-                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new UpdateSuccess(KeyC, null));
 
                 Within(TimeSpan.FromSeconds(5), () =>
@@ -400,7 +407,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         c.Value.ShouldBe(33);
                     });
                 });
-            }, _config.First, _config.Second);
+            }, _first, _second);
 
             EnterBarrierAfterTestStep();
         }
@@ -412,9 +419,9 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 40)));
                 ExpectMsg(new UpdateSuccess(KeyD, null));
 
-                TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both)
+                TestConductor.Blackhole(_first, _second, ThrottleTransportAdapter.Direction.Both)
                     .Wait(TimeSpan.FromSeconds(10));
-            }, _config.First);
+            }, _first);
 
             EnterBarrier("blackhole-first-second");
 
@@ -428,7 +435,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 ExpectMsg(new UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
                 _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
-            }, _config.First, _config.Second);
+            }, _first, _second);
 
             RunOn(() =>
             {
@@ -440,15 +447,15 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Update(keydn, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, n)));
                     ExpectMsg(new UpdateSuccess(keydn, null));
                 }
-            }, _config.First);
+            }, _first);
 
             EnterBarrier("updates-during-partion");
 
             RunOn(() =>
             {
-                TestConductor.PassThrough(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both)
+                TestConductor.PassThrough(_first, _second, ThrottleTransportAdapter.Direction.Both)
                     .Wait(TimeSpan.FromSeconds(5));
-            }, _config.First);
+            }, _first);
 
             EnterBarrier("passThrough-first-second");
 
@@ -468,14 +475,14 @@ namespace Akka.DistributedData.Tests.MultiNode
                             ExpectMsg<GetSuccess>(g => Equals(g.Key, keydn)).Get(keydn).Value.ShouldBe(i);
                         }
                     }));
-            }, _config.First, _config.Second);
+            }, _first, _second);
 
             EnterBarrierAfterTestStep();
         }
 
         public void Cluster_CRDT_should_support_majority_quorum_write_and_read_with_3_nodes_with_1_unreachable()
         {
-            Join(_config.Third, _config.First);
+            Join(_third, _first);
 
             RunOn(() =>
             {
@@ -484,7 +491,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.GetReplicaCount);
                     ExpectMsg(new ReplicaCount(3));
                 }));
-            }, _config.First, _config.Second, _config.Third);
+            }, _first, _second, _third);
 
             EnterBarrier("3-nodes");
 
@@ -492,7 +499,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, x => x.Increment(_cluster, 50)));
                 ExpectMsg(new UpdateSuccess(KeyE, null));
-            }, _config.First, _config.Second, _config.Third);
+            }, _first, _second, _third);
 
             EnterBarrier("write-initial-majority");
 
@@ -501,23 +508,23 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority));
                 var c150 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
                 c150.Value.ShouldBe(150);
-            }, _config.First, _config.Second, _config.Third);
+            }, _first, _second, _third);
 
             EnterBarrier("read-initial-majority");
 
             RunOn(() =>
             {
-                TestConductor.Blackhole(_config.First, _config.Third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
-                TestConductor.Blackhole(_config.Second, _config.Third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
-            }, _config.First);
+                TestConductor.Blackhole(_first, _third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
+                TestConductor.Blackhole(_second, _third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
+            }, _first);
 
             EnterBarrier("blackhole-third");
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
                 ExpectMsg(new UpdateSuccess(KeyE, null));
-            }, _config.Second);
+            }, _second);
 
             EnterBarrier("local-update-from-second");
 
@@ -531,7 +538,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, data =>
                 {
                     probe1.Ref.Tell(data.Value);
-                    return data.Increment(_cluster.SelfUniqueAddress, 1);
+                    return data.Increment(_cluster, 1);
                 }), probe2.Ref);
 
                 // verify read your own writes, without waiting for the UpdateSuccess reply
@@ -542,7 +549,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 probe2.ExpectMsg(new UpdateSuccess(KeyE, null));
                 var c152 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
                 c152.Value.ShouldBe(152);
-            }, _config.First);
+            }, _first);
 
             EnterBarrier("majority-update-from-first");
 
@@ -551,22 +558,22 @@ namespace Akka.DistributedData.Tests.MultiNode
                 var probe1 = CreateTestProbe();
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority), probe1.Ref);
                 probe1.ExpectMsg<GetSuccess>();
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 153, x => x.Increment(_cluster.SelfUniqueAddress, 1)), probe1.Ref);
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 153, x => x.Increment(_cluster, 1)), probe1.Ref);
 
                 // verify read your own writes, without waiting for the UpdateSuccess reply
                 // note that the order of the replies are not defined, and therefore we use separate probes
                 var probe2 = CreateTestProbe();
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 154, x => x.Increment(_cluster.SelfUniqueAddress, 1)), probe2.Ref);
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 154, x => x.Increment(_cluster, 1)), probe2.Ref);
                 var probe3 = CreateTestProbe();
-                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 155, x => x.Increment(_cluster.SelfUniqueAddress, 1)), probe3.Ref);
+                _replicator.Tell(Dsl.Update(KeyE, GCounter.Empty, _writeMajority, 155, x => x.Increment(_cluster, 1)), probe3.Ref);
                 var probe5 = CreateTestProbe();
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority), probe5.Ref);
                 probe1.ExpectMsg(new UpdateSuccess(KeyE, 153));
                 probe2.ExpectMsg(new UpdateSuccess(KeyE, 154));
                 probe3.ExpectMsg(new UpdateSuccess(KeyE, 155));
-                var c155 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
+                var c155 = probe5.ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
                 c155.Value.ShouldBe(155);
-            }, _config.Second);
+            }, _second);
 
             EnterBarrier("majority-update-from-second");
 
@@ -574,17 +581,17 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 _replicator.Tell(Dsl.Get(KeyE2, _readAll, 998));
                 ExpectMsg(new GetFailure(KeyE2, 998), _timeOut.Add(TimeSpan.FromSeconds(1)));
-                _replicator.Tell(Dsl.Get(KeyE2, _readAll));
+                _replicator.Tell(Dsl.Get(KeyE2, Dsl.ReadLocal));
                 ExpectMsg(new NotFound(KeyE2, null));
-            }, _config.First, _config.Second);
+            }, _first, _second);
 
             EnterBarrier("read-all-fail-update");
 
             RunOn(() =>
             {
-                TestConductor.PassThrough(_config.First, _config.Third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
-                TestConductor.PassThrough(_config.Second, _config.Third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
-            }, _config.First);
+                TestConductor.PassThrough(_first, _third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
+                TestConductor.PassThrough(_second, _third, ThrottleTransportAdapter.Direction.Both).Wait(TimeSpan.FromSeconds(5));
+            }, _first);
 
             EnterBarrier("passThrough-third");
 
@@ -593,7 +600,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority));
                 var c155 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
                 c155.Value.ShouldBe(155);
-            }, _config.Third);
+            }, _third);
 
             EnterBarrierAfterTestStep();
         }
@@ -607,13 +614,13 @@ namespace Akka.DistributedData.Tests.MultiNode
                     var c = GCounter.Empty;
                     for (int i = 0; i < 100; i++)
                     {
-                        c = c.Increment(_cluster.SelfUniqueAddress, i);
-                        _replicator.Tell(Dsl.Update(KeyF, GCounter.Empty, _writeTwo, x => x.Increment(_cluster.SelfUniqueAddress, 1)));
+                        c = c.Increment(_cluster, i);
+                        _replicator.Tell(Dsl.Update(KeyF, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 1)));
                     }
 
                     var results = ReceiveN(100);
                     results.All(x => x is UpdateSuccess).ShouldBeTrue();
-                }, _config.First, _config.Second, _config.Third);
+                }, _first, _second, _third);
 
                 EnterBarrier("100-updates-done");
 
@@ -622,7 +629,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Get(KeyF, _readTwo));
                     var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyF)).Get(KeyF);
                     c.Value.ShouldBe(3 * 100);
-                }, _config.First, _config.Second, _config.Third);
+                }, _first, _second, _third);
 
                 EnterBarrierAfterTestStep();
             });
@@ -633,10 +640,10 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Update(KeyG, ORSet<string>.Empty, _writeTwo, x => x
-                    .Add(_cluster.SelfUniqueAddress, "a")
-                    .Add(_cluster.SelfUniqueAddress, "b")));
+                    .Add(_cluster, "a")
+                    .Add(_cluster, "b")));
                 ExpectMsg<UpdateSuccess>();
-            }, _config.First);
+            }, _first);
 
             EnterBarrier("a-b-added-to-G");
 
@@ -646,7 +653,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyG)).Get(KeyG).Elements.SetEquals(new[] { "a", "b" });
                 _replicator.Tell(Dsl.Get(KeyG, ReadLocal.Instance));
                 ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyG)).Get(KeyG).Elements.SetEquals(new[] { "a", "b" });
-            }, _config.Second);
+            }, _second);
 
             EnterBarrierAfterTestStep();
         }
@@ -658,19 +665,19 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Subscribe(KeyH, changedProbe.Ref));
-                _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster.SelfUniqueAddress, "a", Flag.False)));
+                _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster, "a", Flag.False)));
                 ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
                 {
                     new KeyValuePair<string, Flag>("a", Flag.False),
                 })).ShouldBeTrue();
-            }, _config.Second);
+            }, _second);
 
             EnterBarrier("update-h1");
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster.SelfUniqueAddress, "a", Flag.True)));
-            }, _config.First);
+                _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster, "a", Flag.True)));
+            }, _first);
 
             RunOn(() =>
             {
@@ -679,13 +686,13 @@ namespace Akka.DistributedData.Tests.MultiNode
                     new KeyValuePair<string, Flag>("a", Flag.True)
                 })).ShouldBeTrue();
 
-                _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster.SelfUniqueAddress, "b", Flag.True)));
+                _replicator.Tell(Dsl.Update(KeyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(_cluster, "b", Flag.True)));
                 changedProbe.ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyH)).Get(KeyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
                 {
                     new KeyValuePair<string, Flag>("a", Flag.True),
                     new KeyValuePair<string, Flag>("b", Flag.True)
                 })).ShouldBeTrue();
-            }, _config.Second);
+            }, _second);
 
             EnterBarrierAfterTestStep();
         }
@@ -698,7 +705,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             EnterBarrier("subscribed-I");
 
             RunOn(() => _replicator.Tell(Dsl.Update(KeyI, GSet<string>.Empty, _writeTwo, a => a.Add("a"))),
-                _config.Second);
+                _second);
 
             Within(TimeSpan.FromSeconds(5), () =>
                 changedProbe.ExpectMsg<Changed>(c => c.Get(KeyI).Elements.ShouldBe(ImmutableHashSet.Create("a"))));
@@ -706,7 +713,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             EnterBarrier("update-I");
 
             RunOn(() => _replicator.Tell(Dsl.Update(KeyI, GSet<string>.Empty, _writeTwo, a => a.Add("a"))),
-                _config.First);
+                _first);
 
             changedProbe.ExpectNoMsg(TimeSpan.FromSeconds(1));
 

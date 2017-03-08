@@ -37,7 +37,6 @@ namespace Akka.DistributedData
             _read = new Read(key.Id);
             DoneWhenRemainingSize = GetDoneWhenRemainingSize();
         }
-
         protected override int DoneWhenRemainingSize { get; }
 
         private int GetDoneWhenRemainingSize()
@@ -56,7 +55,7 @@ namespace Akka.DistributedData
 
         protected override void PreStart()
         {
-            foreach (var n in PrimaryAndSecondaryNodes.Value.Item1)
+            foreach (var n in PrimaryNodes)
                 Replica(n).Tell(_read);
 
             if (Remaining.Count == DoneWhenRemainingSize)
@@ -75,12 +74,12 @@ namespace Akka.DistributedData
 
                 Remaining = Remaining.Remove(Sender.Path.Address);
                 var done = DoneWhenRemainingSize;
-                Context.GetLogger().Debug("remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done, _result);
+                Log.Debug("remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done, _result);
                 if (Remaining.Count == done) Reply(true);
             })
             .With<SendToSecondary>(x =>
             {
-                foreach (var n in PrimaryAndSecondaryNodes.Value.Item2)
+                foreach (var n in SecondaryNodes)
                     Replica(n).Tell(_read);
             })
             .With<ReceiveTimeout>(_ => Reply(false))
@@ -168,7 +167,7 @@ namespace Akka.DistributedData
             }
         }
 
-        public override string ToString() => $"ReadFrom({N})";
+        public override string ToString() => $"ReadFrom({N}, timeout={Timeout})";
     }
 
     public sealed class ReadMajority : IReadConsistency, IEquatable<ReadMajority>
@@ -187,7 +186,7 @@ namespace Akka.DistributedData
             return obj is ReadMajority && Equals((ReadMajority) obj);
         }
 
-        public override string ToString() => "ReadMajority";
+        public override string ToString() => $"ReadMajority(timeout={Timeout})";
 
         public bool Equals(ReadMajority other)
         {
@@ -219,7 +218,7 @@ namespace Akka.DistributedData
             return obj is ReadAll && Equals((ReadAll) obj);
         }
 
-        public override string ToString() => "ReadAll";
+        public override string ToString() => $"ReadAll(timeout={Timeout})";
 
         public bool Equals(ReadAll other)
         {
