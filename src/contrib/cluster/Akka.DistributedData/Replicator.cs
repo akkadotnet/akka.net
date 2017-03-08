@@ -264,7 +264,10 @@ namespace Akka.DistributedData
             return false;
         }
 
-        private void ReceiveRead(string key) => Sender.Tell(new ReadResult(GetData(key)));
+        private void ReceiveRead(string key)
+        {
+            Sender.Tell(new ReadResult(GetData(key)));
+        } 
 
         private bool MatchingRole(Member m) => string.IsNullOrEmpty(_settings.Role) || m.HasRole(_settings.Role);
         
@@ -618,8 +621,7 @@ namespace Akka.DistributedData
             var d = GetDigest(key);
             var isFound = !Equals(d, NotFoundDigest);
             var isEqualToOther = Equals(d, otherDigest);
-            var result = isFound && !isEqualToOther;
-            return result;
+            return isFound && !isEqualToOther;
         }
 
         private void ReceiveStatus(IImmutableDictionary<string, ByteString> otherDigests, int chunk, int totChunks)

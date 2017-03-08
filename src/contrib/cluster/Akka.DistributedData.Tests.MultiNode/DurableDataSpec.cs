@@ -19,11 +19,14 @@ namespace Akka.DistributedData.Tests.MultiNode
 {
     public class DurableDataSpecConfig : MultiNodeConfig
     {
-        public readonly RoleName First = new RoleName("first");
-        public readonly RoleName Second = new RoleName("second");
+        public RoleName First { get; }
+        public RoleName Second { get; }
 
         public DurableDataSpecConfig(bool writeBehind)
         {
+            First = Role("first");
+            Second = Role("second");
+
             var writeBehindInterval = writeBehind ? "200ms" : "off";
             CommonConfig = ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
@@ -36,7 +39,7 @@ namespace Akka.DistributedData.Tests.MultiNode
               write-behind-interval = ${writeBehindInterval}
             }}
             akka.test.single-expect-default = 5s
-            ");
+            ").WithFallback(DistributedData.DefaultConfig());
         }
     }
 
@@ -375,17 +378,9 @@ namespace Akka.DistributedData.Tests.MultiNode
     {
         public DurableDataSpecNode1() : base(new DurableDataSpecConfig(writeBehind: false)) { }
     }
-    public class DurableDataSpecNode2 : DurableDataSpec
-    {
-        public DurableDataSpecNode2() : base(new DurableDataSpecConfig(writeBehind: false)) { }
-    }
 
     public class DurableDataWriteBehindSpecNode1 : DurableDataSpec
     {
         public DurableDataWriteBehindSpecNode1() : base(new DurableDataSpecConfig(writeBehind: true)) { }
-    }
-    public class DurableDataWriteBehindSpecNode2 : DurableDataSpec
-    {
-        public DurableDataWriteBehindSpecNode2() : base(new DurableDataSpecConfig(writeBehind: true)) { }
     }
 }

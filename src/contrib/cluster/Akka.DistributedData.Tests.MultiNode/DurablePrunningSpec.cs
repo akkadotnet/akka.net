@@ -19,11 +19,14 @@ namespace Akka.DistributedData.Tests.MultiNode
 {
     public class DurablePrunningSpecConfig : MultiNodeConfig
     {
-        public readonly RoleName First = new RoleName("first");
-        public readonly RoleName Second = new RoleName("second");
+        public readonly RoleName First;
+        public readonly RoleName Second;
 
         public DurablePrunningSpecConfig()
         {
+            First = Role("first");
+            Second = Role("second");
+
             CommonConfig = DebugConfig(on: false).WithFallback(ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.actor.provider = ""cluster""
@@ -32,17 +35,17 @@ namespace Akka.DistributedData.Tests.MultiNode
             akka.cluster.distributed-data.durable.lmdb {{
               dir = target/DurablePruningSpec-${DateTime.UtcNow.Ticks}-ddata
               map-size = 10 MiB
-            }}"));
+            }}")).WithFallback(DistributedData.DefaultConfig());
         }
     }
 
-    public abstract class DurablePrunningSpec : MultiNodeSpec
+    public class DurablePrunningSpec : MultiNodeSpec
     {
         private readonly Cluster.Cluster cluster;
         private readonly RoleName first = new RoleName("first");
         private readonly RoleName second = new RoleName("second");
         private readonly TimeSpan maxPrunningDissemination = TimeSpan.FromSeconds(3);
-        private readonly TimeSpan timemout;
+        private readonly TimeSpan timeout;
         private readonly GCounterKey keyA = new GCounterKey("A");
         private readonly IActorRef replicator;
 
@@ -50,7 +53,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         {
             InitialParticipantsValueFactory = Roles.Count;
             cluster = Cluster.Cluster.Get(Sys);
-            timemout = Dilated(TimeSpan.FromSeconds(5));
+            timeout = Dilated(TimeSpan.FromSeconds(5));
         }
 
         protected override int InitialParticipantsValueFactory { get; }
@@ -184,7 +187,4 @@ namespace Akka.DistributedData.Tests.MultiNode
             EnterBarrier(from.Name + "-joined");
         }
     }
-
-    public class DurablePrunningSpecNode1 : DurablePrunningSpec { }
-    public class DurablePrunningSpecNode2 : DurablePrunningSpec { }
 }

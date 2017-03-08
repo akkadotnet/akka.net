@@ -56,7 +56,10 @@ namespace Akka.DistributedData
         protected override void PreStart()
         {
             foreach (var n in PrimaryNodes)
-                Replica(n).Tell(_read);
+            {
+                var replica = Replica(n);
+                replica.Tell(_read);
+            }
 
             if (Remaining.Count == DoneWhenRemainingSize)
                 Reply(true);

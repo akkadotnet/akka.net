@@ -598,8 +598,17 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority));
-                var c155 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
-                c155.Value.ShouldBe(155);
+                try
+                {
+
+                    var c155 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyE)).Get(KeyE);
+                    c155.Value.ShouldBe(155);
+                }
+                catch (Exception e)
+                {
+                    Log.Debug("EXCEPTION");
+                    throw;
+                }
             }, _third);
 
             EnterBarrierAfterTestStep();
