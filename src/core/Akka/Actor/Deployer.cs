@@ -110,7 +110,7 @@ namespace Akka.Actor
                         }
                     }
                     set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
-                } while(!set);
+                } while (!set);
             };
             var elements = deploy.Path.Split('/').Drop(1).ToList();
             add(elements, deploy);
@@ -148,4 +148,3 @@ namespace Akka.Actor
         }
     }
 }
-

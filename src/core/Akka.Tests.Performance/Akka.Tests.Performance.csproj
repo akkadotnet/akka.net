@@ -55,6 +55,7 @@
     <Compile Include="Dispatch\DefaultDispatcherColdThroughputSpec.cs" />
     <Compile Include="Dispatch\DispatcherThroughputSpecBase.cs" />
     <Compile Include="Dispatch\ForkJoinDispatcherThroughputSpec.cs" />
+    <Compile Include="Dispatch\GetMailboxTypeSpec.cs" />
     <Compile Include="Dispatch\MailboxBenchmarks.cs" />
     <Compile Include="Dispatch\MailboxMemoryFootprintSpec.cs" />
     <Compile Include="Actor\ActorThroughputSpec.cs" />
