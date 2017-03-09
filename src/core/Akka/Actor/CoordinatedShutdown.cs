@@ -45,7 +45,7 @@ namespace Akka.Actor
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    public sealed class Phase
+    internal sealed class Phase
     {
         /// <summary>
         /// Creates a new <see cref="Phase"/>
@@ -120,7 +120,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="system">Access to the <see cref="ExtendedActorSystem"/>.</param>
         /// <param name="phases">The list of <see cref="Phase"/>s provided by the HOCON configuration.</param>
-        public CoordinatedShutdown(ExtendedActorSystem system, Dictionary<string, Phase> phases)
+        internal CoordinatedShutdown(ExtendedActorSystem system, Dictionary<string, Phase> phases)
         {
             System = system;
             Phases = phases;
@@ -160,7 +160,7 @@ namespace Akka.Actor
         /// <summary>
         /// The set of named <see cref="Phase"/>s that will be executed during coordinated shutdown.
         /// </summary>
-        public Dictionary<string, Phase> Phases { get; }
+        internal Dictionary<string, Phase> Phases { get; }
 
         /// <summary>
         /// INTERNAL API

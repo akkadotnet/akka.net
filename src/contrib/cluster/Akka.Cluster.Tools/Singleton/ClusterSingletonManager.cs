@@ -638,6 +638,7 @@ namespace Akka.Cluster.Tools.Singleton
         {
             var newOldest = handOverTo?.Path.Address;
             Log.Info("Singleton terminated, hand-over done [{0} -> {1}]", _cluster.SelfAddress, newOldest);
+            handOverTo?.Tell(HandOverDone.Instance);
             _memberExitingProgress.TrySetResult(Done.Instance);
             if (_removed.ContainsKey(_cluster.SelfUniqueAddress))
             {
