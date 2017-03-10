@@ -70,8 +70,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AllAtOnceEntityRecoveryStrategySpec.cs" />
     <Compile Include="ClusterShardingConfigSpec.cs" />
     <Compile Include="ClusterShardingMessageSerializerSpec.cs" />
+    <Compile Include="ConstantRateEntityRecoveryStrategySpec.cs" />
     <Compile Include="LeastShardAllocationStrategySpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
