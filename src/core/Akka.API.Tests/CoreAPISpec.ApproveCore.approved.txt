@@ -502,8 +502,6 @@ namespace Akka.Actor
         public const string PhaseServiceRequestsDone = "service-requests-done";
         public const string PhaseServiceStop = "service-stop";
         public const string PhaseServiceUnbind = "service-unbind";
-        public CoordinatedShutdown(Akka.Actor.ExtendedActorSystem system, System.Collections.Generic.Dictionary<string, Akka.Actor.Phase> phases) { }
-        public System.Collections.Generic.Dictionary<string, Akka.Actor.Phase> Phases { get; }
         public Akka.Actor.ExtendedActorSystem System { get; }
         public System.TimeSpan TotalTimeout { get; }
         public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<Akka.Done>> task) { }
@@ -1336,16 +1334,6 @@ namespace Akka.Actor
             public int WithinTimeRangeMilliseconds { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
-    }
-    public sealed class Phase
-    {
-        public Phase(System.Collections.Immutable.ImmutableHashSet<string> dependsOn, System.TimeSpan timeout, bool recover) { }
-        public System.Collections.Immutable.ImmutableHashSet<string> DependsOn { get; }
-        public bool Recover { get; }
-        public System.TimeSpan Timeout { get; }
-        public override bool Equals(object obj) { }
-        public override int GetHashCode() { }
-        public override string ToString() { }
     }
     public class static PipeToSupport
     {
@@ -5200,12 +5188,6 @@ namespace Akka.Util.Internal
     {
         public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values) { }
         public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values, System.Action<System.Text.StringBuilder, T, int> valueAppender) { }
-    }
-    public class static TaskEx
-    {
-        public static readonly System.Threading.Tasks.Task<Akka.Done> Completed;
-        public static System.Threading.Tasks.Task FromException(System.Exception ex) { }
-        public static System.Threading.Tasks.Task<T> FromException<T>(System.Exception ex) { }
     }
     public class static TaskExtensions
     {
