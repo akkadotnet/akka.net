@@ -226,10 +226,6 @@ namespace Akka.Persistence
         public override void AroundPreRestart(System.Exception cause, object message) { }
         public override void AroundPreStart() { }
         protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
-        [System.ObsoleteAttribute("Use DeferAsync instead")]
-        public void Defer<TEvent>(TEvent evt, System.Action<TEvent> handler) { }
-        [System.ObsoleteAttribute("Use DeferAsync instead")]
-        public void Defer<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         public void DeferAsync<TEvent>(TEvent evt, System.Action<TEvent> handler) { }
         public void DeleteMessages(long toSequenceNr) { }
         public void DeleteSnapshot(long sequenceNr) { }
@@ -240,13 +236,9 @@ namespace Akka.Persistence
         protected virtual void OnRecoveryFailure(System.Exception reason, object message = null) { }
         protected virtual void OnReplaySuccess() { }
         public void Persist<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
-        [System.ObsoleteAttribute("Use PersistAll instead")]
-        public void Persist<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         public void PersistAsync<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
-        [System.ObsoleteAttribute("Use PersistAllAsync instead")]
-        public void PersistAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         protected abstract bool ReceiveCommand(object message);
         protected abstract bool ReceiveRecover(object message);
         public void SaveSnapshot(object snapshot) { }
@@ -315,11 +307,6 @@ namespace Akka.Persistence
     public interface IStashOverflowStrategyConfigurator
     {
         Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config);
-    }
-    [System.ObsoleteAttribute("DeleteMessages will be removed.")]
-    public interface IWithPersistenceId
-    {
-        string PersistenceId { get; }
     }
     public sealed class LoadSnapshot : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.LoadSnapshot>
     {
@@ -716,9 +703,6 @@ namespace Akka.Persistence
     {
         protected UntypedPersistentActor() { }
         protected static Akka.Actor.IUntypedActorContext Context { get; }
-        [System.ObsoleteAttribute("Use Become or BecomeStacked instead. This method will be removed in future versio" +
-            "ns")]
-        protected void Become(Akka.Actor.UntypedReceive receive, bool discardOld = True) { }
         protected void Become(Akka.Actor.UntypedReceive receive) { }
         protected void BecomeStacked(Akka.Actor.UntypedReceive receive) { }
         protected abstract void OnCommand(object message);

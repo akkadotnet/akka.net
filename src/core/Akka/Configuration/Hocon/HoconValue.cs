@@ -361,17 +361,6 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Obsolete. Use <see cref="GetTimeSpan"/> to retrieve <see cref="TimeSpan"/> information. This method will be removed in future versions.
-        /// </summary>
-        /// <param name="allowInfinite">N/A</param>
-        /// <returns>N/A</returns>
-        [Obsolete("Use GetTimeSpan to retrieve TimeSpan information. This method will be removed in future versions.")]
-        public TimeSpan GetMillisDuration(bool allowInfinite = true)
-        {
-            return GetTimeSpan(allowInfinite);
-        }
-
-        /// <summary>
         /// Retrieves the time span value from this <see cref="HoconValue"/>.
         /// </summary>
         /// <param name="allowInfinite">A flag used to set inifinite durations.</param>

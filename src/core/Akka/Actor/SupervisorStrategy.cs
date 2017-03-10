@@ -44,11 +44,9 @@ namespace Akka.Actor
         /// <param name="failedChildStats">TBD</param>
         /// <param name="allChildren">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete]
+        [Obsolete("This method is deprecated [1.1.2]")]
         public bool HandleFailure(ActorCell actorCell, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
-            // for compatibility, since 1.1.2
-
             return HandleFailure(actorCell, failedChildStats.Child, cause, failedChildStats, allChildren);
         }
 
@@ -130,8 +128,7 @@ namespace Akka.Actor
         /// <param name="failedChildStats">TBD</param>
         /// <param name="allChildren">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete]
-        // for compatibility, since 1.1.2
+        [Obsolete("This method is deprecated [1.1.2]")]
         protected abstract void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren);
 
         /// <summary>
@@ -402,7 +399,7 @@ namespace Akka.Actor
         /// <param name="cause">TBD</param>
         /// <param name="failedChildStats">TBD</param>
         /// <param name="allChildren">TBD</param>
-        [Obsolete]
+        [Obsolete("This method is deprecated [1.1.2]")]
         protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
             // for compatibility, since 1.1.2
@@ -689,7 +686,7 @@ namespace Akka.Actor
         /// <param name="cause">TBD</param>
         /// <param name="failedChildStats">TBD</param>
         /// <param name="allChildren">TBD</param>
-        [Obsolete]
+        [Obsolete("This method is deprecated [1.1.2]")]
         protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
             // for compatibility, since 1.1.2

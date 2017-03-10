@@ -1145,7 +1145,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Prepend<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> that)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Recover<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.Util.Option<TOut>> partialFunc) { }
-        [System.ObsoleteAttribute("Use RecoverWithRetries instead.")]
+        [System.ObsoleteAttribute("Use RecoverWithRetries instead. [1.1.2]")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> RecoverWith<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> RecoverWithRetries<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc, int attempts) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Scan<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> scan) { }
@@ -1168,7 +1168,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> TakeWithin<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.TimeSpan duration) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Throttle<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int elements, System.TimeSpan per, int maximumBurst, Akka.Streams.ThrottleMode mode) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Throttle<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int cost, System.TimeSpan per, int maximumBurst, System.Func<TOut, int> calculateCost, Akka.Streams.ThrottleMode mode) { }
-        [System.ObsoleteAttribute("Use Via(GraphStage) instead.")]
+        [System.ObsoleteAttribute("Use Via(GraphStage) instead. [1.1.2]")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Transform<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<Akka.Streams.Stage.IStage<TOut1, TOut2>> stageFactory) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<TMat, System.Threading.Tasks.Task, TMat2> materializerFunction)
             where TIn : TOut { }
@@ -1599,7 +1599,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Prepend<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> that)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Recover<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.Util.Option<TOut>> partialFunc) { }
-        [System.ObsoleteAttribute("Use RecoverWithRetries instead.")]
+        [System.ObsoleteAttribute("Use RecoverWithRetries instead. [1.1.2]")]
         public static Akka.Streams.Dsl.Source<TOut, TMat> RecoverWith<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> RecoverWithRetries<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc, int attempts) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Scan<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> scan) { }
@@ -1622,7 +1622,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut, TMat> TakeWithin<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan duration) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Throttle<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int elements, System.TimeSpan per, int maximumBurst, Akka.Streams.ThrottleMode mode) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Throttle<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int cost, System.TimeSpan per, int maximumBurst, System.Func<TOut, int> calculateCost, Akka.Streams.ThrottleMode mode) { }
-        [System.ObsoleteAttribute("Use Via(GraphStage) instead.")]
+        [System.ObsoleteAttribute("Use Via(GraphStage) instead. [1.1.2]")]
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Transform<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<Akka.Streams.Stage.IStage<TOut1, TOut2>> stageFactory) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TMat, System.Threading.Tasks.Task, TMat2> materializerFunction) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Where<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Predicate<TOut> predicate) { }
@@ -1698,7 +1698,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Prepend<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> that)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.SubFlow<Akka.Streams.Util.Option<TOut>, TMat, TClosed> Recover<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<System.Exception, Akka.Streams.Util.Option<TOut>> partialFunc) { }
-        [System.ObsoleteAttribute("Use RecoverWithRetries instead.")]
+        [System.ObsoleteAttribute("Use RecoverWithRetries instead. [1.1.2]")]
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> RecoverWith<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> RecoverWithRetries<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<System.Exception, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat>> partialFunc, int attempts) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Scan<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> scan) { }
@@ -1717,7 +1717,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> TakeWithin<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.TimeSpan duration) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Throttle<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, int elements, System.TimeSpan per, int maximumBurst, Akka.Streams.ThrottleMode mode) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Throttle<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, int cost, System.TimeSpan per, int maximumBurst, System.Func<TOut, int> calculateCost, Akka.Streams.ThrottleMode mode) { }
-        [System.ObsoleteAttribute("Use Via(GraphStage) instead.")]
+        [System.ObsoleteAttribute("Use Via(GraphStage) instead. [1.1.2]")]
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Transform<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<Akka.Streams.Stage.IStage<TOut1, TOut2>> stageFactory) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat2, TClosed> WatchTermination<TOut, TMat, TMat2, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Func<TMat, System.Threading.Tasks.Task, TMat2> materializerFunction) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Where<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.Predicate<TOut> predicate) { }
@@ -3826,7 +3826,7 @@ namespace Akka.Streams.IO
 }
 namespace Akka.Streams.Stage
 {
-    [System.ObsoleteAttribute("Please use GraphStage instead.")]
+    [System.ObsoleteAttribute("Please use GraphStage instead. [1.1.2]")]
     public abstract class AbstractStage<TIn, TOut> : Akka.Streams.Stage.IStage<TIn, TOut>
     {
         protected AbstractStage() { }
@@ -3841,7 +3841,7 @@ namespace Akka.Streams.Stage
         public virtual void PreStart(Akka.Streams.Stage.ILifecycleContext context) { }
         public virtual Akka.Streams.Stage.IStage<TIn, TOut> Restart() { }
     }
-    [System.ObsoleteAttribute("Please use GraphStage instead.")]
+    [System.ObsoleteAttribute("Please use GraphStage instead. [1.1.2]")]
     public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext> : Akka.Streams.Stage.AbstractStage<TIn, TOut>
         where TPushDirective : Akka.Streams.Stage.IDirective
         where TPullDirective : Akka.Streams.Stage.IDirective
@@ -3874,7 +3874,7 @@ namespace Akka.Streams.Stage
         public override void OnDownstreamFinish() { }
         public override void OnPull() { }
     }
-    [System.ObsoleteAttribute("Please use GraphStage instead.")]
+    [System.ObsoleteAttribute("Please use GraphStage instead. [1.1.0]")]
     public abstract class DetachedStage<TIn, TOut> : Akka.Streams.Stage.AbstractStage<TIn, TOut, Akka.Streams.Stage.IUpstreamDirective, Akka.Streams.Stage.IDownstreamDirective, Akka.Streams.Stage.IDetachedContext<TOut>>
     {
         protected DetachedStage() { }
@@ -4135,7 +4135,7 @@ namespace Akka.Streams.Stage
         void OnDownstreamFinish();
         void OnPull();
     }
-    [System.ObsoleteAttribute("Please use GraphStage instead.")]
+    [System.ObsoleteAttribute("Please use GraphStage instead. [1.1.0]")]
     public interface IStage<in TIn, out TOut> { }
     public interface ISyncDirective : Akka.Streams.Stage.IDirective { }
     public interface ITerminationDirective : Akka.Streams.Stage.IDirective, Akka.Streams.Stage.ISyncDirective { }
@@ -4172,12 +4172,12 @@ namespace Akka.Streams.Stage
         public override Akka.Streams.Stage.ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
         public virtual string ToString() { }
     }
-    [System.ObsoleteAttribute("Please use GraphStage instead.")]
+    [System.ObsoleteAttribute("Please use GraphStage instead. [1.1.0]")]
     public abstract class PushPullStage<TIn, TOut> : Akka.Streams.Stage.AbstractStage<TIn, TOut, Akka.Streams.Stage.ISyncDirective, Akka.Streams.Stage.ISyncDirective, Akka.Streams.Stage.IContext<TOut>>
     {
         protected PushPullStage() { }
     }
-    [System.ObsoleteAttribute("Please use GraphStage instead.")]
+    [System.ObsoleteAttribute("Please use GraphStage instead. [1.1.0]")]
     public abstract class PushStage<TIn, TOut> : Akka.Streams.Stage.PushPullStage<TIn, TOut>
     {
         protected PushStage() { }
@@ -4212,7 +4212,7 @@ namespace Akka.Streams.Stage
         public abstract Akka.Streams.Stage.ISyncDirective OnPush(TIn element, Akka.Streams.Stage.IContext<TOut> context);
     }
     public class static StatefulStage { }
-    [System.ObsoleteAttribute("Please use GraphStage instead.")]
+    [System.ObsoleteAttribute("Please use GraphStage instead. [1.1.0]")]
     public abstract class StatefulStage<TIn, TOut> : Akka.Streams.Stage.PushPullStage<TIn, TOut>
     {
         protected StatefulStage(Akka.Streams.Stage.StageState<TIn, TOut> current) { }

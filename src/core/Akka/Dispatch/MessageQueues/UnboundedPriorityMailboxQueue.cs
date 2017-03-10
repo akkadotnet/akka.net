@@ -22,7 +22,7 @@ namespace Akka.Dispatch.MessageQueues
         /// DEPRECATED. Use UnboundedPriorityMessageQueue(Func{object, int} priorityGenerator, int initialCapacity) instead.        
         /// </summary>
         /// <param name="initialCapacity">The initial capacity of the priority queue.</param>
-        [Obsolete("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity) instead.")]
+        [Obsolete("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity) instead. [1.1.3]")]
         public UnboundedPriorityMessageQueue(int initialCapacity) : this(ListPriorityQueue.DefaultPriorityCalculator, initialCapacity)
         {
 

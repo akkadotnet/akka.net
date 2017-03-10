@@ -71,7 +71,7 @@ namespace Akka.Remote
     public class DeadlineFailureDetector : Akka.Remote.FailureDetector
     {
         [System.ObsoleteAttribute("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) i" +
-            "nstead. (1.1.2)")]
+            "nstead. [1.1.2]")]
         public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, Akka.Remote.Clock clock = null) { }
         public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, System.TimeSpan heartbeatInterval, Akka.Remote.Clock clock = null) { }
         public DeadlineFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream ev) { }
@@ -142,7 +142,7 @@ namespace Akka.Remote
     public class RemoteActorRef : Akka.Actor.InternalActorRefBase, Akka.Actor.IActorRefScope, Akka.Remote.IRemoteRef
     {
         public override bool IsLocal { get; }
-        [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated>")]
+        [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get; }
         public Akka.Actor.Address LocalAddressToUse { get; }
         public override Akka.Actor.IInternalActorRef Parent { get; }

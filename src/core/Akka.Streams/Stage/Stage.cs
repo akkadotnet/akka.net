@@ -31,7 +31,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public interface IStage<in TIn, out TOut> { }
 
     /// <summary>
@@ -88,7 +88,7 @@ namespace Akka.Streams.Stage
     /// <seealso cref="PushStage{TIn,TOut}"/>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public abstract class PushPullStage<TIn, TOut> : AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>> { }
 
     /// <summary>
@@ -96,7 +96,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public abstract class PushStage<TIn, TOut> : PushPullStage<TIn, TOut>
     {
         /// <summary>
@@ -131,7 +131,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public abstract class DetachedStage<TIn, TOut> : AbstractStage<TIn, TOut, IUpstreamDirective, IDownstreamDirective, IDetachedContext<TOut>>
     {
         /// <summary>
@@ -241,7 +241,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public abstract class StatefulStage<TIn, TOut> : PushPullStage<TIn, TOut>
     {
         private bool _isEmitting;

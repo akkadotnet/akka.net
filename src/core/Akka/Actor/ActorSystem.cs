@@ -175,15 +175,6 @@ namespace Akka.Actor
         public abstract void RegisterOnTermination(Action code);
 
         /// <summary>
-        /// Stop this actor system. This will stop the guardian actor, which in turn
-        /// will recursively stop all its child actors, then the system guardian
-        /// (below which the logging actors reside) and the execute all registered
-        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
-        /// </summary>
-        [Obsolete("Use Terminate instead. This method will be removed in future versions")]
-        public abstract void Shutdown();
-
-        /// <summary>
         /// Terminates this actor system. This will stop the guardian actor, which in turn
         /// will recursively stop all its child actors, then the system guardian
         /// (below which the logging actors reside) and the execute all registered
@@ -195,46 +186,6 @@ namespace Akka.Actor
         /// <returns>A <see cref="Task"/> that will complete once the actor system has finished terminating
         /// and all actors are stopped.</returns>
         public abstract Task Terminate();
-
-        /// <summary>
-        /// Returns a task that will be completed when the system has terminated.
-        /// </summary>
-        [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
-        public abstract Task TerminationTask { get; }
-
-        /// <summary>
-        /// Block current thread until the system has been shutdown.
-        /// This will block until after all on termination callbacks have been run.
-        /// </summary>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public abstract void AwaitTermination();
-
-        /// <summary>
-        /// Block current thread until the system has been shutdown, or the specified
-        /// timeout has elapsed. 
-        /// This will block until after all on termination callbacks have been run.
-        /// <para>Returns <c>true</c> if the system was shutdown during the specified time;
-        /// <c>false</c> if it timed out.</para>
-        /// </summary>
-        /// <param name="timeout">The timeout.</param>
-        /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
-        /// <c>false</c> if it timed out.</returns>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public abstract bool AwaitTermination(TimeSpan timeout);
-
-        /// <summary>
-        /// Block current thread until the system has been shutdown, or the specified
-        /// timeout has elapsed, or the cancellationToken was canceled. 
-        /// This will block until after all on termination callbacks have been run.
-        /// <para>Returns <c>true</c> if the system was shutdown during the specified time;
-        /// <c>false</c> if it timed out, or the cancellationToken was canceled. </para>
-        /// </summary>
-        /// <param name="timeout">The timeout.</param>
-        /// <param name="cancellationToken">A cancellation token that cancels the wait operation.</param>
-        /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
-        /// <c>false</c> if it timed out, or the cancellationToken was canceled. </returns>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public abstract bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken);
 
         /// <summary>
         /// Returns a task which will be completed after the ActorSystem has been terminated
@@ -318,16 +269,6 @@ namespace Akka.Actor
 
         /// <inheritdoc cref="IActorRefFactory"/>
         public abstract ActorSelection ActorSelection(string actorPath);
-
-        /// <summary>
-        /// Block and prevent the main application thread from exiting unless
-        /// the actor system is shut down.
-        /// </summary>
-        [Obsolete("Use AwaitTermination instead")]
-        public void WaitForShutdown()
-        {
-            AwaitTermination();
-        }
     }
 }
 

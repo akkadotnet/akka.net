@@ -665,7 +665,7 @@ namespace Akka.Routing
         /// </code>
         /// </summary>
         /// <param name="routees">N/A</param>
-        [Obsolete("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead")]
+        [Obsolete("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead [1.1.0]")]
         public ConsistentHashingGroup(IEnumerable<IActorRef> routees)
             : this(routees.Select(c => c.Path.ToString()))
         {

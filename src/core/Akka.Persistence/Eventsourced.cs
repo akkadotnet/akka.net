@@ -377,18 +377,6 @@ namespace Akka.Persistence
                 _eventBatch.AddFirst(new AtomicWrite(persistents.ToImmutable()));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="events">TBD</param>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use PersistAll instead")]
-        public void Persist<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
-        {
-            PersistAll(events, handler);
-        }
-
         /// <summary> 
         /// Asynchronously persists an <paramref name="event"/>. On successful persistence, the <paramref name="handler"/>
         /// is called with the persisted event. Unlike <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> method,
@@ -445,18 +433,6 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="events">TBD</param>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use PersistAllAsync instead")]
-        public void PersistAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
-        {
-            PersistAllAsync(events, handler);
-        }
-
-        /// <summary>
         /// Defer the <paramref name="handler"/> execution until all pending handlers have been executed. 
         /// Allows to define logic within the actor, which will respect the invocation-order-guarantee
         /// in respect to <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> calls.
@@ -487,33 +463,6 @@ namespace Akka.Persistence
             {
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(evt, o => handler((TEvent)o)));
                 _eventBatch.AddFirst(new NonPersistentMessage(evt, Sender));
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use DeferAsync instead")]
-        public void Defer<TEvent>(TEvent evt, Action<TEvent> handler)
-        {
-            DeferAsync(evt, handler);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="events">TBD</param>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use DeferAsync instead")]
-        public void Defer<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
-        {
-            foreach (var @event in events)
-            {
-                DeferAsync(@event, handler);
             }
         }
 

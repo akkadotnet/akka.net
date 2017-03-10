@@ -130,7 +130,7 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
-            member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
+            member __.DeferEvent callback events = events |> Seq.iter (fun e -> this.DeferAsync(e, Action<_>(updateState callback)))
             member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
             member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
@@ -337,7 +337,7 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
-            member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
+            member __.DeferEvent callback events = events |> Seq.iter (fun e -> this.DeferAsync(e, Action<_>(updateState callback)))
             member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
             member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
