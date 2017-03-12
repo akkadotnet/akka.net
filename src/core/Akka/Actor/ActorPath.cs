@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Akka.Util;
 using Newtonsoft.Json;
@@ -172,6 +174,7 @@ namespace Akka.Actor
         {
             Name = name;
             Address = address;
+            _elements = new FastLazy<IList<string>>(FillElements);
         }
 
         /// <summary>
@@ -185,6 +188,7 @@ namespace Akka.Actor
             Address = parentPath.Address;
             Uid = uid;
             Name = name;
+            _elements = new FastLazy<IList<string>>(FillElements);
         }
 
         /// <summary>
@@ -192,26 +196,62 @@ namespace Akka.Actor
         /// </summary>
         /// <value> The uid. </value>
         public long Uid { get; }
+        
+        private readonly FastLazy<IList<string>> _elements;
+
+        private static readonly string[] _emptyElements = { };
+        private static readonly string[] _systemElements = { "system" };
+        private static readonly string[] _userElements = { "user" };
+
+        private IList<string> FillElements()
+        {
+            // fast path next three `if`
+            if(this is RootActorPath)
+                return _emptyElements;
+            if (Parent is RootActorPath)
+            {
+                if (Name.Equals("system", StringComparison.Ordinal))
+                    return _systemElements;
+                if (Name.Equals("user", StringComparison.Ordinal))
+                    return _userElements;
+                return new [] {Name};
+            }
+            if (Parent._elements.IsValueCreated)
+            {
+                var parentElems = Parent._elements.Value;
+                var myElems = new string[parentElems.Count + 1];
+                parentElems.CopyTo(myElems, 0);
+                myElems[myElems.Length - 1] = Name;
+                return myElems;
+            }
+
+            var current = this;
+            var elements = new List<string>();
+            while (!(current is RootActorPath))
+            {
+                if (current._elements.IsValueCreated)
+                {
+                    var parentElems = current._elements.Value;
+                    var myElems = new string[parentElems.Count + elements.Count];
+                    parentElems.CopyTo(myElems, 0);
+                    for (int i = elements.Count - 1; i >= 0; i--)
+                    {
+                        myElems[parentElems.Count + (elements.Count - 1 - i)] = elements[i];
+                    }
+                    return myElems;
+                }
+                elements.Add(current.Name);
+                current = current.Parent;
+            }
+            elements.Reverse();
+            return elements;
+        }
 
         /// <summary>
         /// Gets the elements.
         /// </summary>
         /// <value> The elements. </value>
-        public IReadOnlyList<string> Elements
-        {
-            get
-            {
-                var current = this;
-                var elements = new List<string>();
-                while (!(current is RootActorPath))
-                {
-                    elements.Add(current.Name);
-                    current = current.Parent;
-                }
-                elements.Reverse();
-                return elements.AsReadOnly();
-            }
-        }
+        public IReadOnlyList<string> Elements => new ReadOnlyCollection<string>(_elements.Value);
 
         /// <summary>
         /// INTERNAL API.
@@ -548,7 +588,7 @@ namespace Akka.Actor
             if (Uid == ActorCell.UndefinedUid)
                 return withAddress;
 
-            return withAddress + "#" + Uid;
+            return String.Concat(withAddress, "#", Uid.ToString());
         }
         /// <summary>
         /// Generate String representation, replacing the Address in the RootActorPath
