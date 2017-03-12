@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Akka.Actor.Dsl;
 using Akka.Util;
 using Newtonsoft.Json;
 using static System.String;
@@ -165,6 +166,9 @@ namespace Akka.Actor
             return true;
         }
 
+        private static readonly Func<ActorPath, IList<string>> FillElementsFunc =
+            actorPath => FillElements(actorPath);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
@@ -174,7 +178,7 @@ namespace Akka.Actor
         {
             Name = name;
             Address = address;
-            _elements = new FastLazy<IList<string>>(FillElements);
+            _elements = new FastLazy<ActorPath, IList<string>>(FillElementsFunc, this);
         }
 
         /// <summary>
@@ -188,7 +192,7 @@ namespace Akka.Actor
             Address = parentPath.Address;
             Uid = uid;
             Name = name;
-            _elements = new FastLazy<IList<string>>(FillElements);
+            _elements = new FastLazy<ActorPath, IList<string>>(FillElementsFunc, this);
         }
 
         /// <summary>
@@ -197,35 +201,35 @@ namespace Akka.Actor
         /// <value> The uid. </value>
         public long Uid { get; }
         
-        private readonly FastLazy<IList<string>> _elements;
+        private readonly FastLazy<ActorPath, IList<string>> _elements;
 
         private static readonly string[] _emptyElements = { };
         private static readonly string[] _systemElements = { "system" };
         private static readonly string[] _userElements = { "user" };
 
-        private IList<string> FillElements()
+        private static IList<string> FillElements(ActorPath actorPath)
         {
             // fast path next three `if`
-            if(this is RootActorPath)
+            if(actorPath is RootActorPath)
                 return _emptyElements;
-            if (Parent is RootActorPath)
+            if (actorPath.Parent is RootActorPath)
             {
-                if (Name.Equals("system", StringComparison.Ordinal))
+                if (actorPath.Name.Equals("system", StringComparison.Ordinal))
                     return _systemElements;
-                if (Name.Equals("user", StringComparison.Ordinal))
+                if (actorPath.Name.Equals("user", StringComparison.Ordinal))
                     return _userElements;
-                return new [] {Name};
+                return new [] {actorPath.Name};
             }
-            if (Parent._elements.IsValueCreated)
+            if (actorPath.Parent._elements.IsValueCreated)
             {
-                var parentElems = Parent._elements.Value;
+                var parentElems = actorPath.Parent._elements.Value;
                 var myElems = new string[parentElems.Count + 1];
                 parentElems.CopyTo(myElems, 0);
-                myElems[myElems.Length - 1] = Name;
+                myElems[myElems.Length - 1] = actorPath.Name;
                 return myElems;
             }
 
-            var current = this;
+            var current = actorPath;
             var elements = new List<string>();
             while (!(current is RootActorPath))
             {

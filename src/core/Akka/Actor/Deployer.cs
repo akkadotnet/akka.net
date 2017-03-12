@@ -60,7 +60,7 @@ namespace Akka.Actor
                 return Deploy.None;
             }
 
-            var elements = rawElements.Skip(1);
+            var elements = rawElements.Drop(1);
             return Lookup(elements);
         }
 

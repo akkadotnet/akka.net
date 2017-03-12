@@ -4902,6 +4902,12 @@ namespace Akka.Util
         public bool IsValueCreated { get; }
         public T Value { get; }
     }
+    public sealed class FastLazy<S, T>
+    {
+        public FastLazy(System.Func<S, T> producer, S state) { }
+        public bool IsValueCreated { get; }
+        public T Value { get; }
+    }
     public interface ILinearSeq<out T> : System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable
     {
         T Head { get; }
