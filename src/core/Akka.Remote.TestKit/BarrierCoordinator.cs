@@ -482,7 +482,7 @@ namespace Akka.Remote.TestKit
                         //we only allow the deadlines to get shorter
                         if (enterDeadline.TimeLeft < @event.StateData.Deadline.TimeLeft)
                         {
-                            SetTimer("Timeout", new StateTimeout(), enterDeadline.TimeLeft, false);
+                            SetTimer("Timeout", StateTimeout.Instance, enterDeadline.TimeLeft, false);
                             nextState = HandleBarrier(@event.StateData.Copy(arrived: together, deadline: enterDeadline));
                         }
                         else
@@ -516,7 +516,7 @@ namespace Akka.Remote.TestKit
 
             OnTransition((state, nextState) =>
             {
-                if (state == State.Idle && nextState == State.Waiting) SetTimer("Timeout", new StateTimeout(), NextStateData.Deadline.TimeLeft, false);
+                if (state == State.Idle && nextState == State.Waiting) SetTimer("Timeout", StateTimeout.Instance, NextStateData.Deadline.TimeLeft, false);
                 else if(state == State.Waiting && nextState == State.Idle) CancelTimer("Timeout");
             });
 

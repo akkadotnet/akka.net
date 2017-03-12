@@ -127,6 +127,7 @@
     <Compile Include="Actor\CoordinatedShutdownSpec.cs" />
     <Compile Include="Actor\Dispatch\ActorModelSpec.cs" />
     <Compile Include="Actor\Dispatch\CurrentSynchronizationContextDispatcherSpecs.cs" />
+    <Compile Include="Actor\FSMActorSpec.cs" />
     <Compile Include="Actor\HotSwapSpec.cs" />
     <Compile Include="Actor\DeadLetterSupressionSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />

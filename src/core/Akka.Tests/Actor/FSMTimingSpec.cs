@@ -8,123 +8,101 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
+using static Akka.Actor.FSMBase;
 
 namespace Akka.Tests.Actor
 {
-
     public class FSMTimingSpec : AkkaSpec
     {
-        public IActorRef Self { get { return TestActor; } }
-
-        public IActorRef _fsm;
-
-        public IActorRef fsm
-        {
-            get { return _fsm ?? (_fsm = Sys.ActorOf(Props.Create(() => new StateMachine(Self)), "fsm")); }
-        }
+        public IActorRef fsm { get; }
 
         public FSMTimingSpec()
-            //: base("akka.test.test-actor.dispatcher.type=Dispatcher" + FullDebugConfig)
-            //: base("akka.test.test-actor.dispatcher.type=Dispatcher" + FullDebugConfig)
-            //: base(FullDebugConfig)
         {
-            //initializes the Finite State Machine, so it doesn't affect any of the time-sensitive tests below
-            fsm.Tell(new FSMBase.SubscribeTransitionCallBack(Self));
-            ExpectMsg(new FSMBase.CurrentState<State>(fsm, State.Initial), FSMSpecHelpers.CurrentStateExpector<State>(), TimeSpan.FromSeconds(1));
+            fsm = Sys.ActorOf(Props.Create(() => new StateMachine(TestActor)), "fsm");
+            fsm.Tell(new SubscribeTransitionCallBack(TestActor));
+            ExpectMsg(new CurrentState<FsmState>(fsm, FsmState.Initial), 1.Seconds());
         }
 
         [Fact]
         public void FSM_must_receive_StateTimeout()
         {
-            //arrange
-
-            //act
-            Within(TimeSpan.FromSeconds(1), () =>
+            Within(1.Seconds(), () =>
             {
-                Within(TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1), () =>
+                Within(500.Milliseconds(), 1.Seconds(), () =>
                 {
-                    fsm.Tell(State.TestStateTimeout, Self);
-                    ExpectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestStateTimeout), FSMSpecHelpers.TransitionStateExpector<State>());
-                    ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestStateTimeout, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>());
-                    return true;
+                    fsm.Tell(FsmState.TestStateTimeout);
+                    ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestStateTimeout));
+                    ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestStateTimeout, FsmState.Initial));
                 });
-                ExpectNoMsg(TimeSpan.FromMilliseconds(50));
-                return true;
+                ExpectNoMsg(50.Milliseconds());
             });
-
-            //assert
         }
 
         [Fact]
         public void FSM_must_cancel_a_StateTimeout()
         {
-            //arrange
-
-            //act
-            Within(TimeSpan.FromSeconds(1), () =>
+            Within(1.Seconds(), () =>
             {
-                fsm.Tell(State.TestStateTimeout, Self);
-                fsm.Tell(new Cancel(), Self);
-                ExpectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestStateTimeout), FSMSpecHelpers.TransitionStateExpector<State>());
+                fsm.Tell(FsmState.TestStateTimeout);
+                fsm.Tell(Cancel.Instance);
+                ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestStateTimeout));
                 ExpectMsg<Cancel>();
-                ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestStateTimeout, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>());
-                ExpectNoMsg(TimeSpan.FromMilliseconds(50));
-                return true;
+                ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestStateTimeout, FsmState.Initial));
+                ExpectNoMsg(50.Milliseconds());
             });
+        }
 
-            //assert
+        [Fact]
+        public void FSM_must_cancel_a_StateTimeout_when_actor_is_stopped()
+        {
+            var stoppingActor = Sys.ActorOf(Props.Create<StoppingActor>());
+            Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
+            stoppingActor.Tell(FsmState.TestStoppingActorStateTimeout);
+
+            Within(400.Milliseconds(), () =>
+            {
+                ExpectNoMsg(300.Milliseconds());
+            });
         }
 
         [Fact]
         public void FSM_must_allow_StateTimeout_override()
         {
-            //arrange
-
-            //act
             //the timeout in state TestStateTimeout is 800ms, then it will change back to Initial
-            Within(TimeSpan.FromMilliseconds(400), () =>
+            Within(400.Milliseconds(), () =>
             {
-                fsm.Tell(State.TestStateTimeoutOverride, Self);
-                ExpectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestStateTimeout), FSMSpecHelpers.TransitionStateExpector<State>());
-                ExpectNoMsg(TimeSpan.FromMilliseconds(300));
-                return true;
+                fsm.Tell(FsmState.TestStateTimeoutOverride);
+                ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestStateTimeout));
+                ExpectNoMsg(300.Milliseconds());
             });
 
-            Within(TimeSpan.FromSeconds(1), () =>
+            Within(1.Seconds(), () =>
             {
-                fsm.Tell(new Cancel(), Self);
+                fsm.Tell(Cancel.Instance);
                 ExpectMsg<Cancel>();
-                ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestStateTimeout, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>());
-                return true;
+                ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestStateTimeout, FsmState.Initial));
             });
-
-            //assert
         }
 
         [Fact]
         public void FSM_must_receive_single_shot_timer()
         {
-            //arrange
-
-            //act
-            Within(TimeSpan.FromSeconds(2), () =>
+            Within(2.Seconds(), () =>
             {
-                Within(TimeSpan.FromMilliseconds(450), TimeSpan.FromSeconds(1), () =>
+                Within(500.Milliseconds(), 1.Seconds(), () =>
                 {
-                    fsm.Tell(State.TestSingleTimer, Self);
-                    ExpectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestSingleTimer), FSMSpecHelpers.TransitionStateExpector<State>());
+                    fsm.Tell(FsmState.TestSingleTimer);
+                    ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestSingleTimer));
                     ExpectMsg<Tick>();
-                    ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestSingleTimer, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>());
-                    return true;
+                    ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestSingleTimer, FsmState.Initial));
                 });
-                ExpectNoMsg(TimeSpan.FromMilliseconds(500));
-                return true;
+                ExpectNoMsg(500.Milliseconds());
             });
-
-            //assert
         }
 
         [Fact]
@@ -132,102 +110,120 @@ namespace Akka.Tests.Actor
         {
             Within(TimeSpan.FromSeconds(2.5), () =>
             {
-                Within(TimeSpan.FromMilliseconds(450), TimeSpan.FromSeconds(1), () =>
+                Within(500.Milliseconds(), 1.Seconds(), () =>
                 {
-                    fsm.Tell(State.TestSingleTimerResubmit, Self);
-                    ExpectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestSingleTimerResubmit), FSMSpecHelpers.TransitionStateExpector<State>());
+                    fsm.Tell(FsmState.TestSingleTimerResubmit);
+                    ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestSingleTimerResubmit));
                     ExpectMsg<Tick>();
-                    return true;
                 });
 
-                Within(TimeSpan.FromSeconds(1), () =>
+                Within(1.Seconds(), () =>
                 {
                     ExpectMsg<Tock>();
-                    ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestSingleTimerResubmit, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>());
-                    return true;
+                    ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestSingleTimerResubmit, FsmState.Initial));
                 });
-                ExpectNoMsg(TimeSpan.FromMilliseconds(500));
-                return true;
+                ExpectNoMsg(500.Milliseconds());
             });
         }
 
         [Fact]
         public void FSM_must_correctly_cancel_a_named_timer()
         {
-            fsm.Tell(State.TestCancelTimer, Self);
-            ExpectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestCancelTimer), FSMSpecHelpers.TransitionStateExpector<State>());
-            Within(TimeSpan.FromMilliseconds(1500), () =>
+            fsm.Tell(FsmState.TestCancelTimer);
+            ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestCancelTimer));
+            Within(500.Milliseconds(), () =>
             {
-                fsm.Tell(new Tick(), Self);
+                fsm.Tell(Tick.Instance);
                 ExpectMsg<Tick>();
-                return true;
             });
 
-            Within(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), () =>
+            Within(300.Milliseconds(), 1.Seconds(), () =>
             {
                 ExpectMsg<Tock>();
-                return true;
             });
-            fsm.Tell(new Cancel(), Self);
-            ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelTimer, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>(), TimeSpan.FromSeconds(1));
+            fsm.Tell(Cancel.Instance);
+            ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestCancelTimer, FsmState.Initial), 1.Seconds());
         }
 
         [Fact]
         public void FSM_must_not_get_confused_between_named_and_state_timers()
         {
-            fsm.Tell(State.TestCancelStateTimerInNamedTimerMessage, Self);
-            fsm.Tell(new Tick(), Self);
-            ExpectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestCancelStateTimerInNamedTimerMessage), FSMSpecHelpers.TransitionStateExpector<State>());
-            ExpectMsg<Tick>(TimeSpan.FromMilliseconds(500));
-            Task.Delay(TimeSpan.FromMilliseconds(200));
+            fsm.Tell(FsmState.TestCancelStateTimerInNamedTimerMessage);
+            fsm.Tell(Tick.Instance);
+            ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestCancelStateTimerInNamedTimerMessage));
+            ExpectMsg<Tick>(500.Milliseconds());
+            Task.Delay(200.Milliseconds());
             Resume(fsm);
-            ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelStateTimerInNamedTimerMessage, State.TestCancelStateTimerInNamedTimerMessage2), FSMSpecHelpers.TransitionStateExpector<State>(), TimeSpan.FromMilliseconds(500));
-            fsm.Tell(new Cancel(), Self);
-            Within(TimeSpan.FromMilliseconds(500), () =>
+            ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestCancelStateTimerInNamedTimerMessage, FsmState.TestCancelStateTimerInNamedTimerMessage2), 500.Milliseconds());
+            fsm.Tell(Cancel.Instance);
+            Within(500.Milliseconds(), () =>
             {
                 ExpectMsg<Cancel>();
-                ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelStateTimerInNamedTimerMessage2, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>());
-                return true;
+                ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestCancelStateTimerInNamedTimerMessage2, FsmState.Initial));
             });
         }
 
-        /// <summary>
-        /// receiveWhile is currently broken
-        /// </summary>
         [Fact]
         public void FSM_must_receive_and_cancel_a_repeated_timer()
         {
-            fsm.Tell(State.TestRepeatedTimer, Self);
-            ExpectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestRepeatedTimer), FSMSpecHelpers.TransitionStateExpector<State>());
-            var seq = ReceiveWhile(TimeSpan.FromSeconds(2), o =>
+            fsm.Tell(FsmState.TestRepeatedTimer);
+            ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestRepeatedTimer));
+            var seq = ReceiveWhile(2.Seconds(), o =>
             {
-                if(o is Tick) return o;
+                if (o is Tick)
+                    return o;
                 return null;
             });
-
-            Assert.Equal(5, seq.Count);
-            Within(TimeSpan.FromMilliseconds(500), () =>
+            seq.Should().HaveCount(5);
+            Within(500.Milliseconds(), () =>
             {
-                ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestRepeatedTimer, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>());
-                return true;
+                ExpectMsg(new Transition<FsmState>(fsm, FsmState.TestRepeatedTimer, FsmState.Initial));
             });
+        }
+
+        [Fact]
+        public void FSM_must_notify_unhandled_messages()
+        {
+            // EventFilter
+            //    .Warning("unhandled event Akka.Tests.Actor.FSMTimingSpec+Tick in state TestUnhandled", source: fsm.Path.ToString())
+            //    .And
+            //    .Warning("unhandled event Akka.Tests.Actor.FSMTimingSpec+Unhandled in state TestUnhandled", source: fsm.Path.ToString())
+            //    .ExpectOne(
+            //    () =>
+            //    {
+                    fsm.Tell(FsmState.TestUnhandled);
+                    ExpectMsg(new Transition<FsmState>(fsm, FsmState.Initial, FsmState.TestUnhandled));
+                    Within(3.Seconds(), () =>
+                    {
+                        fsm.Tell(Tick.Instance);
+                        fsm.Tell(SetHandler.Instance);
+                        fsm.Tell(Tick.Instance);
+                        ExpectMsg<Unhandled>().Msg.Should().BeOfType<Tick>();
+                        fsm.Tell(new Unhandled("test"));
+                        fsm.Tell(Cancel.Instance);
+                        var transition = ExpectMsg<Transition<FsmState>>();
+                        transition.FsmRef.Should().Be(fsm);
+                        transition.From.Should().Be(FsmState.TestUnhandled);
+                        transition.To.Should().Be(FsmState.Initial);
+                    });
+            //    });
         }
 
         #region Actors
 
         static void Suspend(IActorRef actorRef)
         {
-            actorRef.Match()
-                .With<ActorRefWithCell>(l => l.Suspend());
+            var l = actorRef as ActorRefWithCell;
+            l?.Suspend();
         }
 
         static void Resume(IActorRef actorRef)
         {
-            actorRef.Match()
-                .With<ActorRefWithCell>(l => l.Resume());
+            var l = actorRef as ActorRefWithCell;
+            l?.Resume();
         }
 
-        public enum State
+        public enum FsmState
         {
             Initial,
             TestStateTimeout,
@@ -238,245 +234,248 @@ namespace Akka.Tests.Actor
             TestUnhandled,
             TestCancelTimer,
             TestCancelStateTimerInNamedTimerMessage,
-            TestCancelStateTimerInNamedTimerMessage2
+            TestCancelStateTimerInNamedTimerMessage2,
+            TestStoppingActorStateTimeout
         }
 
-        public abstract class DebugName
+        public class Tick
         {
-            public override string ToString()
-            {
-                return GetType().Name;
-            }
+            private Tick() { }
+            public static Tick Instance { get; } = new Tick();
         }
-        public class Tick : DebugName { }
-        public class Tock : DebugName { }
-        public class Cancel : DebugName { }
-        public class SetHandler : DebugName { }
 
-        public class Unhandled : DebugName
+        public class Tock
+        {
+            private Tock() { }
+            public static Tock Instance { get; } = new Tock();
+        }
+
+        public class Cancel
+        {
+            private Cancel() { }
+            public static Cancel Instance { get; } = new Cancel();
+        }
+
+        public class SetHandler
+        {
+            private SetHandler() { }
+            public static SetHandler Instance { get; } = new SetHandler();
+        }
+
+        public class Unhandled
         {
             public Unhandled(object msg)
             {
                 Msg = msg;
             }
 
-            public object Msg { get; private set; }
+            public object Msg { get; }
         }
-
 
         public static void StaticAwaitCond(Func<bool> evaluator, TimeSpan max, TimeSpan? interval)
         {
             InternalAwaitCondition(evaluator, max, interval,(format,args)=> XAssert.Fail(string.Format(format,args)));
         }
 
-
-        public class StateMachine : FSM<State, int>, ILoggingFSM
+        public class StateMachine : FSM<FsmState, int>, ILoggingFSM
         {
             public StateMachine(IActorRef tester)
             {
                 Tester = tester;
-                StartWith(State.Initial, 0);
-                When(State.Initial, @event =>
+                StartWith(FsmState.Initial, 0);
+
+                When(FsmState.Initial, @event =>
                 {
-                    State<State, int> nextState = null;
-                    if (@event.FsmEvent is State)
+                    if (@event.FsmEvent is FsmState)
                     {
-                        var s = (State) @event.FsmEvent;
+                        var s = (FsmState)@event.FsmEvent;
                         switch (s)
                         {
-                            case State.TestSingleTimer:
-                                SetTimer("tester", new Tick(), TimeSpan.FromMilliseconds(500), false);
-                                nextState = GoTo(State.TestSingleTimer);
-                                break;
-                            case State.TestRepeatedTimer:
-                                SetTimer("tester", new Tick(), TimeSpan.FromMilliseconds(100), true);
-                                nextState = GoTo(State.TestRepeatedTimer).Using(4);
-                                break;
-                            case State.TestStateTimeoutOverride:
-                                nextState = GoTo(State.TestStateTimeout).ForMax(TimeSpan.MaxValue);
-                                break;
+                            case FsmState.TestSingleTimer:
+                                SetTimer("tester", Tick.Instance, 500.Milliseconds(), false);
+                                return GoTo(FsmState.TestSingleTimer);
+                            case FsmState.TestRepeatedTimer:
+                                SetTimer("tester", Tick.Instance, 100.Milliseconds(), true);
+                                return GoTo(FsmState.TestRepeatedTimer).Using(4);
+                            case FsmState.TestStateTimeoutOverride:
+                                return GoTo(FsmState.TestStateTimeout).ForMax(TimeSpan.MaxValue);
                             default:
-                                nextState = GoTo(s);
-                                break;
+                                return GoTo(s);
                         }
                     }
-                    return nextState;
+                    return null;
                 });
 
-                When(State.TestStateTimeout, @event =>
+                When(FsmState.TestStateTimeout, @event =>
                 {
-                    State<State, int> nextState = null;
-                    @event.FsmEvent.Match()
-                        .With<StateTimeout>(s =>
-                        {
-                            nextState = GoTo(State.Initial);
-                        })
-                        .With<Cancel>(c =>
-                        {
-                            nextState = GoTo(State.Initial).Replying(new Cancel());
-                        });
-                    return nextState;
+                    if (@event.FsmEvent is StateTimeout)
+                    {
+                        return GoTo(FsmState.Initial);
+                    }
+                    else if (@event.FsmEvent is Cancel)
+                    {
+                        return GoTo(FsmState.Initial).Replying(Cancel.Instance);
+                    }
+                    return null;
+                }, 800.Milliseconds());
 
-                }, TimeSpan.FromMilliseconds(800));
-
-                When(State.TestSingleTimer, @event =>
+                When(FsmState.TestSingleTimer, @event =>
                 {
-                    State<State, int> nextState = null;
                     if (@event.FsmEvent is Tick)
                     {
-                        Tester.Tell(new Tick());
-                        nextState = GoTo(State.Initial);
+                        Tester.Tell(Tick.Instance);
+                        return GoTo(FsmState.Initial);
                     }
-                    return nextState;
+                    return null;
                 });
 
-                OnTransition((state, state1) =>
+                OnTransition((state1, state2) =>
                 {
-                    if(state == State.Initial && state1 == State.TestSingleTimerResubmit)
-                        SetTimer("blah", new Tick(), TimeSpan.FromMilliseconds(500));
+                    if (state1 == FsmState.Initial && state2 == FsmState.TestSingleTimerResubmit)
+                        SetTimer("blah", Tick.Instance, 500.Milliseconds());
                 });
 
-                When(State.TestSingleTimerResubmit, @event =>
+                When(FsmState.TestSingleTimerResubmit, @event =>
                 {
-                    State<State, int> nextState = null;
-                    @event.FsmEvent.Match()
-                        .With<Tick>(tick =>
-                        {
-                            Tester.Tell(new Tick());
-                            SetTimer("blah", new Tock(), TimeSpan.FromMilliseconds(500));
-                            nextState = Stay();
-                        })
-                        .With<Tock>(tock =>
-                        {
-                            Tester.Tell(new Tock());
-                            nextState = GoTo(State.Initial);
-                        });
-
-                    return nextState;
+                    if (@event.FsmEvent is Tick)
+                    {
+                        Tester.Tell(Tick.Instance);
+                        SetTimer("blah", Tock.Instance, 500.Milliseconds());
+                        return Stay();
+                    }
+                    else if (@event.FsmEvent is Tock)
+                    {
+                        Tester.Tell(Tock.Instance);
+                        return GoTo(FsmState.Initial);
+                    }
+                    return null;
                 });
 
-                When(State.TestCancelTimer, @event =>
+                When(FsmState.TestCancelTimer, @event =>
                 {
-                    State<State, int> nextState = null;
-
-                    @event.FsmEvent.Match()
-                        .With<Tick>(tick =>
-                        {
-                            var contextLocal = Context;
-                            var numberOfMessages = ((ActorCell) contextLocal).Mailbox.NumberOfMessages;
-                            SetTimer("hallo", new Tock(), TimeSpan.FromMilliseconds(1));
-                            StaticAwaitCond(() => contextLocal.AsInstanceOf<ActorCell>().Mailbox.HasMessages, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50));
-                            CancelTimer("hallo");
-                            Sender.Tell(new Tick());
-                            SetTimer("hallo", new Tock(), TimeSpan.FromMilliseconds(500));
-                            nextState = Stay();
-                        })
-                        .With<Tock>(tock =>
-                        {
-                            Tester.Tell(new Tock());
-                            nextState = Stay();
-                        })
-                        .With<Cancel>(c =>
-                        {
-                            CancelTimer("hallo");
-                            nextState = GoTo(State.Initial);
-                        });
-
-                    return nextState;
+                    if (@event.FsmEvent is Tick)
+                    {
+                        var contextLocal = Context.AsInstanceOf<ActorCell>();
+                        SetTimer("hallo", Tock.Instance, 1.Milliseconds());
+                        StaticAwaitCond(() => contextLocal.Mailbox.HasMessages, 1.Seconds(), 50.Milliseconds());
+                        CancelTimer("hallo");
+                        Sender.Tell(Tick.Instance);
+                        SetTimer("hallo", Tock.Instance, 500.Milliseconds());
+                        return Stay();
+                    }
+                    else if (@event.FsmEvent is Tock)
+                    {
+                        Tester.Tell(Tock.Instance);
+                        return Stay();
+                    }
+                    else if (@event.FsmEvent is Cancel)
+                    {
+                        CancelTimer("hallo");
+                        return GoTo(FsmState.Initial);
+                    }
+                    return null;
                 });
 
-                When(State.TestRepeatedTimer, @event =>
+                When(FsmState.TestRepeatedTimer, @event =>
                 {
-                    State<State, int> nextState = null;
-
                     if (@event.FsmEvent is Tick)
                     {
                         var remaining = @event.StateData;
-                        Tester.Tell(new Tick());
+                        Tester.Tell(Tick.Instance);
                         if (remaining == 0)
                         {
                             CancelTimer("tester");
-                            nextState = GoTo(State.Initial);
+                            return GoTo(FsmState.Initial);
                         }
                         else
                         {
-                            nextState = Stay().Using(remaining - 1);
+                            return Stay().Using(remaining - 1);
                         }
                     }
-
-                    return nextState;
+                    return null;
                 });
 
-                When(State.TestCancelStateTimerInNamedTimerMessage, @event =>
+                When(FsmState.TestCancelStateTimerInNamedTimerMessage, @event =>
                 {
-                    //FSM is suspended after processing this message and resumed 500s later
-                    State<State, int> nextState = null;
-
-                    @event.FsmEvent.Match()
-                        .With<Tick>(tick =>
-                        {
-                            Suspend(Self);
-                            SetTimer("named", new Tock(), TimeSpan.FromMilliseconds(1));
-                            var contextLocal = Context;
-                            StaticAwaitCond(() =>((ActorCell) contextLocal).Mailbox.HasMessages,
-                                    TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50));
-                            nextState = Stay().ForMax(TimeSpan.FromMilliseconds(1)).Replying(new Tick());
-                        })
-                        .With<Tock>(tock =>
-                        {
-                            nextState = GoTo(State.TestCancelStateTimerInNamedTimerMessage2);
-                        });
-
-                    return nextState;
+                    // FSM is suspended after processing this message and resumed 500s later
+                    if (@event.FsmEvent is Tick)
+                    {
+                        Suspend(Self);
+                        SetTimer("named", Tock.Instance, 1.Milliseconds());
+                        var contextLocal = Context.AsInstanceOf<ActorCell>();
+                        StaticAwaitCond(() => contextLocal.Mailbox.HasMessages, 1.Seconds(), 50.Milliseconds());
+                        return Stay().ForMax(1.Milliseconds()).Replying(Tick.Instance);
+                    }
+                    else if (@event.FsmEvent is Tock)
+                    {
+                        return GoTo(FsmState.TestCancelStateTimerInNamedTimerMessage2);
+                    }
+                    return null;
                 });
 
-                When(State.TestCancelStateTimerInNamedTimerMessage2, @event =>
+                When(FsmState.TestCancelStateTimerInNamedTimerMessage2, @event =>
                 {
-                    State<State, int> nextState = null;
-
-                    @event.FsmEvent.Match()
-                        .With<StateTimeout>(s =>
-                        {
-                            nextState = GoTo(State.Initial);
-                        })
-                        .With<Cancel>(c =>
-                        {
-                            nextState = GoTo(State.Initial).Replying(new Cancel());
-                        });
-
-                    return nextState;
+                    if (@event.FsmEvent is StateTimeout)
+                    {
+                        return GoTo(FsmState.Initial);
+                    }
+                    else if (@event.FsmEvent is Cancel)
+                    {
+                        return GoTo(FsmState.Initial).Replying(Cancel.Instance);
+                    }
+                    return null;
                 });
 
-                When(State.TestUnhandled, @event =>
+                When(FsmState.TestUnhandled, @event =>
                 {
-                    State<State, int> nextState = null;
-
-                    @event.FsmEvent.Match()
-                        .With<SetHandler>(s =>
+                    if (@event.FsmEvent is SetHandler)
+                    {
+                        WhenUnhandled(evt =>
                         {
-                            WhenUnhandled(@event1 =>
+                            if (evt.FsmEvent is Tick)
                             {
-                                Tester.Tell(new Unhandled(new Tick()));
+                                Tester.Tell(new Unhandled(Tick.Instance));
                                 return Stay();
-                            });
-                            nextState = Stay();
-                        })
-                        .With<Cancel>(c =>
-                        {
-                            WhenUnhandled(@event1 => null);
-                            nextState = GoTo(State.Initial);
-                        });
+                            }
 
-                    return nextState;
+                            return null;
+                        });
+                        return Stay();
+                    }
+                    else if (@event.FsmEvent is Cancel)
+                    {
+                        // whenUnhandled(NullFunction)
+                        return GoTo(FsmState.Initial);
+                    }
+                    return null;
                 });
             }
 
+            public IActorRef Tester { get; }
+        }
 
+        public class StoppingActor : FSM<FsmState, int>
+        {
+            public StoppingActor()
+            {
+                StartWith(FsmState.Initial, 0);
 
-            public IActorRef Tester { get; private set; }
+                When(FsmState.Initial, evt =>
+                {
+                    if (evt.FsmEvent is FsmState)
+                    {
+                        var state = (FsmState)evt.FsmEvent;
+                        if (state == FsmState.TestStoppingActorStateTimeout)
+                        {
+                            Context.Stop(Self);
+                            return Stay();
+                        }
+                    }
+                    return null;
+                }, 200.Milliseconds());
+            }
         }
 
         #endregion
     }
 }
-

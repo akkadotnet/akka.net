@@ -720,6 +720,7 @@ namespace Akka.Actor
         public TState StateName { get; }
         public void CancelTimer(string name) { }
         public Akka.Actor.FSMBase.State<TState, TData> GoTo(TState nextStateName) { }
+        [System.ObsoleteAttribute("This method is obsoleted. Use GoTo(nextStateName).Using(newStateData) [1.2.0]")]
         public Akka.Actor.FSMBase.State<TState, TData> GoTo(TState nextStateName, TData stateData) { }
         public void Initialize() { }
         public bool IsTimerActive(string name) { }
@@ -750,52 +751,59 @@ namespace Akka.Actor
     public abstract class FSMBase : Akka.Actor.ActorBase
     {
         protected FSMBase() { }
-        public class CurrentState<TS>
+        public sealed class CurrentState<TS>
         {
             public CurrentState(Akka.Actor.IActorRef fsmRef, TS state) { }
             public Akka.Actor.IActorRef FsmRef { get; }
             public TS State { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
         }
-        public class Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
+        public sealed class Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData) { }
             public object FsmEvent { get; }
             public TD StateData { get; }
             public override string ToString() { }
         }
-        public class Failure : Akka.Actor.FSMBase.Reason
+        public sealed class Failure : Akka.Actor.FSMBase.Reason
         {
             public Failure(object cause) { }
             public object Cause { get; }
         }
-        public class LogEntry<TS, TD>
+        public sealed class LogEntry<TS, TD>
         {
             public LogEntry(TS stateName, TD stateData, object fsmEvent) { }
             public object FsmEvent { get; }
             public TD StateData { get; }
             public TS StateName { get; }
+            public override string ToString() { }
         }
-        public class Normal : Akka.Actor.FSMBase.Reason
+        public sealed class Normal : Akka.Actor.FSMBase.Reason
         {
+            [System.ObsoleteAttribute("This constructor is obsoleted. Use Normal.Instance [1.2.0]")]
             public Normal() { }
+            public static Akka.Actor.FSMBase.Normal Instance { get; }
         }
         public abstract class Reason
         {
             protected Reason() { }
         }
-        public class Shutdown : Akka.Actor.FSMBase.Reason
+        public sealed class Shutdown : Akka.Actor.FSMBase.Reason
         {
+            [System.ObsoleteAttribute("This constructor is obsoleted. Use Shutdown.Instance [1.2.0]")]
             public Shutdown() { }
+            public static Akka.Actor.FSMBase.Shutdown Instance { get; }
         }
         public class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
         {
-            public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null) { }
-            public System.Collections.Generic.List<object> Replies { get; set; }
+            public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyCollection<object> replies = null, bool notifies = True) { }
+            public System.Collections.Generic.IReadOnlyCollection<object> Replies { get; set; }
             public TD StateData { get; }
             public TS StateName { get; }
             public Akka.Actor.FSMBase.Reason StopReason { get; }
             public System.Nullable<System.TimeSpan> Timeout { get; }
-            public Akka.Actor.FSMBase.State<TS, TD> Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null) { }
             public bool Equals(Akka.Actor.FSMBase.State<TS, TD> other) { }
             public override bool Equals(object obj) { }
             public Akka.Actor.FSMBase.State<TS, TD> ForMax(System.TimeSpan timeout) { }
@@ -804,31 +812,36 @@ namespace Akka.Actor
             public override string ToString() { }
             public Akka.Actor.FSMBase.State<TS, TD> Using(TD nextStateData) { }
         }
-        public class StateTimeout
+        public sealed class StateTimeout
         {
+            [System.ObsoleteAttribute("This constructor is obsoleted. Use Shutdown.Instance [1.2.0]")]
             public StateTimeout() { }
+            public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }
-        public class StopEvent<TS, TD> : Akka.Actor.INoSerializationVerificationNeeded
+        public sealed class StopEvent<TS, TD> : Akka.Actor.INoSerializationVerificationNeeded
         {
             public StopEvent(Akka.Actor.FSMBase.Reason reason, TS terminatedState, TD stateData) { }
             public Akka.Actor.FSMBase.Reason Reason { get; }
             public TD StateData { get; }
             public TS TerminatedState { get; }
+            public override string ToString() { }
         }
-        public class SubscribeTransitionCallBack
+        public sealed class SubscribeTransitionCallBack
         {
             public SubscribeTransitionCallBack(Akka.Actor.IActorRef actorRef) { }
             public Akka.Actor.IActorRef ActorRef { get; }
         }
-        public class Transition<TS>
+        public sealed class Transition<TS>
         {
             public Transition(Akka.Actor.IActorRef fsmRef, TS from, TS to) { }
             public TS From { get; }
             public Akka.Actor.IActorRef FsmRef { get; }
             public TS To { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
             public override string ToString() { }
         }
-        public class UnsubscribeTransitionCallBack
+        public sealed class UnsubscribeTransitionCallBack
         {
             public UnsubscribeTransitionCallBack(Akka.Actor.IActorRef actorRef) { }
             public Akka.Actor.IActorRef ActorRef { get; }
@@ -3952,7 +3965,7 @@ namespace Akka.Routing
         protected CustomRouterConfig() { }
         protected CustomRouterConfig(string routerDispatcher) { }
     }
-    public class Deafen : Akka.Routing.ListenerMessage
+    public sealed class Deafen : Akka.Routing.ListenerMessage
     {
         public Deafen(Akka.Actor.IActorRef listener) { }
         public Akka.Actor.IActorRef Listener { get; }
@@ -4020,7 +4033,7 @@ namespace Akka.Routing
     {
         Akka.Routing.ListenerSupport Listeners { get; }
     }
-    public class Listen : Akka.Routing.ListenerMessage
+    public sealed class Listen : Akka.Routing.ListenerMessage
     {
         public Listen(Akka.Actor.IActorRef listener) { }
         public Akka.Actor.IActorRef Listener { get; }
@@ -4386,7 +4399,7 @@ namespace Akka.Routing
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class WithListeners : Akka.Routing.ListenerMessage
+    public sealed class WithListeners : Akka.Routing.ListenerMessage
     {
         public WithListeners(System.Action<Akka.Actor.IActorRef> listenerFunction) { }
         public System.Action<Akka.Actor.IActorRef> ListenerFunction { get; }
@@ -5073,7 +5086,7 @@ namespace Akka.Util.Internal
         public static string BetweenDoubleQuotes(this string self) { }
         public static System.Collections.Generic.IEnumerable<T> Concat<T>(this System.Collections.Generic.IEnumerable<T> enumerable, T item) { }
         public static System.Collections.Generic.IEnumerable<T> Drop<T>(this System.Collections.Generic.IEnumerable<T> self, int count) { }
-        public static void ForEach<T>(this System.Collections.Generic.IEnumerable<T> enumerable, System.Action<T> action) { }
+        public static void ForEach<T>(this System.Collections.Generic.IEnumerable<T> source, System.Action<T> action) { }
         public static TValue GetOrElse<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue elseValue) { }
         public static T GetOrElse<T>(this T obj, T elseValue) { }
         public static T Head<T>(this System.Collections.Generic.IEnumerable<T> self) { }
