@@ -13,7 +13,10 @@ using System.Runtime.InteropServices;
 namespace Akka.Util
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// A Monotonic clock implementation based on total uptime.
+    /// Used for keeping accurate time internally.
     /// </summary>
     internal static class MonotonicClock
     {
@@ -24,7 +27,7 @@ namespace Akka.Util
         private const long NanosPerTick = 100;
 
         /// <summary>
-        /// TBD
+        /// Time as measured by the current system up-time.
         /// </summary>
         public static TimeSpan Elapsed
         {
@@ -35,7 +38,8 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// High resolution elapsed time as determined by a <see cref="Stopwatch"/>
+        /// running continuously in the background.
         /// </summary>
         public static TimeSpan ElapsedHighRes
         {

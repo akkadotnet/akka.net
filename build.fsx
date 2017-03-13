@@ -309,7 +309,8 @@ Target "MultiNodeTests" <| fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "bin" @@ "core" @@ "Akka.MultiNodeTestRunner*")
     let multiNodeTestAssemblies = !! "src/**/bin/Release/Akka.Remote.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/Akka.Cluster.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll"
+                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Sharding.Tests.MultiNode.dll"
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 

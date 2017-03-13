@@ -186,7 +186,7 @@ namespace Akka.Actor
         /// Issues a stop command to the provided <see cref="IActorRef"/>, which will cause that actor
         /// to terminate.
         /// </summary>
-        /// <param name="child">TBD</param>
+        /// <param name="child">The actor who will be stopped.</param>
         void Stop(IActorRef child);
     }
 }
