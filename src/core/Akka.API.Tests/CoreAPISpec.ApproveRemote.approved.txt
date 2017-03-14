@@ -1,6 +1,7 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
