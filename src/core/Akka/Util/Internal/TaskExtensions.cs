@@ -11,7 +11,9 @@ using System.Threading.Tasks;
 namespace Akka.Util.Internal
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// Extensions for working with <see cref="Task"/> types
     /// </summary>
     public static class TaskExtensions
     {

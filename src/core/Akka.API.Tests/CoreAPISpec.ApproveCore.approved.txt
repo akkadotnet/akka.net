@@ -488,6 +488,32 @@ namespace Akka.Actor
         public override int CompareTo(Akka.Actor.ActorPath other) { }
         public override Akka.Actor.ActorPath WithUid(long uid) { }
     }
+    public sealed class CoordinatedShutdown : Akka.Actor.IExtension
+    {
+        public const string PhaseActorSystemTerminate = "actor-system-terminate";
+        public const string PhaseBeforeActorSystemTerminate = "before-actor-system-terminate";
+        public const string PhaseBeforeClusterShutdown = "before-cluster-shutdown";
+        public const string PhaseBeforeServiceUnbind = "before-service-unbind";
+        public const string PhaseClusterExiting = "cluster-exiting";
+        public const string PhaseClusterExitingDone = "cluster-exiting-done";
+        public const string PhaseClusterLeave = "cluster-leave";
+        public const string PhaseClusterShardingShutdownRegion = "cluster-sharding-shutdown-region";
+        public const string PhaseClusterShutdown = "cluster-shutdown";
+        public const string PhaseServiceRequestsDone = "service-requests-done";
+        public const string PhaseServiceStop = "service-stop";
+        public const string PhaseServiceUnbind = "service-unbind";
+        public Akka.Actor.ExtendedActorSystem System { get; }
+        public System.TimeSpan TotalTimeout { get; }
+        public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<Akka.Done>> task) { }
+        public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
+        public System.Threading.Tasks.Task<Akka.Done> Run(string fromPhase = null) { }
+        public System.TimeSpan Timeout(string phase) { }
+    }
+    public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
+    {
+        public CoordinatedShutdownExtension() { }
+        public override Akka.Actor.CoordinatedShutdown CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
     public class DateTimeOffsetNowTimeProvider : Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider
     {
         public System.TimeSpan HighResMonotonicClock { get; }
@@ -2028,6 +2054,10 @@ namespace Akka
         public T ResultOrDefault(System.Func<object, T> function) { }
         public Akka.Case<T> With<TMessage>(System.Func<T> function) { }
         public Akka.Case<T> With<TMessage>(System.Func<TMessage, T> function) { }
+    }
+    public sealed class Done
+    {
+        public static readonly Akka.Done Instance;
     }
     public interface IMatchResult
     {
@@ -3799,6 +3829,10 @@ namespace Akka.Pattern
         public async System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
         public void WithSyncCircuitBreaker(System.Action body) { }
         public T WithSyncCircuitBreaker<T>(System.Func<T> body) { }
+    }
+    public class static FutureTimeoutSupport
+    {
+        public static System.Threading.Tasks.Task<T> After<T>(System.TimeSpan duration, Akka.Actor.IScheduler scheduler, System.Func<System.Threading.Tasks.Task<T>> value) { }
     }
     public interface IBackoffReset { }
     public class IllegalStateException : Akka.Actor.AkkaException

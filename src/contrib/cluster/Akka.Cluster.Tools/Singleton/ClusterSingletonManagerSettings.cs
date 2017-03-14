@@ -12,17 +12,17 @@ using Akka.Configuration;
 namespace Akka.Cluster.Tools.Singleton
 {
     /// <summary>
-    /// TBD
+    /// The settings used for the <see cref="ClusterSingletonManager"/>
     /// </summary>
     [Serializable]
     public sealed class ClusterSingletonManagerSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="ClusterSingletonManagerSettings"/> instance.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="system">The <see cref="ActorSystem"/> to which this singleton manager belongs.</param>
+        /// <exception cref="ConfigurationException">Thrown if no "akka.cluster.singleton" section is defined.</exception>
+        /// <returns>The requested settings.</returns>
         public static ClusterSingletonManagerSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
@@ -31,14 +31,14 @@ namespace Akka.Cluster.Tools.Singleton
             if (config == null)
                 throw new ConfigurationException(string.Format("Cannot initialize {0}: akka.cluster.singleton configuration node was not provided", typeof(ClusterSingletonManagerSettings)));
 
-            return Create(config).WithRemovalMargin(Cluster.Get(system).Settings.DownRemovalMargin);
+            return Create(config).WithRemovalMargin(Cluster.Get(system).DowningProvider.DownRemovalMargin);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="ClusterSingletonManagerSettings"/> instance.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">The HOCON configuration used to create the settings.</param>
+        /// <returns>The requested settings.</returns>
         public static ClusterSingletonManagerSettings Create(Config config)
         {
             return new ClusterSingletonManagerSettings(

@@ -309,7 +309,8 @@ Target "MultiNodeTests" <| fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "bin" @@ "core" @@ "Akka.MultiNodeTestRunner*")
     let multiNodeTestAssemblies = !! "src/**/bin/Release/Akka.Remote.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/Akka.Cluster.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll"
+                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Sharding.Tests.MultiNode.dll"
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -364,7 +365,7 @@ Target "NBench" <| fun _ ->
         let result = ExecProcess(fun info -> 
             info.FileName <- nbenchTestPath
             info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
-            info.Arguments <- args) (System.TimeSpan.FromMinutes 25.0) (* Reasonably long-running task. *)
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
         if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
     
     nbenchTestAssemblies |> Seq.iter (runNBench)

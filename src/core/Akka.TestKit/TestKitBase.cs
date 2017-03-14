@@ -446,7 +446,7 @@ namespace Akka.TestKit
         {
             var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
-            var testActor = system.ActorOf(testActorProps, name);
+            var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;
         }
 
