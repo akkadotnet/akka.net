@@ -142,19 +142,19 @@ namespace Akka.Actor
             return !s.StartsWith("$") && Validate(s.ToCharArray(), s.Length);
         }
 
+        private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
+        private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+
         private static bool Validate(IReadOnlyList<char> chars, int len)
         {
-            Func<char, bool> isValidChar = c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
-            Func<char, bool> isHexChar = c => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
-
             var pos = 0;
             while (pos < len)
             {
-                if (isValidChar(chars[pos]))
+                if (IsValidChar(chars[pos]))
                 {
                     pos = pos + 1;
                 }
-                else if (chars[pos] == '%' && pos + 2 < len && isHexChar(chars[pos + 1]) && isHexChar(chars[pos + 2]))
+                else if (chars[pos] == '%' && pos + 2 < len && IsHexChar(chars[pos + 1]) && IsHexChar(chars[pos + 2]))
                 {
                     pos = pos + 3;
                 }
@@ -265,20 +265,16 @@ namespace Akka.Actor
         /// 
         /// It's implemented in this class because we don't have an ActorPathExtractor equivalent.
         /// </summary>
-        public IReadOnlyList<string> ElementsWithUid
+        internal IReadOnlyList<string> ElementsWithUid
         {
             get
             {
-                var current = this;
-                var elements = new List<string>() { AppendUidFragment(current.Name) };
-                current = current.Parent;
-                while (!(current is RootActorPath || current == null))
-                {
-                    elements.Add(current.Name);
-                    current = current.Parent;
-                }
-                elements.Reverse();
-                return elements.AsReadOnly();
+                if(this is RootActorPath) return new []{""};
+                var elements = _elements.Value;
+                var elementsWithUid = new string[elements.Count];
+                elements.CopyTo(elementsWithUid, 0);
+                elementsWithUid[elementsWithUid.Length - 1] = AppendUidFragment(Name);
+                return elementsWithUid;
             }
         }
 

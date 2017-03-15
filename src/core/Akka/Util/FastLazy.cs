@@ -100,7 +100,7 @@ namespace Akka.Util
         private byte _created = 0;
         private byte _creating = 0;
         private T _createdValue;
-        private readonly S _state;
+        private S _state;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FastLazy{T}"/> class.
@@ -148,6 +148,7 @@ namespace Akka.Util
                     Volatile.Write(ref _creating, 1);
                     _createdValue = _producer(_state);
                     Volatile.Write(ref _created, 1);
+                    _state = default(S); // for reference types to make it suitable for gc
                 }
                 else
                 {
