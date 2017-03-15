@@ -2090,7 +2090,6 @@ namespace Akka.Configuration
         public virtual bool IsEmpty { get; }
         public Akka.Configuration.Hocon.HoconValue Root { get; }
         public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
-        [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__46))]
         public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
         protected Akka.Configuration.Config Copy(Akka.Configuration.Config fallback = null) { }
         public virtual bool GetBoolean(string path, bool default = False) { }
@@ -5145,7 +5144,6 @@ namespace Akka.Util.Internal
     {
         public static System.Collections.Generic.IDictionary<TKey, TValue> AddAndReturn<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
         public static void AddOrSet<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
-        public static System.Collections.Generic.IEnumerable<TOut> AlternateSelectMany<TIn, TOut>(this System.Collections.Generic.IEnumerable<TIn> self, System.Func<TIn, System.Collections.Generic.IEnumerable<TOut>> evenSelector, System.Func<TIn, System.Collections.Generic.IEnumerable<TOut>> oddSelector) { }
         public static T AsInstanceOf<T>(this object self) { }
         public static string BetweenDoubleQuotes(this string self) { }
         public static System.Collections.Generic.IEnumerable<T> Concat<T>(this System.Collections.Generic.IEnumerable<T> enumerable, T item) { }
