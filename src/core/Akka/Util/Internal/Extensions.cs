@@ -51,31 +51,35 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// Like selectMany, but alternates between two selectors (starting with even for item 0)
-        /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <param name="self">The input sequence</param>
-        /// <param name="evenSelector">The selector to use for items 0, 2, 4 etc.</param>
-        /// <param name="oddSelector">The selector to use for items 1, 3, 5 etc.</param>
-        /// <returns>TBD</returns>
-        public static IEnumerable<TOut> AlternateSelectMany<TIn, TOut>(this IEnumerable<TIn> self,
-            Func<TIn, IEnumerable<TOut>> evenSelector, Func<TIn, IEnumerable<TOut>> oddSelector)
-        {
-            return self.SelectMany((val, i) => i%2 == 0 ? evenSelector(val) : oddSelector(val));
-        }
-
-        /// <summary>
         /// Splits a 'dotted path' in its elements, honouring quotes (not splitting by dots between quotes)
         /// </summary>
         /// <param name="path">The input path</param>
         /// <returns>The path elements</returns>
         public static IEnumerable<string> SplitDottedPathHonouringQuotes(this string path)
         {
-            return path.Split('\"')
-                .AlternateSelectMany(
-                    outsideQuote => outsideQuote.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries),
-                    insideQuote => new[] { insideQuote });
+            var i = 0;
+            var j = 0;
+            while (true)
+            {
+                if (j > path.Length) yield break;
+                else if (path[j] == '\"')
+                {
+                    i = path.IndexOf('\"', j + 1);
+                    yield return path.Substring(j + 1, i - j - 1);
+                    j = i + 2;
+                }
+                else
+                {
+                    i = path.IndexOf('.', j);
+                    if (i == -1)
+                    {
+                        yield return path.Substring(j);
+                        yield break;
+                    }
+                    yield return path.Substring(j, i - j);
+                    j = i + 1;
+                }
+            }
         }
         /// <summary>
         /// TBD

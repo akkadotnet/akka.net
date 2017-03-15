@@ -27,7 +27,6 @@ namespace Akka.Cluster.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString("akka.cluster.auto-down-unreachable-after = 0s"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
         }
     }
@@ -55,7 +54,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
 
-            Within(TimeSpan.FromSeconds(30), () =>
+            Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
                 {
@@ -66,7 +65,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 RunOn(() =>
                 {
                     EnterBarrier("second-shutdown");
-                    MarkNodeAsUnavailable(GetAddress(_config.Second));
+                    // this test verifies that the removal is performed via the ExitingCompleted message,
+                    // otherwise we would have `MarkNodeAsUnavailable(second)` to trigger the FailureDetectorPuppet
 
                     // verify that the 'second' node is no longer part of the 'members'/'unreachable' set
                     AwaitAssert(() =>

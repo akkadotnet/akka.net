@@ -69,32 +69,6 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal class IllustrateGracefulShutdown : UntypedActor
-        {
-            private readonly Cluster _cluster;
-            private readonly IActorRef _region;
-            public IllustrateGracefulShutdown()
-            {
-                _cluster = Cluster.Get(Context.System);
-                _region = ClusterSharding.Get(Context.System).ShardRegion("Entity");
-            }
-
-            protected override void OnReceive(object message)
-            {
-                Terminated terminated;
-                if (message.Equals("leave"))
-                {
-                    Context.Watch(_region);
-                    _region.Tell(GracefulShutdown.Instance);
-                }
-                else if ((terminated = message as Terminated) != null && terminated.ActorRef.Equals(_region))
-                {
-                    //_cluster.RegisterOnMemberRemoved(() => Context.System.Shutdown());
-                    _cluster.Leave(_cluster.SelfAddress);
-                }
-            }
-        }
-
         internal IdExtractor extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
 
         internal ShardResolver extractShardId = message => message is int ? message.ToString() : null;

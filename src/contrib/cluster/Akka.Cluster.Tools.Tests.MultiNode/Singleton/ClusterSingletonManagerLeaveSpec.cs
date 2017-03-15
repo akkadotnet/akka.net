@@ -156,8 +156,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
+                var t = TestActor;
+                Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
                 ExpectMsg("stop", 10.Seconds());
                 ExpectMsg("postStop");
+                // CoordinatedShutdown makes sure that singleton actors are
+                // stopped before Cluster shutdown
+                ExpectMsg("MemberRemoved");
             }, _config.First);
             EnterBarrier("first-stopped");
 
@@ -189,8 +194,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
+                var t = TestActor;
+                Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
+                Cluster.Leave(Node(_config.Second).Address);
                 ExpectMsg("stop", 15.Seconds());
                 ExpectMsg("postStop");
+                ExpectMsg("MemberRemoved");
             }, _config.Second);
             EnterBarrier("second-stopped");
 
@@ -207,9 +216,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
-                // TODO: this slould be 5 seconds, like Scala
+                var t = TestActor;
+                Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
                 ExpectMsg("stop", 10.Seconds());
                 ExpectMsg("postStop");
+                ExpectMsg("MemberRemoved");
             }, _config.Third);
             EnterBarrier("third-stopped");
         }

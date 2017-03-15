@@ -488,6 +488,32 @@ namespace Akka.Actor
         public override int CompareTo(Akka.Actor.ActorPath other) { }
         public override Akka.Actor.ActorPath WithUid(long uid) { }
     }
+    public sealed class CoordinatedShutdown : Akka.Actor.IExtension
+    {
+        public const string PhaseActorSystemTerminate = "actor-system-terminate";
+        public const string PhaseBeforeActorSystemTerminate = "before-actor-system-terminate";
+        public const string PhaseBeforeClusterShutdown = "before-cluster-shutdown";
+        public const string PhaseBeforeServiceUnbind = "before-service-unbind";
+        public const string PhaseClusterExiting = "cluster-exiting";
+        public const string PhaseClusterExitingDone = "cluster-exiting-done";
+        public const string PhaseClusterLeave = "cluster-leave";
+        public const string PhaseClusterShardingShutdownRegion = "cluster-sharding-shutdown-region";
+        public const string PhaseClusterShutdown = "cluster-shutdown";
+        public const string PhaseServiceRequestsDone = "service-requests-done";
+        public const string PhaseServiceStop = "service-stop";
+        public const string PhaseServiceUnbind = "service-unbind";
+        public Akka.Actor.ExtendedActorSystem System { get; }
+        public System.TimeSpan TotalTimeout { get; }
+        public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<Akka.Done>> task) { }
+        public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
+        public System.Threading.Tasks.Task<Akka.Done> Run(string fromPhase = null) { }
+        public System.TimeSpan Timeout(string phase) { }
+    }
+    public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
+    {
+        public CoordinatedShutdownExtension() { }
+        public override Akka.Actor.CoordinatedShutdown CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
     public class DateTimeOffsetNowTimeProvider : Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider
     {
         public System.TimeSpan HighResMonotonicClock { get; }
@@ -2029,6 +2055,10 @@ namespace Akka
         public Akka.Case<T> With<TMessage>(System.Func<T> function) { }
         public Akka.Case<T> With<TMessage>(System.Func<TMessage, T> function) { }
     }
+    public sealed class Done
+    {
+        public static readonly Akka.Done Instance;
+    }
     public interface IMatchResult
     {
         bool WasHandled { get; }
@@ -2060,7 +2090,6 @@ namespace Akka.Configuration
         public virtual bool IsEmpty { get; }
         public Akka.Configuration.Hocon.HoconValue Root { get; }
         public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
-        [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__46))]
         public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
         protected Akka.Configuration.Config Copy(Akka.Configuration.Config fallback = null) { }
         public virtual bool GetBoolean(string path, bool default = False) { }
@@ -3801,6 +3830,10 @@ namespace Akka.Pattern
         public void WithSyncCircuitBreaker(System.Action body) { }
         public T WithSyncCircuitBreaker<T>(System.Func<T> body) { }
     }
+    public class static FutureTimeoutSupport
+    {
+        public static System.Threading.Tasks.Task<T> After<T>(System.TimeSpan duration, Akka.Actor.IScheduler scheduler, System.Func<System.Threading.Tasks.Task<T>> value) { }
+    }
     public interface IBackoffReset { }
     public class IllegalStateException : Akka.Actor.AkkaException
     {
@@ -5111,7 +5144,6 @@ namespace Akka.Util.Internal
     {
         public static System.Collections.Generic.IDictionary<TKey, TValue> AddAndReturn<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
         public static void AddOrSet<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
-        public static System.Collections.Generic.IEnumerable<TOut> AlternateSelectMany<TIn, TOut>(this System.Collections.Generic.IEnumerable<TIn> self, System.Func<TIn, System.Collections.Generic.IEnumerable<TOut>> evenSelector, System.Func<TIn, System.Collections.Generic.IEnumerable<TOut>> oddSelector) { }
         public static T AsInstanceOf<T>(this object self) { }
         public static string BetweenDoubleQuotes(this string self) { }
         public static System.Collections.Generic.IEnumerable<T> Concat<T>(this System.Collections.Generic.IEnumerable<T> enumerable, T item) { }

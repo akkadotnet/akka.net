@@ -105,10 +105,11 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Specifies the akka.cluster.role of the nodes on which the targeted
+        /// singleton can run.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="role">The role name.</param>
+        /// <returns>The updated settings.</returns>
         public ClusterSingletonProxySettings WithRole(string role)
         {
             return new ClusterSingletonProxySettings(
