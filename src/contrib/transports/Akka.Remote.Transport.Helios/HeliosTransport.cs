@@ -340,7 +340,7 @@ namespace Akka.Remote.Transport.Helios
 
             try
             {
-                var newServerChannel = await NewServer(listenAddress);
+                var newServerChannel = await NewServer(listenAddress).ConfigureAwait(false);
 
 
                 // Block reads until a handler actor is registered
@@ -369,7 +369,7 @@ namespace Akka.Remote.Transport.Helios
                 Log.Error(ex, "Failed to bind to {0}; shutting down Helios transport.", listenAddress);
                 try
                 {
-                    await Shutdown();
+                    await Shutdown().ConfigureAwait(false);
                 }
                 catch
                 {
@@ -384,12 +384,12 @@ namespace Akka.Remote.Transport.Helios
         /// </summary>
         /// <param name="remoteAddress">TBD</param>
         /// <returns>TBD</returns>
-        public override async Task<AssociationHandle> Associate(Address remoteAddress)
+        public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
             if (!ServerChannel.IsOpen)
                 throw new HeliosConnectionException(ExceptionType.NotOpen, "Transport is not open");
 
-            return await AssociateInternal(remoteAddress);
+            return AssociateInternal(remoteAddress);
         }
 
         /// <summary>
@@ -406,10 +406,10 @@ namespace Akka.Remote.Transport.Helios
                     tasks.Add(channel.CloseAsync());
                 }
                 var all = Task.WhenAll(tasks);
-                await all;
+                await all.ConfigureAwait(false);
 
                 var server = ServerChannel?.CloseAsync() ?? TaskEx.Completed;
-                await server;
+                await server.ConfigureAwait(false);
 
                 return all.IsCompleted && server.IsCompleted;
             }

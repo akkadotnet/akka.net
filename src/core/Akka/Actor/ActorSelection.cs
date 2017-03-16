@@ -123,7 +123,7 @@ namespace Akka.Actor
         {
             try
             {
-                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout);
+                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout).ConfigureAwait(false);
                 if(identity.Subject == null)
                     throw new ActorNotFoundException("subject was null");
 

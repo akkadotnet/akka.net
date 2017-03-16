@@ -19,6 +19,7 @@ using Akka.Util.Internal;
 using Google.ProtocolBuffers;
 using Xunit;
 using Xunit.Abstractions;
+using Nito.AsyncEx;
 
 namespace Akka.Remote.Tests
 {
@@ -162,6 +163,28 @@ namespace Akka.Remote.Tests
             var msg = await here.Ask<Tuple<string, IActorRef>>("ping", TimeSpan.FromSeconds(1.5));
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
+        }
+
+        [Fact]
+        public void Resolve_does_not_deadlock()
+        {
+            // here is really an ActorSelection
+            var actorSelection = (ActorSelection)here;
+            var actorRef = actorSelection.ResolveOne(TimeSpan.FromSeconds(10)).Result;
+            // the only test is that the ResolveOne works, so if we got here, the test passes
+        }
+
+        [Fact]
+        public void Resolve_does_not_deadlock_GuiApplication()
+        {
+            AsyncContext.Run(() =>
+            {
+                // here is really an ActorSelection
+                var actorSelection = (ActorSelection)here;
+                var actorRef = actorSelection.ResolveOne(TimeSpan.FromSeconds(10)).Result;
+                // the only test is that the ResolveOne works, so if we got here, the test passes
+                return Task.Delay(0);
+            });
         }
 
         [Fact]
