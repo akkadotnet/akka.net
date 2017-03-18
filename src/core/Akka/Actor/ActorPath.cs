@@ -207,6 +207,14 @@ namespace Akka.Actor
         private static readonly string[] _systemElements = { "system" };
         private static readonly string[] _userElements = { "user" };
 
+        /// <summary>
+        /// This method pursuits optimization goals mostly in terms of allocations.
+        /// We're computing elements chain only once and storing it in <see cref="_elements" />.
+        /// Computed chain meant to be reused not only by calls to <see cref="Elements" /> 
+        /// but also during chain computation of children actors.
+        /// </summary>
+        /// <param name="actorPath"></param>
+        /// <returns></returns>
         private static IList<string> FillElements(ActorPath actorPath)
         {
             // fast path next three `if`
@@ -220,6 +228,7 @@ namespace Akka.Actor
                     return _userElements;
                 return new [] {actorPath.Name};
             }
+            // if our direct parent has computed chain we can skip list (for intermediate results) creation and resizing
             if (actorPath.Parent._elements.IsValueCreated)
             {
                 var parentElems = actorPath.Parent._elements.Value;
@@ -229,15 +238,18 @@ namespace Akka.Actor
                 return myElems;
             }
 
+            // walking from `this` instance upto root actor
             var current = actorPath;
             var elements = new List<string>();
             while (!(current is RootActorPath))
             {
+                // there may be already computed elements chain for some of our parents, so reuse it!
                 if (current._elements.IsValueCreated)
                 {
                     var parentElems = current._elements.Value;
                     var myElems = new string[parentElems.Count + elements.Count];
                     parentElems.CopyTo(myElems, 0);
+                    // parent's chain already in order, we need to reverse values collected so far
                     for (int i = elements.Count - 1; i >= 0; i--)
                     {
                         myElems[parentElems.Count + (elements.Count - 1 - i)] = elements[i];
@@ -247,6 +259,7 @@ namespace Akka.Actor
                 elements.Add(current.Name);
                 current = current.Parent;
             }
+            // none of our parents have computed chain (no calls to Elements issued)
             elements.Reverse();
             return elements;
         }
