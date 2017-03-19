@@ -219,7 +219,6 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Streams.TestKit"
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.TestKit"
-      "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
       "contrib/serializers/Akka.Serialization.Wire" 
       "contrib/serializers/Akka.Serialization.Hyperion"
