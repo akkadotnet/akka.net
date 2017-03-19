@@ -120,7 +120,7 @@ namespace Akka.Actor
                 .GetWatchedBy()
                 .ToList();
 
-            if (!watchedBy.Any()) return;
+            if (watchedBy.Count == 0) return;
             try
             {
                 // Don't need to send to parent parent since it receives a DWN by default

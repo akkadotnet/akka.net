@@ -36,7 +36,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static IEnumerable<T> Drop<T>(this IEnumerable<T> self, int count)
         {
-            return self.Skip(count).ToList();
+            return self.Skip(count);
         }
 
         /// <summary>

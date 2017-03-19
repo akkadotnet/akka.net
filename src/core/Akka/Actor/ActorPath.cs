@@ -7,7 +7,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Linq;
+using Akka.Actor.Dsl;
 using Akka.Util;
 using Newtonsoft.Json;
 using static System.String;
@@ -139,19 +142,19 @@ namespace Akka.Actor
             return !s.StartsWith("$") && Validate(s.ToCharArray(), s.Length);
         }
 
+        private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
+        private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+
         private static bool Validate(IReadOnlyList<char> chars, int len)
         {
-            Func<char, bool> isValidChar = c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
-            Func<char, bool> isHexChar = c => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
-
             var pos = 0;
             while (pos < len)
             {
-                if (isValidChar(chars[pos]))
+                if (IsValidChar(chars[pos]))
                 {
                     pos = pos + 1;
                 }
-                else if (chars[pos] == '%' && pos + 2 < len && isHexChar(chars[pos + 1]) && isHexChar(chars[pos + 2]))
+                else if (chars[pos] == '%' && pos + 2 < len && IsHexChar(chars[pos + 1]) && IsHexChar(chars[pos + 2]))
                 {
                     pos = pos + 3;
                 }
@@ -163,6 +166,9 @@ namespace Akka.Actor
             return true;
         }
 
+        private static readonly Func<ActorPath, IList<string>> FillElementsFunc =
+            actorPath => FillElements(actorPath);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
@@ -172,6 +178,7 @@ namespace Akka.Actor
         {
             Name = name;
             Address = address;
+            _elements = new FastLazy<ActorPath, IList<string>>(FillElementsFunc, this);
         }
 
         /// <summary>
@@ -185,6 +192,7 @@ namespace Akka.Actor
             Address = parentPath.Address;
             Uid = uid;
             Name = name;
+            _elements = new FastLazy<ActorPath, IList<string>>(FillElementsFunc, this);
         }
 
         /// <summary>
@@ -192,26 +200,75 @@ namespace Akka.Actor
         /// </summary>
         /// <value> The uid. </value>
         public long Uid { get; }
+        
+        private readonly FastLazy<ActorPath, IList<string>> _elements;
+
+        private static readonly string[] _emptyElements = { };
+        private static readonly string[] _systemElements = { "system" };
+        private static readonly string[] _userElements = { "user" };
+
+        /// <summary>
+        /// This method pursuits optimization goals mostly in terms of allocations.
+        /// We're computing elements chain only once and storing it in <see cref="_elements" />.
+        /// Computed chain meant to be reused not only by calls to <see cref="Elements" /> 
+        /// but also during chain computation of children actors.
+        /// </summary>
+        /// <param name="actorPath"></param>
+        /// <returns></returns>
+        private static IList<string> FillElements(ActorPath actorPath)
+        {
+            // fast path next three `if`
+            if(actorPath is RootActorPath)
+                return _emptyElements;
+            if (actorPath.Parent is RootActorPath)
+            {
+                if (actorPath.Name.Equals("system", StringComparison.Ordinal))
+                    return _systemElements;
+                if (actorPath.Name.Equals("user", StringComparison.Ordinal))
+                    return _userElements;
+                return new [] {actorPath.Name};
+            }
+            // if our direct parent has computed chain we can skip list (for intermediate results) creation and resizing
+            if (actorPath.Parent._elements.IsValueCreated)
+            {
+                var parentElems = actorPath.Parent._elements.Value;
+                var myElems = new string[parentElems.Count + 1];
+                parentElems.CopyTo(myElems, 0);
+                myElems[myElems.Length - 1] = actorPath.Name;
+                return myElems;
+            }
+
+            // walking from `this` instance upto root actor
+            var current = actorPath;
+            var elements = new List<string>();
+            while (!(current is RootActorPath))
+            {
+                // there may be already computed elements chain for some of our parents, so reuse it!
+                if (current._elements.IsValueCreated)
+                {
+                    var parentElems = current._elements.Value;
+                    var myElems = new string[parentElems.Count + elements.Count];
+                    parentElems.CopyTo(myElems, 0);
+                    // parent's chain already in order, we need to reverse values collected so far
+                    for (int i = elements.Count - 1; i >= 0; i--)
+                    {
+                        myElems[parentElems.Count + (elements.Count - 1 - i)] = elements[i];
+                    }
+                    return myElems;
+                }
+                elements.Add(current.Name);
+                current = current.Parent;
+            }
+            // none of our parents have computed chain (no calls to Elements issued)
+            elements.Reverse();
+            return elements;
+        }
 
         /// <summary>
         /// Gets the elements.
         /// </summary>
         /// <value> The elements. </value>
-        public IReadOnlyList<string> Elements
-        {
-            get
-            {
-                var current = this;
-                var elements = new List<string>();
-                while (!(current is RootActorPath))
-                {
-                    elements.Add(current.Name);
-                    current = current.Parent;
-                }
-                elements.Reverse();
-                return elements.AsReadOnly();
-            }
-        }
+        public IReadOnlyList<string> Elements => new ReadOnlyCollection<string>(_elements.Value);
 
         /// <summary>
         /// INTERNAL API.
@@ -221,20 +278,16 @@ namespace Akka.Actor
         /// 
         /// It's implemented in this class because we don't have an ActorPathExtractor equivalent.
         /// </summary>
-        public IReadOnlyList<string> ElementsWithUid
+        internal IReadOnlyList<string> ElementsWithUid
         {
             get
             {
-                var current = this;
-                var elements = new List<string>() { AppendUidFragment(current.Name) };
-                current = current.Parent;
-                while (!(current is RootActorPath || current == null))
-                {
-                    elements.Add(current.Name);
-                    current = current.Parent;
-                }
-                elements.Reverse();
-                return elements.AsReadOnly();
+                if(this is RootActorPath) return new []{""};
+                var elements = _elements.Value;
+                var elementsWithUid = new string[elements.Count];
+                elements.CopyTo(elementsWithUid, 0);
+                elementsWithUid[elementsWithUid.Length - 1] = AppendUidFragment(Name);
+                return elementsWithUid;
             }
         }
 
@@ -548,7 +601,7 @@ namespace Akka.Actor
             if (Uid == ActorCell.UndefinedUid)
                 return withAddress;
 
-            return withAddress + "#" + Uid;
+            return String.Concat(withAddress, "#", Uid.ToString());
         }
         /// <summary>
         /// Generate String representation, replacing the Address in the RootActorPath
