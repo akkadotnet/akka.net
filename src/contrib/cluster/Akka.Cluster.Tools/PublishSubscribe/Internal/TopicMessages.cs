@@ -24,7 +24,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Prune Instance = new Prune();
+        public static Prune Instance { get; } = new Prune();
         private Prune() { }
     }
 
@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Count Instance = new Count();
+        public static Count Instance { get; } = new Count();
         private Count() { }
     }
 
@@ -340,7 +340,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GossipTick Instance = new GossipTick();
+        public static GossipTick Instance { get; } = new GossipTick();
 
         private GossipTick() { }
     }
@@ -463,7 +463,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static NoMoreSubscribers Instance = new NoMoreSubscribers();
+        public static NoMoreSubscribers Instance { get; } = new NoMoreSubscribers();
         private NoMoreSubscribers() {}
     }
 
@@ -476,7 +476,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static TerminateRequest Instance = new TerminateRequest();
+        public static TerminateRequest Instance { get; } = new TerminateRequest();
         private TerminateRequest() {}
     }
 
@@ -490,7 +490,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static NewSubscriberArrived Instance = new NewSubscriberArrived();
+        public static NewSubscriberArrived Instance { get; } = new NewSubscriberArrived();
         private NewSubscriberArrived() { }
     }
 

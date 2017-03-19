@@ -35,7 +35,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetNext Instance = new GetNext();
+            public static GetNext Instance { get; } = new GetNext();
             private GetNext() { }
         }
 
@@ -48,7 +48,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly UniqueAddress Oldest;
+            public UniqueAddress Oldest { get; }
 
             /// <summary>
             /// TBD
@@ -76,7 +76,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly UniqueAddress Oldest;
+            public UniqueAddress Oldest { get; }
 
             /// <summary>
             /// TBD

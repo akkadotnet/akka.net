@@ -32,7 +32,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly HandOverToMe Instance = new HandOverToMe();
+        public static HandOverToMe Instance { get; } = new HandOverToMe();
         private HandOverToMe() { }
     }
 
@@ -45,7 +45,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly HandOverInProgress Instance = new HandOverInProgress();
+        public static HandOverInProgress Instance { get; } = new HandOverInProgress();
         private HandOverInProgress() { }
     }
 
@@ -58,7 +58,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly HandOverDone Instance = new HandOverDone();
+        public static HandOverDone Instance { get; } = new HandOverDone();
         private HandOverDone() { }
     }
 
@@ -71,7 +71,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly TakeOverFromMe Instance = new TakeOverFromMe();
+        public static TakeOverFromMe Instance { get; } = new TakeOverFromMe();
         private TakeOverFromMe() { }
     }
 
@@ -84,7 +84,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Cleanup Instance = new Cleanup();
+        public static Cleanup Instance { get; } = new Cleanup();
         private Cleanup() { }
     }
 
@@ -97,7 +97,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly StartOldestChangedBuffer Instance = new StartOldestChangedBuffer();
+        public static StartOldestChangedBuffer Instance { get; } = new StartOldestChangedBuffer();
         private StartOldestChangedBuffer() { }
     }
 
@@ -157,7 +157,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Uninitialized Instance = new Uninitialized();
+        public static Uninitialized Instance { get; } = new Uninitialized();
         private Uninitialized() { }
     }
 
@@ -170,7 +170,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly UniqueAddress Oldest;
+        public UniqueAddress Oldest { get; }
 
         /// <summary>
         /// TBD
@@ -191,7 +191,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly UniqueAddress PreviousOldest;
+        public UniqueAddress PreviousOldest { get; }
 
         /// <summary>
         /// TBD
@@ -218,6 +218,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// TBD
         /// </summary>
         public bool SingletonTerminated { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -249,7 +250,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly UniqueAddress NewOldest;
+        public UniqueAddress NewOldest { get; }
 
         /// <summary>
         /// TBD
@@ -324,7 +325,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly EndData Instance = new EndData();
+        public static EndData Instance { get; } = new EndData();
         private EndData() { }
     }
 
@@ -361,7 +362,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Singleton instance
         /// </summary>
-        public static readonly SelfExiting Instance = new SelfExiting();
+        public static SelfExiting Instance { get; } = new SelfExiting();
     }
 
     /// <summary>

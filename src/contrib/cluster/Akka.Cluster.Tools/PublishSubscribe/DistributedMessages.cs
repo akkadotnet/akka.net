@@ -143,10 +143,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// TBD
         /// </summary>
         public string Topic { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
         public string Group { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -227,10 +229,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// TBD
         /// </summary>
         public string Topic { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
         public string Group { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -595,10 +599,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// TBD
         /// </summary>
         public string Path { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
         public object Message { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -669,43 +675,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class GetTopics : IEquatable<GetTopics>
+    public sealed class GetTopics
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetTopics Instance = new GetTopics();
+        public static GetTopics Instance { get; } = new GetTopics();
         private GetTopics() { }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
-        public bool Equals(GetTopics other)
-        {
-            if (other == null) return false;
-            return true;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as GetTopics);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "GetTopics<>";
-        }
     }
 
     /// <summary>

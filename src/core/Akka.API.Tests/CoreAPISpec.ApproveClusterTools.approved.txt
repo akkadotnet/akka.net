@@ -126,7 +126,7 @@ namespace Akka.Cluster.Tools.Client
     }
     public sealed class GetClusterClients
     {
-        public static readonly Akka.Cluster.Tools.Client.GetClusterClients Instance;
+        public static Akka.Cluster.Tools.Client.GetClusterClients Instance { get; }
     }
     public sealed class GetContactPoints : Akka.Cluster.Tools.Client.IGetContactPoints
     {
@@ -146,7 +146,7 @@ namespace Akka.Cluster.Tools.Client
     public interface IUnsubscribeContactPoints { }
     public sealed class SubscribeClusterClients
     {
-        public static readonly Akka.Cluster.Tools.Client.SubscribeClusterClients Instance;
+        public static Akka.Cluster.Tools.Client.SubscribeClusterClients Instance { get; }
     }
     public sealed class SubscribeContactPoints : Akka.Cluster.Tools.Client.ISubscribeContactPoints
     {
@@ -154,7 +154,7 @@ namespace Akka.Cluster.Tools.Client
     }
     public sealed class UnsubscribeClusterClients
     {
-        public static readonly Akka.Cluster.Tools.Client.UnsubscribeClusterClients Instance;
+        public static Akka.Cluster.Tools.Client.UnsubscribeClusterClients Instance { get; }
     }
     public sealed class UnsubscribeContactPoints : Akka.Cluster.Tools.Client.IUnsubscribeContactPoints
     {
@@ -210,12 +210,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRole(string role) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRoutingLogic(Akka.Routing.RoutingLogic routingLogic) { }
     }
-    public sealed class GetTopics : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.GetTopics>
+    public sealed class GetTopics
     {
-        public static readonly Akka.Cluster.Tools.PublishSubscribe.GetTopics Instance;
-        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.GetTopics other) { }
-        public override bool Equals(object obj) { }
-        public override string ToString() { }
+        public static Akka.Cluster.Tools.PublishSubscribe.GetTopics Instance { get; }
     }
     public interface IDistributedPubSubMessage { }
     public sealed class Publish : Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Publish>
