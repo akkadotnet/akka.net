@@ -67,7 +67,7 @@ namespace Akka.Util.Internal
                             listener.Invoke();
                         }
                     }
-                );
+                ).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace Akka.Util.Internal
             T result = default(T);
             try
             {
-                result = await task();
+                result = await task().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -128,7 +128,7 @@ namespace Akka.Util.Internal
 
             try
             {
-                await task();
+                await task().ConfigureAwait(false);
             }
             catch (Exception ex)
             {

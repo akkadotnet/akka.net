@@ -1103,7 +1103,7 @@ namespace Akka.Remote
         {
             try
             {
-                return new Handle(await Transport.Associate(RemoteAddress, _refuseUid));
+                return new Handle(await Transport.Associate(RemoteAddress, _refuseUid).ConfigureAwait(false));
             }
             catch (Exception e)
             {

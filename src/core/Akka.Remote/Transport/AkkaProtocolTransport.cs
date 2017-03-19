@@ -171,7 +171,7 @@ namespace Akka.Remote.Transport
 
             manager.Tell(new AssociateUnderlyingRefuseUid(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise, refuseUid));
 
-            return (AkkaProtocolHandle)await statusPromise.Task;
+            return (AkkaProtocolHandle)await statusPromise.Task.ConfigureAwait(false);
         }
 
         #region Static properties

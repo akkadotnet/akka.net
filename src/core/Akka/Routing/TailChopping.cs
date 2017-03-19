@@ -123,7 +123,7 @@ namespace Akka.Routing
                     try
                     {
 
-                        completion.TrySetResult(await ((Task<object>)_routees[currentIndex].Ask(message, _within)));
+                        completion.TrySetResult(await ((Task<object>)_routees[currentIndex].Ask(message, _within)).ConfigureAwait(false));
                     }
                     catch (TaskCanceledException)
                     {
