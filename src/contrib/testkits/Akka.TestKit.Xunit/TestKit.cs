@@ -7,7 +7,11 @@
 
 using System;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
+using Akka.Event;
+using Akka.TestKit.Xunit.Internals;
+using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit
 {
@@ -19,16 +23,20 @@ namespace Akka.TestKit.Xunit
         private static readonly XunitAssertions _assertions=new XunitAssertions();
         private bool _isDisposed; //Automatically initialized to false;
 
+        protected readonly ITestOutputHelper Output;
+
         /// <summary>
         /// Create a new instance of the <see cref="TestKit"/> for xUnit class.
         /// If no <paramref name="system"/> is passed in, a new system 
         /// with <see cref="DefaultConfig"/> will be created.
         /// </summary>
         /// <param name="system">Optional: The actor system.</param>
-        public TestKit(ActorSystem system = null)
+        /// <param name="output">TBD</param>
+        public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
             : base(_assertions, system)
         {
-            //Intentionally left blank
+            Output = output;
+            InitializeLogger(Sys);
         }
 
         /// <summary>
@@ -37,10 +45,12 @@ namespace Akka.TestKit.Xunit
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="actorSystemName">Optional: the name of the system. Default: "test"</param>
-        public TestKit(Config config, string actorSystemName=null)
+        /// <param name="output">TBD</param>
+        public TestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
             : base(_assertions, config, actorSystemName)
         {
-            //Intentionally left blank
+            Output = output;
+            InitializeLogger(Sys);
         }
 
 
@@ -49,9 +59,11 @@ namespace Akka.TestKit.Xunit
         /// A new system with the specified configuration will be created.
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
-        public TestKit(string config): base(_assertions, ConfigurationFactory.ParseString(config))
+        /// <param name="output">TBD</param>
+        public TestKit(string config, ITestOutputHelper output = null) : base(_assertions, ConfigurationFactory.ParseString(config))
         {
-            //Intentionally left blank
+            Output = output;
+            InitializeLogger(Sys);
         }
 
         /// <summary>
@@ -100,6 +112,15 @@ namespace Akka.TestKit.Xunit
             GC.SuppressFinalize(this);
         }
 
+        protected void InitializeLogger(ActorSystem system)
+        {
+            if (Output != null)
+            {
+                var extSystem = (ExtendedActorSystem)system;
+                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
+                logger.Tell(new InitializeLogger(system.EventStream));
+            }
+        }
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
         /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
