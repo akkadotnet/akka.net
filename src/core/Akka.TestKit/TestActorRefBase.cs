@@ -188,11 +188,11 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Compares a specified <see cref="TestActorRefBase{TActor}"/> to an <see cref="IActorRef"/> for equality.
         /// </summary>
-        /// <param name="testActorRef">TBD</param>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="testActorRef">The test actor used for comparison</param>
+        /// <param name="actorRef">The actor used for comparison</param>
+        /// <returns><c>true</c> if both actors are equal; otherwise <c>false</c></returns>
         public static bool operator ==(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
@@ -200,11 +200,11 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Compares a specified <see cref="TestActorRefBase{TActor}"/> to an <see cref="IActorRef"/> for inequality.
         /// </summary>
-        /// <param name="testActorRef">TBD</param>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="testActorRef">The test actor used for comparison</param>
+        /// <param name="actorRef">The actor used for comparison</param>
+        /// <returns><c>true</c> if both actors are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
@@ -212,11 +212,11 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Compares a specified <see cref="IActorRef"/> to an <see cref="TestActorRefBase{TActor}"/> for equality.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="testActorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor used for comparison</param>
+        /// <param name="testActorRef">The test actor used for comparison</param>
+        /// <returns><c>true</c> if both actors are equal; otherwise <c>false</c></returns>
         public static bool operator ==(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
@@ -224,11 +224,11 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Compares a specified <see cref="IActorRef"/> to an <see cref="TestActorRefBase{TActor}"/> for inequality.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="testActorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor used for comparison</param>
+        /// <param name="testActorRef">The test actor used for comparison</param>
+        /// <returns><c>true</c> if both actors are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);

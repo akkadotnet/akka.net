@@ -784,10 +784,12 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -796,9 +798,11 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -812,22 +816,22 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified <see cref="TokenBucket"/> for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first <see cref="TokenBucket"/> used for comparison</param>
+        /// <param name="right">The second <see cref="TokenBucket"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="TokenBucket">TokenBuckets</see> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(TokenBucket left, TokenBucket right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified <see cref="TokenBucket"/> for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first <see cref="TokenBucket"/> used for comparison</param>
+        /// <param name="right">The second <see cref="TokenBucket"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="TokenBucket">TokenBuckets</see> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(TokenBucket left, TokenBucket right)
         {
             return !Equals(left, right);
@@ -875,10 +879,12 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -887,9 +893,11 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -902,22 +910,22 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified <see cref="SetThrottle"/> for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first <see cref="SetThrottle"/> used for comparison</param>
+        /// <param name="right">The second <see cref="SetThrottle"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="SetThrottle">SetThrottles</see> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(SetThrottle left, SetThrottle right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified <see cref="SetThrottle"/> for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first <see cref="SetThrottle"/> used for comparison</param>
+        /// <param name="right">The second <see cref="SetThrottle"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="SetThrottle">SetThrottles</see> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(SetThrottle left, SetThrottle right)
         {
             return !Equals(left, right);

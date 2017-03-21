@@ -122,26 +122,26 @@ namespace Akka.Persistence
     public sealed class RecoveryTimedOutException : AkkaException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RecoveryTimedOutException"/> class.
         /// </summary>
         public RecoveryTimedOutException()
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RecoveryTimedOutException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public RecoveryTimedOutException(string message, Exception cause = null) : base(message, cause)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RecoveryTimedOutException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         public RecoveryTimedOutException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
@@ -338,7 +338,7 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        protected static new IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
+        protected new static IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
     }
 
     /// <summary>

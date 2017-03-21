@@ -114,10 +114,10 @@ namespace Akka.DistributedData.Local
         }
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.Local.LocalGCounter" /> to <see cref="Akka.DistributedData.GCounter" />.
         /// </summary>
-        /// <param name="counter">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="counter">The counter to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator GCounter(LocalGCounter counter) => counter._crdt;
         /// <summary>
         /// TBD

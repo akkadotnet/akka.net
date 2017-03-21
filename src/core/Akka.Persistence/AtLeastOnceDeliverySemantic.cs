@@ -260,34 +260,34 @@ namespace Akka.Persistence
     public class MaxUnconfirmedMessagesExceededException : Exception
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
         /// </summary>
         public MaxUnconfirmedMessagesExceededException()
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public MaxUnconfirmedMessagesExceededException(string message) : base(message)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="innerException">TBD</param>
+        /// <param name="message">The error message that explains the reason for the exception.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public MaxUnconfirmedMessagesExceededException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
@@ -340,10 +340,10 @@ namespace Akka.Persistence
             }
 
             /// <summary>
-            /// TBD
+            /// Determines whether the specified delivery, is equal to this instance.
             /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="other">The delivery to compare.</param>
+            /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
             public bool Equals(Delivery other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -365,19 +365,23 @@ namespace Akka.Persistence
             }
 
             /// <summary>
-            /// TBD
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
             /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             public override bool Equals(object obj)
             {
                 return Equals(obj as Delivery);
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a hash code for this instance.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>
+            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            /// </returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -391,14 +395,14 @@ namespace Akka.Persistence
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a <see cref="System.String" /> that represents this instance.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>
+            /// A <see cref="System.String" /> that represents this instance.
+            /// </returns>
             public override string ToString()
             {
-                return string.Format("Delivery<dest: {0}, attempt: {1}, timestamp: {2}, message: {3}", Destination,
-                    Attempt,
-                    Timestamp, Message);
+                return $"Delivery<dest: {Destination}, attempt: {Attempt}, timestamp: {Timestamp}, message: {Message}";
             }
         }
 
@@ -418,10 +422,12 @@ namespace Akka.Persistence
             }
 
             /// <summary>
-            /// TBD
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
             /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             public override bool Equals(object obj)
             {
                 return obj is RedeliveryTick;

@@ -466,22 +466,22 @@ namespace Akka.Cluster
         #region operator overloads
 
         /// <summary>
-        /// TBD
+        /// Compares two specified unique addresses for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first unique address used for comparison</param>
+        /// <param name="right">The second unique address used for comparison</param>
+        /// <returns><c>true</c> if both unique addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(UniqueAddress left, UniqueAddress right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified unique addresses for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first unique address used for comparison</param>
+        /// <param name="right">The second unique address used for comparison</param>
+        /// <returns><c>true</c> if both unique addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(UniqueAddress left, UniqueAddress right)
         {
             return !Equals(left, right);

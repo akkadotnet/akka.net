@@ -181,7 +181,7 @@ namespace Akka.Streams
     public class BufferOverflowException : System.Exception
     {
         public BufferOverflowException(string message) { }
-        public BufferOverflowException(string message, System.Exception inner) { }
+        public BufferOverflowException(string message, System.Exception innerException) { }
         protected BufferOverflowException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class ClosedShape : Akka.Streams.Shape
