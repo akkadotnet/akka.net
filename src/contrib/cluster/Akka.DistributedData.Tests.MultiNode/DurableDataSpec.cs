@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.Remote.TestKit;
@@ -60,7 +61,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
     }
 
-    public abstract class DurableDataSpec : MultiNodeSpec
+    public abstract class DurableDataSpec : MultiNodeClusterSpec
     {
         public static Props TestDurableStoreProps(bool failLoad = false, bool failStore = false)
         {
@@ -83,7 +84,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         protected DurableDataSpec(DurableDataSpecConfig config) : base(config)
         {
             InitialParticipantsValueFactory = Roles.Count;
-            cluster = Cluster.Cluster.Get(Sys);
+            cluster = Akka.Cluster.Cluster.Get(Sys);
             writeTwo = new WriteTo(2, timeout);
             readTwo = new ReadFrom(2, timeout);
             first = config.First;
@@ -92,7 +93,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         protected override int InitialParticipantsValueFactory { get; }
 
-        [MultiNodeFact]
+        [MultiNodeFact(Skip = "FIXME")]
         public void DurableDataSpec_Tests()
         {
             Durable_CRDT_should_work_in_a_single_node_cluster();
@@ -248,7 +249,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 var sys1 = ActorSystem.Create("AdditionalSys", Sys.Settings.Config);
-                var cluster1 = Cluster.Cluster.Get(sys1);
+                var cluster1 = Akka.Cluster.Cluster.Get(sys1);
                 var addr = cluster1.SelfAddress;
                 try
                 {
@@ -291,13 +292,13 @@ namespace Akka.DistributedData.Tests.MultiNode
                 var sys2 = ActorSystem.Create("AdditionalSys", Sys.Settings.Config);
                 try
                 {
-                    Cluster.Cluster.Get(sys2).Join(addr);
+                    Akka.Cluster.Cluster.Get(sys2).Join(addr);
                     /* new TestKit(sys1) with ImplicitSender */
                     {
                         var r2 = NewReplicator(sys2);
 
                         // it should be possible to update while loading is in progress
-                        r2.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(Cluster.Cluster.Get(sys2))));
+                        r2.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(Akka.Cluster.Cluster.Get(sys2))));
                         ExpectMsg(new UpdateSuccess(keyB, null));
 
                         // wait until all loaded

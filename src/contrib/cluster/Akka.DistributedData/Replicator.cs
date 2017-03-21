@@ -266,6 +266,7 @@ namespace Akka.DistributedData
 
         private void ReceiveRead(string key)
         {
+            _log.Debug("Received read '{0}' from {1}", key, Sender);
             Sender.Tell(new ReadResult(GetData(key)));
         } 
 

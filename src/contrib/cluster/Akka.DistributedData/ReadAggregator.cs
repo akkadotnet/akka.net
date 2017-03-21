@@ -58,6 +58,7 @@ namespace Akka.DistributedData
             foreach (var n in PrimaryNodes)
             {
                 var replica = Replica(n);
+                Log.Debug("Sending {0} to primary replica {1}", _read, replica);
                 replica.Tell(_read);
             }
 

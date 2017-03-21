@@ -12,8 +12,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Cluster;
+using Akka.Cluster.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
+using FluentAssertions;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
@@ -39,7 +42,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
     }
 
-    public class ReplicatorSpec : MultiNodeSpec
+    public class ReplicatorSpec : MultiNodeClusterSpec
     {
         private readonly ReplicatorSpecConfig _config;
         private readonly Cluster.Cluster _cluster;
@@ -86,7 +89,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             _first = config.First;
             _second = config.Second;
             _third = config.Third;
-            _cluster = Cluster.Cluster.Get(Sys);
+            _cluster = Akka.Cluster.Cluster.Get(Sys);
             var settings = ReplicatorSettings.Create(Sys)
                 .WithGossipInterval(TimeSpan.FromSeconds(1.0))
                 .WithMaxDeltaElements(10);

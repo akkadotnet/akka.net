@@ -106,6 +106,10 @@
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\transports\Akka.Remote.Transport.Helios\Akka.Remote.Transport.Helios.csproj">
+      <Project>{29feaabc-e326-450a-9008-b5fcecf0115f}</Project>
+      <Name>Akka.Remote.Transport.Helios</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj">
       <Project>{26103500-0dfe-498d-8fcf-efe66bb4fd69}</Project>
       <Name>Akka.DistributedData.LightningDB</Name>
