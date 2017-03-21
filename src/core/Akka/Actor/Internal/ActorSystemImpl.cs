@@ -503,18 +503,6 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        ///     Stop this actor system. This will stop the guardian actor, which in turn
-        ///     will recursively stop all its child actors, then the system guardian
-        ///     (below which the logging actors reside) and the execute all registered
-        ///     termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
-        /// </summary>
-        [Obsolete("Use Terminate instead. This method will be removed in future versions")]
-        public override void Shutdown()
-        {
-            Terminate();
-        }
-
-        /// <summary>
         /// Terminates this actor system. This will stop the guardian actor, which in turn
         /// will recursively stop all its child actors, then the system guardian
         /// (below which the logging actors reside) and the execute all registered
@@ -529,52 +517,6 @@ namespace Akka.Actor.Internal
             Log.Debug("System shutdown initiated");
             _provider.Guardian.Stop();
             return WhenTerminated;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
-        public override Task TerminationTask { get { return _terminationCallbacks.TerminationTask; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public override void AwaitTermination()
-        {
-            AwaitTermination(Timeout.InfiniteTimeSpan, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public override bool AwaitTermination(TimeSpan timeout)
-        {
-            return AwaitTermination(timeout, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
-        public override bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken)
-        {
-            try
-            {
-                return WhenTerminated.Wait((int)timeout.TotalMilliseconds, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                //The cancellationToken was canceled.
-                return false;
-            }
         }
 
         /// <summary>

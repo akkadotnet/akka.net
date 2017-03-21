@@ -56,14 +56,6 @@ namespace Akka.Event
         void Info(string format, params object[] args);
 
         /// <summary>
-        /// Obsolete. Use <see cref="Warning"/> instead!
-        /// </summary>
-        /// <param name="format">N/A</param>
-        /// <param name="args">N/A</param>
-        [Obsolete("Use Warning instead!")]
-        void Warn(string format, params object[] args);
-
-        /// <summary>
         /// Logs a <see cref="LogLevel.WarningLevel"/> message.
         /// </summary>
         /// <param name="format">The message that is being logged.</param>

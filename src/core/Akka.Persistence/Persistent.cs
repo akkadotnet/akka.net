@@ -17,18 +17,6 @@ namespace Akka.Persistence
     /// <summary>
     /// TBD
     /// </summary>
-    [Obsolete("DeleteMessages will be removed.")]
-    public interface IWithPersistenceId
-    {
-        /// <summary>
-        /// Identifier of the persistent identity for which messages should be replayed.
-        /// </summary>
-        string PersistenceId { get; }
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
     public interface IPersistentIdentity
     {
         /// <summary>

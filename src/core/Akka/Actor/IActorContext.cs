@@ -96,25 +96,11 @@ namespace Akka.Actor
         void BecomeStacked(Receive receive);
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        void Become(Receive receive, bool discardOld = true);
-
-        /// <summary>
         /// Changes the actor's behavior and replaces the current receive handler with the previous one on the behavior stack.
         /// <remarks>In order to store an actor on the behavior stack, a call to <see cref="BecomeStacked"/> must have been made
         /// prior to this call</remarks>
         /// </summary>
         void UnbecomeStacked();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
-        void Unbecome();
 
         /// <summary>
         /// Retrieves a child actor with the specified name, if it exists.

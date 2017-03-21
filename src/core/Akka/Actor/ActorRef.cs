@@ -396,7 +396,7 @@ namespace Akka.Actor
         /// <summary>
         /// Indicates if the current actor reference is terminated.
         /// </summary>
-        [Obsolete("Use Context.Watch and Receive<Terminated>")]
+        [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         bool IsTerminated { get; }
 
         /// <summary>
@@ -441,7 +441,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The system message we're sending.</param>
         /// <param name="sender">The sender of the message. Not used.</param>
-        [Obsolete("Use SendSystemMessage(message)")]
+        [Obsolete("Use SendSystemMessage(message) [1.1.0]")]
         void SendSystemMessage(ISystemMessage message, IActorRef sender);
 
         /// <summary>
@@ -489,7 +489,7 @@ namespace Akka.Actor
         public abstract bool IsLocal { get; }
 
         /// <inheritdoc cref="IInternalActorRef"/>
-        [Obsolete("Use SendSystemMessage(message) instead")]
+        [Obsolete("Use SendSystemMessage(message) instead [1.1.0]")]
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             SendSystemMessage(message);
@@ -563,7 +563,7 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc cref="InternalActorRefBase"/>
-        [Obsolete("Use Context.Watch and Receive<Terminated>")]
+        [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get { return false; } }
     }
 

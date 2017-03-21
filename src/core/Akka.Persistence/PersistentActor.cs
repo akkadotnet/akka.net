@@ -315,21 +315,6 @@ namespace Akka.Persistence
         protected abstract void OnRecover(object message);
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        protected void Become(UntypedReceive receive, bool discardOld = true)
-        {
-            if (discardOld)
-                Context.Become(receive);
-            else
-                Context.BecomeStacked(receive);
-        }
-
-
-        /// <summary>
         /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
         /// </summary>
         /// <param name="receive">The new message handler.</param>
@@ -349,7 +334,6 @@ namespace Akka.Persistence
         {
             Context.BecomeStacked(receive);
         }
-
 
         /// <summary>
         /// TBD

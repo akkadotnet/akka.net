@@ -29,7 +29,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="acceptableHeartbeatPause">TBD</param>
         /// <param name="clock">TBD</param>
-        [Obsolete("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) instead. (1.1.2)")]
+        [Obsolete("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) instead. [1.1.2]")]
         public DeadlineFailureDetector(TimeSpan acceptableHeartbeatPause, Clock clock = null) 
             : this(acceptableHeartbeatPause, TimeSpan.Zero, clock)
         {

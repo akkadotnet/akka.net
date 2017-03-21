@@ -87,7 +87,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        [Obsolete("Used ChildrenRefs instead")]
+        [Obsolete("Used ChildrenRefs instead [1.1.0]")]
         IEnumerable<IInternalActorRef> GetChildren();    //TODO: Should be replaced by childrenRefs: ChildrenContainer
 
         /// <summary>

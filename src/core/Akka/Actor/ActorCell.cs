@@ -230,7 +230,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use TryGetChildStatsByName", true)]
+        [Obsolete("Use TryGetChildStatsByName [0.7.1]", true)]
         public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
             IInternalActorRef child;
@@ -296,22 +296,6 @@ namespace Akka.Actor
             _state = _state.BecomeStacked(receive);
         }
 
-
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        void IActorContext.Become(Receive receive, bool discardOld = true)
-        {
-            if(discardOld)
-                Become(receive);
-            else
-                BecomeStacked(receive);
-        }
-
-        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
-        void IActorContext.Unbecome()
-        {
-            UnbecomeStacked();
-        }
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -328,15 +312,6 @@ namespace Akka.Actor
         void IUntypedActorContext.BecomeStacked(UntypedReceive receive)
         {
             BecomeStacked(m => { receive(m); return true; });
-        }
-
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
-        {
-            if (discardOld)
-                Become(m => { receive(m); return true; });
-            else
-                BecomeStacked(m => { receive(m); return true; });
         }
 
         private long NewUid()

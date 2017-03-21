@@ -98,7 +98,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="partialFunc">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use RecoverWithRetries instead.")]
+        [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static IFlow<TOut, TMat> RecoverWith<TOut, TMat>(this IFlow<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {

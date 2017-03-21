@@ -205,7 +205,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Obsolete. Use <see cref="P:Cluster.DowningProvider.DownRemovalMargin"/>.
         /// </summary>
-        [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin")]
+        [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
         public TimeSpan DownRemovalMargin { get; }
 
         /// <summary>
