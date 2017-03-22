@@ -1059,7 +1059,7 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// TBD
             /// </summary>
-            public IReadOnlyCollection<object> Replies
+            public IReadOnlyList<object> Replies
             {
                 get
                 {

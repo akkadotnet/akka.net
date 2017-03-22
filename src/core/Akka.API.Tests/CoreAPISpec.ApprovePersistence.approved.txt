@@ -854,7 +854,7 @@ namespace Akka.Persistence.Fsm
             public System.Action<TData> AfterTransitionHandler { get; }
             public Akka.Util.ILinearSeq<TEvent> DomainEvents { get; }
             public bool Notifies { get; set; }
-            public System.Collections.Generic.IReadOnlyCollection<object> Replies { get; }
+            public System.Collections.Generic.IReadOnlyList<object> Replies { get; }
             public TData StateData { get; }
             public TState StateName { get; }
             public Akka.Actor.FSMBase.Reason StopReason { get; }
