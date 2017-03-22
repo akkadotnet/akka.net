@@ -201,14 +201,14 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Applies a delegate <paramref name="action" /> to all elements of this enumerable.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="enumerable">TBD</param>
-        /// <param name="action">TBD</param>
-        public static void ForEach<T>(this IEnumerable<T> enumerable, Action<T> action)
+        /// <typeparam name="T">The type of the elements of <paramref name="source" />.</typeparam>
+        /// <param name="source">An <see cref="T:System.Collections.Generic.IEnumerable`1" /> to iterate.</param>
+        /// <param name="action">The function that is applied for its side-effect to every element. The result of function <paramref name="action" /> is discarded.</param>
+        public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
-            foreach (var item in enumerable)
+            foreach (var item in source)
                 action(item);
         }
 
