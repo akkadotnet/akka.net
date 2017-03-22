@@ -27,6 +27,13 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -35,16 +42,34 @@ namespace Akka.Remote.TestKit
             return Equals((RoleName)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (_name != null ? _name.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="RoleName"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="RoleName"/> used for comparison</param>
+        /// <param name="right">The second <see cref="RoleName"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="RoleName"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(RoleName left, RoleName right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="RoleName"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="RoleName"/> used for comparison</param>
+        /// <param name="right">The second <see cref="RoleName"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="RoleName"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(RoleName left, RoleName right)
         {
             return !Equals(left, right);
@@ -55,9 +80,15 @@ namespace Akka.Remote.TestKit
             get { return _name; }
         }
 
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("RoleName({0})", _name);
+            return $"RoleName({_name})";
         }
     }
 
@@ -88,11 +119,25 @@ namespace Akka.Remote.TestKit
             get { return _msg; }
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="ToClient{T}" />, is equal to this instance.
+        /// </summary>
+        /// <param name="other">The <see cref="ToClient{T}" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="ToClient{T}" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         protected bool Equals(ToClient<T> other)
         {
             return EqualityComparer<T>.Default.Equals(_msg, other._msg);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -101,16 +146,34 @@ namespace Akka.Remote.TestKit
             return Equals((ToClient<T>)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return EqualityComparer<T>.Default.GetHashCode(_msg);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ToClient{T}"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ToClient{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ToClient{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ToClient{T}"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ToClient<T> left, ToClient<T> right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ToClient{T}"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ToClient{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ToClient{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ToClient{T}"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ToClient<T> left, ToClient<T> right)
         {
             return !Equals(left, right);
@@ -144,11 +207,25 @@ namespace Akka.Remote.TestKit
             get { return _msg; }
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="ToServer{T}" />, is equal to this instance.
+        /// </summary>
+        /// <param name="other">The <see cref="ToServer{T}" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="ToServer{T}" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         protected bool Equals(ToServer<T> other)
         {
             return EqualityComparer<T>.Default.Equals(_msg, other._msg);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -157,16 +234,34 @@ namespace Akka.Remote.TestKit
             return Equals((ToServer<T>)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return EqualityComparer<T>.Default.GetHashCode(_msg);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ToServer{T}"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ToServer{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ToServer{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ToServer{T}"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ToServer<T> left, ToServer<T> right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ToServer{T}"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ToServer{T}"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ToServer{T}"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ToServer{T}"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ToServer<T> left, ToServer<T> right)
         {
             return !Equals(left, right);
@@ -193,6 +288,13 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && Equals(_address, other._address);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -200,6 +302,12 @@ namespace Akka.Remote.TestKit
             return obj is Hello && Equals((Hello)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -208,11 +316,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Hello"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Hello"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Hello"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Hello"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Hello left, Hello right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Hello"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Hello"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Hello"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Hello"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Hello left, Hello right)
         {
             return !Equals(left, right);
@@ -251,6 +371,13 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && _timeout.Equals(other._timeout);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -258,6 +385,12 @@ namespace Akka.Remote.TestKit
             return obj is EnterBarrier && Equals((EnterBarrier)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -266,11 +399,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="EnterBarrier"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="EnterBarrier"/> used for comparison</param>
+        /// <param name="right">The second <see cref="EnterBarrier"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="EnterBarrier"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(EnterBarrier left, EnterBarrier right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="EnterBarrier"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="EnterBarrier"/> used for comparison</param>
+        /// <param name="right">The second <see cref="EnterBarrier"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="EnterBarrier"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(EnterBarrier left, EnterBarrier right)
         {
             return !Equals(left, right);
@@ -306,6 +451,13 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -313,16 +465,34 @@ namespace Akka.Remote.TestKit
             return obj is FailBarrier && Equals((FailBarrier)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (_name != null ? _name.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="FailBarrier"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="FailBarrier"/> used for comparison</param>
+        /// <param name="right">The second <see cref="FailBarrier"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="FailBarrier"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(FailBarrier left, FailBarrier right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="FailBarrier"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="FailBarrier"/> used for comparison</param>
+        /// <param name="right">The second <see cref="FailBarrier"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="FailBarrier"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(FailBarrier left, FailBarrier right)
         {
             return !Equals(left, right);
@@ -355,6 +525,13 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && _success.Equals(other._success);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -362,6 +539,12 @@ namespace Akka.Remote.TestKit
             return obj is BarrierResult && Equals((BarrierResult)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -370,11 +553,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="BarrierResult"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="BarrierResult"/> used for comparison</param>
+        /// <param name="right">The second <see cref="BarrierResult"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="BarrierResult"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(BarrierResult left, BarrierResult right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="BarrierResult"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="BarrierResult"/> used for comparison</param>
+        /// <param name="right">The second <see cref="BarrierResult"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="BarrierResult"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(BarrierResult left, BarrierResult right)
         {
             return !Equals(left, right);
@@ -421,6 +616,13 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_target, other._target) && Equals(_direction, other._direction) && _rateMBit.Equals(other._rateMBit);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -428,6 +630,12 @@ namespace Akka.Remote.TestKit
             return obj is Throttle && Equals((Throttle)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -440,11 +648,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Throttle"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Throttle"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Throttle"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Throttle"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Throttle left, Throttle right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Throttle"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Throttle"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Throttle"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Throttle"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Throttle left, Throttle right)
         {
             return !Equals(left, right);
@@ -484,6 +704,13 @@ namespace Akka.Remote.TestKit
             return Equals(_target, other._target) && Equals(_direction, other._direction) && _rateMBit.Equals(other._rateMBit);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -491,6 +718,12 @@ namespace Akka.Remote.TestKit
             return obj is ThrottleMsg && Equals((ThrottleMsg)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -502,11 +735,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ThrottleMsg"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ThrottleMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ThrottleMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ThrottleMsg"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ThrottleMsg left, ThrottleMsg right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="ThrottleMsg"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="ThrottleMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="ThrottleMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="ThrottleMsg"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ThrottleMsg left, ThrottleMsg right)
         {
             return !Equals(left, right);
@@ -546,6 +791,13 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_target, other._target) && _abort.Equals(other._abort);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -553,6 +805,12 @@ namespace Akka.Remote.TestKit
             return obj is Disconnect && Equals((Disconnect)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -564,11 +822,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Disconnect"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Disconnect"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Disconnect"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Disconnect"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Disconnect left, Disconnect right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Disconnect"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Disconnect"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Disconnect"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Disconnect"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Disconnect left, Disconnect right)
         {
             return !Equals(left, right);
@@ -601,6 +871,13 @@ namespace Akka.Remote.TestKit
             return Equals(_target, other._target) && _abort.Equals(other._abort);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -608,6 +885,12 @@ namespace Akka.Remote.TestKit
             return obj is DisconnectMsg && Equals((DisconnectMsg)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -616,11 +899,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="DisconnectMsg"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="DisconnectMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="DisconnectMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="DisconnectMsg"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(DisconnectMsg left, DisconnectMsg right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="DisconnectMsg"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="DisconnectMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="DisconnectMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="DisconnectMsg"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(DisconnectMsg left, DisconnectMsg right)
         {
             return !Equals(left, right);
@@ -653,6 +948,13 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_shutdownOrExit, other._shutdownOrExit);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -660,6 +962,12 @@ namespace Akka.Remote.TestKit
             return obj is Terminate && Equals((Terminate)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -668,11 +976,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Terminate"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Terminate"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Terminate"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Terminate"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Terminate left, Terminate right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Terminate"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Terminate"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Terminate"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Terminate"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Terminate left, Terminate right)
         {
             return !Equals(left, right);
@@ -698,6 +1018,13 @@ namespace Akka.Remote.TestKit
             return Equals(_shutdownOrExit, other._shutdownOrExit);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -705,16 +1032,34 @@ namespace Akka.Remote.TestKit
             return obj is TerminateMsg && Equals((TerminateMsg)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (_shutdownOrExit != null ? _shutdownOrExit.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="TerminateMsg"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="TerminateMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="TerminateMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="TerminateMsg"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(TerminateMsg left, TerminateMsg right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="TerminateMsg"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="TerminateMsg"/> used for comparison</param>
+        /// <param name="right">The second <see cref="TerminateMsg"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="TerminateMsg"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(TerminateMsg left, TerminateMsg right)
         {
             return !Equals(left, right);
@@ -740,6 +1085,13 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -747,16 +1099,34 @@ namespace Akka.Remote.TestKit
             return obj is GetAddress && Equals((GetAddress)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (_node != null ? _node.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="GetAddress"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="GetAddress"/> used for comparison</param>
+        /// <param name="right">The second <see cref="GetAddress"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="GetAddress"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(GetAddress left, GetAddress right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="GetAddress"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="GetAddress"/> used for comparison</param>
+        /// <param name="right">The second <see cref="GetAddress"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="GetAddress"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(GetAddress left, GetAddress right)
         {
             return !Equals(left, right);
@@ -789,6 +1159,13 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_addr, other._addr);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -796,6 +1173,12 @@ namespace Akka.Remote.TestKit
             return obj is AddressReply && Equals((AddressReply)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -804,11 +1187,23 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="AddressReply"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="AddressReply"/> used for comparison</param>
+        /// <param name="right">The second <see cref="AddressReply"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="AddressReply"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(AddressReply left, AddressReply right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="AddressReply"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="AddressReply"/> used for comparison</param>
+        /// <param name="right">The second <see cref="AddressReply"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="AddressReply"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(AddressReply left, AddressReply right)
         {
             return !Equals(left, right);
@@ -848,6 +1243,13 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -855,16 +1257,34 @@ namespace Akka.Remote.TestKit
             return obj is Remove && Equals((Remove)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (_node != null ? _node.GetHashCode() : 0);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Remove"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Remove"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Remove"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Remove"/> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Remove left, Remove right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="Remove"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="Remove"/> used for comparison</param>
+        /// <param name="right">The second <see cref="Remove"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="Remove"/> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Remove left, Remove right)
         {
             return !Equals(left, right);

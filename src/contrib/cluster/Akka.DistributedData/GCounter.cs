@@ -246,10 +246,10 @@ namespace Akka.DistributedData
         public override string ToString() => $"GCounter({Value})";
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.GCounter" /> to <see cref="System.Numerics.BigInteger" />.
         /// </summary>
-        /// <param name="counter">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="counter">The counter to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator BigInteger(GCounter counter) => counter.Value;
     }
 }

@@ -232,12 +232,14 @@ namespace Akka.Pattern
         }
 
         /// <summary>
-        /// Override for more descriptive toString
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("Closed with failure count = {0}", Current);
+            return $"Closed with failure count = {Current}";
         }
     }
 }

@@ -22,27 +22,33 @@ namespace Akka.TestKit
         private NullMessageEnvelope(){}
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <exception cref="IllegalActorStateException">TBD</exception>
+        /// <exception cref="IllegalActorStateException">
+        /// This exception is thrown automatically since this envelope does not contain a message.
+        /// </exception>
         public override object Message
         {
             get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <exception cref="IllegalActorStateException">TBD</exception>
+        /// <exception cref="IllegalActorStateException">
+        /// This exception is thrown automatically since this envelope does not have a sender.
+        /// </exception>
         public override IActorRef Sender
         {
             get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
             return "<null>";

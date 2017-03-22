@@ -43,20 +43,24 @@ namespace Akka.Actor
         /// </summary>
         public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
 
-        /// <summary>Creates a new system actor in the "/system" namespace. This actor 
+        /// <summary>
+        /// Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
-        /// terminated.</summary>
-        /// <param name="props">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// terminated.
+        /// </summary>
+        /// <param name="props">The <see cref="Props"/> used to create the actor</param>
+        /// <param name="name">The name of the actor to create. The default value is <see langword="null"/>.</param>
+        /// <returns>A reference to the newly created actor</returns>
         public abstract IActorRef SystemActorOf(Props props, string name = null);
 
-        /// <summary>Creates a new system actor in the "/system" namespace. This actor 
+        /// <summary>
+        /// Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
-        /// terminated.</summary>
-        /// <typeparam name="TActor">TBD</typeparam>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// terminated.
+        /// </summary>
+        /// <typeparam name="TActor">The type of actor to create</typeparam>
+        /// <param name="name">The name of the actor to create. The default value is <see langword="null"/>.</param>
+        /// <returns>A reference to the newly created actor</returns>
         public abstract IActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
 
         /// <summary>
@@ -87,4 +91,3 @@ namespace Akka.Actor
         //  private[akka] def printTree: String
     }
 }
-

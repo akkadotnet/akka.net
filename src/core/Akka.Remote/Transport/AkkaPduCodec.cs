@@ -20,19 +20,17 @@ namespace Akka.Remote.Transport
     internal class PduCodecException : AkkaException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PduCodecException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <returns>TBD</returns>
-        public PduCodecException(string msg, Exception cause = null) : base(msg, cause) { }
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
+        public PduCodecException(string message, Exception cause = null) : base(message, cause) { }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PduCodecException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected PduCodecException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {

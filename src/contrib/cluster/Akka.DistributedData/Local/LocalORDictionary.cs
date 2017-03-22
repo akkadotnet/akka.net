@@ -159,10 +159,10 @@ namespace Akka.DistributedData.Local
             new LocalORDictionary<TKey, TVal>(_currentNode, _crdt.Merge(dictionary));
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.Local.LocalORDictionary{TKey, TVal}" /> to <see cref="Akka.DistributedData.ORDictionary{TKey, TVal}" />.
         /// </summary>
-        /// <param name="set">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="set">The set to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator ORDictionary<TKey, TVal>(LocalORDictionary<TKey, TVal> set) => set._crdt;
     }
 }

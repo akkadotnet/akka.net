@@ -118,19 +118,23 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
             return _toString.Value;
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="Address" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="Address" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="Address" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(Address other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -139,16 +143,20 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj) => obj is Address && Equals((Address)obj);
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -162,71 +170,83 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new copy with the same properties as the current address.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new copy of the current address</returns>
         public object Clone()
         {
             return new Address(Protocol, System, Host, Port);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Address"/> with a given <paramref name="protocol"/>.
         /// </summary>
-        /// <param name="protocol">TBD</param>
-        /// <returns>TBD</returns>
+        /// <note>
+        /// This method is immutable and returns a new instance of the address.
+        /// </note>
+        /// <param name="protocol">The protocol used to configure the new address.</param>
+        /// <returns>A new address with the provided <paramref name="protocol" />.</returns>
         public Address WithProtocol(string protocol)
         {
             return new Address(protocol, System, Host, Port);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Address"/> with a given <paramref name="system"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <note>
+        /// This method is immutable and returns a new instance of the address.
+        /// </note>
+        /// <param name="system">The system used to configure the new address.</param>
+        /// <returns>A new address with the provided <paramref name="system" />.</returns>
         public Address WithSystem(string system)
         {
             return new Address(Protocol, system, Host, Port);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Address"/> with a given <paramref name="host"/>.
         /// </summary>
-        /// <param name="host">TBD</param>
-        /// <returns>TBD</returns>
+        /// <note>
+        /// This method is immutable and returns a new instance of the address.
+        /// </note>
+        /// <param name="host">The host used to configure the new address.</param>
+        /// <returns>A new address with the provided <paramref name="host" />.</returns>
         public Address WithHost(string host = null)
         {
             return new Address(Protocol, System, host, Port);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Address"/> with a given <paramref name="port"/>.
         /// </summary>
-        /// <param name="port">TBD</param>
-        /// <returns>TBD</returns>
+        /// <note>
+        /// This method is immutable and returns a new instance of the address.
+        /// </note>
+        /// <param name="port">The port used to configure the new address.</param>
+        /// <returns>A new address with the provided <paramref name="port" />.</returns>
         public Address WithPort(int? port = null)
         {
             return new Address(Protocol, System, Host, port);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified addresses for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first address used for comparison</param>
+        /// <param name="right">The second address used for comparison</param>
+        /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Address left, Address right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified addresses for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first address used for comparison</param>
+        /// <param name="right">The second address used for comparison</param>
+        /// <returns><c>true</c> if both addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Address left, Address right)
         {
             return !Equals(left, right);

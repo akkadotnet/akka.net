@@ -821,9 +821,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves an enumerator that iterates through the collection.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerator that can be used to iterate through the collection.</returns>
         public IEnumerator<T> GetEnumerator()
         {
             return new Enumerator(this);
@@ -835,13 +835,13 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="T[]"/> to <see cref="ArrayLinearSeq{T}"/>.
         /// </summary>
-        /// <param name="that">TBD</param>
-        /// <returns>TBD</returns>
-        public static implicit operator ArrayLinearSeq<T>(T[] that)
+        /// <param name="value">The array to convert</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator ArrayLinearSeq<T>(T[] value)
         {
-            return new ArrayLinearSeq<T>(that);
+            return new ArrayLinearSeq<T>(value);
         }
 
         private class Enumerator : IEnumerator<T>

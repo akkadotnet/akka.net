@@ -335,7 +335,7 @@ namespace Akka.Actor
         public abstract object GetExtension(Akka.Actor.IExtensionId extensionId);
         public abstract T GetExtension<T>()
             where T :  class, Akka.Actor.IExtension;
-        public abstract bool HasExtension(System.Type t);
+        public abstract bool HasExtension(System.Type type);
         public abstract bool HasExtension<T>()
             where T :  class, Akka.Actor.IExtension;
         public abstract object RegisterExtension(Akka.Actor.IExtensionId extension);
@@ -1800,7 +1800,7 @@ namespace Akka.Actor.Internal
         public override object GetExtension(Akka.Actor.IExtensionId extensionId) { }
         public override T GetExtension<T>()
             where T :  class, Akka.Actor.IExtension { }
-        public override bool HasExtension(System.Type t) { }
+        public override bool HasExtension(System.Type type) { }
         public override bool HasExtension<T>()
             where T :  class, Akka.Actor.IExtension { }
         public override object RegisterExtension(Akka.Actor.IExtensionId extension) { }

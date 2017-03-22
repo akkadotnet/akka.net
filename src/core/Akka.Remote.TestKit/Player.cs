@@ -195,11 +195,25 @@ namespace Akka.Remote.TestKit
                 _runningOp = runningOp;
             }
 
+            /// <summary>
+            /// Determines whether the specified <see cref="Data" />, is equal to this instance.
+            /// </summary>
+            /// <param name="other">The <see cref="Data" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="Data" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             protected bool Equals(Data other)
             {
                 return Equals(_channel, other._channel) && Equals(_runningOp, other._runningOp);
             }
 
+            /// <summary>
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+            /// </summary>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -208,6 +222,12 @@ namespace Akka.Remote.TestKit
                 return Equals((Data) obj);
             }
 
+            /// <summary>
+            /// Returns a hash code for this instance.
+            /// </summary>
+            /// <returns>
+            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            /// </returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -217,11 +237,23 @@ namespace Akka.Remote.TestKit
                 }
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Data"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Data"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Data"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Data"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(Data left, Data right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Data"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Data"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Data"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Data"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(Data left, Data right)
             {
                 return !Equals(left, right);
@@ -248,6 +280,13 @@ namespace Akka.Remote.TestKit
                 return Equals(_channel, other._channel);
             }
 
+            /// <summary>
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+            /// </summary>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -256,16 +295,34 @@ namespace Akka.Remote.TestKit
                 return Equals((Connected) obj);
             }
 
+            /// <summary>
+            /// Returns a hash code for this instance.
+            /// </summary>
+            /// <returns>
+            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            /// </returns>
             public override int GetHashCode()
             {
                 return (_channel != null ? _channel.GetHashCode() : 0);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Connected"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Connected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Connected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Connected"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(Connected left, Connected right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="Connected"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="Connected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="Connected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="Connected"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(Connected left, Connected right)
             {
                 return !Equals(left, right);
