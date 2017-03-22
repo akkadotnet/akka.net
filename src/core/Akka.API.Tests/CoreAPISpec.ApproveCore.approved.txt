@@ -798,8 +798,8 @@ namespace Akka.Actor
         }
         public class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
         {
-            public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyCollection<object> replies = null, bool notifies = True) { }
-            public System.Collections.Generic.IReadOnlyCollection<object> Replies { get; set; }
+            public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, bool notifies = True) { }
+            public System.Collections.Generic.IReadOnlyList<object> Replies { get; set; }
             public TD StateData { get; }
             public TS StateName { get; }
             public Akka.Actor.FSMBase.Reason StopReason { get; }
