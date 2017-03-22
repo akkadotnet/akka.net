@@ -74,33 +74,36 @@ namespace Akka.Remote
 
         #region Operators / Equality
 
+
         /// <summary>
-        /// TBD
+        /// Compares two specified sequence numbers to see if the first one is less than the other one.
         /// </summary>
-        /// <param name="s1">TBD</param>
-        /// <param name="s2">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool operator <(SeqNo s1, SeqNo s2)
+        /// <param name="left">The first sequence number used for comparison</param>
+        /// <param name="right">The second sequence number used for comparison</param>
+        /// <returns><c>true</c> if the first sequence number is less than the other one; otherwise <c>false</c></returns>
+        public static bool operator <(SeqNo left, SeqNo right)
         {
-            return s1.CompareTo(s2) < 0;
+            return left.CompareTo(right) < 0;
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified sequence numbers to see if the first one is less than or equal to the other one.
         /// </summary>
-        /// <param name="s1">TBD</param>
-        /// <param name="s2">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool operator <=(SeqNo s1, SeqNo s2)
+        /// <param name="left">The first sequence number used for comparison</param>
+        /// <param name="right">The second sequence number used for comparison</param>
+        /// <returns><c>true</c> if the first sequence number is less than or equal to the other one; otherwise <c>false</c></returns>
+        public static bool operator <=(SeqNo left, SeqNo right)
         {
-            return s1.CompareTo(s2) <= 0;
+            return left.CompareTo(right) <= 0;
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SeqNo"/>, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SeqNo" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SeqNo" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SeqNo other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -109,74 +112,76 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified sequence numbers for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first sequence number used for comparison</param>
+        /// <param name="right">The second sequence number used for comparison</param>
+        /// <returns><c>true</c> if both sequence numbers are equal; otherwise <c>false</c></returns>
         public static bool operator ==(SeqNo left, SeqNo right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified sequence numbers for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first sequence number used for comparison</param>
+        /// <param name="right">The second sequence number used for comparison</param>
+        /// <returns><c>true</c> if both sequence numbers are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(SeqNo left, SeqNo right)
         {
             return !Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified sequence numbers to see if the first one is greater than the other one.
         /// </summary>
-        /// <param name="s1">TBD</param>
-        /// <param name="s2">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool operator >(SeqNo s1, SeqNo s2)
+        /// <param name="left">The first sequence number used for comparison</param>
+        /// <param name="right">The second sequence number used for comparison</param>
+        /// <returns><c>true</c> if the first sequence number is greater than the other one; otherwise <c>false</c></returns>
+        public static bool operator >(SeqNo left, SeqNo right)
         {
-            return s1.CompareTo(s2) > 0;
+            return left.CompareTo(right) > 0;
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified sequence numbers to see if the first one is greater than or equal to the other one.
         /// </summary>
-        /// <param name="s1">TBD</param>
-        /// <param name="s2">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool operator >=(SeqNo s1, SeqNo s2)
+        /// <param name="left">The first sequence number used for comparison</param>
+        /// <param name="right">The second sequence number used for comparison</param>
+        /// <returns><c>true</c> if the first sequence number is greater than or equal to the other one; otherwise <c>false</c></returns>
+        public static bool operator >=(SeqNo left, SeqNo right)
         {
-            return s1.CompareTo(s2) >= 0;
+            return left.CompareTo(right) >= 0;
         }
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="System.Int64"/> to <see cref="SeqNo"/>.
         /// </summary>
-        /// <param name="x">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="x">The value to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator SeqNo(long x)
         {
             return new SeqNo(x);
         }
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="SeqNo"/> to <see cref="System.Int64"/>.
         /// </summary>
-        /// <param name="x">TBD</param>
-        /// <returns>TBD</returns>
-        public static implicit operator long(SeqNo x)
+        /// <param name="seqNo">The sequence number to convert</param>
+        /// <returns>The result of the conversion</returns>
+        public static implicit operator long(SeqNo seqNo)
         {
-            return x.RawValue;
+            return seqNo.RawValue;
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -185,9 +190,11 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return RawValue.GetHashCode();
@@ -195,10 +202,13 @@ namespace Akka.Remote
 
         #endregion
 
+
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
             return RawValue.ToString(CultureInfo.InvariantCulture);

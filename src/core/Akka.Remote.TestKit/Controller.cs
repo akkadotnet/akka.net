@@ -44,6 +44,13 @@ namespace Akka.Remote.TestKit
                 return Equals(_name, other._name);
             }
 
+            /// <summary>
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+            /// </summary>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -51,24 +58,48 @@ namespace Akka.Remote.TestKit
                 return obj is ClientDisconnected && Equals((ClientDisconnected) obj);
             }
 
+            /// <summary>
+            /// Returns a hash code for this instance.
+            /// </summary>
+            /// <returns>
+            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            /// </returns>
             public override int GetHashCode()
             {
                 return (_name != null ? _name.GetHashCode() : 0);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="ClientDisconnected"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="ClientDisconnected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="ClientDisconnected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="ClientDisconnected"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(ClientDisconnected left, ClientDisconnected right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="ClientDisconnected"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="ClientDisconnected"/> used for comparison</param>
+            /// <param name="right">The second <see cref="ClientDisconnected"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="ClientDisconnected"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(ClientDisconnected left, ClientDisconnected right)
             {
                 return !Equals(left, right);
             }
 
+            /// <summary>
+            /// Returns a <see cref="System.String" /> that represents this instance.
+            /// </summary>
+            /// <returns>
+            /// A <see cref="System.String" /> that represents this instance.
+            /// </returns>
             public override string ToString()
             {
-                return string.Format("{0}: {1}", GetType(), Name);
+                return $"{GetType()}: {Name}";
             }
         }
 
@@ -162,6 +193,13 @@ namespace Akka.Remote.TestKit
                 return Equals(_name, other._name) && Equals(_addr, other._addr) && Equals(_fsm, other._fsm);
             }
 
+            /// <summary>
+            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+            /// </summary>
+            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+            /// <returns>
+            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+            /// </returns>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -169,6 +207,12 @@ namespace Akka.Remote.TestKit
                 return obj is NodeInfo && Equals((NodeInfo) obj);
             }
 
+            /// <summary>
+            /// Returns a hash code for this instance.
+            /// </summary>
+            /// <returns>
+            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+            /// </returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -180,11 +224,23 @@ namespace Akka.Remote.TestKit
                 }
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="NodeInfo"/> for equality.
+            /// </summary>
+            /// <param name="left">The first <see cref="NodeInfo"/> used for comparison</param>
+            /// <param name="right">The second <see cref="NodeInfo"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="NodeInfo"/> are equal; otherwise <c>false</c></returns>
             public static bool operator ==(NodeInfo left, NodeInfo right)
             {
                 return Equals(left, right);
             }
 
+            /// <summary>
+            /// Compares two specified <see cref="NodeInfo"/> for inequality.
+            /// </summary>
+            /// <param name="left">The first <see cref="NodeInfo"/> used for comparison</param>
+            /// <param name="right">The second <see cref="NodeInfo"/> used for comparison</param>
+            /// <returns><c>true</c> if both <see cref="NodeInfo"/> are not equal; otherwise <c>false</c></returns>
             public static bool operator !=(NodeInfo left, NodeInfo right)
             {
                 return !Equals(left, right);

@@ -147,10 +147,10 @@ namespace Akka.DistributedData.Local
             new LocalLWWDictionary<TKey, TVal>(_currentNode, _crdt.Merge(dictionary));
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.Local.LocalLWWDictionary{TKey, TVal}" /> to <see cref="Akka.DistributedData.LWWDictionary{TKey, TVal}" />.
         /// </summary>
-        /// <param name="set">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="set">The set to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator LWWDictionary<TKey, TVal>(LocalLWWDictionary<TKey, TVal> set) => set._crdt;
     }
 }

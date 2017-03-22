@@ -60,8 +60,12 @@ namespace Akka.Streams
         /// <param name="context">TBD</param>
         /// <param name="settings">TBD</param>
         /// <param name="namePrefix">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="context"/> is not of type <see cref="ActorSystem"/> or <see cref="IActorContext"/>.
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="context"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
         public static ActorMaterializer Create(IActorRefFactory context, ActorMaterializerSettings settings = null, string namePrefix = null)
         {
@@ -192,7 +196,9 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         /// <param name="materializer">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="materializer"/> is not of type <see cref="ActorMaterializer"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         internal static ActorMaterializer Downcast(IMaterializer materializer)
         {
@@ -214,14 +220,14 @@ namespace Akka.Streams
     public class AbruptTerminationException : Exception
     {
         /// <summary>
-        /// TBD
+        /// The actor that was terminated without notification.
         /// </summary>
         public readonly IActorRef Actor;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AbruptTerminationException" /> class.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The actor that was terminated.</param>
         public AbruptTerminationException(IActorRef actor)
             : base($"Processor actor [{actor}] terminated abruptly")
         {
@@ -229,10 +235,10 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AbruptTerminationException" /> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected AbruptTerminationException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
@@ -245,17 +251,17 @@ namespace Akka.Streams
     public class MaterializationException : Exception
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MaterializationException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="innerException">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public MaterializationException(string message, Exception innerException) : base(message, innerException) { }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MaterializationException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected MaterializationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 

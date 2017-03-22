@@ -550,10 +550,12 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <exception cref="IllegalActorStateException">TBD</exception>
+        /// <param name="reason">N/A</param>
+        /// <exception cref="IllegalActorStateException">
+        /// This exception is thrown automatically since <see cref="ReliableDeliverySupervisor"/> must not be restarted.
+        /// </exception>
         protected override void PostRestart(Exception reason)
         {
             throw new IllegalActorStateException("BUG: ReliableDeliverySupervisor has been attempted to be restarted. This must not happen.");
@@ -2062,4 +2064,3 @@ namespace Akka.Remote
         #endregion
     }
 }
-

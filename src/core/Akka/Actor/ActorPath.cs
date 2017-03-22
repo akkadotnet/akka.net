@@ -545,22 +545,22 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified actor paths for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first actor path used for comparison</param>
+        /// <param name="right">The second actor path used for comparison</param>
+        /// <returns><c>true</c> if both actor paths are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ActorPath left, ActorPath right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified actor paths for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first actor path used for comparison</param>
+        /// <param name="right">The second actor path used for comparison</param>
+        /// <returns><c>true</c> if both actor paths are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ActorPath left, ActorPath right)
         {
             return !Equals(left, right);

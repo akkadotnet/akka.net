@@ -261,33 +261,33 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified vector clocks to see if the first one is greater than the other one.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first vector clock used for comparison</param>
+        /// <param name="right">The second vector clock used for comparison</param>
+        /// <returns><c>true</c> if the first vector clock is greater than the other one; otherwise <c>false</c></returns>
         public static bool operator >(VectorClock left, VectorClock right)
         {
             return left.IsAfter(right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified vector clocks to see if the first one is less than the other one.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first vector clock used for comparison</param>
+        /// <param name="right">The second vector clock used for comparison</param>
+        /// <returns><c>true</c> if the first vector clock is less than the other one; otherwise <c>false</c></returns>
         public static bool operator <(VectorClock left, VectorClock right)
         {
             return left.IsBefore(right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified vector clocks for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first vector clock used for comparison</param>
+        /// <param name="right">The second vector clock used for comparison</param>
+        /// <returns><c>true</c> if both vector clocks are equal; otherwise <c>false</c></returns>
         public static bool operator ==(VectorClock left, VectorClock right)
         {
             if (ReferenceEquals(left, null))
@@ -297,11 +297,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified vector clocks for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first vector clock used for comparison</param>
+        /// <param name="right">The second vector clock used for comparison</param>
+        /// <returns><c>true</c> if both vector clocks are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(VectorClock left, VectorClock right)
         {
             if (ReferenceEquals(left, null))
