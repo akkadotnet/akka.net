@@ -14,14 +14,14 @@ using Akka.Configuration;
 namespace Akka.Remote
 {
     /// <summary>
-    /// TBD
+    /// This class represents configuration information used when setting up remoting.
     /// </summary>
     public class RemoteSettings
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RemoteSettings"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The configuration to use when setting up remoting.</param>
         public RemoteSettings(Config config)
         {
             //TODO: need to add value validation for each field
