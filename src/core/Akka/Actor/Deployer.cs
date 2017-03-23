@@ -54,10 +54,13 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public Deploy Lookup(ActorPath path)
         {
-            if (path.Elements.Head() != "user" || path.Elements.Count() < 2)
+            var rawElements = path.Elements;
+            if (rawElements[0] != "user" || rawElements.Count < 2)
+            {
                 return Deploy.None;
+            }
 
-            var elements = path.Elements.Drop(1);
+            var elements = rawElements.Drop(1);
             return Lookup(elements);
         }
 
@@ -110,7 +113,7 @@ namespace Akka.Actor
                         }
                     }
                     set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
-                } while(!set);
+                } while (!set);
             };
             var elements = deploy.Path.Split('/').Drop(1).ToList();
             add(elements, deploy);
@@ -148,4 +151,3 @@ namespace Akka.Actor
         }
     }
 }
-

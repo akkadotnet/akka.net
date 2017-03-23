@@ -731,7 +731,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private void NotifyNewPersistenceIdAdded(string persistenceId)
+        protected void NotifyNewPersistenceIdAdded(string persistenceId)
         {
             if (_allPersistenceIds.Add(persistenceId) && HasAllIdsSubscribers)
             {
@@ -870,7 +870,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             return new BatchComplete(chunk.ChunkId, chunk.Requests.Length, stopwatch.Elapsed, cause);
         }
 
-        private async Task HandleDeleteMessagesTo(DeleteMessagesTo req, TCommand command)
+        protected virtual async Task HandleDeleteMessagesTo(DeleteMessagesTo req, TCommand command)
         {
             var toSequenceNr = req.ToSequenceNr;
             var persistenceId = req.PersistenceId;
@@ -930,7 +930,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command)
+        protected virtual async Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command)
         {
             command.CommandText = HighestSequenceNrSql;
 
@@ -942,7 +942,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             return highestSequenceNr;
         }
 
-        private async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, TCommand command)
+        protected virtual async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, TCommand command)
         {
             var replyTo = req.ReplyTo;
 
@@ -984,7 +984,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleReplayMessages(ReplayMessages req, TCommand command, IActorContext context)
+        protected virtual async Task HandleReplayMessages(ReplayMessages req, TCommand command, IActorContext context)
         {
             var replaySettings = Setup.ReplayFilterSettings;
             var replyTo = replaySettings.IsEnabled

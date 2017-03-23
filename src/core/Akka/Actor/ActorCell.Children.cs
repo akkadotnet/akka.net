@@ -325,7 +325,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use TryGetSingleChild")]
+        [Obsolete("Use TryGetSingleChild [0.7.1]")]
         public IInternalActorRef GetSingleChild(string name)
         {
             IInternalActorRef child;

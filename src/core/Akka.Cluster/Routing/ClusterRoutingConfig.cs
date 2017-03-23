@@ -28,7 +28,7 @@ namespace Akka.Cluster.Routing
         /// <param name="totalInstances">TBD</param>
         /// <param name="allowLocalRoutees">TBD</param>
         /// <param name="routeesPaths">TBD</param>
-        [Obsolete]
+        [Obsolete("This method is deprecated [1.1.0]")]
         public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, IEnumerable<string> routeesPaths)
             : this(totalInstances, routeesPaths, allowLocalRoutees, null)
         {
@@ -42,7 +42,7 @@ namespace Akka.Cluster.Routing
         /// <param name="allowLocalRoutees">TBD</param>
         /// <param name="useRole">TBD</param>
         /// <param name="routeesPaths">TBD</param>
-        [Obsolete]
+        [Obsolete("This method is deprecated [1.1.0]")]
         public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, ImmutableHashSet<string> routeesPaths)
             : this(totalInstances, routeesPaths, allowLocalRoutees, useRole)
         {
@@ -107,7 +107,7 @@ namespace Akka.Cluster.Routing
         /// <param name="totalInstances">TBD</param>
         /// <param name="allowLocalRoutees">TBD</param>
         /// <param name="maxInstancesPerNode">TBD</param>
-        [Obsolete]
+        [Obsolete("This method is deprecated [1.1.0]")]
         public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode)
             : this(totalInstances, maxInstancesPerNode, allowLocalRoutees)
         {
@@ -120,7 +120,7 @@ namespace Akka.Cluster.Routing
         /// <param name="allowLocalRoutees">TBD</param>
         /// <param name="useRole">TBD</param>
         /// <param name="maxInstancesPerNode">TBD</param>
-        [Obsolete]
+        [Obsolete("This method is deprecated [1.1.0]")]
         public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) 
             : this(totalInstances, maxInstancesPerNode, allowLocalRoutees, useRole)
         {

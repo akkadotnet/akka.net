@@ -77,6 +77,10 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
@@ -120,8 +124,10 @@
     <Compile Include="Actor\BugFix2176Spec.cs" />
     <Compile Include="Actor\Cancellation\AlreadyCancelledCancelableTests.cs" />
     <Compile Include="Actor\Cancellation\CancelableTests.cs" />
+    <Compile Include="Actor\CoordinatedShutdownSpec.cs" />
     <Compile Include="Actor\Dispatch\ActorModelSpec.cs" />
     <Compile Include="Actor\Dispatch\CurrentSynchronizationContextDispatcherSpecs.cs" />
+    <Compile Include="Actor\FSMActorSpec.cs" />
     <Compile Include="Actor\HotSwapSpec.cs" />
     <Compile Include="Actor\DeadLetterSupressionSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
@@ -182,6 +188,7 @@
     <Compile Include="MatchHandler\MatchExpressionBuilder_CreateArgumentValuesArray_Tests.cs" />
     <Compile Include="MatchHandler\MatchHandlerBuilderTests.cs" />
     <Compile Include="MatchHandler\PartialActionBuilderTests.cs" />
+    <Compile Include="Pattern\BackoffOnRestartSupervisorSpec.cs" />
     <Compile Include="Pattern\BackoffSupervisorSpec.cs" />
     <Compile Include="Pattern\CircuitBreakerSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

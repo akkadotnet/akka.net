@@ -419,7 +419,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="routees">N/A</param>
         /// <param name="within">N/A</param>
-        [Obsolete("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within) instead")]
+        [Obsolete("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within) instead [1.1.0]")]
         public ScatterGatherFirstCompletedGroup(IEnumerable<IActorRef> routees, TimeSpan within)
             : this(routees.Select(c => c.Path.ToString()), within, Dispatchers.DefaultDispatcherId)
         {

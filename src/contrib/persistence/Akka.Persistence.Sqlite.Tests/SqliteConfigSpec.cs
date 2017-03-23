@@ -6,7 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Configuration;
+using Akka.Persistence.Sql.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 

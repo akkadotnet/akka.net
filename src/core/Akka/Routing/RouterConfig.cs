@@ -45,7 +45,7 @@ namespace Akka.Routing
         /// <summary>
         /// A configuration that specifies that no router is to be used.
         /// </summary>
-        [Obsolete("Use NoRouter.Instance instead")]
+        [Obsolete("Use NoRouter.Instance instead [1.1.0]")]
         public static RouterConfig NoRouter => Routing.NoRouter.Instance;
 
         /// <summary>

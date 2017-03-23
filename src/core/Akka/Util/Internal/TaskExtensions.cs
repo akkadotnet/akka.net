@@ -12,7 +12,9 @@ using System.Threading.Tasks;
 namespace Akka.Util.Internal
 {
     /// <summary>
-    /// Extension methods for operations on <see cref="Task"/> task types.
+    /// INTERNAL API
+    ///
+    /// Extensions for working with <see cref="Task"/> types
     /// </summary>
     public static class TaskExtensions
     {

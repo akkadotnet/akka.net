@@ -95,10 +95,10 @@ namespace Akka.DistributedData
         public override string ToString() => Id;
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.Key{T}" /> to <see cref="System.String" />.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="key">The key to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator string(Key<T> key) => key.Id;
     }
 }

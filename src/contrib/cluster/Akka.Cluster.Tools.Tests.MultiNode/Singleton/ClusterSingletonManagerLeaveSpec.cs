@@ -66,13 +66,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 _testActorRef.Tell("postStop");
             }
+
+            public static Props Props(IActorRef testActorRef) 
+                => Actor.Props.Create(() => new Echo(testActorRef));
         }
     }
 
     public class ClusterSingletonManagerLeaveSpec : MultiNodeClusterSpec
     {
         private readonly ClusterSingletonManagerLeaveSpecConfig _config;
-
         private readonly Lazy<IActorRef> _echoProxy;
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
@@ -103,7 +105,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         private IActorRef CreateSingleton()
         {
             return Sys.ActorOf(ClusterSingletonManager.Props(
-                singletonProps: Props.Create(() => new ClusterSingletonManagerLeaveSpecConfig.Echo(TestActor)),
+                singletonProps: ClusterSingletonManagerLeaveSpecConfig.Echo.Props(TestActor),
                 terminationMessage: "stop",
                 settings: ClusterSingletonManagerSettings.Create(Sys)),
                 name: "echo");
@@ -154,8 +156,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
+                var t = TestActor;
+                Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
                 ExpectMsg("stop", 10.Seconds());
                 ExpectMsg("postStop");
+                // CoordinatedShutdown makes sure that singleton actors are
+                // stopped before Cluster shutdown
+                ExpectMsg("MemberRemoved");
             }, _config.First);
             EnterBarrier("first-stopped");
 
@@ -169,7 +176,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 var p = CreateTestProbe();
                 var firstAddress = Node(_config.First).Address;
-                p.Within(10.Seconds(), () =>
+                p.Within(15.Seconds(), () =>
                 {
                     p.AwaitAssert(() =>
                     {
@@ -187,8 +194,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
+                var t = TestActor;
+                Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
+                Cluster.Leave(Node(_config.Second).Address);
                 ExpectMsg("stop", 15.Seconds());
                 ExpectMsg("postStop");
+                ExpectMsg("MemberRemoved");
             }, _config.Second);
             EnterBarrier("second-stopped");
 
@@ -205,8 +216,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
+                var t = TestActor;
+                Cluster.RegisterOnMemberRemoved(() => t.Tell("MemberRemoved"));
                 ExpectMsg("stop", 10.Seconds());
                 ExpectMsg("postStop");
+                ExpectMsg("MemberRemoved");
             }, _config.Third);
             EnterBarrier("third-stopped");
         }

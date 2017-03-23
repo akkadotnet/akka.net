@@ -65,6 +65,7 @@ namespace Akka.Cluster.Proto
             if (obj is InternalClusterAction.InitJoin) return Msg.Empty.DefaultInstance.ToByteArray();
             if (obj is InternalClusterAction.InitJoinAck) return AddressToProtoByteArray(((InternalClusterAction.InitJoinAck)obj).Address);
             if (obj is InternalClusterAction.InitJoinNack) return AddressToProtoByteArray(((InternalClusterAction.InitJoinNack)obj).Address);
+            if(obj is InternalClusterAction.ExitingConfirmed) return UniqueAddressToProtoByteArray(((InternalClusterAction.ExitingConfirmed)obj).Address);
             throw new ArgumentException(string.Format("Can't serialize object of type {0}", obj.GetType()));
         }
 
@@ -90,6 +91,7 @@ namespace Akka.Cluster.Proto
             if (type == typeof(InternalClusterAction.InitJoinNack)) return new InternalClusterAction.InitJoinNack(AddressFromBinary(bytes));
             if (type == typeof(ClusterHeartbeatSender.Heartbeat)) return new ClusterHeartbeatSender.Heartbeat(AddressFromBinary(bytes));
             if (type == typeof(ClusterHeartbeatSender.HeartbeatRsp)) return new ClusterHeartbeatSender.HeartbeatRsp(UniqueAddressFromBinary(bytes));
+            if(type == typeof(InternalClusterAction.ExitingConfirmed)) return new InternalClusterAction.ExitingConfirmed(UniqueAddressFromBinary(bytes));
             if (type == typeof(GossipStatus)) return GossipStatusFromBinary(bytes);
             if (type == typeof(GossipEnvelope)) return GossipEnvelopeFromBinary(bytes);
 

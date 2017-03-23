@@ -25,8 +25,10 @@ namespace Akka.Cluster.Tests
               auto-down-unreachable-after = 0s
               periodic-tasks-initial-delay = 120 s
               publish-stats-interval = 0 s # always, when it happens
+              run-coordinated-shutdown-when-down = off
             }
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+            akka.coordinated-shutdown.terminate-actor-system = off
             akka.remote.log-remote-lifecycle-events = off
             akka.remote.dot-netty.tcp.port = 0";
 
@@ -156,41 +158,32 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void A_cluster_must_complete_LeaveAsync_task_upon_being_removed()
         {
-            _cluster.Join(_selfAddress);
-            LeaderActions(); // Joining -> Up
+            var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
+                akka.actor.provider = ""cluster""
+                akka.remote.dot-netty.tcp.port = 0
+                akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
+                akka.coordinated-shutdown.terminate-actor-system = off
+                akka.cluster.run-coordinated-shutdown-when-down = off
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
-            _cluster.Subscribe(TestActor, new[] { typeof(ClusterEvent.MemberRemoved) });
+            var probe = CreateTestProbe(sys2);
+            Cluster.Get(sys2).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
+            probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
 
-            // first, is in response to the subscription
-            ExpectMsg<ClusterEvent.CurrentClusterState>();
+            Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
+            probe.ExpectMsg<ClusterEvent.MemberUp>();
 
-            var leaveTask = _cluster.LeaveAsync();
+            var leaveTask = Cluster.Get(sys2).LeaveAsync();
 
-            // current node should be marked as leaving, but not removed yet
-            AwaitCondition(() => _cluster.State.Members
-                .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Leaving, 
-                TimeSpan.FromSeconds(10), 
-                message: "Failed to observe node as Leaving.");
+            leaveTask.IsCompleted.Should().BeFalse();
+            probe.ExpectMsg<ClusterEvent.MemberLeft>();
+            probe.ExpectMsg<ClusterEvent.MemberExited>();
+            probe.ExpectMsg<ClusterEvent.MemberRemoved>();
 
-            // can't run this inside Within block
-            ExpectNoMsg();
-
-            Within(TimeSpan.FromSeconds(10), () =>
-            {
-                leaveTask.IsCompleted.Should().BeFalse();
-
-                LeaderActions(); // Leaving --> Exiting
-                AwaitCondition(() => _cluster.State.Members
-                   .Single(x => x.Address.Equals(_cluster.SelfAddress)).Status == MemberStatus.Exiting, 
-                   TimeSpan.FromSeconds(10), message: "Failed to observe node as Exiting.");
-
-                LeaderActions(); // Exiting --> Removed
-                ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
-                leaveTask.IsCompleted.Should().BeTrue();
-            });
+            AwaitCondition(() => leaveTask.IsCompleted);
 
             // A second call for LeaveAsync should complete immediately
-            _cluster.LeaveAsync().IsCompleted.Should().BeTrue();
+            Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
         }
 
         [Fact]
@@ -306,6 +299,99 @@ namespace Akka.Cluster.Tests
             TestActor.Path.Address.Host.Should().BeNull();
             _cluster.RemotePathOf(TestActor).Uid.Should().Be(TestActor.Path.Uid);
             _cluster.RemotePathOf(TestActor).Address.Should().Be(_selfAddress);
+        }
+
+        [Fact]
+        public void A_cluster_must_leave_via_CoordinatedShutdownRun()
+        {
+            var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
+                akka.actor.provider = ""cluster""
+                akka.remote.dot-netty.tcp.port = 0
+                akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
+                akka.coordinated-shutdown.terminate-actor-system = off
+                akka.cluster.run-coordinated-shutdown-when-down = off
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
+
+            try
+            {
+                var probe = CreateTestProbe(sys2);
+                Cluster.Get(sys2).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
+                probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
+                Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
+                probe.ExpectMsg<ClusterEvent.MemberUp>();
+
+                CoordinatedShutdown.Get(sys2).Run();
+
+                probe.ExpectMsg<ClusterEvent.MemberLeft>();
+                probe.ExpectMsg<ClusterEvent.MemberExited>();
+                probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+            }
+            finally
+            {
+                Shutdown(sys2);
+            }
+        }
+
+        [Fact]
+        public void A_cluster_must_terminate_ActorSystem_via_leave_CoordinatedShutdown()
+        {
+            var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
+                akka.actor.provider = ""cluster""
+                akka.remote.dot-netty.tcp.port = 0
+                akka.coordinated-shutdown.terminate-actor-system = on
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
+
+            try
+            {
+                var probe = CreateTestProbe(sys2);
+                Cluster.Get(sys2).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
+                probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
+                Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
+                probe.ExpectMsg<ClusterEvent.MemberUp>();
+
+                Cluster.Get(sys2).Leave(Cluster.Get(sys2).SelfAddress);
+
+                probe.ExpectMsg<ClusterEvent.MemberLeft>();
+                probe.ExpectMsg<ClusterEvent.MemberExited>();
+                probe.ExpectMsg<ClusterEvent.MemberRemoved>(); 
+                AwaitCondition(() => sys2.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
+                Cluster.Get(sys2).IsTerminated.Should().BeTrue();
+            }
+            finally
+            {
+                Shutdown(sys2);
+            }
+        }
+
+        [Fact]
+        public void A_cluster_must_terminate_ActorSystem_via_Down_CoordinatedShutdown()
+        {
+            var sys3 = ActorSystem.Create("ClusterSpec3", ConfigurationFactory.ParseString(@"
+                akka.actor.provider = ""cluster""
+                akka.remote.dot-netty.tcp.port = 0
+                akka.coordinated-shutdown.terminate-actor-system = on
+                akka.cluster.run-coordinated-shutdown-when-down = on
+                akka.loglevel=DEBUG
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
+
+            try
+            {
+                var probe = CreateTestProbe(sys3);
+                Cluster.Get(sys3).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
+                probe.ExpectMsg<ClusterEvent.CurrentClusterState>();
+                Cluster.Get(sys3).Join(Cluster.Get(sys3).SelfAddress);
+                probe.ExpectMsg<ClusterEvent.MemberUp>();
+
+                Cluster.Get(sys3).Down(Cluster.Get(sys3).SelfAddress);
+
+                probe.ExpectMsg<ClusterEvent.MemberRemoved>();
+                AwaitCondition(() => sys3.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
+                Cluster.Get(sys3).IsTerminated.Should().BeTrue();
+            }
+            finally
+            {
+                Shutdown(sys3);
+            }
         }
     }
 }

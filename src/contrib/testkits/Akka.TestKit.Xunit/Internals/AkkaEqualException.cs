@@ -36,22 +36,6 @@ namespace Akka.TestKit.Xunit.Internals
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="expected">TBD</param>
-        /// <param name="actual">TBD</param>
-        /// <param name="skipPositionCheck">TBD</param>
-        /// <param name="format">TBD</param>
-        /// <param name="args">TBD</param>
-        public AkkaEqualException(object expected, object actual, bool skipPositionCheck, string format = "",
-            params object[] args)
-            : base(expected, actual, skipPositionCheck)
-        {
-            _args = args;
-            _format = format;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <param name="info">TBD</param>
         /// <param name="context">TBD</param>
         protected AkkaEqualException(SerializationInfo info, StreamingContext context)

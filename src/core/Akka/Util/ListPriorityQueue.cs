@@ -30,7 +30,7 @@ namespace Akka.Util
         /// DEPRECATED. Should always specify priority calculator instead.
         /// </summary>
         /// <param name="initialCapacity">The current capacity of the priority queue.</param>
-        [Obsolete("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead")]
+        [Obsolete("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead [1.1.3]")]
         public ListPriorityQueue(int initialCapacity) : this (initialCapacity, DefaultPriorityCalculator)
         {
             
@@ -54,7 +54,7 @@ namespace Akka.Util
         /// <remarks>
         /// WARNING: SHOULD NOT BE USED. Use the constructor to set priority instead.
         /// </remarks>
-        [Obsolete("Use the constructor to set the priority calculator instead.")]
+        [Obsolete("Use the constructor to set the priority calculator instead. [1.1.3]")]
         public void SetPriorityCalculator(Func<object, int> priorityCalculator)
         {
             _priorityCalculator = priorityCalculator;

@@ -75,7 +75,7 @@ namespace Akka.Actor
             //Intentionally left blank
         }
 
-        [Obsolete("Only to be used from DeprecatedSchedulerExtensions.")] //TODO: Remove this line and make it private when DeprecatedSchedulerExtensions is removed
+        [Obsolete("Only to be used from DeprecatedSchedulerExtensions. [1.0.0]")] //TODO: Remove this line and make it private when DeprecatedSchedulerExtensions is removed
         internal Cancelable(IActionScheduler scheduler, CancellationTokenSource source)
         {
             _source = source;

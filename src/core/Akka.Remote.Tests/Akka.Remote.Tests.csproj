@@ -117,8 +117,8 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Xml" />
@@ -154,6 +154,15 @@
     <Compile Include="AckedDeliverySpec.cs" />
     <Compile Include="ActorsLeakSpec.cs" />
     <Compile Include="AddressUidExtensionSpecs.cs" />
+    <Compile Include="AsyncContext\AsyncContext.cs" />
+    <Compile Include="AsyncContext\AsyncContext.SynchronizationContext.cs" />
+    <Compile Include="AsyncContext\AsyncContext.TaskQueue.cs" />
+    <Compile Include="AsyncContext\AsyncContext.TaskScheduler.cs" />
+    <Compile Include="AsyncContext\BoundAction.cs" />
+    <Compile Include="AsyncContext\ExceptionHelpers.cs" />
+    <Compile Include="AsyncContext\SingleDisposable %28of T%29.cs" />
+    <Compile Include="AsyncContext\SynchronizationContextSwitcher.cs" />
+    <Compile Include="AsyncContext\SynchronousTaskExtensions.cs.cs" />
     <Compile Include="Transport\BackwardCompatibilitySpec.cs" />
     <Compile Include="DeadlineFailureDetectorSpec.cs" />
     <Compile Include="EndpointRegistrySpec.cs" />
@@ -217,7 +226,9 @@
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="AsyncContext\about.txt" />
+  </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

@@ -80,8 +80,8 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Core" />
@@ -123,12 +123,7 @@
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
-    <Compile Include="Transport\AkkaIO\AddressConverters.cs" />
-    <Compile Include="Transport\AkkaIO\AkkaIOTransport.cs" />
-    <Compile Include="Transport\AkkaIO\ConnectionAssociation.cs" />
     <Compile Include="IPExtensions.cs" />
-    <Compile Include="Transport\AkkaIO\TransportListener.cs" />
-    <Compile Include="Transport\AkkaIO\TransportManager.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\DotNetty\AkkaLoggingHandler.cs" />
     <Compile Include="Transport\DotNetty\DotNettyTransportSettings.cs" />

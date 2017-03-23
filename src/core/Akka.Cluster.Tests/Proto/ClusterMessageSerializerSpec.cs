@@ -73,6 +73,7 @@ namespace Akka.Cluster.Tests.Proto
             CheckSerialization(new InternalClusterAction.InitJoinNack(address));
             CheckSerialization(new ClusterHeartbeatSender.Heartbeat(address));
             CheckSerialization(new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress));
+            CheckSerialization(new InternalClusterAction.ExitingConfirmed(uniqueAddress));
 
             var node1 = new VectorClock.Node("node1");
             var node2 = new VectorClock.Node("node2");

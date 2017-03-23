@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
                 .GroupedWithin(1000, TimeSpan.FromMilliseconds(500))
                 .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
-
+            
             var pSub = p.ExpectSubscription();
             var cSub = c.ExpectSubscription();
 
@@ -158,6 +158,28 @@ namespace Akka.Streams.Tests.Dsl
             // nothing more requested
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(1100));
             cSub.Request(3);
+            c.ExpectNoMsg(TimeSpan.FromMilliseconds(600));
+            pSub.SendComplete();
+            c.ExpectComplete();
+            c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+        }
+
+        [Fact]
+        public void A_GroupedWithin_must_not_emit_empty_group_when_finished_while_not_being_pushed()
+        {
+            var p = this.CreateManualPublisherProbe<int>();
+            var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
+
+            Source.FromPublisher(p)
+                .GroupedWithin(1000, TimeSpan.FromMilliseconds(500))
+                .To(Sink.FromSubscriber(c))
+                .Run(Materializer);
+
+            var pSub = p.ExpectSubscription();
+            var cSub = c.ExpectSubscription();
+
+            cSub.Request(1);
+            pSub.ExpectRequest();
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(600));
             pSub.SendComplete();
             c.ExpectComplete();

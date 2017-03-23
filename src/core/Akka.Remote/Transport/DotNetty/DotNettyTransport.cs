@@ -97,10 +97,20 @@ namespace Akka.Remote.Transport.DotNetty
 
     internal class DotNettyTransportException : RemoteTransportException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DotNettyTransportException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public DotNettyTransportException(string message, Exception cause = null) : base(message, cause)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DotNettyTransportException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected DotNettyTransportException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
@@ -154,7 +164,7 @@ namespace Akka.Remote.Transport.DotNetty
             var dns = listenAddress as DnsEndPoint;
             if (dns != null)
             {
-                listenAddress = await DnsToIPEndpoint(dns);
+                listenAddress = await DnsToIPEndpoint(dns).ConfigureAwait(false);
             }
             
             return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
@@ -171,7 +181,7 @@ namespace Akka.Remote.Transport.DotNetty
 
             try
             {
-                var newServerChannel = await NewServer(listenAddress);
+                var newServerChannel = await NewServer(listenAddress).ConfigureAwait(false);
                 
                 // Block reads until a handler actor is registered
                 // no incoming connections will be accepted until this value is reset
@@ -203,7 +213,7 @@ namespace Akka.Remote.Transport.DotNetty
                 Log.Error(ex, "Failed to bind to {0}; shutting down DotNetty transport.", listenAddress);
                 try
                 {
-                    await Shutdown();
+                    await Shutdown().ConfigureAwait(false);
                 }
                 catch
                 {
@@ -218,7 +228,7 @@ namespace Akka.Remote.Transport.DotNetty
             if (!ServerChannel.Open)
                 throw new ChannelException("Transport is not open");
 
-            return await AssociateInternal(remoteAddress);
+            return await AssociateInternal(remoteAddress).ConfigureAwait(false);
         }
 
         protected abstract Task<AssociationHandle> AssociateInternal(Address remoteAddress);
@@ -233,10 +243,10 @@ namespace Akka.Remote.Transport.DotNetty
                     tasks.Add(channel.CloseAsync());
                 }
                 var all = Task.WhenAll(tasks);
-                await all;
+                await all.ConfigureAwait(false);
 
                 var server = ServerChannel?.CloseAsync() ?? TaskEx.Completed;
-                await server;
+                await server.ConfigureAwait(false);
 
                 return all.IsCompleted && server.IsCompleted;
             }
@@ -283,12 +293,12 @@ namespace Akka.Remote.Transport.DotNetty
             IPEndPoint endpoint;
             //if (!Settings.EnforceIpFamily)
             //{
-            //    endpoint = await ResolveNameAsync(dns);
+            //    endpoint = await ResolveNameAsync(dns).ConfigureAwait(false);
             //}
             //else
             //{
                 var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
-                endpoint = await ResolveNameAsync(dns, addressFamily);
+                endpoint = await ResolveNameAsync(dns, addressFamily).ConfigureAwait(false);
             //}
             return endpoint;
         }
@@ -388,7 +398,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address)
         {
-            var resolved = await Dns.GetHostEntryAsync(address.Host);
+            var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             //NOTE: for some reason while Helios takes first element from resolved address list
             // on the DotNetty side we need to take the last one in order to be compatible
             return new IPEndPoint(resolved.AddressList[resolved.AddressList.Length - 1], address.Port);
@@ -396,7 +406,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)
         {
-            var resolved = await Dns.GetHostEntryAsync(address.Host);
+            var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             var found = resolved.AddressList.LastOrDefault(a => a.AddressFamily == addressFamily);
             if (found == null)
             {

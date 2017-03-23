@@ -105,13 +105,20 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             _pendingRequestsCancellation.Cancel();
         }
 
-        private async Task<Initialized> Initialize()
+        private async Task<object> Initialize()
         {
-            using (var connection = CreateDbConnection())
+            try
             {
-                await connection.OpenAsync(_pendingRequestsCancellation.Token);
-                await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
-                return Initialized.Instance;
+                using (var connection = CreateDbConnection())
+                {
+                    await connection.OpenAsync(_pendingRequestsCancellation.Token);
+                    await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
+                    return Initialized.Instance;
+                }
+            }
+            catch (Exception e)
+            {
+                return new Failure {Exception = e};
             }
         }
 
@@ -123,7 +130,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             })
             .With<Failure>(failure =>
             {
-                _log.Error(failure.Exception, "Error during snapshot store initialization");
+                Log.Error(failure.Exception, "Error during snapshot store initialization");
                 Context.Stop(Self);
             })
             .Default(_ => Stash.Stash())

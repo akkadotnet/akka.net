@@ -24,16 +24,17 @@ namespace Akka.Streams.Implementation
     public class SignalThrewException : IllegalStateException, ISpecViolation
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SignalThrewException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public SignalThrewException(string message, Exception cause) : base(message, cause) { }
+
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SignalThrewException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected SignalThrewException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
