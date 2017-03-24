@@ -4,7 +4,16 @@
       "src": [
         {
           "files": [
-            "**/Akka.csproj"
+            "**/Akka.csproj",
+			"**/Akka.Persistence.csproj",
+			"**/Akka.Persistence.Query.csproj",
+			"**/Akka.Streams.csproj",
+			"**/Akka.Remote.csproj",
+			"**/Akka.Cluster.csproj",
+			"**/Akka.TestKit.csproj",
+			"**/Akka.Cluster.Tools.csproj",
+			"**/Akka.Cluster.Sharding.csproj",
+			"**/Akka.DistributedData.csproj"
           ],
           "exclude": [
             "**/obj/**",
