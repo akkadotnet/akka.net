@@ -13,7 +13,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class PredicateAndHandler
+    internal class PredicateAndHandler
     {
         private readonly HandlerKind _handlerKind;
         private readonly bool _handlerFirstArgumentShouldBeBaseType;

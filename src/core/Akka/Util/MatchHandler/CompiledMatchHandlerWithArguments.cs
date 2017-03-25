@@ -12,7 +12,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class CompiledMatchHandlerWithArguments
+    internal class CompiledMatchHandlerWithArguments
     {
         private readonly Delegate _compiledDelegate;
         private readonly object[] _delegateArguments;
