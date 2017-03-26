@@ -12,7 +12,7 @@ using Akka.Configuration;
 using Akka.Remote.Proto;
 using Akka.Routing;
 using Akka.Serialization;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote.Serialization
 {
@@ -50,9 +50,10 @@ namespace Akka.Remote.Serialization
 
         private ActorRefData SerializeActorRef(IActorRef @ref)
         {
-            return ActorRefData.CreateBuilder()
-                .SetPath(Akka.Serialization.Serialization.SerializedActorPath(@ref))
-                .Build();
+            return new ActorRefData
+            {
+                Path = Akka.Serialization.Serialization.SerializedActorPath(@ref)
+            };
         }
 
         private ByteString Serialize(object obj)
@@ -81,55 +82,61 @@ namespace Akka.Remote.Serialization
         {
             var msg = obj as DaemonMsgCreate;
             if (msg == null)
-                throw new ArgumentException("Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer");
-       
-            DaemonMsgCreateData daemonBuilder = DaemonMsgCreateData.CreateBuilder()
-                .SetProps(GetPropsData(msg.Props))
-                .SetDeploy(GetDeployData(msg.Deploy))
-                .SetPath(msg.Path)
-                .SetSupervisor(SerializeActorRef(msg.Supervisor))
-                .Build();
+            {
+                throw new ArgumentException(
+                    "Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer");
+            }
 
-            return daemonBuilder.ToByteArray();
+            var daemon = new DaemonMsgCreateData
+            {
+                Props = GetPropsData(msg.Props),
+                Deploy = GetDeployData(msg.Deploy),
+                Path = msg.Path,
+                Supervisor = SerializeActorRef(msg.Supervisor)
+            };
+
+            return daemon.ToByteArray();
         }
 
         private PropsData GetPropsData(Props props)
         {
-            var builder = PropsData.CreateBuilder()
-                .SetClazz(props.Type.AssemblyQualifiedName)
-                .SetDeploy(GetDeployData(props.Deploy));
+            var propsData = new PropsData
+            {
+                Clazz = props.Type.AssemblyQualifiedName,
+                Deploy = GetDeployData(props.Deploy)
+            };
 
             foreach (object arg in props.Arguments)
             {
                 if (arg == null)
                 {
-                    builder = builder.AddArgs(ByteString.Empty);
-                    builder = builder.AddClasses("");
+                    propsData.Args.Add(ByteString.Empty);
+                    propsData.Classes.Add("");
                 }
                 else
                 {
-                    builder = builder.AddArgs(Serialize(arg));
-                    builder = builder.AddClasses(arg.GetType().AssemblyQualifiedName);
+                    propsData.Args.Add(Serialize(arg));
+                    propsData.Classes.Add(arg.GetType().AssemblyQualifiedName);
                 }
             }
 
-            return builder.Build();
+            return propsData;
         }
 
         private DeployData GetDeployData(Deploy deploy)
         {
-            var res = DeployData.CreateBuilder()
-                .SetPath(deploy.Path);
-            if (deploy.Config != ConfigurationFactory.Empty)
-                res.SetConfig(Serialize(deploy.Config));
-            if (deploy.RouterConfig != NoRouter.Instance)
-                res.SetRouterConfig(Serialize(deploy.RouterConfig));
-            if (deploy.Scope != Deploy.NoScopeGiven)
-                res.SetScope(Serialize(deploy.Scope));
-            if (deploy.Dispatcher != Deploy.NoDispatcherGiven)
-                res.SetDispatcher(deploy.Dispatcher);
+            var res = new DeployData { Path = deploy.Path };
 
-            return res.Build();
+            if (deploy.Config != ConfigurationFactory.Empty)
+                res.Config = Serialize(deploy.Config);
+            if (deploy.RouterConfig != NoRouter.Instance)
+                res.RouterConfig = Serialize(deploy.RouterConfig);
+            if (deploy.Scope != Deploy.NoScopeGiven)
+                res.Scope = Serialize(deploy.Scope);
+            if (deploy.Dispatcher != Deploy.NoDispatcherGiven)
+                res.Dispatcher = deploy.Dispatcher;
+
+            return res;
         }
 
         /// <summary>
@@ -143,7 +150,7 @@ namespace Akka.Remote.Serialization
         /// </exception>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            var proto = DaemonMsgCreateData.ParseFrom(bytes);
+            var proto = DaemonMsgCreateData.Parser.ParseFrom(bytes);
             Type clazz; 
 
             try
@@ -168,39 +175,37 @@ namespace Akka.Remote.Serialization
         private Deploy GetDeploy(DeployData protoDeploy)
         {
             Config config;
-            if (protoDeploy.HasConfig)
+            if (protoDeploy.Config != null) // TODO GPB HasConfig
                 config = (Config) Deserialize(protoDeploy.Config, typeof (Config));
             else
                 config = ConfigurationFactory.Empty;
 
             RouterConfig routerConfig;
-            if (protoDeploy.HasRouterConfig)
+            if (protoDeploy.RouterConfig != null) // TODO GPB HasRouterConfig
                 routerConfig = (RouterConfig)Deserialize(protoDeploy.RouterConfig, typeof(RouterConfig));
             else
                 routerConfig = NoRouter.Instance;
 
             Scope scope;
-            if (protoDeploy.HasScope)
+            if (protoDeploy.Scope != null)
                 scope = (Scope) Deserialize(protoDeploy.Scope, typeof (Scope));
             else
                 scope = Deploy.NoScopeGiven;
 
-            string dispatcher;
-            if (protoDeploy.HasDispatcher)
-                dispatcher = protoDeploy.Dispatcher;
-            else 
-                dispatcher = Deploy.NoDispatcherGiven;
+            // expect missing field to be serialized as empty string (https://developers.google.com/protocol-buffers/docs/reference/csharp-generated#singular)
+            // empty string is the same as Deploy.NoDispatcherGiven
+            var dispatcher = protoDeploy.Dispatcher;
 
             return new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher);
         }
 
         private IEnumerable<object> GetArgs(DaemonMsgCreateData proto)
         {
-            var args = new object[proto.Props.ArgsCount];
+            var args = new object[proto.Props.Args.Count];
             for (int i = 0; i < args.Length; i++)
             {
-                var typeName = proto.Props.GetClasses(i);
-                var arg = proto.Props.GetArgs(i);
+                var typeName = proto.Props.Classes[i];
+                var arg = proto.Props.Args[i];
                 if (typeName == "" && ByteString.Empty.Equals(arg))
                 {
                     //HACK: no typename and empty arg gives null 
