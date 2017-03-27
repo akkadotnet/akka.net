@@ -92,7 +92,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly SubscribeClusterClients Instance = new SubscribeClusterClients();
+        public static SubscribeClusterClients Instance { get; } = new SubscribeClusterClients();
         private SubscribeClusterClients() { }
     }
 
@@ -104,7 +104,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly UnsubscribeClusterClients Instance = new UnsubscribeClusterClients();
+        public static UnsubscribeClusterClients Instance { get; } = new UnsubscribeClusterClients();
         private UnsubscribeClusterClients() { }
     }
 
@@ -117,7 +117,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetClusterClients Instance = new GetClusterClients();
+        public static GetClusterClients Instance { get; } = new GetClusterClients();
         private GetClusterClients() { }
     }
 
@@ -176,7 +176,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetContacts Instance = new GetContacts();
+            public static GetContacts Instance { get; } = new GetContacts();
             private GetContacts() { }
         }
 
@@ -189,7 +189,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ImmutableList<string> ContactPoints;
+            public ImmutableList<string> ContactPoints { get; }
 
             /// <summary>
             /// TBD
@@ -243,7 +243,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Heartbeat Instance = new Heartbeat();
+            public static Heartbeat Instance { get; } = new Heartbeat();
             private Heartbeat() { }
         }
 
@@ -256,7 +256,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly HeartbeatRsp Instance = new HeartbeatRsp();
+            public static HeartbeatRsp Instance { get; } = new HeartbeatRsp();
             private HeartbeatRsp() { }
         }
 
@@ -269,7 +269,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Ping Instance = new Ping();
+            public static Ping Instance { get; } = new Ping();
             private Ping() { }
         }
 
@@ -281,7 +281,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly CheckDeadlines Instance = new CheckDeadlines();
+            public static CheckDeadlines Instance { get; } = new CheckDeadlines();
             private CheckDeadlines() { }
         }
         #endregion
@@ -309,7 +309,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly RingOrdering Instance = new RingOrdering();
+            public static RingOrdering Instance { get; } = new RingOrdering();
             private RingOrdering() { }
 
             /// <summary>

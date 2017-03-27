@@ -29,7 +29,8 @@ namespace Akka.Cluster.Tools.Singleton
 
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
             if (config == null)
-                throw new ConfigurationException(string.Format("Cannot initialize {0}: akka.cluster.singleton configuration node was not provided", typeof(ClusterSingletonManagerSettings)));
+                throw new ConfigurationException(
+                    $"Cannot initialize {typeof(ClusterSingletonManagerSettings)}: akka.cluster.singleton configuration node was not provided");
 
             return Create(config).WithRemovalMargin(Cluster.Get(system).DowningProvider.DownRemovalMargin);
         }
@@ -50,27 +51,30 @@ namespace Akka.Cluster.Tools.Singleton
 
         private static string RoleOption(string role)
         {
-            if (String.IsNullOrEmpty(role))
+            if (string.IsNullOrEmpty(role))
                 return null;
             return role;
         }
 
         /// <summary>
-        /// TBD
+        /// The actor name of the child singleton actor.
         /// </summary>
-        public readonly string SingletonName;
+        public string SingletonName { get; }
+
         /// <summary>
-        /// TBD
+        /// Singleton among the nodes tagged with specified role.
         /// </summary>
-        public readonly string Role;
+        public string Role { get; }
+
         /// <summary>
-        /// TBD
+        /// Margin until the singleton instance that belonged to a downed/removed partition is created in surviving partition.
         /// </summary>
-        public readonly TimeSpan RemovalMargin;
+        public TimeSpan RemovalMargin { get; }
+
         /// <summary>
-        /// TBD
+        /// When a node is becoming oldest it sends hand-over request to previous oldest, that might be leaving the cluster.
         /// </summary>
-        public readonly TimeSpan HandOverRetryInterval;
+        public TimeSpan HandOverRetryInterval { get; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="ClusterSingletonManagerSettings"/>.
@@ -98,11 +102,11 @@ namespace Akka.Cluster.Tools.Singleton
         public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval)
         {
             if (string.IsNullOrWhiteSpace(singletonName))
-                throw new ArgumentNullException("singletonName");
+                throw new ArgumentNullException(nameof(singletonName));
             if (removalMargin < TimeSpan.Zero)
-                throw new ArgumentException("ClusterSingletonManagerSettings.RemovalMargin must be positive", "removalMargin");
+                throw new ArgumentException("ClusterSingletonManagerSettings.RemovalMargin must be positive", nameof(removalMargin));
             if (handOverRetryInterval <= TimeSpan.Zero)
-                throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", "handOverRetryInterval");
+                throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", nameof(handOverRetryInterval));
 
             SingletonName = singletonName;
             Role = role;
@@ -111,7 +115,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Create a singleton manager with specified singleton name.
         /// </summary>
         /// <param name="singletonName">TBD</param>
         /// <returns>TBD</returns>
@@ -121,7 +125,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Create a singleton manager with specified singleton role.
         /// </summary>
         /// <param name="role">TBD</param>
         /// <returns>TBD</returns>
@@ -131,7 +135,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Create a singleton manager with specified singleton remova margin.
         /// </summary>
         /// <param name="removalMargin">TBD</param>
         /// <returns>TBD</returns>
@@ -141,7 +145,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Create a singleton manager with specified singleton remova margin hand-over retry interval.
         /// </summary>
         /// <param name="handOverRetryInterval">TBD</param>
         /// <returns>TBD</returns>

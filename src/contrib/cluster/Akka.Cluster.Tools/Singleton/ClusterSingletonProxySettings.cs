@@ -27,7 +27,7 @@ namespace Akka.Cluster.Tools.Singleton
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
             if (config == null)
-                throw new ConfigurationException(string.Format("Cannot create {0}: akka.cluster.singleton-proxy configuration node not found", typeof(ClusterSingletonProxySettings)));
+                throw new ConfigurationException($"Cannot create {typeof(ClusterSingletonProxySettings)}: akka.cluster.singleton-proxy configuration node not found");
 
             return Create(config);
         }
@@ -50,21 +50,24 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// The actor name of the singleton actor that is started by the <see cref="ClusterSingletonManager"/>.
         /// </summary>
-        public readonly string SingletonName;
+        public string SingletonName { get; }
+
         /// <summary>
-        /// TBD
+        /// The role of the cluster nodes where the singleton can be deployed.
         /// </summary>
-        public readonly string Role;
+        public string Role { get; }
+
         /// <summary>
-        /// TBD
+        /// Interval at which the proxy will try to resolve the singleton instance.
         /// </summary>
-        public readonly TimeSpan SingletonIdentificationInterval;
+        public TimeSpan SingletonIdentificationInterval { get; }
+
         /// <summary>
-        /// TBD
+        /// If the location of the singleton is unknown the proxy will buffer this number of messages and deliver them when the singleton is identified.
         /// </summary>
-        public readonly int BufferSize;
+        public int BufferSize { get; }
 
         /// <summary>
         /// Creates new instance of the <see cref="ClusterSingletonProxySettings"/>.
@@ -82,11 +85,11 @@ namespace Akka.Cluster.Tools.Singleton
         public ClusterSingletonProxySettings(string singletonName, string role, TimeSpan singletonIdentificationInterval, int bufferSize)
         {
             if (string.IsNullOrEmpty(singletonName))
-                throw new ArgumentNullException("singletonName");
+                throw new ArgumentNullException(nameof(singletonName));
             if (singletonIdentificationInterval == TimeSpan.Zero)
-                throw new ArgumentException("ClusterSingletonProxySettings.SingletonIdentificationInterval must be positive", "singletonIdentificationInterval");
+                throw new ArgumentException("ClusterSingletonProxySettings.SingletonIdentificationInterval must be positive", nameof(singletonIdentificationInterval));
             if (bufferSize <= 0)
-                throw new ArgumentException("ClusterSingletonProxySettings.BufferSize must be positive", "bufferSize");
+                throw new ArgumentException("ClusterSingletonProxySettings.BufferSize must be positive", nameof(bufferSize));
 
             SingletonName = singletonName;
             Role = role;
@@ -95,7 +98,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Create a singleton proxy with specified singleton name.
         /// </summary>
         /// <param name="singletonName">TBD</param>
         /// <returns>TBD</returns>
@@ -120,7 +123,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Create a singleton proxy with specified singleton identification interval.
         /// </summary>
         /// <param name="singletonIdentificationInterval">TBD</param>
         /// <returns>TBD</returns>
@@ -130,7 +133,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Create a singleton proxy with specified singleton buffer size.
         /// </summary>
         /// <param name="bufferSize">TBD</param>
         /// <returns>TBD</returns>
@@ -139,15 +142,7 @@ namespace Akka.Cluster.Tools.Singleton
             return Copy(bufferSize: bufferSize);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="singletonName">TBD</param>
-        /// <param name="role">TBD</param>
-        /// <param name="singletonIdentificationInterval">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <returns>TBD</returns>
-        public ClusterSingletonProxySettings Copy(string singletonName = null, string role = null,
+        private ClusterSingletonProxySettings Copy(string singletonName = null, string role = null,
             TimeSpan? singletonIdentificationInterval = null, int? bufferSize = null)
         {
             return new ClusterSingletonProxySettings(

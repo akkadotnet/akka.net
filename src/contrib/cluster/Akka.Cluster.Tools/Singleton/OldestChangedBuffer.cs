@@ -35,7 +35,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetNext Instance = new GetNext();
+            public static GetNext Instance { get; } = new GetNext();
             private GetNext() { }
         }
 
@@ -48,11 +48,12 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly UniqueAddress Oldest;
+            public UniqueAddress Oldest { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly bool SafeToBeOldest;
+            public bool SafeToBeOldest { get; }
 
             /// <summary>
             /// TBD
@@ -75,7 +76,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly UniqueAddress Oldest;
+            public UniqueAddress Oldest { get; }
 
             /// <summary>
             /// TBD
@@ -119,7 +120,7 @@ namespace Akka.Cluster.Tools.Singleton
             });
         }
 
-        private string _role;
+        private readonly string _role;
         private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
         private ImmutableQueue<object> _changes = ImmutableQueue<object>.Empty;
 
@@ -174,7 +175,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
         {
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>

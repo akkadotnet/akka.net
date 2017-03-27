@@ -155,7 +155,7 @@ namespace Akka.Cluster.Tools.Client
     /// <summary>
     /// TBD
     /// </summary>
-    public class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
+    public sealed class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
     {
         /// <summary>
         /// TBD
