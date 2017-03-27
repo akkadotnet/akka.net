@@ -189,7 +189,8 @@ namespace Akka.Remote.TestKit
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
         /// <param name="exitValue">is the return code which shall be given to System.exit</param>
-        /// <returns></returns>
+        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <returns>TBD</returns>
         public Task<Done> Exit(RoleName node, int exitValue)
         {
             // the recover is needed to handle ClientDisconnectedException exception,
@@ -200,7 +201,7 @@ namespace Akka.Remote.TestKit
                 var failure = t.Result as FSMBase.Failure;
                 if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
 
-                throw new InvalidOperationException(String.Format("Expected Done but received {0}", t.Result));
+                throw new InvalidOperationException($"Expected Done but received {t.Result}");
             });
         }
 
@@ -210,8 +211,9 @@ namespace Akka.Remote.TestKit
         /// removed, so that the remaining nodes may still pass subsequent barriers.
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
-        /// <param name="abort"></param>
-        /// <returns></returns>
+        /// <param name="abort">TBD</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <returns>TBD</returns>
         public Task<Done> Shutdown(RoleName node, bool abort = false)
         {
             // the recover is needed to handle ClientDisconnectedException exception,
@@ -222,7 +224,7 @@ namespace Akka.Remote.TestKit
                 var failure = t.Result as FSMBase.Failure;
                 if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
 
-                throw new InvalidOperationException(String.Format("Expected Done but received {0}", t.Result));
+                throw new InvalidOperationException($"Expected Done but received {t.Result}");
             });
         }
 

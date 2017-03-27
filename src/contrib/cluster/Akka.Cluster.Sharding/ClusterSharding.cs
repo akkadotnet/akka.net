@@ -661,14 +661,15 @@ namespace Akka.Cluster.Sharding
             {
                 return region;
             }
-            throw new ArgumentException(string.Format("Shard type [{0}] must be started first", typeName));
+            throw new ArgumentException($"Shard type [{typeName}] must be started first");
         }
 
         private void RequireClusterRole(string role)
         {
             if (!(string.IsNullOrEmpty(role) || _cluster.SelfRoles.Contains(role)))
             {
-                throw new IllegalStateException(string.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
+                throw new IllegalStateException(
+                    $"This cluster member [{_cluster.SelfAddress}] doesn't have the role [{role}]");
             }
         }
     }

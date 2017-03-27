@@ -182,17 +182,17 @@ namespace Akka.Remote
     internal class EndpointException : AkkaException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="cause">TBD</param>
-        public EndpointException(string msg, Exception cause = null) : base(msg, cause) { }
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
+        public EndpointException(string message, Exception cause = null) : base(message, cause) { }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected EndpointException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
@@ -313,11 +313,11 @@ namespace Akka.Remote
     internal sealed class EndpointDisassociatedException : EndpointException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointDisassociatedException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        public EndpointDisassociatedException(string msg)
-            : base(msg)
+        /// <param name="message">The message that describes the error.</param>
+        public EndpointDisassociatedException(string message)
+            : base(message)
         {
         }
     }
@@ -328,20 +328,20 @@ namespace Akka.Remote
     internal sealed class EndpointAssociationException : EndpointException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointAssociationException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        public EndpointAssociationException(string msg)
-            : base(msg)
+        /// <param name="message">The message that describes the error.</param>
+        public EndpointAssociationException(string message)
+            : base(message)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointAssociationException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="inner">TBD</param>
-        public EndpointAssociationException(string msg, Exception inner) : base(msg, inner) { }
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
+        public EndpointAssociationException(string message, Exception innerException) : base(message, innerException) { }
     }
 
     /// <summary>
@@ -350,11 +350,11 @@ namespace Akka.Remote
     internal sealed class OversizedPayloadException : EndpointException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="OversizedPayloadException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        public OversizedPayloadException(string msg)
-            : base(msg)
+        /// <param name="message">The message that describes the error.</param>
+        public OversizedPayloadException(string message)
+            : base(message)
         {
         }
     }

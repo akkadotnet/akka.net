@@ -122,6 +122,7 @@ namespace Akka.Cluster
         /// <param name="members">TBD</param>
         /// <param name="overview">TBD</param>
         /// <param name="version">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview, VectorClock version)
         {
             _members = members;
@@ -156,19 +157,24 @@ namespace Akka.Cluster
         private void AssertInvariants()
         {
             if (_members.Any(m => m.Status == MemberStatus.Removed))
-                throw new ArgumentException(string.Format("Live members must not have status [Removed], got {0}",
-                    _members.Where(m => m.Status == MemberStatus.Removed).Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b)));
+            {
+                var members = string.Join(", ", _members.Where(m => m.Status == MemberStatus.Removed).Select(m => m.ToString()));
+                throw new ArgumentException($"Live members must not have status [Removed], got {members}", nameof(_members));
+            }
 
-            var inReachabilityButNotMember =
-                _overview.Reachability.AllObservers.Except(_members.Select(m => m.UniqueAddress));
+            var inReachabilityButNotMember = _overview.Reachability.AllObservers.Except(_members.Select(m => m.UniqueAddress));
             if (!inReachabilityButNotMember.IsEmpty)
-                throw new ArgumentException("Nodes not part of cluster in reachability table, got {0}",
-                    inReachabilityButNotMember.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b));
+            {
+                var inreachability = string.Join(", ", inReachabilityButNotMember.Select(a => a.ToString()));
+                throw new ArgumentException($"Nodes not part of cluster in reachability table, got {inreachability}", nameof(_overview));
+            }
 
             var seenButNotMember = _overview.Seen.Except(_members.Select(m => m.UniqueAddress));
             if (!seenButNotMember.IsEmpty)
-                throw new ArgumentException("Nodes not part of cluster have marked the Gossip as seen, got {0}",
-                    seenButNotMember.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b));
+            {
+                var seen = string.Join(", ", seenButNotMember.Select(a => a.ToString()));
+                throw new ArgumentException($"Nodes not part of cluster have marked the Gossip as seen, got {seen}", nameof(_overview));
+            }
         }
 
         //TODO: Serializer should ignore

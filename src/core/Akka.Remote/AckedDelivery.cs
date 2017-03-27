@@ -355,12 +355,15 @@ namespace Akka.Remote
         public SortedSet<SeqNo> Nacks { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("ACK[{0}, {1}]", CumulativeAck, String.Join(",", Nacks.Select(x => x.ToString())));
+            var nacks = string.Join(",", Nacks.Select(x => x.ToString()));
+            return $"ACK[{CumulativeAck}, {nacks}]";
         }
     }
 
@@ -374,7 +377,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="c">The capacity of the buffer</param>
         public ResendBufferCapacityReachedException(int c)
-            : base(string.Format("Resent buffer capacity of {0} has been reached.", c))
+            : base($"Resent buffer capacity of {c} has been reached.")
         {
         }
 
@@ -472,7 +475,7 @@ namespace Akka.Remote
         /// <returns>The updated buffer.</returns>
         public AckedSendBuffer<T> Buffer(T msg)
         {
-            if (msg.Seq <= MaxSeq) throw new ArgumentException(String.Format("Sequence number must be monotonic. Received {0} which is smaller than {1}", msg.Seq, MaxSeq));
+            if (msg.Seq <= MaxSeq) throw new ArgumentException($"Sequence number must be monotonic. Received {msg.Seq} which is smaller than {MaxSeq}", nameof(msg));
 
             if (NonAcked.Count == Capacity) throw new ResendBufferCapacityReachedException(Capacity);
 
@@ -480,12 +483,15 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("[{0}]", string.Join(",", NonAcked.Select(x => x.ToString())));
+            var nonAcked = string.Join(",", NonAcked.Select(x => x.ToString()));
+            return $"[{nonAcked}]";
         }
 
         #region Copy methods
@@ -550,7 +556,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly static SeqNo.HasSeqNoComparer<T> Comparer = new SeqNo.HasSeqNoComparer<T>();
+        public static readonly SeqNo.HasSeqNoComparer<T> Comparer = new SeqNo.HasSeqNoComparer<T>();
 
         /// <summary>
         /// Constructor

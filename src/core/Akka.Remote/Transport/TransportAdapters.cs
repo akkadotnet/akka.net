@@ -103,7 +103,7 @@ namespace Akka.Remote.Transport
                 }
                 catch (Exception ex)
                 {
-                    throw new ArgumentException(string.Format("Cannot initiate transport adapter {0}", adapter.Value), ex);
+                    throw new ArgumentException($"Cannot initiate transport adapter {adapter.Value}", ex);
                 }
             }
 
@@ -123,7 +123,7 @@ namespace Akka.Remote.Transport
                 return _adaptersTable[name];
             }
 
-            throw new ArgumentException(string.Format("There is no registered transport adapter provider with name {0}", name));
+            throw new ArgumentException($"There is no registered transport adapter provider with name {name}");
         }
     }
 
