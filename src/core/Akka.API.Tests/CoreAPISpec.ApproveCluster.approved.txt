@@ -286,7 +286,7 @@ namespace Akka.Cluster.Routing
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig other) { }
+        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
     }
     public sealed class ClusterRouterGroupSettings : Akka.Cluster.Routing.ClusterRouterSettingsBase
     {

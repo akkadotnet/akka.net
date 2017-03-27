@@ -129,7 +129,7 @@ namespace Akka.Routing
                     {
                         completion.TrySetResult(
                             new Status.Failure(
-                                new AskTimeoutException(String.Format("Ask timed out on {0} after {1}", sender, _within))));
+                                new AskTimeoutException($"Ask timed out on {sender} after {_within}")));
                     }
                 }, cancelable);
             }

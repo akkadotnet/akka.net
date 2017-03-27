@@ -472,7 +472,7 @@ namespace Akka.Remote.Transport
                     return new Heartbeat();
             }
 
-            throw new PduCodecException(string.Format("Decoding of control PDU failed, invalid format, unexpected {0}", controlPdu));
+            throw new PduCodecException($"Decoding of control PDU failed, invalid format, unexpected {controlPdu}");
         }
 
 
@@ -521,7 +521,8 @@ namespace Akka.Remote.Transport
 
         private AddressData SerializeAddress(Address address)
         {
-            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue) throw new ArgumentException(string.Format("Address {0} could not be serialized: host or port missing", address));
+            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
+                throw new ArgumentException($"Address {address} could not be serialized: host or port missing");
             return AddressData.CreateBuilder()
                 .SetHostname(address.Host)
                 .SetPort((uint)address.Port.Value)
