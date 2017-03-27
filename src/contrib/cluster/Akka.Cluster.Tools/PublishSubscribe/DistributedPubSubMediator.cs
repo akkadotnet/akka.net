@@ -21,7 +21,6 @@ using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
-
     /// <summary>
     /// <para>
     /// This actor manages a registry of actor references and replicates
@@ -156,7 +155,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             _settings = settings;
 
             if (!string.IsNullOrEmpty(_settings.Role) && !_cluster.SelfRoles.Contains(_settings.Role))
-                throw new ArgumentException(string.Format("The cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, _settings.Role));
+                throw new ArgumentException($"The cluster member [{_cluster.SelfAddress}] doesn't have the role [{_settings.Role}]");
 
             //Start periodic gossip to random nodes in cluster
             _gossipCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, GossipTick.Instance, Self);

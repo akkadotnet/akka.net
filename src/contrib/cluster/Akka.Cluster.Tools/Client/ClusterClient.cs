@@ -132,7 +132,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly RefreshContactsTick Instance = new RefreshContactsTick();
+            public static RefreshContactsTick Instance { get; } = new RefreshContactsTick();
             private RefreshContactsTick() { }
         }
 
@@ -145,7 +145,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly HeartbeatTick Instance = new HeartbeatTick();
+            public static HeartbeatTick Instance { get; } = new HeartbeatTick();
             private HeartbeatTick() { }
         }
 
@@ -158,7 +158,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ReconnectTimeout Instance = new ReconnectTimeout();
+            public static ReconnectTimeout Instance { get; } = new ReconnectTimeout();
             private ReconnectTimeout() { }
         }
 
