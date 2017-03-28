@@ -287,8 +287,6 @@ namespace Akka.Actor
     public class ActorSelection : Akka.Actor.ICanTell
     {
         public ActorSelection() { }
-        [System.ObsoleteAttribute("The constructor is obsoleted, use ActorSelection(IActorRef anchor, IEnumerable<st" +
-            "ring> elements) [1.2.0]")]
         public ActorSelection(Akka.Actor.IActorRef anchor, Akka.Actor.SelectionPathElement[] path) { }
         public ActorSelection(Akka.Actor.IActorRef anchor, string path) { }
         public ActorSelection(Akka.Actor.IActorRef anchor, System.Collections.Generic.IEnumerable<string> elements) { }
