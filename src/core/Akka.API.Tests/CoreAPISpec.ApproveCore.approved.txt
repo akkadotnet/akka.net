@@ -4,9 +4,11 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.TestKit.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests")]
@@ -128,6 +130,8 @@ namespace Akka.Actor
         public ActorIdentity(object messageId, Akka.Actor.IActorRef subject) { }
         public object MessageId { get; }
         public Akka.Actor.IActorRef Subject { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public class ActorInitializationException : Akka.Actor.AkkaException
@@ -1011,6 +1015,8 @@ namespace Akka.Actor
     {
         public Identify(object messageId) { }
         public object MessageId { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public interface IExtension { }
@@ -4507,222 +4513,6 @@ namespace Akka.Serialization
         public virtual object FromBinary(byte[] bytes, System.Type type) { }
         public abstract object FromBinary(byte[] binary, string manifest);
         public abstract string Manifest(object o);
-    }
-}
-namespace Akka.Tools.MatchHandler
-{
-    public class Argument
-    {
-        public Argument(Akka.Tools.MatchHandler.PredicateAndHandler predicateAndHandler, object value, bool valueIsActionOrFunc) { }
-        public Akka.Tools.MatchHandler.PredicateAndHandler PredicateAndHandler { get; }
-        public object Value { get; }
-        public bool ValueIsActionOrFunc { get; }
-    }
-    public class CachedMatchCompiler<T> : Akka.Tools.MatchHandler.IMatchCompiler<T>
-    {
-        public static readonly Akka.Tools.MatchHandler.CachedMatchCompiler<T> Instance;
-        public CachedMatchCompiler(Akka.Tools.MatchHandler.IMatchExpressionBuilder expressionBuilder, Akka.Tools.MatchHandler.IPartialActionBuilder actionBuilder, Akka.Tools.MatchHandler.ILambdaExpressionCompiler expressionCompiler) { }
-        public Akka.Tools.MatchHandler.PartialAction<T> Compile(System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.TypeHandler> handlers, System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.Argument> capturedArguments, Akka.Tools.MatchHandler.MatchBuilderSignature signature) { }
-        public void CompileToMethod(System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.TypeHandler> handlers, System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.Argument> capturedArguments, Akka.Tools.MatchHandler.MatchBuilderSignature signature, System.Reflection.Emit.TypeBuilder typeBuilder, string methodName, System.Reflection.MethodAttributes methodAttributes = 22) { }
-    }
-    public class CompiledMatchHandlerWithArguments
-    {
-        public CompiledMatchHandlerWithArguments(System.Delegate compiledDelegate, object[] delegateArguments) { }
-        public System.Delegate CompiledDelegate { get; }
-        public object[] DelegateArguments { get; }
-    }
-    public enum HandlerKind
-    {
-        Action = 0,
-        ActionWithPredicate = 1,
-        Func = 2,
-    }
-    public interface ILambdaExpressionCompiler
-    {
-        System.Delegate Compile(System.Linq.Expressions.LambdaExpression expression);
-        void CompileToMethod(System.Linq.Expressions.LambdaExpression expression, System.Reflection.Emit.MethodBuilder method);
-    }
-    public interface IMatchCompiler<in T>
-    {
-        Akka.Tools.MatchHandler.PartialAction<T> Compile(System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.TypeHandler> handlers, System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.Argument> capturedArguments, Akka.Tools.MatchHandler.MatchBuilderSignature signature);
-        void CompileToMethod(System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.TypeHandler> handlers, System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.Argument> capturedArguments, Akka.Tools.MatchHandler.MatchBuilderSignature signature, System.Reflection.Emit.TypeBuilder typeBuilder, string methodName, System.Reflection.MethodAttributes methodAttributes = 22);
-    }
-    public interface IMatchExpressionBuilder
-    {
-        Akka.Tools.MatchHandler.MatchExpressionBuilderResult BuildLambdaExpression(System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.TypeHandler> typeHandlers);
-        object[] CreateArgumentValuesArray(System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.Argument> arguments);
-    }
-    public interface IPartialActionBuilder
-    {
-        Akka.Tools.MatchHandler.PartialAction<T> Build<T>(Akka.Tools.MatchHandler.CompiledMatchHandlerWithArguments handlerAndArgs);
-    }
-    public interface IPartialHandlerArgumentsCapture<T>
-    {
-        bool Handle(T message);
-        void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments);
-    }
-    public class LambdaExpressionCompiler : Akka.Tools.MatchHandler.ILambdaExpressionCompiler
-    {
-        public LambdaExpressionCompiler() { }
-        public System.Delegate Compile(System.Linq.Expressions.LambdaExpression expression) { }
-        public void CompileToMethod(System.Linq.Expressions.LambdaExpression expression, System.Reflection.Emit.MethodBuilder method) { }
-    }
-    public class MatchBuilder : Akka.Tools.MatchHandler.MatchBuilder<object>
-    {
-        public MatchBuilder(Akka.Tools.MatchHandler.IMatchCompiler<object> compiler) { }
-    }
-    public class MatchBuilder<TItem>
-    {
-        public MatchBuilder(Akka.Tools.MatchHandler.IMatchCompiler<TItem> compiler) { }
-        public Akka.Tools.MatchHandler.PartialAction<TItem> Build() { }
-        public void BuildToMethod(System.Reflection.Emit.TypeBuilder typeBuilder, string methodName, System.Reflection.MethodAttributes attributes = 22) { }
-        public void Match<T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null)
-            where T : TItem { }
-        public void Match(System.Type handlesType, System.Action<TItem> handler, System.Predicate<TItem> shouldHandle = null) { }
-        public void Match<T>(System.Func<T, bool> handler)
-            where T : TItem { }
-        public void Match(System.Type handlesType, System.Func<TItem, bool> handler) { }
-        public void MatchAny(System.Action<TItem> handler) { }
-    }
-    public class MatchBuilderSignature : System.IEquatable<Akka.Tools.MatchHandler.MatchBuilderSignature>
-    {
-        public MatchBuilderSignature(System.Collections.Generic.IReadOnlyList<object> signature) { }
-        public bool Equals(Akka.Tools.MatchHandler.MatchBuilderSignature other) { }
-        public override bool Equals(object obj) { }
-        public override int GetHashCode() { }
-        public override string ToString() { }
-    }
-    public class MatchExpressionBuilder<T> : Akka.Tools.MatchHandler.IMatchExpressionBuilder
-    {
-        public MatchExpressionBuilder() { }
-        public Akka.Tools.MatchHandler.MatchExpressionBuilderResult BuildLambdaExpression(System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.TypeHandler> typeHandlers) { }
-        public object[] CreateArgumentValuesArray(System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.Argument> arguments) { }
-    }
-    public class MatchExpressionBuilderResult
-    {
-        public MatchExpressionBuilderResult(System.Linq.Expressions.LambdaExpression lambdaExpression, object[] arguments) { }
-        public object[] Arguments { get; }
-        public System.Linq.Expressions.LambdaExpression LambdaExpression { get; }
-    }
-    public delegate bool PartialAction<in T>(T item);
-    public class PartialActionBuilder : Akka.Tools.MatchHandler.IPartialActionBuilder
-    {
-        public const int MaxNumberOfArguments = 15;
-        public PartialActionBuilder() { }
-        public Akka.Tools.MatchHandler.PartialAction<T> Build<T>(Akka.Tools.MatchHandler.CompiledMatchHandlerWithArguments handlerAndArgs) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public sealed class PartialHandlerArgumentsCapture<T, T1, T2, T3, T4, T5, T6, T7, T8> : Akka.Tools.MatchHandler.IPartialHandlerArgumentsCapture<T>
-    {
-        public PartialHandlerArgumentsCapture() { }
-        public bool Handle(T value) { }
-        public void Initialize(System.Delegate handler, System.Collections.Generic.IReadOnlyList<object> arguments) { }
-    }
-    public class PredicateAndHandler
-    {
-        public System.Linq.Expressions.Expression ActionOrFuncExpression { get; set; }
-        public System.Collections.Generic.IReadOnlyList<Akka.Tools.MatchHandler.Argument> Arguments { get; }
-        public bool HandlerFirstArgumentShouldBeBaseType { get; }
-        public Akka.Tools.MatchHandler.HandlerKind HandlerKind { get; }
-        public System.Linq.Expressions.Expression PredicateExpression { get; set; }
-        public static Akka.Tools.MatchHandler.PredicateAndHandler CreateAction(object action, object predicate = null, bool handlerFirstArgumentShouldBeBaseType = False) { }
-        public static Akka.Tools.MatchHandler.PredicateAndHandler CreateFunc(object func, bool handlerFirstArgumentShouldBeBaseType = False) { }
-    }
-    public class TypeHandler
-    {
-        public TypeHandler(System.Type handlesType) { }
-        public System.Collections.Generic.List<Akka.Tools.MatchHandler.PredicateAndHandler> Handlers { get; }
-        public System.Type HandlesType { get; }
-        public System.Collections.Generic.IEnumerable<Akka.Tools.MatchHandler.Argument> GetArguments() { }
     }
 }
 namespace Akka.Util

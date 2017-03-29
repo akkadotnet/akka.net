@@ -20,7 +20,7 @@ namespace Akka.Persistence
         public int WarnAfterNumberOfUnconfirmedAttempts { get; }
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public bool ConfirmDelivery(long deliveryId) { }
         public void Deliver(Akka.Actor.ActorPath destination, System.Func<long, object> deliveryMessageMapper) { }
         public void Deliver(Akka.Actor.ActorSelection destination, System.Func<long, object> deliveryMessageMapper) { }
@@ -39,7 +39,7 @@ namespace Akka.Persistence
         public int WarnAfterNumberOfUnconfirmedAttempts { get; }
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public bool ConfirmDelivery(long deliveryId) { }
         public void Deliver(Akka.Actor.ActorPath destination, System.Func<long, object> deliveryMessageMapper) { }
         public void Deliver(Akka.Actor.ActorSelection destination, System.Func<long, object> deliveryMessageMapper) { }
@@ -225,7 +225,7 @@ namespace Akka.Persistence
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
         public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public void DeferAsync<TEvent>(TEvent evt, System.Action<TEvent> handler) { }
         public void DeleteMessages(long toSequenceNr) { }
         public void DeleteSnapshot(long sequenceNr) { }
@@ -443,7 +443,7 @@ namespace Akka.Persistence
         public Akka.Actor.IStash Stash { get; set; }
         public abstract string ViewId { get; }
         public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public void DeleteSnapshot(long sequenceNr) { }
         public void DeleteSnapshots(Akka.Persistence.SnapshotSelectionCriteria criteria) { }
         public void LoadSnapshot(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, long toSequenceNr) { }
@@ -926,7 +926,7 @@ namespace Akka.Persistence.Journal
         public Akka.Actor.IStash Stash { get; set; }
         public abstract System.TimeSpan Timeout { get; }
         public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr) { }
         public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }

@@ -14,7 +14,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class LambdaExpressionCompiler : ILambdaExpressionCompiler
+    internal class LambdaExpressionCompiler : ILambdaExpressionCompiler
     {
         /// <summary>
         /// TBD

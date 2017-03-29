@@ -18,7 +18,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public class CachedMatchCompiler<T> : IMatchCompiler<T>
+    internal class CachedMatchCompiler<T> : IMatchCompiler<T>
     {
         private readonly IMatchExpressionBuilder _expressionBuilder;
         private readonly IPartialActionBuilder _actionBuilder;
