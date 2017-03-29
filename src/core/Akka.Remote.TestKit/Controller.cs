@@ -12,7 +12,7 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Helios.Channels;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.TestKit
 {
@@ -23,7 +23,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class Controller : UntypedActor, ILogReceive
+    internal class Controller : UntypedActor, ILogReceive
     {
         public sealed class ClientDisconnected : IDeadLetterSuppression
         {
@@ -311,7 +311,7 @@ namespace Akka.Remote.TestKit
                 if (clientLost != null) return FailBarrier(clientLost.BarrierData);
                 var duplicateNode = e as BarrierCoordinator.DuplicateNodeException;
                 if (duplicateNode != null) return FailBarrier(duplicateNode.BarrierData);
-                throw new InvalidOperationException(String.Format("Cannot process exception of type {0}", e.GetType()));
+                throw new InvalidOperationException($"Cannot process exception of type {e.GetType()}");
             });
         }
 

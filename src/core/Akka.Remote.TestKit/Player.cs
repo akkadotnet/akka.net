@@ -20,7 +20,7 @@ using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
 using Akka.Util.Internal;
-using Helios.Channels;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.TestKit
 {
