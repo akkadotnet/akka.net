@@ -39,6 +39,16 @@
       <HintPath>..\..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="FsCheck, Version=2.8.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FsCheck.2.8.0\lib\net452\FsCheck.dll</HintPath>
+    </Reference>
+    <Reference Include="FsCheck.Xunit, Version=2.8.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FsCheck.Xunit.2.8.0\lib\net452\FsCheck.Xunit.dll</HintPath>
+    </Reference>
+    <Reference Include="FSharp.Core, Version=4.3.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FSharp.Core.3.1.2.5\lib\net40\FSharp.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Google.ProtocolBuffers, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.dll</HintPath>
       <Private>True</Private>
@@ -94,12 +104,14 @@
     <Compile Include="ClusterDeployerSpec.cs" />
     <Compile Include="ClusterDomainEventPublisherSpec.cs" />
     <Compile Include="ClusterDomainEventSpec.cs" />
+    <Compile Include="ClusterGenerators.cs" />
     <Compile Include="ClusterHeartBeatSenderStateSpec.cs" />
     <Compile Include="ClusterSpec.cs" />
     <Compile Include="ClusterSpecBase.cs" />
     <Compile Include="DowningProviderSpec.cs" />
     <Compile Include="GossipSpec.cs" />
     <Compile Include="HeartbeatNodeRingSpec.cs" />
+    <Compile Include="MemberOrderingModelBasedTests.cs" />
     <Compile Include="MemberOrderingSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\ClusterMessageSerializerSpec.cs" />
@@ -109,6 +121,7 @@
     <Compile Include="SerializationChecksSpec.cs" />
     <Compile Include="StartupWithOneThreadSpec.cs" />
     <Compile Include="TestMember.cs" />
+    <Compile Include="VectorClockModelBasedSpecs.cs" />
     <Compile Include="VectorClockSpec.cs" />
   </ItemGroup>
   <ItemGroup>

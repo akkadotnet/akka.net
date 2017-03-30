@@ -68,20 +68,20 @@ namespace Akka.Cluster
             return Empty.Copy(members: members);
         }
 
-        static readonly ImmutableHashSet<MemberStatus> LeaderMemberStatus =
+        private static readonly ImmutableHashSet<MemberStatus> LeaderMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
 
-        static readonly ImmutableHashSet<MemberStatus> ConvergenceMemberStatus =
+        private static readonly ImmutableHashSet<MemberStatus> ConvergenceMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
 
         /// <summary>
-        /// TBD
+        /// If there are unreachable members in the cluster with any of these statuses, they will be skipped during convergence checks.
         /// </summary>
         public static readonly ImmutableHashSet<MemberStatus> ConvergenceSkipUnreachableWithMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
 
         /// <summary>
-        /// TBD
+        /// If there are unreachable members in the cluster with any of these statuses, they will be pruned from the local gossip
         /// </summary>
         public static readonly ImmutableHashSet<MemberStatus> RemoveUnreachableWithMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
