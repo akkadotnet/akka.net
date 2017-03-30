@@ -244,11 +244,14 @@ namespace Akka.Serialization
                 {
                     // force deferral of the base "object" serializer until all other higher-level types have been evaluated
                     if (serializerType.Key.IsAssignableFrom(type) && serializerType.Key != _objectType)
+                    {
                         serializer = serializerType.Value;
+                        break;
+                    }
                 }
 
                 //do a final check for the "object" serializer
-                if (_serializerMap.ContainsKey(_objectType) && _objectType.IsAssignableFrom(type))
+                if (serializer == null && _serializerMap.ContainsKey(_objectType) && _objectType.IsAssignableFrom(type))
                     serializer = _serializerMap[_objectType];
 
                 if (serializer == null)
