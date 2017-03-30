@@ -48,9 +48,10 @@ namespace Akka.Remote.TestKit
             {new LengthFieldPrepender(4, false), new LengthFieldBasedFrameDecoder(10000, 0, 4, 0, 4)};
             var protobuf = new IChannelHandler[] { new ProtobufEncoder(), new ProtobufDecoder(TCP.Wrapper.DefaultInstance) };
             var msg = new IChannelHandler[] { new MsgEncoder(), new MsgDecoder() };
-            var pipeline = encoders.Concat(protobuf).Concat(msg).Concat(new IChannelHandler[] { handler });
+            var pipeline = encoders.Concat(protobuf).Concat(msg);
             foreach (var h in pipeline)
                 channel.Pipeline.AddLast(h);
+            channel.Pipeline.AddLast("TestKitHandler", handler);
         }
 
 

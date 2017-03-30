@@ -244,6 +244,12 @@ namespace Akka.Remote.TestKit
         private readonly IActorRef _controller;
         private readonly ConcurrentDictionary<IChannel, IActorRef> _clients = new ConcurrentDictionary<IChannel, IActorRef>();
 
+        /// <summary>
+        /// A single <see cref="ConductorHandler"/> gets shared across all of the connections between 
+        /// server and clients.
+        /// </summary>
+        public override bool IsSharable => true;
+
         public ConductorHandler(IActorRef controller, ILoggingAdapter log)
         {
             _controller = controller;
