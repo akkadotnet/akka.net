@@ -123,14 +123,25 @@ namespace Akka.Serialization
         /// </summary>
         public ActorSystem System { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="serializer">TBD</param>
+        /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AddSerializer(Serializer serializer)
+        public void AddSerializer(Serializer serializer)
         {
             _serializers.Add(serializer.Identifier, serializer);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="type">TBD</param>
+        /// <param name="serializer">TBD</param>
+        /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AddSerializationMap(Type type, Serializer serializer)
+        public void AddSerializationMap(Type type, Serializer serializer)
         {
             _serializerMap[type] = serializer;
         }
