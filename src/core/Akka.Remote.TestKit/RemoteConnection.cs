@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.DotNetty;
+using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Common.Internal.Logging;
 using DotNetty.Common.Utilities;
@@ -39,13 +40,16 @@ namespace Akka.Remote.TestKit
     {
         static RemoteConnection()
         {
-           // InternalLoggerFactory.DefaultFactory = new StandardOutLoggerFactory();
+            var f = new LoggerFactory();
+            f.AddProvider(new ConsoleLoggerProvider());
+            f.CreateLogger("Akka.Remote.TestKit").LogDebug("Using StandardOut as the default logging system.");
+            InternalLoggerFactory.DefaultFactory = f;
         }
 
         private static void ApplyChannelPipeline(IChannel channel, IChannelHandler handler)
         {
             var encoders = new IChannelHandler[]
-            {new LengthFieldPrepender(4, false), new LengthFieldBasedFrameDecoder(10000, 0, 4, 0, 4)};
+            {new LengthFieldPrepender(ByteOrder.LittleEndian, 4, 0, false), new LengthFieldBasedFrameDecoder(ByteOrder.LittleEndian, 10000, 0, 4, 0, 4, true)};
             var protobuf = new IChannelHandler[] { new ProtobufEncoder(), new ProtobufDecoder(TCP.Wrapper.DefaultInstance) };
             var msg = new IChannelHandler[] { new MsgEncoder(), new MsgDecoder() };
             var pipeline = encoders.Concat(protobuf).Concat(msg);

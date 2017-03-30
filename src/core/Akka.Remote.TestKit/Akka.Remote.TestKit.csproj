@@ -99,6 +99,7 @@
     <Compile Include="BarrierCoordinator.cs" />
     <Compile Include="CommandLine.cs" />
     <Compile Include="Conductor.cs" />
+    <Compile Include="ConsoleLogger.cs" />
     <Compile Include="Controller.cs" />
     <Compile Include="DataTypes.cs" />
     <Compile Include="Extension.cs" />
