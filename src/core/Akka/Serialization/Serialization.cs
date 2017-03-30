@@ -9,25 +9,20 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using Akka.Actor;
-using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
 
 namespace Akka.Serialization
 {
     /// <summary>
-    /// TBD
+    /// Serialization information needed for serializing local actor refs.
     /// </summary>
-    public class Information
+    internal class Information
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public Address Address { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public ActorSystem System { get; set; }
     }
 
@@ -73,7 +68,7 @@ namespace Akka.Serialization
             System = system;
 
             _nullSerializer = new NullSerializer(system);
-            _serializers.Add(_nullSerializer.Identifier, _nullSerializer);
+            AddSerializer(_nullSerializer);
 
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
@@ -94,7 +89,7 @@ namespace Akka.Serialization
                 var serializer = serializerConfig != null
                     ? (Serializer)Activator.CreateInstance(serializerType, system, serializerConfig)
                     : (Serializer)Activator.CreateInstance(serializerType, system);
-                _serializers.Add(serializer.Identifier, serializer);
+                AddSerializer(serializer);
                 namedSerializers.Add(kvp.Key, serializer);
             }
 
@@ -119,36 +114,29 @@ namespace Akka.Serialization
                     continue;
                 }
 
-                _serializerMap.TryAdd(messageType, serializer);
+                AddSerializationMap(messageType, serializer);
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorSystem System { get; private set; }
+        public ActorSystem System { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="serializer">TBD</param>
-        public void AddSerializer(Serializer serializer)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void AddSerializer(Serializer serializer)
         {
             _serializers.Add(serializer.Identifier, serializer);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="type">TBD</param>
-        /// <param name="serializer">TBD</param>
-        public void AddSerializationMap(Type type, Serializer serializer)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void AddSerializationMap(Type type, Serializer serializer)
         {
-            _serializerMap.TryAdd(type, serializer);
+            _serializerMap[type] = serializer;
         }
 
         /// <summary>
-        /// TBD
+        /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
         /// <param name="bytes">TBD</param>
         /// <param name="serializerId">TBD</param>
@@ -156,7 +144,7 @@ namespace Akka.Serialization
         /// <exception cref="SerializationException">
         /// This exception is thrown if the system cannot find the serializer with the given <paramref name="serializerId"/>.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
             Serializer serializer;
@@ -169,7 +157,7 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
         /// <param name="bytes">TBD</param>
         /// <param name="serializerId">TBD</param>
@@ -178,7 +166,7 @@ namespace Akka.Serialization
         /// This exception is thrown if the system cannot find the serializer with the given <paramref name="serializerId"/>
         /// or it couldn't find the given <paramref name="manifest"/> with the given <paramref name="serializerId"/>.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, string manifest)
         {
             Serializer serializer;
@@ -251,14 +239,14 @@ namespace Akka.Serialization
                     }
                 }
 
-                //do a final check for the "object" serializer
-                if (serializer == null && _serializerMap.ContainsKey(_objectType) && _objectType.IsAssignableFrom(type))
+                // do a final check for the "object" serializer
+                if (serializer == null && _serializerMap.ContainsKey(_objectType))
                     serializer = _serializerMap[_objectType];
 
                 if (serializer == null)
                     throw new SerializationException($"Serializer not found for type {objectType.Name}");
 
-                _serializerMap.TryAdd(type, serializer);
+                AddSerializationMap(type, serializer);
                 return serializer;
             }
         }

@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Serialization;
+using Akka.Util;
 using Google.ProtocolBuffers;
 
 namespace Akka.Persistence.Serialization
@@ -39,7 +40,7 @@ namespace Akka.Persistence.Serialization
         /// <summary>
         /// TBD
         /// </summary>
-        public Information TransportInformation
+        internal Information TransportInformation
         {
             get
             {
@@ -198,7 +199,7 @@ namespace Akka.Persistence.Serialization
                     builder.SetPayloadManifest(ByteString.CopyFromUtf8(manifest));
             }
             else if (serializer.IncludeManifest)
-                builder.SetPayloadManifest(ByteString.CopyFromUtf8(TypeQualifiedNameForManifest(payload.GetType())));
+                builder.SetPayloadManifest(ByteString.CopyFromUtf8(payload.GetType().TypeQualifiedName()));
 
             var bytes = serializer.ToBinary(payload);
 

@@ -4421,12 +4421,6 @@ namespace Akka.Serialization
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
-    public class Information
-    {
-        public Information() { }
-        public Akka.Actor.Address Address { get; set; }
-        public Akka.Actor.ActorSystem System { get; set; }
-    }
     public class JavaSerializer : Akka.Serialization.Serializer
     {
         public JavaSerializer(Akka.Actor.ExtendedActorSystem system) { }
@@ -4480,8 +4474,6 @@ namespace Akka.Serialization
     {
         public Serialization(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Actor.ActorSystem System { get; }
-        public void AddSerializationMap(System.Type type, Akka.Serialization.Serializer serializer) { }
-        public void AddSerializer(Akka.Serialization.Serializer serializer) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
         public Akka.Serialization.Serializer FindSerializerFor(object obj) { }
@@ -4496,9 +4488,9 @@ namespace Akka.Serialization
         public virtual int Identifier { get; }
         public abstract bool IncludeManifest { get; }
         public abstract object FromBinary(byte[] bytes, System.Type type);
+        public T FromBinary<T>(byte[] bytes) { }
         public abstract byte[] ToBinary(object obj);
         public byte[] ToBinaryWithAddress(Akka.Actor.Address address, object obj) { }
-        protected static string TypeQualifiedNameForManifest(System.Type type) { }
     }
     public class static SerializerIdentifierHelper
     {

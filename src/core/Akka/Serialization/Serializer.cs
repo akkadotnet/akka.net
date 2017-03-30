@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.Serialization
 {
@@ -87,22 +88,11 @@ namespace Akka.Serialization
         public abstract object FromBinary(byte[] bytes, Type type);
 
         /// <summary>
-        /// Utility to be used by implementors to create a manifest from the type.
-        /// The manifest is used to look up the type on deserialization.
-        /// Returns the type qualified name including namespace and assembly, but not assembly version.
+        /// Deserializes a byte array into an object.
         /// </summary>
-        /// <remarks>
-        /// See <see cref="Type.GetType(string)"/> for details on how a type is looked up
-        /// from a name. In particular, if the (partial) assembly name is not included
-        /// only the assembly calling <see cref="Type.GetType(string)"/> is searched.
-        /// If the (partial) assembly name is included, it searches in the specified assembly.
-        /// </remarks>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
-        protected static string TypeQualifiedNameForManifest(Type type)
-        {
-            return type == null ? string.Empty : string.Format("{0},{1}", type.FullName, type.Assembly.GetName().Name);
-        }
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <returns>The object contained in the array</returns>
+        public T FromBinary<T>(byte[] bytes) => (T)FromBinary(bytes, typeof(T));
     }
 
     /// <summary>
@@ -131,7 +121,7 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public sealed override object FromBinary(byte[] bytes, Type type)
         {
-            var manifest = TypeQualifiedNameForManifest(type);
+            var manifest = type.TypeQualifiedName();
             return FromBinary(bytes, manifest);
         }
 
