@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -60,7 +61,7 @@ namespace Akka.Serialization
 
         private readonly Serializer _nullSerializer;
 
-        private readonly Dictionary<Type, Serializer> _serializerMap = new Dictionary<Type, Serializer>();
+        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new ConcurrentDictionary<Type, Serializer>();
         private readonly Dictionary<int, Serializer> _serializers = new Dictionary<int, Serializer>();
 
         /// <summary>
@@ -118,7 +119,7 @@ namespace Akka.Serialization
                     continue;
                 }
 
-                _serializerMap.Add(messageType, serializer);
+                _serializerMap.TryAdd(messageType, serializer);
             }
         }
 
@@ -143,7 +144,7 @@ namespace Akka.Serialization
         /// <param name="serializer">TBD</param>
         public void AddSerializationMap(Type type, Serializer serializer)
         {
-            _serializerMap.Add(type, serializer);
+            _serializerMap.TryAdd(type, serializer);
         }
 
         /// <summary>
@@ -257,7 +258,7 @@ namespace Akka.Serialization
                 if (serializer == null)
                     throw new SerializationException($"Serializer not found for type {objectType.Name}");
 
-                _serializerMap.Add(type, serializer);
+                _serializerMap.TryAdd(type, serializer);
                 return serializer;
             }
         }
