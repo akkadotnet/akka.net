@@ -203,24 +203,24 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the Serializer configured for the given object, returns the NullSerializer if it's null.
         /// </summary>
         /// <param name="obj">TBD</param>
         /// <returns>TBD</returns>
         public Serializer FindSerializerFor(object obj)
         {
-            if (obj == null)
-                return _nullSerializer;
-
-            Type type = obj.GetType();
-            return FindSerializerForType(type);
+            return obj == null ? _nullSerializer : FindSerializerForType(obj.GetType());
         }
 
         //cache to eliminate lots of typeof operator calls
         private readonly Type _objectType = typeof(object);
 
         /// <summary>
-        /// TBD
+        /// Returns the configured Serializer for the given Class. The configured Serializer
+        /// is used if the configured class `IsAssignableFrom` from the <see cref="Type">type</see>, i.e.
+        /// the configured class is a super class or implemented interface. In case of
+        /// ambiguity it is primarily using the most specific configured class,
+        /// and secondly the entry configured first.
         /// </summary>
         /// <param name="objectType">TBD</param>
         /// <exception cref="SerializationException">
@@ -229,20 +229,34 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public Serializer FindSerializerForType(Type objectType)
         {
-            Type type = objectType;
-            //TODO: see if we can do a better job with proper type sorting here - most specific to least specific (object serializer goes last)
-            foreach (var serializerType in _serializerMap)
+            Serializer fullMatchSerializer;
+            if (_serializerMap.TryGetValue(objectType, out fullMatchSerializer))
             {
-                //force deferral of the base "object" serializer until all other higher-level types have been evaluated
-                if (serializerType.Key.IsAssignableFrom(type) && serializerType.Key != _objectType)
-                    return serializerType.Value;
+                return fullMatchSerializer;
             }
+            else
+            {
+                Serializer serializer = null;
+                Type type = objectType;
 
-            //do a final check for the "object" serializer
-            if (_serializerMap.ContainsKey(_objectType) && _objectType.IsAssignableFrom(type))
-                return _serializerMap[_objectType];
+                // TODO: see if we can do a better job with proper type sorting here - most specific to least specific (object serializer goes last)
+                foreach (var serializerType in _serializerMap)
+                {
+                    // force deferral of the base "object" serializer until all other higher-level types have been evaluated
+                    if (serializerType.Key.IsAssignableFrom(type) && serializerType.Key != _objectType)
+                        serializer = serializerType.Value;
+                }
 
-            throw new SerializationException($"Serializer not found for type {objectType.Name}");
+                //do a final check for the "object" serializer
+                if (_serializerMap.ContainsKey(_objectType) && _objectType.IsAssignableFrom(type))
+                    serializer = _serializerMap[_objectType];
+
+                if (serializer == null)
+                    throw new SerializationException($"Serializer not found for type {objectType.Name}");
+
+                _serializerMap.Add(type, serializer);
+                return serializer;
+            }
         }
 
         /// <summary>
@@ -294,12 +308,7 @@ namespace Akka.Serialization
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="serializerId">TBD</param>
-        /// <returns>TBD</returns>
-        public Serializer GetSerializerById(int serializerId)
+        internal Serializer GetSerializerById(int serializerId)
         {
             return _serializers[serializerId];
         }
