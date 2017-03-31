@@ -313,7 +313,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
     {
         public DistributedPubSubMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override int Identifier { get; }
-        public override object FromBinary(byte[] bytes, string manifestString) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
     }
@@ -391,7 +391,7 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
     {
         public ClusterSingletonMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override int Identifier { get; }
-        public override object FromBinary(byte[] binary, string manifest) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
     }

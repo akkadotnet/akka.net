@@ -1,4 +1,4 @@
-﻿// --- auto generated: 1/12/2017 3:38:17 AM --- //
+﻿// --- auto generated: 3/30/2017 7:02:44 PM --- //
 //-----------------------------------------------------------------------
 // <copyright file="FanInShape.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
@@ -68,11 +68,13 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         /// <param name="n">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="n" /> is less than or equal to zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public Inlet<T1> In(int n)
         {
-            if (n <= 0) throw new ArgumentException("n must be > 0", "n");
+            if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
             return In1s[n-1];
         }
         

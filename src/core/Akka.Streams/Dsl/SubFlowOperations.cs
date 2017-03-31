@@ -692,7 +692,7 @@ namespace Akka.Streams.Dsl
         /// <param name="start">TBD</param>
         /// <param name="inject">TBD</param>
         /// <param name="end">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Intersperse<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TOut start, TOut inject, TOut end)
         {
@@ -722,7 +722,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="inject">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Intersperse<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TOut inject)
         {
