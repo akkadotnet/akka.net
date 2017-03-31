@@ -16,8 +16,7 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
-using Helios.Channels;
-using Helios.Topology;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.TestKit
 {
@@ -71,17 +70,6 @@ namespace Akka.Remote.TestKit
             var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
             await StartClient(name, node).ConfigureAwait(false);
             return node;
-        }
-
-        /// <summary>
-        /// Obtain the port to which the controller’s socket is actually bound. This
-        /// will deviate from the configuration in `akka.testconductor.port` in case
-        /// that was given as zero.
-        /// </summary>
-        /// <returns>The address of the controller's socket endpoint</returns>
-        public Task<INode> SockAddr()
-        {
-            return Controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -255,6 +243,12 @@ namespace Akka.Remote.TestKit
         private readonly ILoggingAdapter _log;
         private readonly IActorRef _controller;
         private readonly ConcurrentDictionary<IChannel, IActorRef> _clients = new ConcurrentDictionary<IChannel, IActorRef>();
+
+        /// <summary>
+        /// A single <see cref="ConductorHandler"/> gets shared across all of the connections between 
+        /// server and clients.
+        /// </summary>
+        public override bool IsSharable => true;
 
         public ConductorHandler(IActorRef controller, ILoggingAdapter log)
         {

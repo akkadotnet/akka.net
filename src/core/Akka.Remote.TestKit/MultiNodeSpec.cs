@@ -21,7 +21,6 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Akka.Util.Internal;
-using Helios.Topology;
 
 namespace Akka.Remote.TestKit
 {

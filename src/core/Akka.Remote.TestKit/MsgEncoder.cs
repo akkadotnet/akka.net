@@ -9,11 +9,10 @@ using System;
 using System.Collections.Generic;
 using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport;
-using Helios.Buffers;
-using Helios.Channels;
-using Helios.Codecs;
-using Helios.Logging;
-using Helios.Net;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
+using Microsoft.Extensions.Logging;
 using TCP;
 using Address = Akka.Actor.Address;
 
@@ -21,7 +20,7 @@ namespace Akka.Remote.TestKit
 {
     internal class MsgEncoder : MessageToMessageEncoder<object>
     {
-        private readonly ILogger _logger = LoggingFactory.GetLogger<MsgEncoder>();
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<MsgEncoder>();
 
         public static TCP.Address Address2Proto(Address addr)
         {
@@ -47,7 +46,7 @@ namespace Akka.Remote.TestKit
 
         protected override void Encode(IChannelHandlerContext context, object message, List<object> output)
         {
-            _logger.Debug("Encoding {0}", message);
+            _logger.LogDebug("Encoding {0}", message);
             var w = Wrapper.CreateBuilder();
             message.Match()
                 .With<Hello>(
