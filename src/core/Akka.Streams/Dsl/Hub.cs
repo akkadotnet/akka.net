@@ -429,7 +429,9 @@ namespace Akka.Streams.Dsl
         /// TBD
         /// </summary>
         /// <param name="perProducerBufferSize">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="perProducerBufferSize"/> is less than or equal to zero.
+        /// </exception>
         public MergeHub(int perProducerBufferSize)
         {
             if (perProducerBufferSize <= 0)
@@ -1113,7 +1115,10 @@ namespace Akka.Streams.Dsl
         /// TBD
         /// </summary>
         /// <param name="bufferSize">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="bufferSize"/>
+        /// is less than or equal to zero, is greater than 4095, or is not a power of two.
+        /// </exception>
         public BroadcastHub(int bufferSize)
         {
             if (bufferSize <= 0)

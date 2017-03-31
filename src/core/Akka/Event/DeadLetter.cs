@@ -76,7 +76,7 @@ namespace Akka.Event
         /// <param name="sender">The actor that sent the message.</param>
         /// <param name="recipient">The actor that was to receive the message.</param>
         /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when either the sender or the recipient is null.
+        /// This exception is thrown when either the sender or the recipient is undefined.
         /// </exception>
         public DeadLetter(object message, IActorRef sender, IActorRef recipient) : base(message, sender, recipient)
         {
@@ -98,7 +98,7 @@ namespace Akka.Event
         /// <param name="sender">The actor that sent the message.</param>
         /// <param name="recipient">The actor that was to receive the message.</param>
         /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when either the sender or the recipient is null.
+        /// This exception is thrown when either the sender or the recipient is undefined.
         /// </exception>
         public SuppressedDeadLetter(IDeadLetterSuppression message, IActorRef sender, IActorRef recipient) : base(message, sender, recipient)
         {

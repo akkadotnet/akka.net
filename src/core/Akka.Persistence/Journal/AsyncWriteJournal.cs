@@ -36,9 +36,15 @@ namespace Akka.Persistence.Journal
         private long _resequencerCounter = 1L;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AsyncWriteJournal"/> class.
         /// </summary>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the Persistence extension related to this journal has not been used in the current <see cref="ActorSystem"/> contexxt.
+        /// </exception>
+        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the configuration.
+        /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
+        /// </exception>
         protected AsyncWriteJournal()
         {
             var extension = Persistence.Instance.Apply(Context.System);
@@ -71,7 +77,7 @@ namespace Akka.Persistence.Journal
                     _replayFilterMode = ReplayFilterMode.Warn;
                     break;
                 default:
-                    throw new ArgumentException(string.Format("Invalid replay-filter.mode [{0}], supported values [off, repair-by-discard-old, fail, warn]", replayFilterMode));
+                    throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
             _replayFilterWindowSize = config.GetInt("replay-filter.window-size");
@@ -414,8 +420,7 @@ namespace Akka.Persistence.Journal
                     if (!t.IsFaulted && !t.IsCanceled && writeMessagesAsyncException == null)
                     {
                         if (t.Result != null && t.Result.Count != atomicWriteCount)
-                            throw new IllegalStateException(string.Format("AsyncWriteMessages return invalid number or results. " +
-                                "Expected [{0}], but got [{1}].", atomicWriteCount, t.Result.Count));
+                            throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. Expected [{atomicWriteCount}], but got [{t.Result.Count}].");
 
 
                         _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));

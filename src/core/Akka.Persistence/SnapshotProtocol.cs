@@ -33,16 +33,18 @@ namespace Akka.Persistence
     public sealed class SnapshotMetadata : IEquatable<SnapshotMetadata>
     {
         /// <summary>
-        /// TBD
+        /// This class represents an <see cref="IComparer{T}"/> used when comparing two <see cref="SnapshotMetadata"/> objects.
         /// </summary>
         internal class SnapshotMetadataComparer : IComparer<SnapshotMetadata>
         {
             /// <summary>
-            /// TBD
+            /// Compares two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
             /// </summary>
-            /// <param name="x">TBD</param>
-            /// <param name="y">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="x">The first object to compare.</param>
+            /// <param name="y">The second object to compare.</param>
+            /// <returns>
+            /// A signed integer that indicates the relative values of <paramref name="x" /> and <paramref name="y" />, as shown in the following table.Value Meaning Less than zero<paramref name="x" /> is less than <paramref name="y" />.Zero<paramref name="x" /> equals <paramref name="y" />.Greater than zero<paramref name="x" /> is greater than <paramref name="y" />.
+            /// </returns>
             public int Compare(SnapshotMetadata x, SnapshotMetadata y)
             {
                 var compare = string.Compare(x.PersistenceId, y.PersistenceId, StringComparison.Ordinal);
@@ -66,21 +68,21 @@ namespace Akka.Persistence
         public static DateTime TimestampNotSpecified = DateTime.MinValue;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="sequenceNr">TBD</param>
+        /// <param name="persistenceId">The id of the persistent actor fro mwhich the snapshot was taken.</param>
+        /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
         public SnapshotMetadata(string persistenceId, long sequenceNr)
             : this(persistenceId, sequenceNr, TimestampNotSpecified)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="sequenceNr">TBD</param>
-        /// <param name="timestamp">TBD</param>
+        /// <param name="persistenceId">The id of the persistent actor fro mwhich the snapshot was taken.</param>
+        /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
+        /// <param name="timestamp">The time at which the snapshot was saved.</param>
         [JsonConstructor]
         public SnapshotMetadata(string persistenceId, long sequenceNr, DateTime timestamp)
         {
@@ -90,7 +92,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Id of the persistent actor, from which the snapshot was taken.
+        /// Id of the persistent actor from which the snapshot was taken.
         /// </summary>
         public readonly string PersistenceId;
 
@@ -105,20 +107,24 @@ namespace Akka.Persistence
         public readonly DateTime Timestamp;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as SnapshotMetadata);
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SnapshotMetadata" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SnapshotMetadata" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SnapshotMetadata" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SnapshotMetadata other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -128,9 +134,11 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -143,12 +151,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("SnapshotMetadata<pid: {0}, seqNr: {1}, timestamp: {2:yyyy/MM/dd}>", PersistenceId, SequenceNr, Timestamp);
+            return $"SnapshotMetadata<pid: {PersistenceId}, seqNr: {SequenceNr}, timestamp: {Timestamp:yyyy/MM/dd}>";
         }
     }
 
@@ -173,10 +183,12 @@ namespace Akka.Persistence
         public readonly SnapshotMetadata Metadata;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SaveSnapshotSuccess" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SaveSnapshotSuccess" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SaveSnapshotSuccess" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SaveSnapshotSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -186,31 +198,37 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as SaveSnapshotSuccess);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (Metadata != null ? Metadata.GetHashCode() : 0);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("SaveSnapshotSuccess<{0}>", Metadata);
+            return $"SaveSnapshotSuccess<{Metadata}>";
         }
     }
 
@@ -235,10 +253,13 @@ namespace Akka.Persistence
         public readonly SnapshotMetadata Metadata;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="DeleteSnapshotSuccess" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="DeleteSnapshotSuccess" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="DeleteSnapshotSuccess" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+
         public bool Equals(DeleteSnapshotSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -248,31 +269,37 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteSnapshotSuccess);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (Metadata != null ? Metadata.GetHashCode() : 0);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("DeleteSnapshotSuccess<{0}>", Metadata);
+            return $"DeleteSnapshotSuccess<{Metadata}>";
         }
     }
 
@@ -297,10 +324,12 @@ namespace Akka.Persistence
         public readonly SnapshotSelectionCriteria Criteria;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="DeleteSnapshotsSuccess" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="DeleteSnapshotsSuccess" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="DeleteSnapshotsSuccess" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(DeleteSnapshotsSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -310,31 +339,37 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteSnapshotsSuccess);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (Criteria != null ? Criteria.GetHashCode() : 0);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("DeleteSnapshotsSuccess<{0}>", Criteria);
+            return $"DeleteSnapshotsSuccess<{Criteria}>";
         }
     }
 
@@ -366,10 +401,12 @@ namespace Akka.Persistence
         public readonly Exception Cause;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SaveSnapshotFailure" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SaveSnapshotFailure" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SaveSnapshotFailure" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SaveSnapshotFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -379,19 +416,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as SaveSnapshotFailure);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -401,12 +442,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("SaveSnapshotFailure<meta: {0}, cause: {1}>", Metadata, Cause);
+            return $"SaveSnapshotFailure<meta: {Metadata}, cause: {Cause}>";
         }
     }
 
@@ -438,10 +481,12 @@ namespace Akka.Persistence
         public readonly Exception Cause;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="DeleteSnapshotFailure" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="DeleteSnapshotFailure" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="DeleteSnapshotFailure" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(DeleteSnapshotFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -451,19 +496,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteSnapshotFailure);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -473,12 +522,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("DeleteSnapshotFailure<meta: {0}, cause: {1}>", Metadata, Cause);
+            return $"DeleteSnapshotFailure<meta: {Metadata}, cause: {Cause}>";
         }
     }
 
@@ -510,10 +561,12 @@ namespace Akka.Persistence
         public readonly Exception Cause;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="DeleteSnapshotsFailure" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="DeleteSnapshotsFailure" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="DeleteSnapshotsFailure" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(DeleteSnapshotsFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -523,19 +576,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteSnapshotsFailure);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -545,12 +602,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("DeleteSnapshotsFailure<criteria: {0}, cause: {1}>", Criteria, Cause);
+            return $"DeleteSnapshotsFailure<criteria: {Criteria}, cause: {Cause}>";
         }
     }
 
@@ -582,10 +641,12 @@ namespace Akka.Persistence
         public readonly object Snapshot;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SnapshotOffer" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SnapshotOffer" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SnapshotOffer" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SnapshotOffer other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -595,19 +656,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as SnapshotOffer);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -617,12 +682,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("SnapshotOffer<meta: {0}, snapshot: {1}>", Metadata, Snapshot);
+            return $"SnapshotOffer<meta: {Metadata}, snapshot: {Snapshot}>";
         }
     }
 
@@ -709,10 +776,12 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SnapshotSelectionCriteria" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SnapshotSelectionCriteria" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SnapshotSelectionCriteria" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SnapshotSelectionCriteria other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -723,19 +792,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as SnapshotSelectionCriteria);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -750,14 +823,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format(
-                "SnapshotSelectionCriteria<maxSeqNr: {0}, maxTimestamp: {1:yyyy/MM/dd}, minSeqNr: {2}, minTimestamp: {3:yyyy/MM/dd}>",
-                MaxSequenceNr, MaxTimeStamp, MinSequenceNr, MinTimestamp);
+            return $"SnapshotSelectionCriteria<maxSeqNr: {MaxSequenceNr}, maxTimestamp: {MaxTimeStamp:yyyy/MM/dd}, minSeqNr: {MinSequenceNr}, minTimestamp: {MinTimestamp:yyyy/MM/dd}>";
         }
     }
 
@@ -788,10 +861,12 @@ namespace Akka.Persistence
         public readonly object Snapshot;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SelectedSnapshot" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SelectedSnapshot" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SelectedSnapshot" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SelectedSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -801,19 +876,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as SelectedSnapshot);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -823,12 +902,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("SelectedSnapshot<meta: {0}, snapshot: {1}>", Metadata, Snapshot);
+            return $"SelectedSnapshot<meta: {Metadata}, snapshot: {Snapshot}>";
         }
     }
 
@@ -870,10 +951,12 @@ namespace Akka.Persistence
         public readonly long ToSequenceNr;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="LoadSnapshot" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="LoadSnapshot" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="LoadSnapshot" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(LoadSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -885,19 +968,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as LoadSnapshot);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -910,12 +997,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("LoadSnapshot<pid: {0}, toSeqNr: {1}, criteria: {2}>", PersistenceId, ToSequenceNr, Criteria);
+            return $"LoadSnapshot<pid: {PersistenceId}, toSeqNr: {ToSequenceNr}, criteria: {Criteria}>";
         }
     }
 
@@ -946,10 +1035,12 @@ namespace Akka.Persistence
         public readonly long ToSequenceNr;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="LoadSnapshotResult" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="LoadSnapshotResult" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="LoadSnapshotResult" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(LoadSnapshotResult other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -960,19 +1051,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as LoadSnapshotResult);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -982,12 +1077,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("LoadSnapshotResult<toSeqNr: {0}, snapshot: {1}>", ToSequenceNr, Snapshot);
+            return $"LoadSnapshotResult<toSeqNr: {ToSequenceNr}, snapshot: {Snapshot}>";
         }
     }
 
@@ -1006,7 +1103,7 @@ namespace Akka.Persistence
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
             if (metadata == null)
-                throw new ArgumentNullException("metadata", "SaveSnapshot requires SnapshotMetadata to be provided");
+                throw new ArgumentNullException(nameof(metadata), "SaveSnapshot requires SnapshotMetadata to be provided");
 
             Metadata = metadata;
             Snapshot = snapshot;
@@ -1022,10 +1119,12 @@ namespace Akka.Persistence
         public readonly object Snapshot;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SaveSnapshot" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SaveSnapshot" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SaveSnapshot" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SaveSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -1035,19 +1134,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as SaveSnapshot);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -1057,12 +1160,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("SaveSnapshot<meta: {0}, snapshot: {1}>", Metadata, Snapshot);
+            return $"SaveSnapshot<meta: {Metadata}, snapshot: {Snapshot}>";
         }
     }
 
@@ -1080,7 +1185,7 @@ namespace Akka.Persistence
         public DeleteSnapshot(SnapshotMetadata metadata)
         {
             if(metadata == null)
-                throw new ArgumentNullException("metadata", "DeleteSnapshot requires SnapshotMetadata to be provided");
+                throw new ArgumentNullException(nameof(metadata), "DeleteSnapshot requires SnapshotMetadata to be provided");
 
             Metadata = metadata;
         }
@@ -1091,10 +1196,12 @@ namespace Akka.Persistence
         public readonly SnapshotMetadata Metadata;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="DeleteSnapshot" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="DeleteSnapshot" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="DeleteSnapshot" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(DeleteSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -1104,31 +1211,37 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteSnapshot);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return Metadata.GetHashCode();
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("DeleteSnapshot<meta: {0}>", Metadata);
+            return $"DeleteSnapshot<meta: {Metadata}>";
         }
     }
 
@@ -1159,10 +1272,12 @@ namespace Akka.Persistence
         public readonly SnapshotSelectionCriteria Criteria;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="DeleteSnapshots" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="DeleteSnapshots" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="DeleteSnapshots" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(DeleteSnapshots other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -1173,19 +1288,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteSnapshots);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -1195,12 +1314,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("DeleteSnapshots<pid: {0}, criteria: {1}>", PersistenceId, Criteria);
+            return $"DeleteSnapshots<pid: {PersistenceId}, criteria: {Criteria}>";
         }
     }
 

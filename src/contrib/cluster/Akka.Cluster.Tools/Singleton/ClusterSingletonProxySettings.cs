@@ -81,15 +81,19 @@ namespace Akka.Cluster.Tools.Singleton
         /// are sent viea the proxy.Use 0 to disable buffering, i.e.messages will be dropped immediately if the location 
         /// of the singleton is unknown.
         /// </param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="singletonIdentificationInterval"/>
+        /// or <paramref name="bufferSize"/> is less than or equal to zero.
+        /// </exception>
+        /// <exception cref="ArgumentNullException"></exception>
         public ClusterSingletonProxySettings(string singletonName, string role, TimeSpan singletonIdentificationInterval, int bufferSize)
         {
             if (string.IsNullOrEmpty(singletonName))
                 throw new ArgumentNullException(nameof(singletonName));
             if (singletonIdentificationInterval == TimeSpan.Zero)
-                throw new ArgumentException("ClusterSingletonProxySettings.SingletonIdentificationInterval must be positive", nameof(singletonIdentificationInterval));
+                throw new ArgumentException("singletonIdentificationInterval must be positive", nameof(singletonIdentificationInterval));
             if (bufferSize <= 0)
-                throw new ArgumentException("ClusterSingletonProxySettings.BufferSize must be positive", nameof(bufferSize));
+                throw new ArgumentException("bufferSize must be positive", nameof(bufferSize));
 
             SingletonName = singletonName;
             Role = role;
@@ -98,21 +102,28 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// Create a singleton proxy with specified singleton name.
+        /// Creates a new <see cref="ClusterSingletonProxySettings" /> setting with the specified <paramref name="singletonName"/>.
+        /// <note>
+        /// This method is immutable and returns a new instance of the setting.
+        /// </note>
         /// </summary>
-        /// <param name="singletonName">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="singletonName">The name of the singleton actor used by the <see cref="ClusterSingletonManager"/>.</param>
+        /// <returns>A new setting with the provided <paramref name="singletonName" />.</returns>
         public ClusterSingletonProxySettings WithSingletonName(string singletonName)
         {
             return Copy(singletonName: singletonName);
         }
 
         /// <summary>
-        /// Specifies the akka.cluster.role of the nodes on which the targeted
-        /// singleton can run.
+        /// Creates a new <see cref="ClusterSingletonProxySettings" /> setting with the specified <paramref name="role"/>
+        /// from the <c>akka.cluster.role</c> in the configuration used. The <paramref name="role"/> specifies the nodes
+        /// on which the targeted singleton can run.
+        /// <note>
+        /// This method is immutable and returns a new instance of the setting.
+        /// </note>
         /// </summary>
-        /// <param name="role">The role name.</param>
-        /// <returns>The updated settings.</returns>
+        /// <param name="role">The role of the singleton proxy.</param>
+        /// <returns>A new setting with the provided <paramref name="role" />.</returns>
         public ClusterSingletonProxySettings WithRole(string role)
         {
             return new ClusterSingletonProxySettings(
@@ -123,20 +134,26 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// Create a singleton proxy with specified singleton identification interval.
+        /// Creates a new <see cref="ClusterSingletonProxySettings" /> setting with the specified <paramref name="singletonIdentificationInterval"/>.
+        /// <note>
+        /// This method is immutable and returns a new instance of the setting.
+        /// </note>
         /// </summary>
-        /// <param name="singletonIdentificationInterval">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="singletonIdentificationInterval">The indentification level of the singleton proxy.</param>
+        /// <returns>A new setting with the provided <paramref name="singletonIdentificationInterval" />.</returns>
         public ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval)
         {
             return Copy(singletonIdentificationInterval: SingletonIdentificationInterval);
         }
 
         /// <summary>
-        /// Create a singleton proxy with specified singleton buffer size.
+        /// Creates a new <see cref="ClusterSingletonProxySettings" /> setting with the specified <paramref name="bufferSize"/>.
+        /// <note>
+        /// This method is immutable and returns a new instance of the setting.
+        /// </note>
         /// </summary>
-        /// <param name="bufferSize">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="bufferSize">The buffer size of the singleton proxy.</param>
+        /// <returns>A new setting with the provided <paramref name="bufferSize" />.</returns>
         public ClusterSingletonProxySettings WithBufferSize(int bufferSize)
         {
             return Copy(bufferSize: bufferSize);

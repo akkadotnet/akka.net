@@ -50,13 +50,15 @@ namespace Akka.Streams.Dsl
         /// <param name="maximumFramelength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream. This length *includes* the header (i.e the offset and the length of the size field)</param>
         /// <param name="fieldOffset">The offset of the field from the beginning of the frame in bytes</param>
         /// <param name="byteOrder">The <see cref="ByteOrder"/> to be used when decoding the field</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="fieldLength"/> is not equal to either 1, 2, 3 or 4.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
             if (fieldLength < 1 || fieldLength > 4)
-                throw new ArgumentException("Length field length must be 1,2,3 or 4");
+                throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
             return Flow.Create<ByteString>()
                 .Transform(() => new LengthFieldFramingStage(fieldLength, maximumFramelength, fieldOffset, byteOrder))
