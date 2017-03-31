@@ -98,9 +98,9 @@ namespace Akka.Persistence.Serialization
         private Information _transportInformation;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotSerializer"/> class.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system to associate with this serializer.</param>
         public SnapshotSerializer(ExtendedActorSystem system)
             : base(system)
         {
@@ -117,7 +117,7 @@ namespace Akka.Persistence.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// Returns whether this serializer needs a manifest in the fromBinary method
         /// </summary>
         public override bool IncludeManifest
         {
@@ -125,26 +125,31 @@ namespace Akka.Persistence.Serialization
         }
 
         /// <summary>
-        /// Serializes a <see cref="Snapshot"/>. Delegates serialization of snapshot data to a matching
-        /// <see cref="Serializer"/>
+        /// Serializes the given object into a byte array
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The object to serialize</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the <see cref="SnapshotSerializer"/> cannot serialize the specified <paramref name="obj"/>.
+        /// The specified <paramref name="obj" /> must be of type <see cref="Snapshot"/>.
+        /// </exception>
+        /// <returns>
+        /// A byte array containing the serialized object
+        /// </returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is Snapshot) return SnapshotToBinary((obj as Snapshot).Data);
 
-            throw new ArgumentException(typeof(SnapshotSerializer) + " cannot serialize object of type " + obj.GetType(), "obj");
+            throw new ArgumentException($"{typeof(SnapshotSerializer)} cannot serialize object of type {obj.GetType()}", nameof(obj));
         }
 
         /// <summary>
-        /// Deserializes a <see cref="Snapshot"/>. Delegates deserialization of snapshot data to a matching
-        /// <see cref="Serializer"/>
+        /// Deserializes a byte array into an object of type <paramref name="type" />.
         /// </summary>
-        /// <param name="bytes">TBD</param>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="type">The type of object contained in the array</param>
+        /// <returns>
+        /// The object contained in the array
+        /// </returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
             return new Snapshot(SnapshotFromBinary(bytes));

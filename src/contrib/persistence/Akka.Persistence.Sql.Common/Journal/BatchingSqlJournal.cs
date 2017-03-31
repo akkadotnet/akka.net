@@ -31,37 +31,41 @@ namespace Akka.Persistence.Sql.Common.Journal
     public sealed class ReplayFilterSettings
     {
         /// <summary>
-        /// What the filter should do when detecting invalid events.
+        /// Mode used when detecting invalid events.
         /// </summary>
         public readonly ReplayFilterMode Mode;
-        
+
         /// <summary>
-        /// It uses a look ahead buffer for analyzing the events.
-        /// This defines the size (in number of events) of the buffer.
+        /// Size (in number of events) of the look ahead buffer used for analyzing the events.
         /// </summary>
         public readonly int WindowSize;
 
         /// <summary>
-        /// How many old writerUuid to remember.
+        /// Maximum number of writerUuid to remember.
         /// </summary>
         public readonly int MaxOldWriters;
 
         /// <summary>
-        /// Should the debug logging be enabled for each replayed event?
+        /// Determine if the debug logging is enabled for each replayed event.
         /// </summary>
         public readonly bool IsDebug;
 
         /// <summary>
-        /// Is replay filter feature enabled?
+        /// Determine if the replay filter feature is enabled
         /// </summary>
         public bool IsEnabled => Mode != ReplayFilterMode.Disabled;
 
         /// <summary>
-        /// Creates a new instance of the <see cref="ReplayFilterSettings"/> from provided HOCON <paramref name="config"/>.
+        /// Initializes a new instance of the <see cref="ReplayFilterSettings" /> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <param name="config">The configuration used to configure the replay filter.</param>
+        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the specified <paramref name="config"/>.
+        /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="config"/> is undefined.
+        /// </exception>
         public ReplayFilterSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "No HOCON config was provided for replay filter settings");
@@ -74,9 +78,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 case "repair-by-discard-old": mode = ReplayFilterMode.RepairByDiscardOld; break;
                 case "fail": mode = ReplayFilterMode.Fail; break;
                 case "warn": mode = ReplayFilterMode.Warn; break;
-                default: throw new ArgumentException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]", nameof(config));
+                default: throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]");
             }
-            
+
             Mode = mode;
             WindowSize = config.GetInt("window-size", 100);
             MaxOldWriters = config.GetInt("max-old-writers", 10);
@@ -84,12 +88,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ReplayFilterSettings" /> class.
         /// </summary>
-        /// <param name="mode">TBD</param>
-        /// <param name="windowSize">TBD</param>
-        /// <param name="maxOldWriters">TBD</param>
-        /// <param name="isDebug">TBD</param>
+        /// <param name="mode">The mode used when detecting invalid events.</param>
+        /// <param name="windowSize">The size of the replay filter's buffer.</param>
+        /// <param name="maxOldWriters">The maximum number of writerUuid to remember.</param>
+        /// <param name="isDebug">If set to <c>true</c>, debug logging is enabled for each replayed event.</param>
         public ReplayFilterSettings(ReplayFilterMode mode, int windowSize, int maxOldWriters, bool isDebug)
         {
             Mode = mode;
@@ -106,19 +110,19 @@ namespace Akka.Persistence.Sql.Common.Journal
     public sealed class CircuitBreakerSettings
     {
         /// <summary>
-        /// Max number of failures that can happen before circuit will open.
+        /// Maximum number of failures that can happen before the circuit opens.
         /// </summary>
         public int MaxFailures { get; }
         
         /// <summary>
-        /// Max time available for operation to execute before 
-        /// <see cref="CircuitBreaker"/> will consider it a failure.
+        /// Maximum time available for operation to execute before 
+        /// <see cref="CircuitBreaker"/> considers it a failure.
         /// </summary>
         public TimeSpan CallTimeout { get; }
 
         /// <summary>
-        /// Timeot that has to pass before <see cref="CircuitBreaker"/>
-        /// will move into half-closed state, trying to eventually close 
+        /// Timeout that has to pass before <see cref="CircuitBreaker"/>
+        /// moves into half-closed state, trying to eventually close 
         /// after sampling an operation.
         /// </summary>
         public TimeSpan ResetTimeout { get; }
@@ -126,9 +130,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Creates a new instance of the <see cref="CircuitBreakerSettings"/> from provided HOCON <paramref name="config"/>.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="config">The configuration used to configure the circuit breaker.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="config"/> is undefined.
+        /// </exception>
         public CircuitBreakerSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
@@ -139,11 +144,15 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="CircuitBreakerSettings" /> class.
         /// </summary>
-        /// <param name="maxFailures">TBD</param>
-        /// <param name="callTimeout">TBD</param>
-        /// <param name="resetTimeout">TBD</param>
+        /// <param name="maxFailures">The maximum number of failures that can happen before the circuit opens.</param>
+        /// <param name="callTimeout">
+        /// The maximum time available for operation to execute before <see cref="CircuitBreaker"/> considers it a failure.
+        /// </param>
+        /// <param name="resetTimeout">
+        /// The amount of time before <see cref="CircuitBreaker"/> moves into the half-closed state.
+        /// </param>
         public CircuitBreakerSettings(int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
         {
             MaxFailures = maxFailures;
@@ -217,13 +226,23 @@ namespace Akka.Persistence.Sql.Common.Journal
         public QueryConfiguration NamingConventions { get; }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="namingConventions">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="ArgumentNullException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="config">The configuration used to configure the journal.</param>
+        /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
+        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// This exception is thrown for a couple of reasons.
+        /// <ul>
+        /// <li>A connection string for the SQL event journal was not specified.</li>
+        /// <li>
+        /// An unknown <c>isolation-level</c> value was specified. Acceptable <c>isolation-level</c> values include:
+        /// chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified
+        /// </li>
+        /// </ul>
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="config"/> is undefined.
+        /// </exception>
         protected BatchingSqlJournalSetup(Config config, QueryConfiguration namingConventions)
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "Sql journal settings cannot be initialized, because required HOCON section couldn't been found");
@@ -237,7 +256,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
 
             if (string.IsNullOrWhiteSpace(connectionString))
-                throw new ArgumentException("No connection string for Sql Event Journal was specified");
+                throw new Akka.Configuration.ConfigurationException("No connection string for Sql Event Journal was specified");
 
             IsolationLevel level;
             switch (config.GetString("isolation-level", "unspecified"))
@@ -249,9 +268,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 case "serializable": level = IsolationLevel.Serializable; break;
                 case "snapshot": level = IsolationLevel.Snapshot; break;
                 case "unspecified": level = IsolationLevel.Unspecified; break;
-                default: throw new ArgumentException("Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified");
+                default: throw new Akka.Configuration.ConfigurationException("Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified");
             }
-            
+
             ConnectionString = connectionString;
             MaxConcurrentOperations = config.GetInt("max-concurrent-operations", 64);
             MaxBatchSize = config.GetInt("max-batch-size", 100);
@@ -265,18 +284,24 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
         /// </summary>
-        /// <param name="connectionString">TBD</param>
-        /// <param name="maxConcurrentOperations">TBD</param>
-        /// <param name="maxBatchSize">TBD</param>
-        /// <param name="maxBufferSize">TBD</param>
-        /// <param name="autoInitialize">TBD</param>
-        /// <param name="connectionTimeout">TBD</param>
-        /// <param name="isolationLevel">TBD</param>
-        /// <param name="circuitBreakerSettings">TBD</param>
-        /// <param name="replayFilterSettings">TBD</param>
-        /// <param name="namingConventions">TBD</param>
+        /// <param name="connectionString">The connection string used to connect to the database.</param>
+        /// <param name="maxConcurrentOperations">The maximum number of batch operations allowed to be executed at the same time.</param>
+        /// <param name="maxBatchSize">The maximum size of single batch of operations to be executed over a single <see cref="DbConnection"/>.</param>
+        /// <param name="maxBufferSize">The maximum size of requests stored in journal buffer.</param>
+        /// <param name="autoInitialize">
+        /// If set to <c>true</c>, the journal executes all SQL scripts stored under the
+        /// <see cref="BatchingSqlJournal{TConnection,TCommand}.Initializers"/> collection prior
+        /// to starting executing any requests.
+        /// </param>
+        /// <param name="connectionTimeout">The maximum time given for executed <see cref="DbCommand"/> to complete.</param>
+        /// <param name="isolationLevel">The isolation level of transactions used during query execution.</param>
+        /// <param name="circuitBreakerSettings">
+        /// The settings used by the <see cref="CircuitBreaker"/> when for executing request batches.
+        /// </param>
+        /// <param name="replayFilterSettings">The settings used when replaying events from database back to the persistent actors.</param>
+        /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
         protected BatchingSqlJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions)
         {
             ConnectionString = connectionString;
@@ -486,9 +511,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         private int _remainingOperations;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BatchingSqlJournal{TConnection, TCommand}" /> class.
         /// </summary>
-        /// <param name="setup">TBD</param>
+        /// <param name="setup">The settings used to configure the journal.</param>
         protected BatchingSqlJournal(BatchingSqlJournalSetup setup)
         {
             Setup = setup;
@@ -498,7 +523,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             _tagSubscribers = new Dictionary<string, HashSet<IActorRef>>();
             _allIdsSubscribers = new HashSet<IActorRef>();
             _allPersistenceIds = new HashSet<string>();
-            
+
             _remainingOperations = Setup.MaxConcurrentOperations;
             Buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
             _getSerializer = Context.System.Serialization.FindSerializerFor;
@@ -1257,7 +1282,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public static readonly JournalBufferOverflowException Instance = new JournalBufferOverflowException();
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="JournalBufferOverflowException" /> class.
         /// </summary>
         public JournalBufferOverflowException() : base(
             "Batching journal buffer has been overflowed. This may happen as an effect of burst of persistent actors "

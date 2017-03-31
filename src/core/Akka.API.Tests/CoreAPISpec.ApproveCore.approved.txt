@@ -4511,7 +4511,7 @@ namespace Akka.Serialization
         protected SerializerWithStringManifest(Akka.Actor.ExtendedActorSystem system) { }
         public virtual bool IncludeManifest { get; }
         public virtual object FromBinary(byte[] bytes, System.Type type) { }
-        public abstract object FromBinary(byte[] binary, string manifest);
+        public abstract object FromBinary(byte[] bytes, string manifest);
         public abstract string Manifest(object o);
     }
 }
