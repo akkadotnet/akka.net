@@ -3278,7 +3278,7 @@ namespace Akka.IO
         }
         public class Aborted : Akka.IO.Tcp.ConnectionClosed
         {
-            public static Akka.IO.Tcp.Aborted Instance;
+            public static readonly Akka.IO.Tcp.Aborted Instance;
             public override bool IsAborted { get; }
         }
         public class Bind : Akka.IO.Tcp.Command
@@ -3333,7 +3333,7 @@ namespace Akka.IO
         }
         public class ConfirmedClosed : Akka.IO.Tcp.ConnectionClosed
         {
-            public static Akka.IO.Tcp.ConfirmedClosed Instance;
+            public static readonly Akka.IO.Tcp.ConfirmedClosed Instance;
             public override bool IsConfirmed { get; }
         }
         public class Connect : Akka.IO.Tcp.Command
@@ -3382,7 +3382,7 @@ namespace Akka.IO
         }
         public class PeerClosed : Akka.IO.Tcp.ConnectionClosed
         {
-            public static Akka.IO.Tcp.PeerClosed Instance;
+            public static readonly Akka.IO.Tcp.PeerClosed Instance;
             public override bool IsPeerClosed { get; }
         }
         public sealed class Received : Akka.IO.Tcp.Event

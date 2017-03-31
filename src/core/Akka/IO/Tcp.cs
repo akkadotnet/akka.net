@@ -902,7 +902,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static Aborted Instance = new Aborted();
+            public static readonly Aborted Instance = new Aborted();
 
             private Aborted()
             {
@@ -926,7 +926,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static ConfirmedClosed Instance = new ConfirmedClosed();
+            public static readonly ConfirmedClosed Instance = new ConfirmedClosed();
 
             private ConfirmedClosed()
             {
@@ -949,7 +949,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static PeerClosed Instance = new PeerClosed();
+            public static readonly PeerClosed Instance = new PeerClosed();
 
             private PeerClosed()
             {
