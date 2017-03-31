@@ -15,25 +15,23 @@ using Akka.Util;
 
 namespace Akka.Remote
 {
-    /**
-     * Implementation of 'The Phi Accrual Failure Detector' by Hayashibara et al. as defined in their paper:
-     * [http://ddg.jaist.ac.jp/pub/HDY+04.pdf]
-     *
-     * The suspicion level of failure is given by a value called φ (phi).
-     * The basic idea of the φ failure detector is to express the value of φ on a scale that
-     * is dynamically adjusted to reflect current network conditions. A configurable
-     * threshold is used to decide if φ is considered to be a failure.
-     *
-     * The value of φ is calculated as:
-     *
-     * {{{
-     * φ = -log10(1 - F(timeSinceLastHeartbeat)
-     * }}}
-     * where F is the cumulative distribution function of a normal distribution with mean
-     * and standard deviation estimated from historical heartbeat inter-arrival times.
-     */
     /// <summary>
-    /// TBD
+    /// Implementation of 'The Phi Accrual Failure Detector' by Hayashibara et al. as defined in their paper:
+    /// [http://ddg.jaist.ac.jp/pub/HDY+04.pdf]
+    ///
+    /// The suspicion level of failure is given by a value called φ (phi).
+    /// The basic idea of the φ failure detector is to express the value of φ on a scale that
+    /// is dynamically adjusted to reflect current network conditions. A configurable
+    /// threshold is used to decide if φ is considered to be a failure.
+    ///
+    /// The value of φ is calculated as:
+    ///
+    /// <code>
+    /// φ = -log10(1 - F(timeSinceLastHeartbeat)
+    /// </code>
+    /// 
+    /// where F is the cumulative distribution function of a normal distribution with mean
+    /// and standard deviation estimated from historical heartbeat inter-arrival times.
     /// </summary>
     public class PhiAccrualFailureDetector : FailureDetector
     {

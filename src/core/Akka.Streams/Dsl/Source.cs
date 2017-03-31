@@ -621,7 +621,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="props">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified actor <paramref name="props"/> is not of type <see cref="Actors.ActorPublisher{T}"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Source<T, IActorRef> ActorPublisher<T>(Props props)
         {
@@ -662,7 +664,12 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="bufferSize"/> is less than zero.
+        /// </exception>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown when the specified <paramref name="overflowStrategy"/> is of type <see cref="OverflowStrategy.Backpressure"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Source<T, IActorRef> ActorRef<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {
@@ -697,7 +704,7 @@ namespace Akka.Streams.Dsl
 
 
         /// <summary>
-        /// Combine the elements of multiple streams into a stream of lists.
+        /// Combines the elements of multiple streams into a stream of lists.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="sources">TBD</param>
@@ -706,7 +713,7 @@ namespace Akka.Streams.Dsl
             => ZipWithN(x => x, sources);
 
         /// <summary>
-        /// Combine the elements of multiple streams into a stream of sequences using a combiner function.
+        /// Combines the elements of multiple streams into a stream of sequences using a combiner function.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TOut2">TBD</typeparam>
@@ -751,6 +758,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="bufferSize"/> is less than zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Source<T, ISourceQueueWithComplete<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {
