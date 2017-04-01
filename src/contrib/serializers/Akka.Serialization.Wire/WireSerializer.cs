@@ -17,6 +17,7 @@ namespace Akka.Serialization
     /// <summary>
     /// This is a special <see cref="Serializer"/> that serializes and deserializes plain old CLR objects (POCOs).
     /// </summary>
+    [Obsolete("We're transitioning towards Hyperion")]
     public class WireSerializer : Serializer
     {
         private readonly Hyperion.Serializer _serializer;
