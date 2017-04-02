@@ -130,7 +130,7 @@ namespace Akka.Cluster.Tools.Client
         /// The reply to <see cref="GetClusterClients"/>
         /// </summary>
         /// <param name="clusterClientsList">The presently known list of cluster clients.</param>
-        public ClusterClients(ImmutableHashSet<IActorRef> clusterClientsList)
+        public ClusterClients(IImmutableSet<IActorRef> clusterClientsList)
         {
             ClusterClientsList = clusterClientsList;
         }
@@ -138,7 +138,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public ImmutableHashSet<IActorRef> ClusterClientsList { get; }
+        public IImmutableSet<IActorRef> ClusterClientsList { get; }
     }
 
     /// <summary>

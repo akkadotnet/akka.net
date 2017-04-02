@@ -110,18 +110,18 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
             public sealed class LatestContactPoints : INoSerializationVerificationNeeded
             {
-                public LatestContactPoints(ImmutableHashSet<ActorPath> contactPoints)
+                public LatestContactPoints(IImmutableSet<ActorPath> contactPoints)
                 {
                     ContactPoints = contactPoints;
                 }
 
-                public ImmutableHashSet<ActorPath> ContactPoints { get; }
+                public IImmutableSet<ActorPath> ContactPoints { get; }
             }
 
             #endregion
 
             private readonly IActorRef _targetClient;
-            private ImmutableHashSet<ActorPath> _contactPoints;
+            private IImmutableSet<ActorPath> _contactPoints;
 
             public TestClientListener(IActorRef targetClient)
             {
@@ -169,17 +169,17 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
             public sealed class LatestClusterClients : INoSerializationVerificationNeeded
             {
-                public LatestClusterClients(ImmutableHashSet<IActorRef> clusterClients)
+                public LatestClusterClients(IImmutableSet<IActorRef> clusterClients)
                 {
                     ClusterClients = clusterClients;
                 }
 
-                public ImmutableHashSet<IActorRef> ClusterClients { get; }
+                public IImmutableSet<IActorRef> ClusterClients { get; }
             }
             #endregion
 
             private readonly IActorRef _targetReceptionist;
-            private ImmutableHashSet<IActorRef> _clusterClients;
+            private IImmutableSet<IActorRef> _clusterClients;
 
             public TestReceptionistListener(IActorRef targetReceptionist)
             {
@@ -602,7 +602,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                 RunOn(() =>
                 {
                     _remainingServerRoleNames.Count.Should().Be(1);
-                    var remainingContacts = _remainingServerRoleNames.Select(r => Node(r) / "system" / "receptionist").ToList();
+                    var remainingContacts = _remainingServerRoleNames.Select(r => Node(r) / "system" / "receptionist").ToImmutableHashSet();
                     var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(remainingContacts)), "client4");
 
                     c.Tell(new ClusterClient.Send("/user/service2", "bonjour4", localAffinity: true));
