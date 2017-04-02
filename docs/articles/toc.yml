@@ -52,6 +52,8 @@
     href: actors/dependency-injection.md
   - name: Testing Actor Systems
     href: actors/testing-actor-systems.md
+  - name: Coordinated Shutdown
+    href: actors/coordinated-shutdown.md
 - name: Persistence
   items: 
   - name: Architecture
