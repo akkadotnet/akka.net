@@ -284,7 +284,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             ClusterClient_must_communicate_to_any_node_in_cluster();
             ClusterClient_must_work_with_ask();
             ClusterClient_must_demonstrate_usage();
-            ClusterClient_must_report_events();
+            //ClusterClient_must_report_events();
             //ClusterClient_must_reestablish_connection_to_another_receptionist_when_server_is_shutdown();
             //ClusterClient_must_reestablish_connection_to_receptionist_after_partition();
             //ClusterClient_must_reestablish_connection_to_receptionist_after_server_restart();
