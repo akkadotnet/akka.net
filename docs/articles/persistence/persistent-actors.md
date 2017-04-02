@@ -13,8 +13,8 @@ Unlike the default `UntypedActor` class, `PersistentActor` and its derivatives r
 Persistent actors also offer a set of specialized members:
 
 - `Persist` and `PersistAsync` methods can be used to send events to the event journal in order to store them inside. The second argument is a callback invoked when the journal confirms that events have been stored successfully.
-- `Defer` and `DeferAsync` are used to perform various operations *after* events will be persisted and their callback handlers will be invoked. Unlike the persist methods, defer won't store an event in persistent storage. Defer methods may NOT be invoked in case when the actor is restarted even though the journal will successfully persist events sent.
-- `DeleteMessages` will order attached journal to remove part of its events. It can be either logical deletion - messages are marked as deleted, but are not removed physically from the backend storage - or a physical one, when the messages are removed physically from the journal.
+- `DeferAsync` is used to perform various operations *after* events will be persisted and their callback handlers will be invoked. Unlike the persist methods, defer won't store an event in persistent storage. Defer method may NOT be invoked in case when the actor is restarted even though the journal will successfully persist events sent.
+- `DeleteMessages` will order attached journal to remove part of its events. It can be only physical deletion, when the messages are removed physically from the journal.
 - `LoadSnapshot` will send a request to the snapshot store to resend the current actor's snapshot.
 - `SaveSnapshot` will send the current actor's internal state as a snapshot to be saved by the configured snapshot store.
 - `DeleteSnapshot` and `DeleteSnapshots` methods may be used to specify snapshots to be removed from the snapshot store in cases where they are no longer needed.
@@ -147,29 +147,34 @@ A persistent actor must have an identifier that doesn't change across different 
 public override string PersistenceId { get; } = "my-stable-persistence-id";
 ```
 
+> [!NOTE]
+> `PersistenceId` must be unique to a given entity in the journal (database table/keyspace). When replaying messages persisted to the journal, you query messages with a `PersistenceId`. So, if two different entities share the same `PersistenceId`, message-replaying behavior is corrupted.
+
 ## Recovery
 By default, a persistent actor is automatically recovered on start and on restart by replaying journaled messages. New messages sent to a persistent actor during recovery do not interfere with replayed messages. They are cached and received by a persistent actor after recovery phase completes.
 
 > [!NOTE]
-> Accessing the `Sender` for replayed messages will always result in a deadLetters reference, as the original sender is presumed to be long gone. If you indeed have to notify an actor during recovery in the future, store its `ActorPath` explicitly in your persisted events.
+> Accessing the `Sender` for replayed messages will always result in a `DeadLetters` reference, as the original sender is presumed to be long gone. If you indeed have to notify an actor during recovery in the future, store its `ActorPath` explicitly in your persisted events.
 
 ### Recovery customization
-Applications may also customise how recovery is performed by returning a customised `Recovery` object in the recovery method of a `ReceivePersistentActor`, for example setting an upper bound to the replay which allows the actor to be replayed to a certain point "in the past" instead to its most up to date state:
+Applications may also customise how recovery is performed by returning a customised `Recovery` object in the recovery method of a `ReceivePersistentActor`.
+
+To skip loading snapshots and replay all events you can use `SnapshotSelectionCriteria.None`. This can be useful if snapshot serialization format has changed in an incompatible way. It should typically not be used when events have been deleted.
 
 ```csharp
-public override Recovery Recovery
-{
-    get { return new Recovery(new SnapshotSelectionCriteria(457)); }
-}
+public override Recovery Recovery => new Recovery(fromSnapshot: SnapshotSelectionCriteria.None)
 ```
 
-Recovery can be disabled by returning `SnapshotSelectionCriteria.None` in the recovery property of a PersistentActor:
+Another example, which can be fun for experiments but probably not in a real application, is setting an upper bound to the replay which allows the actor to be replayed to a certain point "in the past" instead to its most up to date state. Note that after that it is a bad idea to persist new events because a later recovery will probably be confused by the new events that follow the events that were previously skipped.
 
 ```csharp
-public override Recovery Recovery
-{
-    get { return new Recovery(SnapshotSelectionCriteria.None); }
-}
+public override Recovery Recovery => new Recovery(new SnapshotSelectionCriteria(457));
+```
+
+Recovery can be disabled by returning `Recovery.None` in the recovery property of a `ReceivePersistentActor`:
+
+```csharp
+public override Recovery Recovery => Recovery.None;
 ```
 
 ### Recovery status
@@ -193,6 +198,7 @@ Command<string>(message =>
     
 });
 ```
+The actor will always receive a `RecoveryCompleted` message, even if there are no events in the journal and the snapshot store is empty, or if it's a new persistent actor with a previously unused `PersistenceId`.
 
 If there is a problem with recovering the state of the actor from the journal, `OnRecoveryFailure` is called (logging the error by default) and the actor will be stopped.
 
@@ -295,6 +301,8 @@ public class MyPersistentActor : ReceivePersistentActor
 ```
 
 Notice that the `Sender` is safe to access in the handler callback, and will be pointing to the original sender of the command for which this `DeferAsync` handler was called.
+
+The calling side will get the responses in this (guaranteed) order:
 
 ```csharp
 persistentActor.tell("a");
@@ -419,7 +427,10 @@ persistentActor.tell("b");
 // a -> a-outer-1 -> a-outer-2 -> a-inner-1 -> a-inner-2
 // b -> b-outer-1 -> b-outer-2 -> b-inner-1 -> b-inner-2
 ```
-While it is possible to nest mixed persist and `PersistAsync` with keeping their respective semantics it is not a recommended practice, as it may lead to overly complex nesting.
+While it is possible to nest mixed `Persist` and `PersistAsync` with keeping their respective semantics it is not a recommended practice, as it may lead to overly complex nesting.
+
+> [!WARNING]
+> While it is possible to nest `Persist` calls within one another, it is not legal call persist from any other `Thread` than the Actors message processing `Thread`. For example, it is not legal to call `Persist` from tasks! Doing so will break the guarantees that the persist methods aim to provide. Always call `Persist` and `PersistAsync` from within the Actor's receive block (or methods synchronously invoked from there).
 
 ## Failures
 If persistence of an event fails, `OnPersistFailure` will be invoked (logging the error by default), and the actor will unconditionally be stopped.
@@ -441,7 +452,7 @@ protected override void PreStart()
 
 If persistence of an event is rejected before it is stored, e.g. due to serialization error, `OnPersistRejected` will be invoked (logging a warning by default), and the actor continues with next message.
 
-If there is a problem with recovering the state of the actor from the journal when the actor is started, `OnRecoveryFailure` is called (logging the error by default), and the actor will be stopped.
+If there is a problem with recovering the state of the actor from the journal when the actor is started, `OnRecoveryFailure` is called (logging the error by default), and the actor will be stopped. Note that failure to load snapshot is also treated like this, but you can disable loading of snapshots if you for example know that serialization format has changed in an incompatible way, see [Recovery customization](#recovery customization).
 
 ## Atomic writes
 Each event is of course stored atomically, but it is also possible to store several events atomically by using the `PersistAll` or `PersistAllAsync` method. That means that all events passed to that method are stored or none of them are stored if there is an error.
@@ -458,6 +469,9 @@ In order to optimize throughput when using `PersistAsync`, a persistent actor in
 It is possible to delete all messages (journaled by a single persistent actor) up to a specified sequence number; Persistent actors may call the `DeleteMessages` method to this end.
 
 Deleting messages in event sourcing based applications is typically either not used at all, or used in conjunction with snapshotting, i.e. after a snapshot has been successfully stored, a `DeleteMessages` (`ToSequenceNr`) up until the sequence number of the data held by that snapshot can be issued to safely delete the previous events while still having access to the accumulated state during replays - by loading the snapshot.
+
+> [!WARNING]
+> If you are using `Persistence Query`, query results may be missing deleted messages in a journal, depending on how deletions are implemented in the journal plugin. Unless you use a plugin which still shows deleted messages in persistence query results, you have to design your application so that it is not affected by missing messages.
 
 The result of the `DeleteMessages` request is signaled to the persistent actor with a `DeleteMessagesSuccess` message if the delete was successful or a `DeleteMessagesFailure` message if it failed.
 
@@ -558,4 +572,30 @@ persistentActor.Tell(new Shutdown());
 //   # unstashing;                            internal-stash = []
 // Shutdown
 // -- stop --
+```
+
+## Replay filter
+There could be cases where event streams are corrupted and multiple writers (i.e. multiple persistent actor instances) journaled different messages with the same sequence number. In such a case, you can configure how you filter replayed messages from multiple writers, upon recovery.
+
+In your configuration, under the `akka.persistence.journal.xxx.replay-filter` section (where xxx is your journal plugin id), you can select the replay filter mode from one of the following values:
+
+- repair-by-discard-old
+- fail
+- warn
+- off
+
+For example, if you configure the replay filter for `sqlite` plugin, it looks like this:
+```hocon
+# The replay filter can detect a corrupt event stream by inspecting
+# sequence numbers and writerUuid when replaying events.
+akka.persistence.journal.sqlite.replay-filter {
+  # What the filter should do when detecting invalid events.
+  # Supported values:
+  # `repair-by-discard-old` : discard events from old writers,
+  #                           warning is logged
+  # `fail` : fail the replay, error is logged
+  # `warn` : log warning but emit events untouched
+  # `off` : disable this feature completely
+  mode = repair-by-discard-old
+}
 ```
