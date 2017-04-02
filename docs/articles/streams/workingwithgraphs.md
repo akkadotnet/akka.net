@@ -182,7 +182,7 @@ Being able to hide complex graphs inside of simple elements such as Sink / Sourc
 
 In order to create a Source from a graph the method ``Source.fromGraph`` is used, to use it we must have a
 ``IGraph<SourceShape, T>``. This is constructed using ``GraphDSL.Create`` and returning a ``SourceShape``
-from the function passed in . The single outlet must be provided to the ``SourceShape.Of`` method and will become “the sink that must be attached before this Source can run”.
+from the function passed in . The single outlet must be provided to the ``SourceShape.Of`` method and will become "the sink that must be attached before this Source can run".
 
 Refer to the example below, in which we create a Source that zips together two numbers, to see this graph
 construction in action:

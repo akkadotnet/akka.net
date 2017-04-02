@@ -7,7 +7,7 @@ title: Persistence FSM
 `PersistentFSM` handles the incoming messages in an FSM like fashion. Its internal state is persisted as a sequence of changes, later referred to as domain events. Relationship between incoming messages, FSM's states and transitions, persistence of domain events is defined by a DSL.
 
 > [!WARNING]
-> PersistentFSM is marked as “experimental”.
+> PersistentFSM is marked as `experimental`.
 
 To demonstrate the features of the `PersistentFSM` class, consider an actor which represents a Web store customer. The contract of our "`WebStoreCustomerFSMActor`" is that it accepts the following commands:
 

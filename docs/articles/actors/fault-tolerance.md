@@ -224,7 +224,7 @@ And finally in case of the fatal `IllegalArgumentException` the child will be
 terminated by the supervisor:
 
 ```csharp
-Watch(child); // have testActor watch “child”
+Watch(child); // have testActor watch "child"
 child.Tell(new ArgumentException()); // break it
 ExpectMsg<Terminated>().ActorRef.Should().Be(child);
 ```

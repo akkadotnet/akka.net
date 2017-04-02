@@ -173,6 +173,9 @@ We can picture the initial state of a 5-node Akka.NET cluster to look like this:
 
 **A** and **B** also know *each other's locations*, so they can communicate with each other initially also.
 
+> [!NOTE]
+> A special rule applies the first time a cluster forms: the first seed node declared in a `akka.cluster.seed-nodes` list *must be up*. Otherwise the cluster will not form. This is designed to prevent a split brain from forming the first time a cluster launches. And in general, as a best practice: **always use an identical seed node list on every node, including the seed nodes**. This will give you the most consistent behavior and results.
+
 ![Akka.Cluster nodes begin attempting to join each other, beginning with seed nodes](/images/akka-cluster-joining.png)
 
 All nodes initially attempt to connect to a seed node - in this instance the nodes are configured in the following way:

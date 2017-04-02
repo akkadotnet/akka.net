@@ -333,16 +333,16 @@ Starting from Akka.NET v1.5, default Newtonsoft.Json serializer will be replaced
 
     Install-Package Akka.Serialization.Hyperion -pre
 
-Then bind wire serializer using following HOCON configuration in your actor system settings:
+Then bind `hyperion` serializer using following HOCON configuration in your actor system settings:
 
 ```
 akka {
   actor {
     serializers {
-      wire = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
+      hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
     }
     serialization-bindings {
-      "System.Object" = wire
+      "System.Object" = hyperion
     }
   }
 }

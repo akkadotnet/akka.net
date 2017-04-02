@@ -6,8 +6,8 @@ title: Message Delivery Reliability
 # Message Delivery Reliability
 
 Akka.NET helps you build reliable applications which make use of multiple processor
-cores in one machine (“scaling up”) or distributed across a computer network
-(“scaling out”). The key abstraction to make this work is that all interactions
+cores in one machine ("scaling up") or distributed across a computer network
+("scaling out"). The key abstraction to make this work is that all interactions
 between your code units—actors—happen via message passing, which is why the
 precise semantics of how messages are passed between actors deserve their own
 chapter.
@@ -33,7 +33,7 @@ on message delivery. The details of this trade-off are discussed further below.
 
 As a supplementary part we give a few pointers at how to build stronger
 reliability on top of the built-in ones. The chapter closes by discussing the
-role of the “Dead Letter Office”.
+role of the "Dead Letter Office".
 
 ## The General Rules
 
@@ -46,7 +46,7 @@ also underlies the `Ask` pattern):
 The first rule is typically found also in other actor implementations while the
 second is specific to Akka.NET.
 
-### Discussion: What does “at-most-once” mean?
+### Discussion: What does "at-most-once" mean?
 
 When it comes to describing the semantics of a delivery mechanism, there are
 three basic categories:
@@ -88,13 +88,13 @@ Each one of these have different challenges and costs, and it is obvious that
 there are conditions under which any message passing library would be unable to
 comply; think for example about configurable mailbox types and how a bounded
 mailbox would interact with the third point, or even what it would mean to
-decide upon the “successfully” part of point five.
+decide upon the "successfully" part of point five.
 
 Along those same lines goes the reasoning in [Nobody Needs Reliable
 Messaging](http://www.infoq.com/articles/no-reliable-messaging). The only meaningful way for a sender to know whether an
 interaction was successful is by receiving a business-level acknowledgement
 message, which is not something Akka.NET could make up on its own (neither are we
-writing a “do what I mean” framework nor would you want us to).
+writing a "do what I mean" framework nor would you want us to).
 
 Akka.NET embraces distributed computing and makes the fallibility of communication
 explicit through message passing, therefore it does not try to lie and emulate
@@ -182,7 +182,7 @@ Relying on the stronger reliability in this section is not recommended since it
 will bind your application to local-only deployment: an application may have to
 be designed differently (as opposed to just employing some message exchange
 patterns local to some actors) in order to be fit for running on a cluster of
-machines. Our credo is “design once, deploy any way you wish”, and to achieve
+machines. Our credo is "design once, deploy any way you wish", and to achieve
 this you should only rely on The [General Rules](xref:message-delivery-reliability#the-general-rules).
 
 ### Reliability of Local Message Sends
