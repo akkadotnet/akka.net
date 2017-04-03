@@ -1241,6 +1241,8 @@ namespace Akka.Streams.Dsl
             where TShape2 : Akka.Streams.Shape
             where TShape3 : Akka.Streams.Shape
             where TShape4 : Akka.Streams.Shape { }
+        public static Akka.Streams.IGraph<TShape, TMat> CreateMaterialized<TShape, TMat>(System.Func<Akka.Streams.Dsl.GraphDsl.Builder<TMat>, TShape> buildBlock)
+            where TShape : Akka.Streams.Shape { }
         public sealed class Builder<T>
         {
             public Akka.Streams.Outlet<T> MaterializedValue { get; }
@@ -1292,7 +1294,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Inlet<TIn> In(int id) { }
         public override string ToString() { }
     }
-    public interface IRunnableGraph<TMat> : Akka.Streams.IGraph<Akka.Streams.ClosedShape>, Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat>
+    public interface IRunnableGraph<out TMat> : Akka.Streams.IGraph<Akka.Streams.ClosedShape>, Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat>
     {
         Akka.Streams.Dsl.IRunnableGraph<TMat> AddAttributes(Akka.Streams.Attributes attributes);
         Akka.Streams.Dsl.IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> func);
