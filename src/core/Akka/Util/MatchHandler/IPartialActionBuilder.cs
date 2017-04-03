@@ -12,7 +12,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public interface IPartialActionBuilder
+    internal interface IPartialActionBuilder
     {
         /// <summary>
         /// Builds the specified delegate and arguments to a <see cref="PartialAction{T}"/>

@@ -22,7 +22,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public interface IPartialHandlerArgumentsCapture<T>
+    internal interface IPartialHandlerArgumentsCapture<T>
     {
         /// <summary>
         /// TBD
@@ -42,7 +42,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class PartialHandlerArgumentsCapture<T> : IPartialHandlerArgumentsCapture<T>
+    internal sealed class PartialHandlerArgumentsCapture<T> : IPartialHandlerArgumentsCapture<T>
     {
         /// <summary>
         /// TBD
@@ -73,7 +73,7 @@ namespace Akka.Tools.MatchHandler
 <# for (var t = 1; t <= i; t++) { #>
     /// <typeparam name="T<#= t #>">TBD</typeparam>
 <# } #>
-    public sealed class PartialHandlerArgumentsCapture<T, <#= types #>> : IPartialHandlerArgumentsCapture<T>
+    internal sealed class PartialHandlerArgumentsCapture<T, <#= types #>> : IPartialHandlerArgumentsCapture<T>
     {
         /// <summary>
         /// TBD

@@ -17,7 +17,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public static partial class DistributedPubSubMessages
+    internal static partial class DistributedPubSubMessages
     {
 
         #region Extension registration
@@ -128,7 +128,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     }
     #region Messages
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public sealed partial class Status : pb::GeneratedMessage<Status, Status.Builder>
+    internal sealed partial class Status : pb::GeneratedMessage<Status, Status.Builder>
     {
         private Status() { }
         private static readonly Status defaultInstance = new Status().MakeReadOnly();
@@ -164,7 +164,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         public static partial class Types
         {
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            public sealed partial class Version : pb::GeneratedMessage<Version, Version.Builder>
+            internal sealed partial class Version : pb::GeneratedMessage<Version, Version.Builder>
             {
                 private Version() { }
                 private static readonly Version defaultInstance = new Version().MakeReadOnly();
@@ -322,7 +322,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
                 }
 
                 [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-                public sealed partial class Builder : pb::GeneratedBuilder<Version, Builder>
+                internal sealed partial class Builder : pb::GeneratedBuilder<Version, Builder>
                 {
                     protected override Builder ThisBuilder
                     {
@@ -724,7 +724,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public sealed partial class Builder : pb::GeneratedBuilder<Status, Builder>
+        internal sealed partial class Builder : pb::GeneratedBuilder<Status, Builder>
         {
             protected override Builder ThisBuilder
             {
@@ -990,7 +990,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public sealed partial class Delta : pb::GeneratedMessage<Delta, Delta.Builder>
+    internal sealed partial class Delta : pb::GeneratedMessage<Delta, Delta.Builder>
     {
         private Delta() { }
         private static readonly Delta defaultInstance = new Delta().MakeReadOnly();
@@ -1026,7 +1026,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         public static partial class Types
         {
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            public sealed partial class Entry : pb::GeneratedMessage<Entry, Entry.Builder>
+            internal sealed partial class Entry : pb::GeneratedMessage<Entry, Entry.Builder>
             {
                 private Entry() { }
                 private static readonly Entry defaultInstance = new Entry().MakeReadOnly();
@@ -1203,7 +1203,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
                 }
 
                 [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-                public sealed partial class Builder : pb::GeneratedBuilder<Entry, Builder>
+                internal sealed partial class Builder : pb::GeneratedBuilder<Entry, Builder>
                 {
                     protected override Builder ThisBuilder
                     {
@@ -1475,7 +1475,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
             }
 
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            public sealed partial class Bucket : pb::GeneratedMessage<Bucket, Bucket.Builder>
+            internal sealed partial class Bucket : pb::GeneratedMessage<Bucket, Bucket.Builder>
             {
                 private Bucket() { }
                 private static readonly Bucket defaultInstance = new Bucket().MakeReadOnly();
@@ -1661,7 +1661,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
                 }
 
                 [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-                public sealed partial class Builder : pb::GeneratedBuilder<Bucket, Builder>
+                internal sealed partial class Builder : pb::GeneratedBuilder<Bucket, Builder>
                 {
                     protected override Builder ThisBuilder
                     {
@@ -2105,7 +2105,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public sealed partial class Builder : pb::GeneratedBuilder<Delta, Builder>
+        internal sealed partial class Builder : pb::GeneratedBuilder<Delta, Builder>
         {
             protected override Builder ThisBuilder
             {
@@ -2338,7 +2338,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public sealed partial class Address : pb::GeneratedMessage<Address, Address.Builder>
+    internal sealed partial class Address : pb::GeneratedMessage<Address, Address.Builder>
     {
         private Address() { }
         private static readonly Address defaultInstance = new Address().MakeReadOnly();
@@ -2537,7 +2537,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public sealed partial class Builder : pb::GeneratedBuilder<Address, Builder>
+        internal sealed partial class Builder : pb::GeneratedBuilder<Address, Builder>
         {
             protected override Builder ThisBuilder
             {
@@ -2845,7 +2845,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public sealed partial class Send : pb::GeneratedMessage<Send, Send.Builder>
+    internal sealed partial class Send : pb::GeneratedMessage<Send, Send.Builder>
     {
         private Send() { }
         private static readonly Send defaultInstance = new Send().MakeReadOnly();
@@ -3024,7 +3024,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public sealed partial class Builder : pb::GeneratedBuilder<Send, Builder>
+        internal sealed partial class Builder : pb::GeneratedBuilder<Send, Builder>
         {
             protected override Builder ThisBuilder
             {
@@ -3326,7 +3326,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public sealed partial class SendToAll : pb::GeneratedMessage<SendToAll, SendToAll.Builder>
+    internal sealed partial class SendToAll : pb::GeneratedMessage<SendToAll, SendToAll.Builder>
     {
         private SendToAll() { }
         private static readonly SendToAll defaultInstance = new SendToAll().MakeReadOnly();
@@ -3505,7 +3505,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public sealed partial class Builder : pb::GeneratedBuilder<SendToAll, Builder>
+        internal sealed partial class Builder : pb::GeneratedBuilder<SendToAll, Builder>
         {
             protected override Builder ThisBuilder
             {
@@ -3807,7 +3807,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public sealed partial class Publish : pb::GeneratedMessage<Publish, Publish.Builder>
+    internal sealed partial class Publish : pb::GeneratedMessage<Publish, Publish.Builder>
     {
         private Publish() { }
         private static readonly Publish defaultInstance = new Publish().MakeReadOnly();
@@ -3965,7 +3965,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public sealed partial class Builder : pb::GeneratedBuilder<Publish, Builder>
+        internal sealed partial class Builder : pb::GeneratedBuilder<Publish, Builder>
         {
             protected override Builder ThisBuilder
             {
@@ -4234,7 +4234,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-    public sealed partial class Payload : pb::GeneratedMessage<Payload, Payload.Builder>
+    internal sealed partial class Payload : pb::GeneratedMessage<Payload, Payload.Builder>
     {
         private Payload() { }
         private static readonly Payload defaultInstance = new Payload().MakeReadOnly();
@@ -4411,7 +4411,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public sealed partial class Builder : pb::GeneratedBuilder<Payload, Builder>
+        internal sealed partial class Builder : pb::GeneratedBuilder<Payload, Builder>
         {
             protected override Builder ThisBuilder
             {

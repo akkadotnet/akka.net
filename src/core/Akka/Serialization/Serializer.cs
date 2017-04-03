@@ -111,24 +111,24 @@ namespace Akka.Serialization
     public abstract class SerializerWithStringManifest : Serializer
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SerializerWithStringManifest"/> class.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system to associate with this serializer.</param>
         protected SerializerWithStringManifest(ExtendedActorSystem system) : base(system)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Returns whether this serializer needs a manifest in the fromBinary method
         /// </summary>
         public sealed override bool IncludeManifest { get { return true; } }
 
         /// <summary>
-        /// TBD
+        /// Deserializes a byte array into an object of type <paramref name="type" />.
         /// </summary>
-        /// <param name="bytes">TBD</param>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="type">The type of object contained in the array</param>
+        /// <returns>The object contained in the array</returns>
         public sealed override object FromBinary(byte[] bytes, Type type)
         {
             var manifest = TypeQualifiedNameForManifest(type);
@@ -136,19 +136,22 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Produces an object from an array of bytes, with an optional type-hint.
+        /// Deserializes a byte array into an object using an optional <paramref name="manifest"/> (type hint).
         /// </summary>
-        /// <param name="binary">TBD</param>
-        /// <param name="manifest">TBD</param>
-        /// <returns>TBD</returns>
-        public abstract object FromBinary(byte[] binary, string manifest);
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="manifest">The type hint used to deserialize the object contained in the array.</param>
+        /// <returns>The object contained in the array</returns>
+        public abstract object FromBinary(byte[] bytes, string manifest);
 
         /// <summary>
-        /// Return the manifest (type hint) that will be provided in the fromBinary method.
-        /// Return <see cref="string.Empty"/> if not needed.
+        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(byte[],System.Type)"/> method.
+        /// 
+        /// <note>
+        /// This method returns <see cref="String.Empty"/> if a manifest is not needed.
+        /// </note>
         /// </summary>
-        /// <param name="o">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="o">The object for which the manifest is needed.</param>
+        /// <returns>The manifest needed for the deserialization of the specified <paramref name="o"/>.</returns>
         public abstract string Manifest(object o);
     }
 

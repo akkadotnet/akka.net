@@ -20,7 +20,7 @@ using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
 using Akka.Util.Internal;
-using Helios.Channels;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.TestKit
 {
@@ -583,7 +583,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class PlayerHandler : ChannelHandlerAdapter
+    internal class PlayerHandler : ChannelHandlerAdapter
     {
         readonly IPEndPoint _server;
         int _reconnects;
@@ -595,7 +595,12 @@ namespace Akka.Remote.TestKit
         private bool _loggedDisconnect = false;
         
         Deadline _nextAttempt;
-        
+
+        /// <summary>
+        /// Shareable, since the handler may be added multiple times during reconnect
+        /// </summary>
+        public override bool IsSharable => true;
+
         public PlayerHandler(IPEndPoint server, int reconnects, TimeSpan backoff, int poolSize, IActorRef fsm,
             ILoggingAdapter log, IScheduler scheduler)
         {

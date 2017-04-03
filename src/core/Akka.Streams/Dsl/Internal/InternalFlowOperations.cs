@@ -696,7 +696,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="start">TBD</param>
         /// <param name="inject">TBD</param>
         /// <param name="end">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Intersperse<T, TMat>(this IFlow<T, TMat> flow, T start, T inject, T end)
         {
@@ -725,7 +725,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is undefined.</exception>
         public static IFlow<T, TMat> Intersperse<T, TMat>(this IFlow<T, TMat> flow, T inject)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(inject);
@@ -1650,9 +1650,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="per">TBD</param>
         /// <param name="maximumBurst">TBD</param>
         /// <param name="mode">TBD</param>
-        /// <exception cref="ArgumentException">Thow when <paramref name="elements"/> is less than or equal zero, 
-        /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
-        /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when one of the following conditions is met.
+        /// <ul>
+        /// <li>The specified <paramref name="elements"/> is less than or equal to zero</li>
+        /// <li>The specified <paramref name="per"/> timeout is equal to <see cref="TimeSpan.Zero"/>.</li>
+        /// <li>The specified <paramref name="maximumBurst"/> is less than or equal zero in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</li>
+        /// <li>The <see cref="TimeSpan.Ticks"/> in the specified <paramref name="per"/> is less than the specified <paramref name="elements"/>.</li>
+        /// </ul>
+        /// </exception>
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int elements, TimeSpan per,
             int maximumBurst, ThrottleMode mode)
@@ -1662,7 +1668,7 @@ namespace Akka.Streams.Dsl.Internal
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < elements)
-                throw new ArgumentException("Rates larger than 1 unit / tick are not supported");
+                throw new ArgumentException("Rates larger than 1 unit / tick are not supported", nameof(elements));
 
             return flow.Via(new Throttle<T>(elements, per, maximumBurst, _ => 1, mode));
         }
@@ -1701,7 +1707,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="maximumBurst">TBD</param>
         /// <param name="calculateCost">TBD</param>
         /// <param name="mode">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when one of the following conditions is met.
+        /// <ul>
+        /// <li>The specified <paramref name="cost"/> is less than or equal to zero</li>
+        /// <li>The specified <paramref name="per"/> timeout is equal to <see cref="TimeSpan.Zero"/>.</li>
+        /// <li>The specified <paramref name="maximumBurst"/> is less than or equal zero in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</li>
+        /// <li>The <see cref="TimeSpan.Ticks"/> in the specified <paramref name="per"/> is less than the specified <paramref name="cost"/>.</li>
+        /// </ul>
+        /// </exception>
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per,
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
@@ -1711,7 +1725,7 @@ namespace Akka.Streams.Dsl.Internal
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < cost)
-                throw new ArgumentException("Rates larger than 1 unit / tick are not supported");
+                throw new ArgumentException("Rates larger than 1 unit / tick are not supported", nameof(cost));
 
             return flow.Via(new Throttle<T>(cost, per, maximumBurst, calculateCost, mode));
         }

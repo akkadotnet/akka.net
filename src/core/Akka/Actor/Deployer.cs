@@ -29,9 +29,9 @@ namespace Akka.Actor
         private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Deployer"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings used to configure the deployer.</param>
         public Deployer(Settings settings)
         {
             _settings = settings;

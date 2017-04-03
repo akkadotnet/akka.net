@@ -131,11 +131,13 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <param name="eagerComplete">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="inputPorts"/> is less than one.
+        /// </exception>
         public Merge(int inputPorts, bool eagerComplete = false)
         {
             // one input might seem counter intuitive but saves us from special handling in other places
-            if (inputPorts < 1) throw new ArgumentException("Merge must have one or more input ports");
+            if (inputPorts < 1) throw new ArgumentException("Merge must have one or more input ports", nameof(inputPorts));
             _inputPorts = inputPorts;
             _eagerComplete = eagerComplete;
 
@@ -374,10 +376,12 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="secondaryPorts">TBD</param>
         /// <param name="eagerClose">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="secondaryPorts"/> is less than one.
+        /// </exception>
         public MergePreferred(int secondaryPorts, bool eagerClose = false)
         {
-            if (secondaryPorts < 1) throw new ArgumentException("A MergePreferred must have at least one secondary port");
+            if (secondaryPorts < 1) throw new ArgumentException("A MergePreferred must have at least one secondary port", nameof(secondaryPorts));
             _secondaryPorts = secondaryPorts;
             _eagerClose = eagerClose;
 
@@ -550,7 +554,10 @@ namespace Akka.Streams.Dsl
         /// <param name="inputPorts">TBD</param>
         /// <param name="segmentSize">TBD</param>
         /// <param name="eagerClose">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="inputPorts"/> is less than or equal to one
+        /// or the specified <paramref name="segmentSize"/> is less than or equal to zero.
+        /// </exception>
         internal Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
         {
             if (inputPorts <= 1) throw new ArgumentException("Interleave input ports count must be greater than 1", nameof(inputPorts));
@@ -823,7 +830,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="eagerCancel">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="outputPorts"/> is less than one.
+        /// </exception>
         public Broadcast(int outputPorts, bool eagerCancel = false)
         {
             if (outputPorts < 1) throw new ArgumentException("A Broadcast must have one or more output ports", nameof(outputPorts));
@@ -1036,12 +1045,12 @@ namespace Akka.Streams.Dsl
     public sealed class PartitionOutOfBoundsException : Exception
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PartitionOutOfBoundsException" /> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error. </param>
         public PartitionOutOfBoundsException(string message) : base(message)
         {
-            
+
         }
     }
 
@@ -1154,10 +1163,12 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="waitForAllDownstreams">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="outputPorts"/> is less than one.
+        /// </exception>
         public Balance(int outputPorts, bool waitForAllDownstreams = false)
         {
-            if (outputPorts < 1) throw new ArgumentException("A Balance must have one or more output ports");
+            if (outputPorts < 1) throw new ArgumentException("A Balance must have one or more output ports", nameof(outputPorts));
             _outputPorts = outputPorts;
             _waitForAllDownstreams = waitForAllDownstreams;
 
@@ -1577,10 +1588,12 @@ namespace Akka.Streams.Dsl
         /// TBD
         /// </summary>
         /// <param name="inputPorts">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="inputPorts"/> is less than or equal to one.
+        /// </exception>
         public Concat(int inputPorts = 2)
         {
-            if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port");
+            if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port", nameof(inputPorts));
             _inputPorts = inputPorts;
 
             var inlets = new Inlet<TIn>[inputPorts];

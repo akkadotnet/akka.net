@@ -289,7 +289,14 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         /// <param name="raw">TBD</param>
-        /// <exception cref="PduCodecException">TBD</exception>
+        /// <exception cref="PduCodecException">
+        /// This exception is thrown when the Akka PDU in the specified byte string,
+        /// <paramref name="raw" />, mets one of the following conditions:
+        /// <ul>
+        /// <li>The PDU is neither a message or a control message.</li>
+        /// <li>The PDU is a control message with an invalid format. </li>
+        /// </ul>
+        /// </exception>
         /// <returns>TBD</returns>
         public override IAkkaPdu DecodePdu(ByteString raw)
         {
@@ -320,6 +327,9 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         /// <param name="info">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="info"/> contains an invalid address.
+        /// </exception>
         /// <returns>TBD</returns>
         public override ByteString ConstructAssociate(HandshakeInfo info)
         {
@@ -472,7 +482,7 @@ namespace Akka.Remote.Transport
                     return new Heartbeat();
             }
 
-            throw new PduCodecException(string.Format("Decoding of control PDU failed, invalid format, unexpected {0}", controlPdu));
+            throw new PduCodecException($"Decoding of control PDU failed, invalid format, unexpected {controlPdu}");
         }
 
 
@@ -521,7 +531,8 @@ namespace Akka.Remote.Transport
 
         private AddressData SerializeAddress(Address address)
         {
-            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue) throw new ArgumentException(string.Format("Address {0} could not be serialized: host or port missing", address));
+            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
+                throw new ArgumentException($"Address {address} could not be serialized: host or port missing");
             return AddressData.CreateBuilder()
                 .SetHostname(address.Host)
                 .SetPort((uint)address.Port.Value)

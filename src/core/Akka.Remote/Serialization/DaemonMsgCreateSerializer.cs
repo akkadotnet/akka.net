@@ -74,15 +74,14 @@ namespace Akka.Remote.Serialization
         /// </summary>
         /// <param name="obj">The object to serialize </param>
         /// <returns>A byte array containing the serialized object</returns>
-        /// <exception cref="ArgumentException">Can't serialize a non-<see cref="DaemonMsgCreate"/> message using <see cref="DaemonMsgCreateSerializer"/></exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="obj" /> is not of type <see cref="DaemonMsgCreate"/>.
+        /// </exception>
         public override byte[] ToBinary(object obj)
         {
             var msg = obj as DaemonMsgCreate;
             if (msg == null)
-            {
-                throw new ArgumentException(
-                    "Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer");
-            }
+                throw new ArgumentException("Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer");
        
             DaemonMsgCreateData daemonBuilder = DaemonMsgCreateData.CreateBuilder()
                 .SetProps(GetPropsData(msg.Props))
@@ -140,8 +139,7 @@ namespace Akka.Remote.Serialization
         /// <param name="type">The type of object contained in the array</param>
         /// <returns>The object contained in the array</returns>
         /// <exception cref="TypeLoadException">
-        /// Could not find type on the remote system.
-        /// Ensure that the remote system has an assembly that contains the type in its assembly search path.
+        /// This exception is thrown when the type could not be found on the remote system.
         /// </exception>
         public override object FromBinary(byte[] bytes, Type type)
         {
@@ -154,12 +152,7 @@ namespace Akka.Remote.Serialization
             }
             catch (TypeLoadException ex)
             {
-                var msg = string.Format(
-                       "Could not find type '{0}' on the remote system. " +
-                       "Ensure that the remote system has an assembly that contains the type {0} in its assembly search path", 
-                       proto.Props.Clazz);
-
-
+                var msg = $"Could not find type '{proto.Props.Clazz}' on the remote system. Ensure that the remote system has an assembly that contains the type {proto.Props.Clazz} in its assembly search path";
                 throw new TypeLoadException(msg, ex);
             }
 

@@ -35,6 +35,7 @@ namespace Akka.Cluster
         public void JoinSeedNodes(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes) { }
         public void Leave(Akka.Actor.Address address) { }
         public System.Threading.Tasks.Task LeaveAsync() { }
+        public System.Threading.Tasks.Task LeaveAsync(System.Threading.CancellationToken cancellationToken) { }
         public void RegisterOnMemberRemoved(System.Action callback) { }
         public void RegisterOnMemberUp(System.Action callback) { }
         public Akka.Actor.ActorPath RemotePathOf(Akka.Actor.IActorRef actorRef) { }
@@ -285,7 +286,7 @@ namespace Akka.Cluster.Routing
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig other) { }
+        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
     }
     public sealed class ClusterRouterGroupSettings : Akka.Cluster.Routing.ClusterRouterSettingsBase
     {

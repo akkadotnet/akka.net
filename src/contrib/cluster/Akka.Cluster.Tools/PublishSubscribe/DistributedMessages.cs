@@ -20,7 +20,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Ref;
+        public IActorRef Ref { get; }
 
         /// <summary>
         /// TBD
@@ -68,7 +68,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("Put<ref:{0}>", Ref);
+            return $"Put<ref:{Ref}>";
         }
     }
 
@@ -81,7 +81,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Path;
+        public string Path { get; }
 
         /// <summary>
         /// TBD
@@ -129,7 +129,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("Remove<path:{0}>", Path);
+            return $"Remove<path:{Path}>";
         }
     }
 
@@ -142,15 +142,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Topic;
+        public string Topic { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Group;
+        public string Group { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Ref;
+        public IActorRef Ref { get; }
 
         /// <summary>
         /// TBD
@@ -213,7 +215,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("Subscribe<topic:{0}, group:{1}, ref:{2}>", Topic, Group, Ref);
+            return $"Subscribe<topic:{Topic}, group:{Group}, ref:{Ref}>";
         }
     }
 
@@ -226,15 +228,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Topic;
+        public string Topic { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Group;
+        public string Group { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Ref;
+        public IActorRef Ref { get; }
 
         /// <summary>
         /// TBD
@@ -297,7 +301,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("Unsubscribe<topic:{0}, group:{1}, ref:{2}>", Topic, Group, Ref);
+            return $"Unsubscribe<topic:{Topic}, group:{Group}, ref:{Ref}>";
         }
     }
 
@@ -310,7 +314,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Subscribe Subscribe;
+        public Subscribe Subscribe { get; }
 
         /// <summary>
         /// TBD
@@ -359,7 +363,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("SubscribeAck<{0}>", Subscribe);
+            return $"SubscribeAck<{Subscribe}>";
         }
     }
 
@@ -372,7 +376,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Unsubscribe Unsubscribe;
+        public Unsubscribe Unsubscribe { get; }
 
         /// <summary>
         /// TBD
@@ -419,7 +423,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("UnsubscribeAck<{0}>", Unsubscribe);
+            return $"UnsubscribeAck<{Unsubscribe}>";
         }
     }
 
@@ -432,15 +436,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Topic;
+        public string Topic { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly object Message;
+        public object Message { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly bool SendOneMessageToEachGroup;
+        public bool SendOneMessageToEachGroup { get; }
 
         /// <summary>
         /// TBD
@@ -500,7 +504,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("Publish<topic:{0}, sendOneToEachGroup:{1}, message:{2}>", Topic, SendOneMessageToEachGroup, Message);
+            return $"Publish<topic:{Topic}, sendOneToEachGroup:{SendOneMessageToEachGroup}, message:{Message}>";
         }
     }
 
@@ -513,15 +517,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Path;
+        public string Path { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly object Message;
+        public object Message { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly bool LocalAffinity;
+        public bool LocalAffinity { get; }
 
         /// <summary>
         /// TBD
@@ -581,7 +585,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("Send<path:{0}, localAffinity:{1}, message:{2}>", Path, LocalAffinity, Message);
+            return $"Send<path:{Path}, localAffinity:{LocalAffinity}, message:{Message}>";
         }
     }
 
@@ -594,15 +598,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string Path;
+        public string Path { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly object Message;
+        public object Message { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly bool ExcludeSelf;
+        public bool ExcludeSelf { get; }
 
         /// <summary>
         /// TBD
@@ -661,7 +667,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("SendToAll<path:{0}, excludeSelf:{1}, message:{2}>", Path, ExcludeSelf, Message);
+            return $"SendToAll<path:{Path}, excludeSelf:{ExcludeSelf}, message:{Message}>";
         }
     }
 
@@ -669,43 +675,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class GetTopics : IEquatable<GetTopics>
+    public sealed class GetTopics
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetTopics Instance = new GetTopics();
+        public static GetTopics Instance { get; } = new GetTopics();
         private GetTopics() { }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
-        public bool Equals(GetTopics other)
-        {
-            if (other == null) return false;
-            return true;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as GetTopics);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "GetTopics<>";
-        }
     }
 
     /// <summary>
@@ -717,7 +693,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string[] Topics;
+        public string[] Topics { get; }
 
         /// <summary>
         /// TBD
@@ -766,7 +742,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("CurrentTopics<{0}>", string.Join(",", Topics));
+            return $"CurrentTopics<{string.Join(",", Topics)}>";
         }
     }
 }

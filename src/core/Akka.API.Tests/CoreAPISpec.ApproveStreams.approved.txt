@@ -846,7 +846,7 @@ namespace Akka.Streams.Actors
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
         public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public void OnComplete() { }
         public void OnCompleteThenStop() { }
         public void OnError(System.Exception cause) { }
@@ -874,7 +874,7 @@ namespace Akka.Streams.Actors
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
         public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         protected void Cancel() { }
         public static Reactive.Streams.ISubscriber<T> Create<T>(Akka.Actor.IActorRef @ref) { }
         protected void Request(long n) { }

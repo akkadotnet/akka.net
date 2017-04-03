@@ -16,7 +16,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="TItem">TBD</typeparam>
-    public class MatchBuilder<TItem>
+    internal class MatchBuilder<TItem>
     {
         //This class works by collecting all handlers.
         //By creating a signature, made up of all types [Type], and types-of-handlers [HandlerKind], we can use the same code
@@ -261,7 +261,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class MatchBuilder : MatchBuilder<object>
+    internal class MatchBuilder : MatchBuilder<object>
     {
         /// <summary>
         /// TBD

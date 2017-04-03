@@ -24,7 +24,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Prune Instance = new Prune();
+        public static Prune Instance { get; } = new Prune();
         private Prune() { }
     }
 
@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Count Instance = new Count();
+        public static Count Instance { get; } = new Count();
         private Count() { }
     }
 
@@ -50,15 +50,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Address Owner;
+        public Address Owner { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly long Version;
+        public long Version { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IImmutableDictionary<string, ValueHolder> Content;
+        public IImmutableDictionary<string, ValueHolder> Content { get; }
 
         /// <summary>
         /// TBD
@@ -131,11 +133,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly long Version;
+        public long Version { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Ref;
+        public IActorRef Ref { get; }
 
         [NonSerialized]
         private Routee _routee;
@@ -269,7 +272,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Bucket[] Buckets;
+        public Bucket[] Buckets { get; }
 
         /// <summary>
         /// TBD
@@ -337,7 +340,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GossipTick Instance = new GossipTick();
+        public static GossipTick Instance { get; } = new GossipTick();
 
         private GossipTick() { }
     }
@@ -351,7 +354,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef TopicRef;
+        public IActorRef TopicRef { get; }
 
         /// <summary>
         /// TBD
@@ -372,11 +375,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly SubscribeAck Ack;
+        public SubscribeAck Ack { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Subscriber;
+        public IActorRef Subscriber { get; }
 
         /// <summary>
         /// TBD
@@ -399,11 +403,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly UnsubscribeAck Ack;
+        public UnsubscribeAck Ack { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef Subscriber;
+        public IActorRef Subscriber { get; }
 
         /// <summary>
         /// TBD
@@ -426,7 +431,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly object Message;
+        public object Message { get; }
 
         /// <summary>
         /// TBD
@@ -453,30 +458,26 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// <summary>
     /// Passivate-like message sent from child to parent, used to signal that sender has no subscribers and no child actors.
     /// </summary>
-    internal class NoMoreSubscribers : IChildActorTerminationProtocol
+    internal sealed class NoMoreSubscribers : IChildActorTerminationProtocol
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public static NoMoreSubscribers Instance = new NoMoreSubscribers();
-        private NoMoreSubscribers()
-        {
-        }
+        public static NoMoreSubscribers Instance { get; } = new NoMoreSubscribers();
+        private NoMoreSubscribers() {}
     }
 
     /// <summary>
     /// Sent from parent to child actor to signalize that messages are being buffered. When received by child actor
     /// if no <see cref="Subscribe"/> message has been received after sending <see cref="NoMoreSubscribers"/> message child actor will stop itself.
     /// </summary>
-    internal class TerminateRequest : IChildActorTerminationProtocol
+    internal sealed class TerminateRequest : IChildActorTerminationProtocol
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public static TerminateRequest Instance = new TerminateRequest();
-        private TerminateRequest()
-        {
-        }
+        public static TerminateRequest Instance { get; } = new TerminateRequest();
+        private TerminateRequest() {}
     }
 
     /// <summary>
@@ -484,15 +485,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// after sending <see cref="NoMoreSubscribers"/> but before receiving <see cref="TerminateRequest"/>.
     /// When received by the parent buffered messages will be forwarded to child actor for processing.
     /// </summary>
-    internal class NewSubscriberArrived : IChildActorTerminationProtocol
+    internal sealed class NewSubscriberArrived : IChildActorTerminationProtocol
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public static NewSubscriberArrived Instance = new NewSubscriberArrived();
-        private NewSubscriberArrived()
-        {
-        }
+        public static NewSubscriberArrived Instance { get; } = new NewSubscriberArrived();
+        private NewSubscriberArrived() { }
     }
 
     /// <summary>

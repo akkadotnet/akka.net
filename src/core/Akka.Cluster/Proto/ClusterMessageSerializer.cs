@@ -31,11 +31,18 @@ namespace Akka.Cluster.Proto
 
         private const int BufferSize = 1024 * 4;
 
+        /// <summary>
+        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
+        /// Values from 0 to 16 is reserved for Akka internal usage
+        /// </summary>
         public override int Identifier
         {
             get { return 5; }
         }
 
+        /// <summary>
+        /// Returns whether this serializer needs a manifest in the fromBinary method
+        /// </summary>
         public override bool IncludeManifest
         {
             get { return true; }
@@ -44,6 +51,14 @@ namespace Akka.Cluster.Proto
         //must be lazy because serializer is initialized from Cluster extension constructor
         private Lazy<TimeSpan> _gossipTimeToLive;
 
+        /// <summary>
+        /// Serializes the given object into a byte array
+        /// </summary>
+        /// <param name="obj">The object to serialize</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified object is not a cluster message.
+        /// </exception>
+        /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is ClusterHeartbeatSender.Heartbeat) return AddressToProtoByteArray(((ClusterHeartbeatSender.Heartbeat)obj).From);
@@ -66,9 +81,18 @@ namespace Akka.Cluster.Proto
             if (obj is InternalClusterAction.InitJoinAck) return AddressToProtoByteArray(((InternalClusterAction.InitJoinAck)obj).Address);
             if (obj is InternalClusterAction.InitJoinNack) return AddressToProtoByteArray(((InternalClusterAction.InitJoinNack)obj).Address);
             if(obj is InternalClusterAction.ExitingConfirmed) return UniqueAddressToProtoByteArray(((InternalClusterAction.ExitingConfirmed)obj).Address);
-            throw new ArgumentException(string.Format("Can't serialize object of type {0}", obj.GetType()));
+            throw new ArgumentException($"Can't serialize object of type {obj.GetType()}", nameof(obj));
         }
 
+        /// <summary>
+        /// Deserializes a byte array into an object of type <paramref name="type" />.
+        /// </summary>
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="type">The type of object contained in the array</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified type is not a cluster message.
+        /// </exception>
+        /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (type == typeof (InternalClusterAction.Join))
@@ -91,16 +115,18 @@ namespace Akka.Cluster.Proto
             if (type == typeof(InternalClusterAction.InitJoinNack)) return new InternalClusterAction.InitJoinNack(AddressFromBinary(bytes));
             if (type == typeof(ClusterHeartbeatSender.Heartbeat)) return new ClusterHeartbeatSender.Heartbeat(AddressFromBinary(bytes));
             if (type == typeof(ClusterHeartbeatSender.HeartbeatRsp)) return new ClusterHeartbeatSender.HeartbeatRsp(UniqueAddressFromBinary(bytes));
-            if(type == typeof(InternalClusterAction.ExitingConfirmed)) return new InternalClusterAction.ExitingConfirmed(UniqueAddressFromBinary(bytes));
+            if (type == typeof(InternalClusterAction.ExitingConfirmed)) return new InternalClusterAction.ExitingConfirmed(UniqueAddressFromBinary(bytes));
             if (type == typeof(GossipStatus)) return GossipStatusFromBinary(bytes);
             if (type == typeof(GossipEnvelope)) return GossipEnvelopeFromBinary(bytes);
 
-            throw new ArgumentException("Ned a cluster message class to be able to deserialize bytes in ClusterSerializer.");
+            throw new ArgumentException("Need a cluster message class to be able to deserialize bytes in ClusterSerializer.", nameof(type));
         }
 
         /// <summary>
         /// Compresses the protobuf message using GZIP compression
         /// </summary>
+        /// <param name="message">The message to compress</param>
+        /// <returns>A byte array containing the compressed message</returns>
         public byte[] Compress(IMessageLite message)
         {
             using (var bos = new MemoryStream(BufferSize))
@@ -115,6 +141,8 @@ namespace Akka.Cluster.Proto
         /// <summary>
         /// Decompresses the protobuf message using GZIP compression
         /// </summary>
+        /// <param name="bytes">The array containing the message to decompress</param>
+        /// <returns>A byte array containing the decompressed message</returns>
         public byte[] Decompress(byte[] bytes)
         {
             using(var input = new GZipStream(new MemoryStream(bytes), CompressionMode.Decompress))
@@ -155,7 +183,7 @@ namespace Akka.Cluster.Proto
         private Msg.Address.Builder AddressToProto(Address address)
         {
             if(string.IsNullOrEmpty(address.Host) || !address.Port.HasValue) 
-                throw new ArgumentException(string.Format("Address [{0}] could not be serialized: host or port missing.", address), "address");
+                throw new ArgumentException($"Address [{address}] could not be serialized: host or port missing.", nameof(address));
             return
                 Msg.Address.CreateBuilder()
                     .SetSystem(address.System)
@@ -260,7 +288,7 @@ namespace Akka.Cluster.Proto
         private int MapWithErrorMessage<T>(Dictionary<T, int> map, T value, string unknown)
         {
             if (map.ContainsKey(value)) return map[value];
-            throw new ArgumentException(string.Format("Unknown {0} [{1}] in cluster message", unknown, value));
+            throw new ArgumentException($"Unknown {unknown} [{value}] in cluster message");
         }
 
         private Msg.Join JoinToProto(UniqueAddress node, ImmutableHashSet<string> roles)

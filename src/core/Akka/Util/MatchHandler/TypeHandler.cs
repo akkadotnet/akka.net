@@ -14,7 +14,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class TypeHandler
+    internal class TypeHandler
     {
         private readonly Type _handlesType;
         private readonly List<PredicateAndHandler> _handlers = new List<PredicateAndHandler>();

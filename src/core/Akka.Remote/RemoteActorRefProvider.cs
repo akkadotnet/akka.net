@@ -308,9 +308,7 @@ namespace Akka.Remote
                     catch (Exception ex)
                     {
                         throw new ConfigurationException(
-                            string.Format(
-                                "Configuration problem while creating {0} with dispatcher [{1}] and mailbox [{2}]", path,
-                                props.Dispatcher, props.Mailbox), ex);
+                            $"Configuration problem while creating {path} with dispatcher [{props.Dispatcher}] and mailbox [{props.Mailbox}]", ex);
                     }
                     var localAddress = Transport.LocalAddressForRemote(addr);
                     var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() /
@@ -321,7 +319,7 @@ namespace Akka.Remote
                 }
                 catch (Exception ex)
                 {
-                    throw new ActorInitializationException(string.Format("Remote deployment failed for [{0}]", path), ex);
+                    throw new ActorInitializationException($"Remote deployment failed for [{path}]", ex);
                 }
 
             }

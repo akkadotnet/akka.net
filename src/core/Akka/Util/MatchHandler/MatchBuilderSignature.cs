@@ -17,7 +17,7 @@ namespace Akka.Tools.MatchHandler
     /// Two signatures are equal if they contain the same <see cref="Type">Types</see> and <see cref="HandlerKind">HandlerKinds</see>
     /// in the same order.
     /// </summary>
-    public class MatchBuilderSignature : IEquatable<MatchBuilderSignature>
+    internal class MatchBuilderSignature : IEquatable<MatchBuilderSignature>
     {
         private readonly IReadOnlyList<object> _list;
 

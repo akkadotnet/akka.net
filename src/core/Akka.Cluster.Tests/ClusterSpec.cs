@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -183,6 +184,76 @@ namespace Akka.Cluster.Tests
 
             // A second call for LeaveAsync should complete immediately
             Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
+        }
+
+        [Fact]
+        public void A_cluster_must_return_completed_LeaveAsync_task_if_member_already_removed()
+        {
+            // Join cluster
+            _cluster.Join(_selfAddress);
+            LeaderActions(); // Joining -> Up
+
+            // Subscribe to MemberRemoved and wait for confirmation
+            _cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberRemoved));
+            ExpectMsg<ClusterEvent.CurrentClusterState>();
+
+            // Leave the cluster prior to calling LeaveAsync()
+            _cluster.Leave(_selfAddress);
+
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                LeaderActions(); // Leaving --> Exiting
+                LeaderActions(); // Exiting --> Removed
+
+                // Member should leave
+                ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
+            });
+
+            // LeaveAsync() task expected to complete immediately
+            _cluster.LeaveAsync().IsCompleted.Should().BeTrue();
+        }
+
+        [Fact]
+        public void A_cluster_must_cancel_LeaveAsync_task_if_CancellationToken_fired_before_node_left()
+        {
+            // Join cluster
+            _cluster.Join(_selfAddress);
+            LeaderActions(); // Joining -> Up
+
+            // Subscribe to MemberRemoved and wait for confirmation
+            _cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberRemoved));
+            ExpectMsg<ClusterEvent.CurrentClusterState>();
+
+            // Requesting leave with cancellation token
+            var cts = new CancellationTokenSource();
+            var task1 = _cluster.LeaveAsync(cts.Token);
+
+            // Requesting another leave without cancellation
+            var task2 = _cluster.LeaveAsync(new CancellationTokenSource().Token);
+
+            // Cancelling the first task
+            cts.Cancel();
+            task1.Should(t => t.IsCanceled, "Task should be cancelled.");
+
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                // Second task should continue awaiting for cluster leave
+                task2.IsCompleted.Should().BeFalse();
+
+                // Waiting for leave
+                LeaderActions(); // Leaving --> Exiting
+                LeaderActions(); // Exiting --> Removed
+
+                // Member should leave even a task was cancelled
+                ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
+
+                // Second task should complete (not cancelled)
+                task2.Should(t => t.IsCompleted && !t.IsCanceled, "Task should be completed, but not cancelled.");
+            });
+
+            // Subsequent LeaveAsync() tasks expected to complete immediately (not cancelled)
+            var task3 = _cluster.LeaveAsync();
+            task3.Should(t => t.IsCompleted && !t.IsCanceled, "Task should be completed, but not cancelled.");
         }
 
         [Fact]

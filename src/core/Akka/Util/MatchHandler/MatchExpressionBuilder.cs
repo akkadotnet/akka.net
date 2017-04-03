@@ -16,7 +16,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public class MatchExpressionBuilder<T> : IMatchExpressionBuilder
+    internal class MatchExpressionBuilder<T> : IMatchExpressionBuilder
     {
         //See the end of file a description of what this class does
 

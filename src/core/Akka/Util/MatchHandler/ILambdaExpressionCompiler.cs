@@ -14,7 +14,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public interface ILambdaExpressionCompiler
+    internal interface ILambdaExpressionCompiler
     {
         /// <summary>
         /// Produces a delegate that represents the lambda expression.

@@ -15,25 +15,23 @@ using Akka.Util;
 
 namespace Akka.Remote
 {
-    /**
-     * Implementation of 'The Phi Accrual Failure Detector' by Hayashibara et al. as defined in their paper:
-     * [http://ddg.jaist.ac.jp/pub/HDY+04.pdf]
-     *
-     * The suspicion level of failure is given by a value called φ (phi).
-     * The basic idea of the φ failure detector is to express the value of φ on a scale that
-     * is dynamically adjusted to reflect current network conditions. A configurable
-     * threshold is used to decide if φ is considered to be a failure.
-     *
-     * The value of φ is calculated as:
-     *
-     * {{{
-     * φ = -log10(1 - F(timeSinceLastHeartbeat)
-     * }}}
-     * where F is the cumulative distribution function of a normal distribution with mean
-     * and standard deviation estimated from historical heartbeat inter-arrival times.
-     */
     /// <summary>
-    /// TBD
+    /// Implementation of 'The Phi Accrual Failure Detector' by Hayashibara et al. as defined in their paper:
+    /// [http://ddg.jaist.ac.jp/pub/HDY+04.pdf]
+    ///
+    /// The suspicion level of failure is given by a value called φ (phi).
+    /// The basic idea of the φ failure detector is to express the value of φ on a scale that
+    /// is dynamically adjusted to reflect current network conditions. A configurable
+    /// threshold is used to decide if φ is considered to be a failure.
+    ///
+    /// The value of φ is calculated as:
+    ///
+    /// <code>
+    /// φ = -log10(1 - F(timeSinceLastHeartbeat)
+    /// </code>
+    /// 
+    /// where F is the cumulative distribution function of a normal distribution with mean
+    /// and standard deviation estimated from historical heartbeat inter-arrival times.
     /// </summary>
     public class PhiAccrualFailureDetector : FailureDetector
     {
@@ -294,7 +292,14 @@ namespace Akka.Remote
         /// <param name="intervals">TBD</param>
         /// <param name="intervalSum">TBD</param>
         /// <param name="squaredIntervalSum">TBD</param>
-        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown for the following reasons:
+        /// <ul>
+        /// <li>The specified <paramref name="maxSampleSize"/> is less than one.</li>
+        /// <li>The specified <paramref name="intervalSum"/> is less than zero.</li>
+        /// <li>The specified <paramref name="squaredIntervalSum"/> is less than zero.</li>
+        /// </ul>
+        /// </exception>
         public HeartbeatHistory(int maxSampleSize, List<long> intervals, long intervalSum, long squaredIntervalSum)
         {
             _maxSampleSize = maxSampleSize;
@@ -303,11 +308,11 @@ namespace Akka.Remote
             _squaredIntervalSum = squaredIntervalSum;
 
             if (maxSampleSize < 1)
-                throw new ArgumentOutOfRangeException("maxSampleSize", string.Format("maxSampleSize must be >= 1, got {0}", maxSampleSize));
+                throw new ArgumentOutOfRangeException(nameof(maxSampleSize), $"maxSampleSize must be >= 1, got {maxSampleSize}");
             if (intervalSum < 0L)
-                throw new ArgumentOutOfRangeException("intervalSum", string.Format("intervalSum must be >= 0, got {0}", intervalSum));
+                throw new ArgumentOutOfRangeException(nameof(intervalSum), $"intervalSum must be >= 0, got {intervalSum}");
             if (squaredIntervalSum < 0L)
-                throw new ArgumentOutOfRangeException("squaredIntervalSum", string.Format("squaredIntervalSum must be >= 0, got {0}", squaredIntervalSum));
+                throw new ArgumentOutOfRangeException(nameof(squaredIntervalSum), $"squaredIntervalSum must be >= 0, got {squaredIntervalSum}");
         }
 
         /// <summary>
