@@ -12,7 +12,7 @@ using Akka.Actor;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// TBD
+    /// Asynchronous message replay and sequence number recovery interface.
     /// </summary>
     public interface IAsyncRecovery
     {

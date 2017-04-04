@@ -17,7 +17,7 @@ using scg = global::System.Collections.Generic;
 public static partial class PersistenceMessages {
 
   #region Extension registration
-  public static void RegisterAllExtensions(pb::ExtensionRegistry registry) {
+  internal static void RegisterAllExtensions(pb::ExtensionRegistry registry) {
   }
   #endregion
   #region Static variables
@@ -35,7 +35,7 @@ public static partial class PersistenceMessages {
   internal static pb::FieldAccess.FieldAccessorTable<global::PersistentStateChangeEvent, global::PersistentStateChangeEvent.Builder> internal__static_PersistentStateChangeEvent__FieldAccessorTable;
   #endregion
   #region Descriptor
-  public static pbd::FileDescriptor Descriptor {
+  internal static pbd::FileDescriptor Descriptor {
     get { return descriptor; }
   }
   private static pbd::FileDescriptor descriptor;
@@ -96,7 +96,7 @@ public static partial class PersistenceMessages {
 }
 #region Messages
 [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-public sealed partial class PersistentMessage : pb::GeneratedMessage<PersistentMessage, PersistentMessage.Builder> {
+internal sealed partial class PersistentMessage : pb::GeneratedMessage<PersistentMessage, PersistentMessage.Builder> {
   private PersistentMessage() { }
   private static readonly PersistentMessage defaultInstance = new PersistentMessage().MakeReadOnly();
   private static readonly string[] _persistentMessageFieldNames = new string[] { "deleted", "manifest", "payload", "persistenceId", "sender", "sequenceNr", "writerUuid" };
@@ -661,7 +661,7 @@ public sealed partial class PersistentMessage : pb::GeneratedMessage<PersistentM
 }
 
 [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-public sealed partial class PersistentPayload : pb::GeneratedMessage<PersistentPayload, PersistentPayload.Builder> {
+internal sealed partial class PersistentPayload : pb::GeneratedMessage<PersistentPayload, PersistentPayload.Builder> {
   private PersistentPayload() { }
   private static readonly PersistentPayload defaultInstance = new PersistentPayload().MakeReadOnly();
   private static readonly string[] _persistentPayloadFieldNames = new string[] { "payload", "payloadManifest", "serializerId" };
@@ -1026,7 +1026,7 @@ public sealed partial class PersistentPayload : pb::GeneratedMessage<PersistentP
 }
 
 [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-public sealed partial class AtomicWrite : pb::GeneratedMessage<AtomicWrite, AtomicWrite.Builder> {
+internal sealed partial class AtomicWrite : pb::GeneratedMessage<AtomicWrite, AtomicWrite.Builder> {
   private AtomicWrite() { }
   private static readonly AtomicWrite defaultInstance = new AtomicWrite().MakeReadOnly();
   private static readonly string[] _atomicWriteFieldNames = new string[] { "payload" };
@@ -1331,7 +1331,7 @@ public sealed partial class AtomicWrite : pb::GeneratedMessage<AtomicWrite, Atom
 }
 
 [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-public sealed partial class AtLeastOnceDeliverySnapshot : pb::GeneratedMessage<AtLeastOnceDeliverySnapshot, AtLeastOnceDeliverySnapshot.Builder> {
+internal sealed partial class AtLeastOnceDeliverySnapshot : pb::GeneratedMessage<AtLeastOnceDeliverySnapshot, AtLeastOnceDeliverySnapshot.Builder> {
   private AtLeastOnceDeliverySnapshot() { }
   private static readonly AtLeastOnceDeliverySnapshot defaultInstance = new AtLeastOnceDeliverySnapshot().MakeReadOnly();
   private static readonly string[] _atLeastOnceDeliverySnapshotFieldNames = new string[] { "currentDeliveryId", "unconfirmedDeliveries" };
@@ -2077,7 +2077,7 @@ public sealed partial class AtLeastOnceDeliverySnapshot : pb::GeneratedMessage<A
 }
 
 [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-public sealed partial class PersistentStateChangeEvent : pb::GeneratedMessage<PersistentStateChangeEvent, PersistentStateChangeEvent.Builder> {
+internal sealed partial class PersistentStateChangeEvent : pb::GeneratedMessage<PersistentStateChangeEvent, PersistentStateChangeEvent.Builder> {
   private PersistentStateChangeEvent() { }
   private static readonly PersistentStateChangeEvent defaultInstance = new PersistentStateChangeEvent().MakeReadOnly();
   private static readonly string[] _persistentStateChangeEventFieldNames = new string[] { "stateIdentifier", "timeout" };

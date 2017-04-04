@@ -60,19 +60,19 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="AtLeastOnceDeliveryReceiveActor.cs" />
+    <Compile Include="AtLeastOnceDelivery.Messages.cs" />
     <Compile Include="AtLeastOnceDeliverySemantic.cs" />
-    <Compile Include="Eventsourced.Lifecycle.cs" />
-    <Compile Include="AtLeastOnceDelivery.cs" />
+    <Compile Include="AtLeastOnceDeliveryActor.cs" />
     <Compile Include="Eventsourced.cs" />
-    <Compile Include="Eventsourced.Recovery.cs" />
     <Compile Include="Fsm\PersistentFSM.cs" />
     <Compile Include="Fsm\PersistentFSMBase.cs" />
-    <Compile Include="InternalExtensions.cs" />
     <Compile Include="Journal\EventAdapters.cs" />
     <Compile Include="Journal\EventSequences.cs" />
     <Compile Include="Journal\PersistencePluginProxy.cs" />
     <Compile Include="Journal\ReplayFilter.cs" />
     <Compile Include="Journal\Tagged.cs" />
+    <Compile Include="Internal\LinkedListExtensions.cs" />
+    <Compile Include="PersistentActor.Messages.cs" />
     <Compile Include="PersistentActor.cs" />
     <Compile Include="PersistentView.Recovery.cs" />
     <Compile Include="PersistentView.Lifecycle.cs" />
@@ -98,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Persistence.nuspec" />
+    <Compile Include="Eventsourced.Messages.cs" />
     <None Include="packages.config" />
     <EmbeddedResource Include="persistence.conf" />
     <None Include="README.md" />

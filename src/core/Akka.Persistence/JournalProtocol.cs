@@ -27,25 +27,26 @@ namespace Akka.Persistence
     /// </summary>
     public interface IJournalResponse : IJournalMessage { }
 
+    // TODO: move this message
     /// <summary>
-    /// TBD
+    /// Reply message to a successful <see cref="Eventsourced.DeleteMessages"/> request.
     /// </summary>
     [Serializable]
     public sealed class DeleteMessagesSuccess : IJournalResponse, IEquatable<DeleteMessagesSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteMessagesSuccess"/> class.
         /// </summary>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="toSequenceNr">Inclusive upper sequence number bound where a replay should end.</param>
         public DeleteMessagesSuccess(long toSequenceNr)
         {
             ToSequenceNr = toSequenceNr;
         }
 
         /// <summary>
-        /// TBD
+        /// Inclusive upper sequence number bound where a replay should end.
         /// </summary>
-        public readonly long ToSequenceNr;
+        public long ToSequenceNr { get; }
 
         /// <inheritdoc/>
         public bool Equals(DeleteMessagesSuccess other)
@@ -75,20 +76,19 @@ namespace Akka.Persistence
         }
     }
 
+    // TODO: move this message
     /// <summary>
-    /// Reply message to failed <see cref="DeleteMessages"/> request.
+    /// Reply message to failed <see cref="Eventsourced.DeleteMessages"/> request.
     /// </summary>
     [Serializable]
     public sealed class DeleteMessagesFailure : IJournalResponse, IEquatable<DeleteMessagesFailure>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteMessagesFailure"/> class.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
-        /// </exception>
+        /// <param name="cause">Failure cause.</param>
+        /// <param name="toSequenceNr">Inclusive upper sequence number bound where a replay should end.</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public DeleteMessagesFailure(Exception cause, long toSequenceNr)
         {
             if (cause == null)
@@ -99,13 +99,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Failure cause.
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
+
         /// <summary>
-        /// TBD
+        /// Inclusive upper sequence number bound where a replay should end.
         /// </summary>
-        public readonly long ToSequenceNr;
+        public long ToSequenceNr { get; }
 
         /// <inheritdoc/>
         public bool Equals(DeleteMessagesFailure other)
@@ -127,7 +128,7 @@ namespace Akka.Persistence
         {
             unchecked
             {
-                return ((Cause != null ? Cause.GetHashCode() : 0)*397) ^ ToSequenceNr.GetHashCode();
+                return ((Cause != null ? Cause.GetHashCode() : 0) * 397) ^ ToSequenceNr.GetHashCode();
             }
         }
 
@@ -145,17 +146,16 @@ namespace Akka.Persistence
     public sealed class DeleteMessagesTo : IJournalRequest, IEquatable<DeleteMessagesTo>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteMessagesTo"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <param name="persistentActor">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="persistenceId"/> is undefined.
-        /// </exception>
+        /// <param name="persistenceId">Requesting persistent actor id.</param>
+        /// <param name="toSequenceNr">Sequence number where replay should end (inclusive).</param>
+        /// <param name="persistentActor">Requesting persistent actor.</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
         public DeleteMessagesTo(string persistenceId, long toSequenceNr, IActorRef persistentActor)
         {
-            if (string.IsNullOrEmpty(persistenceId)) throw new ArgumentNullException(nameof(persistenceId), "DeleteMessagesTo requires persistence id to be provided");
+            if (string.IsNullOrEmpty(persistenceId))
+                throw new ArgumentNullException(nameof(persistenceId), "DeleteMessagesTo requires persistence id to be provided");
 
             PersistenceId = persistenceId;
             ToSequenceNr = toSequenceNr;
@@ -163,17 +163,19 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Requesting persistent actor id.
         /// </summary>
-        public readonly string PersistenceId;
+        public string PersistenceId { get; }
+
         /// <summary>
-        /// TBD
+        /// Sequence number where replay should end (inclusive).
         /// </summary>
-        public readonly long ToSequenceNr;
+        public long ToSequenceNr { get; }
+
         /// <summary>
-        /// TBD
+        /// Requesting persistent actor.
         /// </summary>
-        public readonly IActorRef PersistentActor;
+        public IActorRef PersistentActor { get; }
 
         /// <inheritdoc/>
         public bool Equals(DeleteMessagesTo other)
@@ -212,19 +214,18 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Request to write messages.
     /// </summary>
     [Serializable]
     public sealed class WriteMessages : IJournalRequest, IEquatable<WriteMessages>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="WriteMessages"/> class.
         /// </summary>
-        /// <param name="messages">TBD</param>
-        /// <param name="persistentActor">TBD</param>
+        /// <param name="messages">Messages to be written.</param>
+        /// <param name="persistentActor">Write requestor.</param>
         /// <param name="actorInstanceId">TBD</param>
-        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor,
-            int actorInstanceId)
+        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor, int actorInstanceId)
         {
             Messages = messages;
             PersistentActor = persistentActor;
@@ -232,17 +233,19 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Messages to be written.
         /// </summary>
-        public readonly IEnumerable<IPersistentEnvelope> Messages;
+        public IEnumerable<IPersistentEnvelope> Messages { get; }
+
+        /// <summary>
+        /// Write requestor.
+        /// </summary>
+        public IActorRef PersistentActor { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef PersistentActor;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly int ActorInstanceId;
+        public int ActorInstanceId { get; }
 
         /// <inheritdoc/>
         public bool Equals(WriteMessages other)
@@ -285,34 +288,14 @@ namespace Akka.Persistence
     /// to the requestor before all subsequent <see cref="WriteMessageSuccess"/> replies.
     /// </summary>
     [Serializable]
-    public class WriteMessagesSuccessful : IJournalResponse, IEquatable<WriteMessagesSuccessful>
+    public sealed class WriteMessagesSuccessful : IJournalResponse
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="WriteMessagesSuccessful"/>.
         /// </summary>
-        public static readonly WriteMessagesSuccessful Instance = new WriteMessagesSuccessful();
+        public static WriteMessagesSuccessful Instance { get; } = new WriteMessagesSuccessful();
 
         private WriteMessagesSuccessful() { }
-
-        /// <inheritdoc/>
-        public bool Equals(WriteMessagesSuccessful other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as WriteMessagesSuccessful);
-        }
-
-        /// <inheritdoc/>
-        public override string ToString()
-        {
-            return "WriteMessagesSuccessful<>";
-        }
     }
 
     /// <summary>
@@ -340,7 +323,7 @@ namespace Akka.Persistence
         /// <summary>
         /// The cause of the failed <see cref="WriteMessages"/> request.
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <inheritdoc/>
         public bool Equals(WriteMessagesFailed other)
@@ -378,9 +361,9 @@ namespace Akka.Persistence
     public sealed class WriteMessageSuccess : IJournalResponse, IEquatable<WriteMessageSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="WriteMessageSuccess"/> class.
         /// </summary>
-        /// <param name="persistent">TBD</param>
+        /// <param name="persistent">Successfully written message.</param>
         /// <param name="actorInstanceId">TBD</param>
         public WriteMessageSuccess(IPersistentRepresentation persistent, int actorInstanceId)
         {
@@ -391,11 +374,12 @@ namespace Akka.Persistence
         /// <summary>
         /// Successfully written message.
         /// </summary>
-        public readonly IPersistentRepresentation Persistent;
+        public IPersistentRepresentation Persistent { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly int ActorInstanceId;
+        public int ActorInstanceId { get; }
 
         /// <inheritdoc/>
         public bool Equals(WriteMessageSuccess other)
@@ -438,10 +422,10 @@ namespace Akka.Persistence
     public sealed class WriteMessageRejected : IJournalResponse, IEquatable<WriteMessageRejected>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="WriteMessageRejected"/> class.
         /// </summary>
-        /// <param name="persistent">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="persistent">Message rejected to be written.</param>
+        /// <param name="cause">Failure cause.</param>
         /// <param name="actorInstanceId">TBD</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
@@ -459,17 +443,17 @@ namespace Akka.Persistence
         /// <summary>
         /// Message failed to be written.
         /// </summary>
-        public readonly IPersistentRepresentation Persistent;
+        public IPersistentRepresentation Persistent { get; }
 
         /// <summary>
         /// The cause of the failure
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly int ActorInstanceId;
+        public int ActorInstanceId { get; }
 
         /// <inheritdoc/>
         public bool Equals(WriteMessageRejected other)
@@ -515,10 +499,10 @@ namespace Akka.Persistence
     public sealed class WriteMessageFailure : IJournalResponse, IEquatable<WriteMessageFailure>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="WriteMessageFailure"/> class.
         /// </summary>
-        /// <param name="persistent">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="persistent">Message failed to be written.</param>
+        /// <param name="cause">Failure cause.</param>
         /// <param name="actorInstanceId">TBD</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
@@ -536,17 +520,17 @@ namespace Akka.Persistence
         /// <summary>
         /// Message failed to be written.
         /// </summary>
-        public readonly IPersistentRepresentation Persistent;
+        public IPersistentRepresentation Persistent { get; }
 
         /// <summary>
         /// The cause of the failure
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly int ActorInstanceId;
+        public int ActorInstanceId { get; }
 
         /// <inheritdoc/>
         public bool Equals(WriteMessageFailure other)
@@ -591,9 +575,9 @@ namespace Akka.Persistence
     public sealed class LoopMessageSuccess : IJournalResponse, IEquatable<LoopMessageSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="LoopMessageSuccess"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">A looped message.</param>
         /// <param name="actorInstanceId">TBD</param>
         public LoopMessageSuccess(object message, int actorInstanceId)
         {
@@ -604,11 +588,12 @@ namespace Akka.Persistence
         /// <summary>
         /// A looped message.
         /// </summary>
-        public readonly object Message;
+        public object Message { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly int ActorInstanceId;
+        public int ActorInstanceId { get; }
 
         /// <inheritdoc/>
         public bool Equals(LoopMessageSuccess other)
@@ -651,11 +636,11 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayMessages"/> class.
         /// </summary>
-        /// <param name="fromSequenceNr">The sequence number where the replay should start.</param>
-        /// <param name="toSequenceNr">The sequence number where the replay should end.</param>
-        /// <param name="max">The maximum number of messages to be replayed.</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="persistentActor">TBD</param>
+        /// <param name="fromSequenceNr">Sequence number where replay should start (inclusive).</param>
+        /// <param name="toSequenceNr">Sequence number where replay should end (inclusive).</param>
+        /// <param name="max">Maximum number of messages to be replayed.</param>
+        /// <param name="persistenceId">Requesting persistent actor identifier.</param>
+        /// <param name="persistentActor">Requesting persistent actor.</param>
         public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
             IActorRef persistentActor)
         {
@@ -669,27 +654,27 @@ namespace Akka.Persistence
         /// <summary>
         /// Inclusive lower sequence number bound where a replay should start.
         /// </summary>
-        public readonly long FromSequenceNr;
+        public long FromSequenceNr { get; }
 
         /// <summary>
         /// Inclusive upper sequence number bound where a replay should end.
         /// </summary>
-        public readonly long ToSequenceNr;
+        public long ToSequenceNr { get; }
 
         /// <summary>
         /// Maximum number of messages to be replayed.
         /// </summary>
-        public readonly long Max;
+        public long Max { get; }
 
         /// <summary>
         /// Requesting persistent actor identifier.
         /// </summary>
-        public readonly string PersistenceId;
+        public string PersistenceId { get; }
 
         /// <summary>
         /// Requesting persistent actor.
         /// </summary>
-        public readonly IActorRef PersistentActor;
+        public IActorRef PersistentActor { get; }
 
         /// <inheritdoc/>
         public bool Equals(ReplayMessages other)
@@ -723,6 +708,15 @@ namespace Akka.Persistence
                 return hashCode;
             }
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString()
+        {
+            return $"ReplayMessages<fromSequenceNr: {FromSequenceNr}, toSequenceNr: {ToSequenceNr}, max: {Max}, persistenceId: {PersistenceId}>";
+        }
     }
 
     /// <summary>
@@ -732,18 +726,18 @@ namespace Akka.Persistence
     public sealed class ReplayedMessage : IJournalResponse, IEquatable<ReplayedMessage>, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ReplayedMessage"/> class.
         /// </summary>
-        /// <param name="persistent">TBD</param>
+        /// <param name="persistent">Replayed message.</param>
         public ReplayedMessage(IPersistentRepresentation persistent)
         {
             Persistent = persistent;
         }
 
         /// <summary>
-        /// TBD
+        /// Replayed message.
         /// </summary>
-        public readonly IPersistentRepresentation Persistent;
+        public IPersistentRepresentation Persistent { get; }
 
         /// <inheritdoc/>
         public bool Equals(ReplayedMessage other)
@@ -781,21 +775,21 @@ namespace Akka.Persistence
     /// Note that the replay might have been limited to a lower sequence number.
     /// </summary>
     [Serializable]
-    public class RecoverySuccess : IJournalResponse, IEquatable<RecoverySuccess>, IDeadLetterSuppression
+    public sealed class RecoverySuccess : IJournalResponse, IEquatable<RecoverySuccess>, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RecoverySuccess"/> class.
         /// </summary>
-        /// <param name="highestSequenceNr">TBD</param>
+        /// <param name="highestSequenceNr">Highest stored sequence number.</param>
         public RecoverySuccess(long highestSequenceNr)
         {
             HighestSequenceNr = highestSequenceNr;
         }
 
         /// <summary>
-        /// TBD
+        /// Highest stored sequence number.
         /// </summary>
-        public readonly long HighestSequenceNr;
+        public long HighestSequenceNr { get; }
 
         /// <inheritdoc/>
         public bool Equals(RecoverySuccess other)
@@ -826,7 +820,8 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Reply message to a failed <see cref="ReplayMessages"/> request. This reply is sent to the requestor
+    /// if a replay could not be successfully completed.
     /// </summary>
     [Serializable]
     public sealed class ReplayMessagesFailure : IJournalResponse, IEquatable<ReplayMessagesFailure>, IDeadLetterSuppression
@@ -849,7 +844,7 @@ namespace Akka.Persistence
         /// <summary>
         /// The cause of the failure
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <inheritdoc/>
         public bool Equals(ReplayMessagesFailure other)
@@ -879,6 +874,7 @@ namespace Akka.Persistence
         }
     }
 
+    // TODO: remove this message
     /// <summary>
     /// TBD
     /// </summary>
@@ -901,17 +897,17 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly long FromSequenceNr;
+        public long FromSequenceNr { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly string PersistenceId;
+        public string PersistenceId { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly IActorRef PersistentActor;
+        public IActorRef PersistentActor { get; }
 
         /// <inheritdoc/>
         public bool Equals(ReadHighestSequenceNr other)
@@ -949,6 +945,7 @@ namespace Akka.Persistence
         }
     }
 
+    // TODO: remove this message
     /// <summary>
     /// TBD
     /// </summary>
@@ -968,7 +965,7 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly long HighestSequenceNr;
+        public long HighestSequenceNr { get; }
 
         /// <inheritdoc/>
         public bool Equals(ReadHighestSequenceNrSuccess other)
@@ -1019,6 +1016,7 @@ namespace Akka.Persistence
         }
     }
 
+    // TODO: remove this message
     /// <summary>
     /// TBD
     /// </summary>
@@ -1043,7 +1041,7 @@ namespace Akka.Persistence
         /// <summary>
         /// The cause of the failure
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <inheritdoc/>
         public bool Equals(ReadHighestSequenceNrFailure other)
@@ -1073,4 +1071,3 @@ namespace Akka.Persistence
         }
     }
 }
-

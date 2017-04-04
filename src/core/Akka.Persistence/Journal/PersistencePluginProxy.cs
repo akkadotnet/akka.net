@@ -76,12 +76,12 @@ namespace Akka.Persistence.Journal
 
         private class Journal : IPluginType
         {
-            public string Qualifier { get { return "journal"; } }
+            public string Qualifier => "journal";
         }
 
         private class SnapshotStore : IPluginType
         {
-            public string Qualifier { get { return "snapshot-store"; } }
+            public string Qualifier => "snapshot-store";
         }
 
         private readonly Config _config;

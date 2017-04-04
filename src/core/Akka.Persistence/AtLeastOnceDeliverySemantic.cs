@@ -9,376 +9,23 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Serialization;
 using Akka.Actor;
-using Akka.Persistence.Serialization;
 
 namespace Akka.Persistence
 {
-
-    #region Messages
-
-    /// <summary>
-    /// Snapshot of current <see cref="AtLeastOnceDeliveryActor" /> state. Can be retrieved with
-    /// <see cref="AtLeastOnceDeliverySemantic.GetDeliverySnapshot" /> and saved with
-    /// <see cref="Eventsourced.SaveSnapshot" />.
-    /// During recovery the snapshot received in <see cref="SnapshotOffer" /> should be sent with
-    /// <see cref="AtLeastOnceDeliverySemantic.SetDeliverySnapshot" />.
-    /// </summary>
-    public sealed class AtLeastOnceDeliverySnapshot : IMessage, IEquatable<AtLeastOnceDeliverySnapshot>
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly long CurrentDeliveryId;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="currentDeliveryId">TBD</param>
-        /// <param name="unconfirmedDeliveries">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="unconfirmedDeliveries"/> array is undefined.
-        /// </exception>
-        public AtLeastOnceDeliverySnapshot(long currentDeliveryId, UnconfirmedDelivery[] unconfirmedDeliveries)
-        {
-            if (unconfirmedDeliveries == null)
-                throw new ArgumentNullException(nameof(unconfirmedDeliveries),
-                    "AtLeastOnceDeliverySnapshot expects not null array of unconfirmed deliveries");
-
-            CurrentDeliveryId = currentDeliveryId;
-            UnconfirmedDeliveries = unconfirmedDeliveries;
-        }
-
-        /// <inheritdoc/>
-        public bool Equals(AtLeastOnceDeliverySnapshot other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            if (ReferenceEquals(this, other)) return true;
-
-            return Equals(CurrentDeliveryId, other.CurrentDeliveryId)
-                   && UnconfirmedDeliveries.SequenceEqual(other.UnconfirmedDeliveries);
-        }
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as AtLeastOnceDeliverySnapshot);
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = CurrentDeliveryId.GetHashCode();
-                hashCode = (hashCode*397) ^ (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
-                return hashCode;
-            }
-        }
-
-        /// <inheritdoc/>
-        public override string ToString()
-        {
-            return $"AtLeastOnceDeliverySnapshot<currentDeliveryId: {CurrentDeliveryId}, unconfirmedDeliveries: {UnconfirmedDeliveries.Length}>";
-        }
-    }
-
-    /// <summary>
-    /// Message should be sent after <see cref="AtLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts" />
-    /// limit will is reached.
-    /// </summary>
-    [Serializable]
-    public sealed class UnconfirmedWarning : IEquatable<UnconfirmedWarning>
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="unconfirmedDeliveries">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="unconfirmedDeliveries"/> array is undefined.
-        /// </exception>
-        public UnconfirmedWarning(UnconfirmedDelivery[] unconfirmedDeliveries)
-        {
-            if (unconfirmedDeliveries == null)
-                throw new ArgumentNullException(nameof(unconfirmedDeliveries),
-                    "UnconfirmedWarning expects not null array of unconfirmed deliveries");
-
-            UnconfirmedDeliveries = unconfirmedDeliveries;
-        }
-
-        /// <inheritdoc/>
-        public bool Equals(UnconfirmedWarning other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            if (ReferenceEquals(this, other)) return true;
-
-            return Equals(UnconfirmedDeliveries, other.UnconfirmedDeliveries);
-        }
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as UnconfirmedWarning);
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
-        }
-
-        /// <inheritdoc/>
-        public override string ToString()
-        {
-            return $"UnconfirmedWarning<unconfirmedDeliveries: {UnconfirmedDeliveries.Length}>";
-        }
-    }
-
-    /// <summary>
-    /// Contains details about unconfirmed messages.
-    /// It's included inside <see cref="UnconfirmedWarning" /> and <see cref="AtLeastOnceDeliverySnapshot" />.
-    /// <see cref="AtLeastOnceDeliverySemantic.AfterNumberOfUnconfirmedAttempts" />
-    /// </summary>
-    [Serializable]
-    public sealed class UnconfirmedDelivery : IEquatable<UnconfirmedDelivery>
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly long DeliveryId;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly ActorPath Destination;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly object Message;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="deliveryId">TBD</param>
-        /// <param name="destination">TBD</param>
-        /// <param name="message">TBD</param>
-        public UnconfirmedDelivery(long deliveryId, ActorPath destination, object message)
-        {
-            DeliveryId = deliveryId;
-            Destination = destination;
-            Message = message;
-        }
-
-        /// <inheritdoc/>
-        public bool Equals(UnconfirmedDelivery other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            if (ReferenceEquals(this, other)) return true;
-
-            return Equals(DeliveryId, other.DeliveryId)
-                   && Equals(Destination, other.Destination)
-                   && Equals(Message, other.Message);
-        }
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as UnconfirmedDelivery);
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = DeliveryId.GetHashCode();
-                hashCode = (hashCode*397) ^ (Destination != null ? Destination.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Message != null ? Message.GetHashCode() : 0);
-                return hashCode;
-            }
-        }
-
-        /// <inheritdoc/>
-        public override string ToString()
-        {
-            return $"UnconfirmedDelivery<deliveryId: {DeliveryId}, dest: {Destination}, message: {Message}>";
-        }
-    }
-
-    /// <summary>
-    /// This exception is thrown when the <see cref="AtLeastOnceDeliverySemantic.MaxUnconfirmedMessages" /> threshold has been exceeded.
-    /// </summary>
-    public class MaxUnconfirmedMessagesExceededException : Exception
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
-        /// </summary>
-        public MaxUnconfirmedMessagesExceededException()
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
-        /// </summary>
-        /// <param name="message">The message that describes the error.</param>
-        public MaxUnconfirmedMessagesExceededException(string message) : base(message)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
-        /// </summary>
-        /// <param name="message">The error message that explains the reason for the exception.</param>
-        /// <param name="innerException">The exception that is the cause of the current exception.</param>
-        public MaxUnconfirmedMessagesExceededException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-    }
-
-    #endregion
-
     /// <summary>
     /// TBD
     /// </summary>
     public class AtLeastOnceDeliverySemantic
     {
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        [Serializable]
-        public sealed class Delivery : IEquatable<Delivery>
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly int Attempt;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly ActorPath Destination;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly object Message;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly DateTime Timestamp;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="destination">TBD</param>
-            /// <param name="message">TBD</param>
-            /// <param name="timestamp">TBD</param>
-            /// <param name="attempt">TBD</param>
-            public Delivery(ActorPath destination, object message, DateTime timestamp, int attempt)
-            {
-                Destination = destination;
-                Message = message;
-                Timestamp = timestamp;
-                Attempt = attempt;
-            }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
-            public Delivery IncrementedCopy()
-            {
-                return new Delivery(Destination, Message, Timestamp, Attempt + 1);
-            }
-
-            /// <inheritdoc/>
-            public bool Equals(Delivery other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                if (ReferenceEquals(this, other)) return true;
-
-                return Equals(Attempt, other.Attempt)
-                       && Equals(Timestamp, other.Timestamp)
-                       && Equals(Destination, other.Destination)
-                       && Equals(Message, other.Message);
-            }
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as Delivery);
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    int hashCode = (Destination != null ? Destination.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ (Message != null ? Message.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ Timestamp.GetHashCode();
-                    hashCode = (hashCode*397) ^ Attempt;
-                    return hashCode;
-                }
-            }
-
-            /// <inheritdoc/>
-            public override string ToString()
-            {
-                return $"Delivery<dest: {Destination}, attempt: {Attempt}, timestamp: {Timestamp}, message: {Message}";
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        [Serializable]
-        public sealed class RedeliveryTick: INotInfluenceReceiveTimeout
-        {
-            /// <summary>
-            /// The singleton instance of the redelivery tick
-            /// </summary>
-            public static readonly RedeliveryTick Instance = new RedeliveryTick();
-
-            private RedeliveryTick()
-            {
-            }
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return obj is RedeliveryTick;
-            }
-        }
-
-        #region actor methods
-
         private readonly IActorContext _context;
         private long _deliverySequenceNr;
         private ICancelable _redeliverScheduleCancelable;
         private readonly PersistenceSettings.AtLeastOnceDeliverySettings _settings;
         private ImmutableSortedDictionary<long, Delivery> _unconfirmed = ImmutableSortedDictionary<long, Delivery>.Empty;
 
-
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AtLeastOnceDeliverySemantic"/> class.
         /// </summary>
         /// <param name="context">TBD</param>
         /// <param name="settings">TBD</param>
@@ -396,10 +43,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual TimeSpan RedeliverInterval
-        {
-            get { return _settings.RedeliverInterval; }
-        }
+        public virtual TimeSpan RedeliverInterval => _settings.RedeliverInterval;
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst
@@ -411,10 +55,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual int RedeliveryBurstLimit
-        {
-            get { return _settings.RedeliveryBurstLimit; }
-        }
+        public virtual int RedeliveryBurstLimit => _settings.RedeliveryBurstLimit;
 
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
@@ -424,10 +65,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual int WarnAfterNumberOfUnconfirmedAttempts
-        {
-            get { return _settings.WarnAfterNumberOfUnconfirmedAttempts; }
-        }
+        public virtual int WarnAfterNumberOfUnconfirmedAttempts => _settings.WarnAfterNumberOfUnconfirmedAttempts;
 
         /// <summary>
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory.
@@ -438,18 +76,12 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual int MaxUnconfirmedMessages
-        {
-            get { return _settings.MaxUnconfirmedMessages; }
-        }
+        public virtual int MaxUnconfirmedMessages => _settings.MaxUnconfirmedMessages;
 
         /// <summary>
         ///     Number of messages, that have not been confirmed yet.
         /// </summary>
-        public int UnconfirmedCount
-        {
-            get { return _unconfirmed.Count; }
-        }
+        public int UnconfirmedCount => _unconfirmed.Count;
 
         private void StartRedeliverTask()
         {
@@ -590,7 +222,6 @@ namespace Akka.Persistence
             _redeliverScheduleCancelable?.Cancel();
         }
 
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -615,6 +246,5 @@ namespace Akka.Persistence
             }
             return false;
         }
-        #endregion
     }
 }
