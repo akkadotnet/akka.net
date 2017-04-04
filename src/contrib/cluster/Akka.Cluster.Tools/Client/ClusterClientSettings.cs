@@ -154,18 +154,6 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="initialContacts">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
-        [Obsolete("Use WithInitialContacts(IImmutableSet<ActorPath> initialContacts) instead")]
-        public ClusterClientSettings WithInitialContacts(IEnumerable<ActorPath> initialContacts)
-        {
-            return WithInitialContacts(initialContacts.ToImmutableHashSet());
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <param name="value">TBD</param>
         /// <returns>TBD</returns>
         public ClusterClientSettings WithEstablishingGetContactsInterval(TimeSpan value)

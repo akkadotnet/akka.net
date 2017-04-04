@@ -15,6 +15,7 @@ using Akka.Actor;
 using Akka.Cluster.PubSub.Serializers.Proto;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Serialization;
+using Akka.Util;
 using Google.ProtocolBuffers;
 using Address = Akka.Cluster.PubSub.Serializers.Proto.Address;
 using Delta = Akka.Cluster.Tools.PublishSubscribe.Internal.Delta;
@@ -320,7 +321,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             else
             {
                 if (serializer.IncludeManifest)
-                    builder.SetMessageManifest(ByteString.CopyFromUtf8(TypeQualifiedNameForManifest(message.GetType())));
+                    builder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().TypeQualifiedName()));
             }
 
             return builder.Build();

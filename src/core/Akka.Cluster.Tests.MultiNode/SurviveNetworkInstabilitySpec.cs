@@ -101,20 +101,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class SurviveNetworkInstabilityMultiNode1 : SurviveNetworkInstabilitySpec { }
-    public class SurviveNetworkInstabilityMultiNode2 : SurviveNetworkInstabilitySpec { }
-    public class SurviveNetworkInstabilityMultiNode3 : SurviveNetworkInstabilitySpec { }
-    public class SurviveNetworkInstabilityMultiNode4 : SurviveNetworkInstabilitySpec { }
-    public class SurviveNetworkInstabilityMultiNode5 : SurviveNetworkInstabilitySpec { }
-    public class SurviveNetworkInstabilityMultiNode6 : SurviveNetworkInstabilitySpec { }
-    public class SurviveNetworkInstabilityMultiNode7 : SurviveNetworkInstabilitySpec { }
-    public class SurviveNetworkInstabilityMultiNode8 : SurviveNetworkInstabilitySpec { }
-
-    public abstract class SurviveNetworkInstabilitySpec : MultiNodeClusterSpec
+    public class SurviveNetworkInstabilitySpec : MultiNodeClusterSpec
     {
         private readonly SurviveNetworkInstabilitySpecConfig _config;
 
-        protected SurviveNetworkInstabilitySpec()
+        public SurviveNetworkInstabilitySpec()
             : this(new SurviveNetworkInstabilitySpecConfig())
         {
         }

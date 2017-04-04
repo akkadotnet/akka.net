@@ -268,7 +268,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<GetTopics>(getTopics =>
             {
-                Sender.Tell(new CurrentTopics(GetCurrentTopics().ToArray()));
+                Sender.Tell(new CurrentTopics(GetCurrentTopics().ToImmutableHashSet()));
             });
             Receive<Subscribed>(subscribed =>
             {

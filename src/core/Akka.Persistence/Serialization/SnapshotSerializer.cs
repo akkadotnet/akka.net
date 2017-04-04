@@ -10,6 +10,7 @@ using System.IO;
 using System.Text;
 using Akka.Actor;
 using Akka.Serialization;
+using Akka.Util;
 
 namespace Akka.Persistence.Serialization
 {
@@ -105,10 +106,11 @@ namespace Akka.Persistence.Serialization
             : base(system)
         {
         }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public Information TransportInformation
+        internal Information TransportInformation
         {
             get
             {
@@ -183,7 +185,7 @@ namespace Akka.Persistence.Serialization
                 }
                 else if (serializer.IncludeManifest)
                 {
-                    var snapshotTypeBinary = Encoding.UTF8.GetBytes(TypeQualifiedNameForManifest(snapshot.GetType()));
+                    var snapshotTypeBinary = Encoding.UTF8.GetBytes(snapshot.GetType().TypeQualifiedName());
                     headerOut.Write(snapshotTypeBinary, 0, snapshotTypeBinary.Length);
                 }
 

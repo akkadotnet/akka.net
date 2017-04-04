@@ -8,6 +8,8 @@
 using System;
 using Akka.Actor;
 using Akka.Event;
+using System.Collections.Immutable;
+using System.Linq;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
@@ -693,15 +695,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public string[] Topics { get; }
+        public IImmutableSet<string> Topics { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="topics">TBD</param>
-        public CurrentTopics(string[] topics)
+        public CurrentTopics(IImmutableSet<string> topics)
         {
-            Topics = topics ?? new string[0];
+            Topics = topics ?? ImmutableHashSet<string>.Empty;
         }
 
         /// <summary>
@@ -714,7 +716,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(other, this)) return true;
 
-            return Equals(Topics, other.Topics);
+            return Topics.SequenceEqual(other.Topics);
         }
 
         /// <summary>
