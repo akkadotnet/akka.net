@@ -281,7 +281,21 @@ namespace Akka.Remote.Tests
                     Assert.True(fd.IsAvailable);
                 }
             }
+        }
 
+        [Fact]
+        public void PhiAccrualHistory_must_work_with_MonotonicClock()
+        {
+            var fd =
+                   FailureDetectorSpecHelpers.CreateFailureDetector();
+
+            Assert.True(fd.IsAvailable);
+            fd.HeartBeat();
+            Assert.True(fd.IsAvailable);
+            fd.HeartBeat();
+            fd.HeartBeat();
+            fd.HeartBeat();
+            Assert.True(fd.IsAvailable);
         }
 
         /// <summary>

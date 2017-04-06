@@ -22,7 +22,7 @@ namespace Akka.Remote
 
         private long _heartbeatTimestamp = 0L; //not used until active (first heartbeat)
         private volatile bool _active = false;
-        private readonly long _deadlineMillis;
+        private readonly long _deadlineTicks;
 
         /// <summary>
         /// Obsolete. Use <see cref="DeadlineFailureDetector(TimeSpan, TimeSpan, Clock)"/> instead.
@@ -67,7 +67,7 @@ namespace Akka.Remote
             }
 
             _clock = clock ?? DefaultClock;
-            _deadlineMillis = Convert.ToInt64(acceptableHeartbeatPause.TotalMilliseconds + heartbeatInterval.TotalMilliseconds);
+            _deadlineTicks = Convert.ToInt64(acceptableHeartbeatPause.Ticks + heartbeatInterval.Ticks);
         }
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace Akka.Remote
 
         private bool IsAvailableTicks(long timestamp)
         {
-            if (_active) return (Interlocked.Read(ref _heartbeatTimestamp) + _deadlineMillis) > timestamp;
+            if (_active) return (Interlocked.Read(ref _heartbeatTimestamp) + _deadlineTicks) > timestamp;
             return true; //treat unmanaged connections, e.g. with zero heartbeats, as healthy connections
         }
 
