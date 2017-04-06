@@ -192,7 +192,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
     }
-    public class DistributedPubSubSettings
+    public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements) { }
         public System.TimeSpan GossipInterval { get; }
@@ -354,7 +354,7 @@ namespace Akka.Cluster.Tools.Singleton
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
     }
-    public sealed class ClusterSingletonProxySettings
+    public sealed class ClusterSingletonProxySettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         public ClusterSingletonProxySettings(string singletonName, string role, System.TimeSpan singletonIdentificationInterval, int bufferSize) { }
         public int BufferSize { get; }

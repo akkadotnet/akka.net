@@ -443,7 +443,7 @@ namespace Akka.DistributedData
     /// for example not access `sender()` reference of an enclosing actor.
     /// </summary>
     [Serializable]
-    public sealed class Update : ICommand
+    public sealed class Update : ICommand, INoSerializationVerificationNeeded
     {
         private IReplicatedData ModifyWithInitial(IReplicatedData initial, Func<IReplicatedData, IReplicatedData> modifier, IReplicatedData data) =>
             modifier(data ?? initial);
@@ -489,7 +489,7 @@ namespace Akka.DistributedData
     /// 2. <see cref="ModifyFailure"/> if a <see cref="Update.Modify"/> delegate has thrown a failure.
     /// 3. <see cref="UpdateTimeout"/> if a request couldn't complete withing given timeout and write consistency constraints.
     /// </summary>
-    public interface IUpdateResponse
+    public interface IUpdateResponse : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Key, under with updated data is going to be stored.
@@ -705,7 +705,7 @@ namespace Akka.DistributedData
     /// given <see cref="Key"/>. The <see cref="Replicator"/> will reply with one of the <see cref="IDeleteResponse{T}"/> messages.
     /// </summary>
     [Serializable]
-    public sealed class Delete : ICommand, IEquatable<Delete>
+    public sealed class Delete : ICommand, INoSerializationVerificationNeeded, IEquatable<Delete>
     {
         public IKey Key { get; }
         public IWriteConsistency Consistency { get; }
@@ -744,7 +744,7 @@ namespace Akka.DistributedData
     /// 2. <see cref="ReplicationDeletedFailure"/> when delete operation ended with failure.
     /// 3. <see cref="DataDeleted"/> when an operation attempted to delete already deleted data.
     /// </summary>
-    public interface IDeleteResponse
+    public interface IDeleteResponse : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Key, for which data was deleted.
