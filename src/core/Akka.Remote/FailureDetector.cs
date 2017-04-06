@@ -39,7 +39,7 @@ namespace Akka.Remote
         /// The default clock implementation used by the <see cref="PhiAccrualFailureDetector"/>
         /// </summary>
         /// <returns>A clock instance.</returns>
-        public static readonly Clock DefaultClock = () => MonotonicClock.GetTicks();
+        public static readonly Clock DefaultClock = () => MonotonicClock.GetMilliseconds();
 
         #endregion
     }
