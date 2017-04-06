@@ -105,7 +105,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             _readAll = new ReadAll(_timeOut);
         }
 
-        [MultiNodeFact]
+        [MultiNodeFact(Skip = "FIXME")]
         public void ReplicatorSpecTests()
         {
             Cluster_CRDT_should_work_in_single_node_cluster();
