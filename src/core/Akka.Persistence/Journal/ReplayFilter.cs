@@ -73,16 +73,23 @@ namespace Akka.Persistence.Journal
         /// <param name="windowSize">TBD</param>
         /// <param name="maxOldWriters">TBD</param>
         /// <param name="debugEnabled">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown for a number of reasons. These include:
+        /// <ul>
+        /// <li>The specified <paramref name="windowSize"/> is less than or equal to zero.</li>
+        /// <li>The specified <paramref name="maxOldWriters"/> is less than or equal to zero.</li>
+        /// <li>The specified <paramref name="mode"/> is <see cref="ReplayFilterMode.Disabled"/>.</li>
+        /// </ul>
+        /// </exception>
         /// <returns>TBD</returns>
         public static Props Props(IActorRef persistentActor, ReplayFilterMode mode, int windowSize, int maxOldWriters, bool debugEnabled)
         {
             if (windowSize <= 0)
-                throw new ArgumentNullException("windowSize", "windowSize must be > 0");
+                throw new ArgumentNullException(nameof(windowSize), "windowSize must be > 0");
             if (maxOldWriters <= 0)
-                throw new ArgumentNullException("maxOldWriters", "maxOldWriters must be > 0");
+                throw new ArgumentNullException(nameof(maxOldWriters), "maxOldWriters must be > 0");
             if (mode == ReplayFilterMode.Disabled)
-                throw new ArgumentNullException("mode", "mode must not be Disabled");
+                throw new ArgumentNullException(nameof(mode), "mode must not be Disabled");
             return Actor.Props.Create(() => new ReplayFilter(persistentActor, mode, windowSize, maxOldWriters, debugEnabled));
         }
 
@@ -111,8 +118,12 @@ namespace Akka.Persistence.Journal
         /// TBD
         /// </summary>
         /// <param name="message">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the <see cref="Mode"/> is set to <see cref="ReplayFilterMode.Disabled"/>.
+        /// </exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when either the replayed event is in the wrong order or from an old writer.
+        /// </exception>
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
@@ -135,11 +146,7 @@ namespace Akka.Persistence.Journal
                         // from same writer
                         if (r.Persistent.SequenceNr < _sequenceNr)
                         {
-                            var errMsg =
-                                string.Format(
-                                    "Invalid replayed event [{0}] in wrong order from " +
-                                    "writer [{1}] with PersistenceId [{2}]", r.Persistent.SequenceNr,
-                                    r.Persistent.WriterGuid, r.Persistent.PersistenceId);
+                            var errMsg = $"Invalid replayed event [{r.Persistent.SequenceNr}] in wrong order from writer [{r.Persistent.WriterGuid}] with PersistenceId [{r.Persistent.PersistenceId}]";
                             LogIssue(errMsg);
                             switch (Mode)
                             {
@@ -165,10 +172,7 @@ namespace Akka.Persistence.Journal
                     else if (_oldWriters.Contains(r.Persistent.WriterGuid))
                     {
                         // from old writer
-                        var errMsg =
-                            string.Format(
-                                "Invalid replayed event [{0}] from old writer [{1}] with PersistenceId [{2}]",
-                                r.Persistent.SequenceNr, r.Persistent.WriterGuid, r.Persistent.PersistenceId);
+                        var errMsg = $"Invalid replayed event [{r.Persistent.SequenceNr}] from old writer [{r.Persistent.WriterGuid}] with PersistenceId [{r.Persistent.PersistenceId}]";
                         LogIssue(errMsg);
                         switch (Mode)
                         {
@@ -202,10 +206,7 @@ namespace Akka.Persistence.Journal
                             var msg = node.Value;
                             if (msg.Persistent.SequenceNr >= _sequenceNr)
                             {
-                                var errMsg =
-                                    string.Format(
-                                        "Invalid replayed event [{0}] in buffer from old writer [{1}] with PersistenceId [{2}]",
-                                        r.Persistent.SequenceNr, r.Persistent.WriterGuid, r.Persistent.PersistenceId);
+                                var errMsg = $"Invalid replayed event [{r.Persistent.SequenceNr}] in buffer from old writer [{r.Persistent.WriterGuid}] with PersistenceId [{r.Persistent.PersistenceId}]";
                                 LogIssue(errMsg);
                                 switch (Mode)
                                 {

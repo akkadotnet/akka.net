@@ -22,12 +22,12 @@ namespace Akka.DI.Core
         /// <param name="system">The actor system in which to register the given dependency resolver.</param>
         /// <param name="dependencyResolver">The dependency resolver being registered to the actor system.</param>
         /// <exception cref="ArgumentNullException">
-        /// Either the <paramref name="system"/> or the <paramref name="dependencyResolver"/> was null.
+        /// This exception is thrown when either the specified <paramref name="system"/> or the specified <paramref name="dependencyResolver"/> is undefined.
         /// </exception>
         public static void AddDependencyResolver(this ActorSystem system, IDependencyResolver dependencyResolver)
         {
-            if (system == null) throw new ArgumentNullException("system");
-            if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
+            if (system == null) throw new ArgumentNullException(nameof(system), $"ActorSystem requires a valid {nameof(system)}");
+            if (dependencyResolver == null) throw new ArgumentNullException(nameof(dependencyResolver), $"ActorSystem requires {nameof(dependencyResolver)} to be provided");
             system.RegisterExtension(DIExtension.DIExtensionProvider);
             DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolver);
         }
