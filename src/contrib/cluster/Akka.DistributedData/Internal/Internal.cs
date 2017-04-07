@@ -7,13 +7,13 @@
 
 using System;
 using System.Collections.Generic;
-using Akka.IO;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Event;
+using Google.ProtocolBuffers;
 
 namespace Akka.DistributedData.Internal
 {
@@ -170,6 +170,43 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => "WriteAck";
+    }
+
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    [Serializable]
+    internal sealed class WriteNack : IReplicatorMessage, IEquatable<WriteNack>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal static readonly WriteNack Instance = new WriteNack();
+
+        private WriteNack() { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
+        public bool Equals(WriteNack other) => true;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
+        public override bool Equals(object obj) => obj is WriteNack;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override int GetHashCode() => 1;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString() => "WriteNack";
     }
 
     /// <summary>
@@ -364,21 +401,21 @@ namespace Akka.DistributedData.Internal
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class DataEnvelope : IEquatable<DataEnvelope>, IReplicatorMessage
+    public sealed class DataEnvelope : IEquatable<DataEnvelope>, IReplicatorMessage
     {
         /// <summary>
         /// TBD
         /// </summary>
-        internal static DataEnvelope DeletedEnvelope => new DataEnvelope(DeletedData.Instance);
+        public static DataEnvelope DeletedEnvelope => new DataEnvelope(DeletedData.Instance);
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal IReplicatedData Data { get; }
+        public IReplicatedData Data { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        internal IImmutableDictionary<UniqueAddress, PruningState> Pruning { get; }
+        public IImmutableDictionary<UniqueAddress, PruningState> Pruning { get; }
 
         /// <summary>
         /// TBD
@@ -565,7 +602,7 @@ namespace Akka.DistributedData.Internal
     /// </summary>
     /// <returns>TBD</returns>
     [Serializable]
-    public sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>
+    internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>
     {
         /// <summary>
         /// TBD
