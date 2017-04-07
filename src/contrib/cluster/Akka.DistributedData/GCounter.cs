@@ -79,39 +79,26 @@ namespace Akka.DistributedData
         /// <summary>
         /// Increment the counter by 1.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
         public GCounter Increment(Cluster.Cluster node) => Increment(node.SelfUniqueAddress);
 
         /// <summary>
         /// Increment the counter by 1.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
         public GCounter Increment(UniqueAddress node) => Increment(node, new BigInteger(1));
 
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="delta">TBD</param>
-        /// <returns>TBD</returns>
         public GCounter Increment(Cluster.Cluster node, ulong delta) => Increment(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="delta">TBD</param>
-        /// <returns>TBD</returns>
         public GCounter Increment(UniqueAddress node, ulong delta) => Increment(node, new BigInteger(delta));
 
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="delta">TBD</param>
-        /// <returns>TBD</returns>
         public GCounter Increment(Cluster.Cluster node, BigInteger delta) => Increment(node.SelfUniqueAddress, delta);
 
         /// <summary>
@@ -218,7 +205,7 @@ namespace Akka.DistributedData
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return State.SequenceEqual(other.State);
+            return Equals(Value, other.Value);
         }
 
         /// <summary>

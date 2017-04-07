@@ -67,7 +67,7 @@ namespace Akka.DistributedData.Tests
             AwaitAssert(() =>
             {
                 _replicator.Tell(Dsl.Get(Updater.Key, ReadLocal.Instance));
-                var msg = ExpectMsg<Replicator.GetSuccess>();
+                var msg = ExpectMsg<GetSuccess>();
                 var elements = msg.Get(Updater.Key).Elements;
                 Assert.Equal(expected, elements);
             });

@@ -125,10 +125,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.MultiNodeTestRunner.Sh
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98CEB6FB-A277-42FA-A98E-99A8640B26FD}"
 	ProjectSection(SolutionItems) = preProject
+		core\protobuf\ClusterClientMessages.proto = core\protobuf\ClusterClientMessages.proto
+		core\protobuf\ClusterMessages.proto = core\protobuf\ClusterMessages.proto
+		core\protobuf\ClusterShardingMessages.proto = core\protobuf\ClusterShardingMessages.proto
 		core\protobuf\ContainerFormats.proto = core\protobuf\ContainerFormats.proto
 		core\protobuf\csharp_options.proto = core\protobuf\csharp_options.proto
 		core\protobuf\descriptor.proto = core\protobuf\descriptor.proto
+		core\protobuf\DistributedPubSubMessages.proto = core\protobuf\DistributedPubSubMessages.proto
 		core\protobuf\PersistenceMessages.proto = core\protobuf\PersistenceMessages.proto
+		core\protobuf\ReplicatedDataMessages.proto = core\protobuf\ReplicatedDataMessages.proto
+		core\protobuf\ReplicatorMessages.proto = core\protobuf\ReplicatorMessages.proto
+		core\protobuf\TestConductorProtocol.proto = core\protobuf\TestConductorProtocol.proto
 		core\protobuf\WireFormats.proto = core\protobuf\WireFormats.proto
 	EndProjectSection
 EndProject
@@ -259,6 +266,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Transports", "Transports", "{6AD34FA4-7584-454D-ACD4-A8911E0BDB00}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.Transport.Helios", "contrib\transports\Akka.Remote.Transport.Helios\Akka.Remote.Transport.Helios.csproj", "{29FEAABC-E326-450A-9008-B5FCECF0115F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DistributedData.LightningDB", "contrib\cluster\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj", "{26103500-0DFE-498D-8FCF-EFE66BB4FD69}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -981,6 +990,14 @@ Global
 		{29FEAABC-E326-450A-9008-B5FCECF0115F}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{29FEAABC-E326-450A-9008-B5FCECF0115F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{29FEAABC-E326-450A-9008-B5FCECF0115F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1099,5 +1116,6 @@ Global
 		{E3549E17-7206-44F0-A322-EDC058A0498F} = {0E55F1F8-E212-43D7-A0C0-ACEA9794B0D7}
 		{6AD34FA4-7584-454D-ACD4-A8911E0BDB00} = {588C1513-FAB6-42C3-B6FC-3485F13620CF}
 		{29FEAABC-E326-450A-9008-B5FCECF0115F} = {6AD34FA4-7584-454D-ACD4-A8911E0BDB00}
+		{26103500-0DFE-498D-8FCF-EFE66BB4FD69} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 	EndGlobalSection
 EndGlobal

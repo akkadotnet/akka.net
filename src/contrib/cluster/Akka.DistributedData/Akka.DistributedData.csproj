@@ -62,6 +62,7 @@
     <Compile Include="..\..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Durable\Messages.cs" />
     <Compile Include="Local\ClusterReplicatedDataExtensions.cs" />
     <Compile Include="DistributedData.cs" />
     <Compile Include="Dsl.cs" />
@@ -112,7 +113,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.DistributedData.nuspec" />
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
   <ItemGroup />

@@ -494,6 +494,8 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public Reachability Reachability { get { return _reachability; } }
+
+        public override string ToString() => $"GossipOverview(seen=[{string.Join(", ", Seen)}], reachability={Reachability})";
     }
 
     /// <summary>
@@ -611,6 +613,7 @@ namespace Akka.Cluster
             }
         }
 
+        public override string ToString() => $"GossipStatus(from={From}, version={Version})";
     }
 }
 

@@ -252,6 +252,8 @@ namespace Akka.Actor
             /// TBD
             /// </summary>
             public object Cause { get; }
+
+            public override string ToString() => $"Failure({Cause})";
         }
 
         /// <summary>
