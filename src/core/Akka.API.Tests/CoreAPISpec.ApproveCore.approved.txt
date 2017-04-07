@@ -775,6 +775,7 @@ namespace Akka.Actor
         {
             public Failure(object cause) { }
             public object Cause { get; }
+            public override string ToString() { }
         }
         public sealed class LogEntry<TS, TD>
         {

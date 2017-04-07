@@ -163,11 +163,6 @@ namespace Akka.DistributedData
         /// increasing version number from a database record that is used for optimistic
         /// concurrency control.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="key">TBD</param>
-        /// <param name="value">TBD</param>
-        /// <param name="clock">TBD</param>
-        /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> SetItem(Cluster.Cluster node, TKey key, TValue value,
             Clock<TValue> clock = null) => SetItem(node.SelfUniqueAddress, key, value, clock);
 
@@ -179,11 +174,6 @@ namespace Akka.DistributedData
         /// increasing version number from a database record that is used for optimistic
         /// concurrency control.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="key">TBD</param>
-        /// <param name="value">TBD</param>
-        /// <param name="clock">TBD</param>
-        /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> SetItem(UniqueAddress node, TKey key, TValue value,
             Clock<TValue> clock = null)
         {
@@ -200,9 +190,6 @@ namespace Akka.DistributedData
         /// Note that if there is a conflicting update on another node the entry will
         /// not be removed after merge.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="key">TBD</param>
-        /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> Remove(Cluster.Cluster node, TKey key) => Remove(node.SelfUniqueAddress, key);
 
         /// <summary>
@@ -210,9 +197,6 @@ namespace Akka.DistributedData
         /// Note that if there is a conflicting update on another node the entry will
         /// not be removed after merge.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="key">TBD</param>
-        /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> Remove(UniqueAddress node, TKey key) => 
             new LWWDictionary<TKey, TValue>(_underlying.Remove(node, key));
 
