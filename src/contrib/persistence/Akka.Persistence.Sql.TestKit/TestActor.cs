@@ -32,12 +32,17 @@ namespace Akka.Persistence.Sql.TestKit
 
         public override string PersistenceId { get; }
         protected override bool ReceiveRecover(object message) => true;
+        private IActorRef _parentTestActor;
 
         protected override bool ReceiveCommand(object message) => message.Match()
             .With<DeleteCommand>(delete =>
             {
+                _parentTestActor = Sender;
                 DeleteMessages(delete.ToSequenceNr);
-                Sender.Tell(delete.ToSequenceNr.ToString() + "-deleted");
+            })
+            .With<DeleteMessagesSuccess>(deleteSuccess =>
+            {
+                _parentTestActor.Tell(deleteSuccess.ToSequenceNr.ToString() + "-deleted");
             })
             .With<string>(cmd =>
             {
