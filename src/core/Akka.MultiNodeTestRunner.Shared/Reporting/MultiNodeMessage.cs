@@ -46,6 +46,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Comparisons
 
+        /// <summary>
+        /// Compares the current instance with another object of the same type and returns an integer that indicates whether the current instance precedes, follows, or occurs in the same position in the sort order as the other object.
+        /// </summary>
+        /// <param name="other">An object to compare with this instance.</param>
+        /// <returns>
+        /// A value that indicates the relative order of the objects being compared. The return value has these meanings:
+        /// <dl>
+        ///   <dt>Less than zero</dt>
+        ///   <dd>This instance precedes <paramref name="other" /> in the sort order.</dd>
+        ///   <dt>Zero</dt>
+        ///   <dd>This instance occurs in the same position in the sort order as <paramref name="other" />.</dd>
+        ///   <dt>Greater than zero</dt>
+        ///   <dd>This instance follows <paramref name="other" /> in the sort order.</dd>
+        /// </dl>
+        /// </returns>
         public virtual int CompareTo(MultiNodeMessage other)
         {
             var tc = TimeStamp.CompareTo(other.TimeStamp);

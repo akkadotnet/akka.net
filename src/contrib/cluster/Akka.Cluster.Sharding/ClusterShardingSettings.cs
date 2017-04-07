@@ -80,6 +80,10 @@ namespace Akka.Cluster.Sharding
         /// <param name="snapshotAfter">TBD</param>
         /// <param name="leastShardAllocationRebalanceThreshold">TBD</param>
         /// <param name="leastShardAllocationMaxSimultaneousRebalance">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="entityRecoveryStrategy"/> is invalid.
+        /// Acceptable values include: all | constant
+        /// </exception>
         public TunningParameters(
             TimeSpan coordinatorFailureBackoff,
             TimeSpan retryInterval,
@@ -283,12 +287,14 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         /// <param name="tunningParameters">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="tunningParameters"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
         public ClusterShardingSettings WithTuningParameters(TunningParameters tunningParameters)
         {
             if (tunningParameters == null)
-                throw new ArgumentNullException("tunningParameters");
+                throw new ArgumentNullException(nameof(tunningParameters), $"ClusterShardingSettings requires {nameof(tunningParameters)} to be provided");
 
             return Copy(tunningParameters: tunningParameters);
         }
@@ -297,11 +303,14 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="coordinatorSingletonSettings"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
         public ClusterShardingSettings WithCoordinatorSingletonSettings(ClusterSingletonManagerSettings coordinatorSingletonSettings)
         {
             if (coordinatorSingletonSettings == null)
-                throw new ArgumentNullException("coordinatorSingletonSettings");
+                throw new ArgumentNullException(nameof(coordinatorSingletonSettings), $"ClusterShardingSettings requires {nameof(coordinatorSingletonSettings)} to be provided");
 
             return Copy(coordinatorSingletonSettings: coordinatorSingletonSettings);
         }

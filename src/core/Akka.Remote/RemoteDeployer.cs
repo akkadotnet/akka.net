@@ -35,7 +35,7 @@ namespace Akka.Remote
         /// <param name="key">The path used to deploy the actor.</param>
         /// <param name="config">The configuration used to configure the deployed actor.</param>
         /// <exception cref="ConfigurationException">
-        /// This exception is thrown when an invalid remote node name is read from the specified <paramref name="config"/>.
+        /// This exception is thrown when a remote node name in the specified <paramref name="config"/> is unparseable.
         /// </exception>
         /// <returns>A configured actor deployment to the given path.</returns>
         public override Deploy ParseConfig(string key, Config config)
@@ -77,4 +77,3 @@ namespace Akka.Remote
         }
     }
 }
-

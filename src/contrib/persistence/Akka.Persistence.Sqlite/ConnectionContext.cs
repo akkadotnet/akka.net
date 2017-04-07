@@ -23,11 +23,13 @@ namespace Akka.Persistence.Sqlite
         /// TBD
         /// </summary>
         /// <param name="connectionString">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="connectionString"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
         public static SQLiteConnection Remember(string connectionString)
         {
-            if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException("connectionString", "No connection string with connection to remember");
+            if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString), "No connection string with connection to remember");
 
             var conn = Remembered.GetOrAdd(connectionString, s => new SQLiteConnection(connectionString));
 

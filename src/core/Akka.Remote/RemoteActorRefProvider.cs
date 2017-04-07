@@ -234,8 +234,13 @@ namespace Akka.Remote
         /// <param name="deploy">TBD</param>
         /// <param name="lookupDeploy">TBD</param>
         /// <param name="async">TBD</param>
-        /// <exception cref="ActorInitializationException">TBD</exception>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="ActorInitializationException">
+        /// This exception is thrown when the remote deployment to the specified <paramref name="path"/> fails.
+        /// </exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when either the scope of the deployment is local
+        /// or the specified <paramref name="props"/> is invalid for deployment to the specified <paramref name="path"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
@@ -293,8 +298,7 @@ namespace Akka.Remote
                 //check for correct scope configuration
                 if (props.Deploy.Scope is LocalScope)
                 {
-                    throw new ConfigurationException(
-                        string.Format("configuration requested remote deployment for local-only Props at {0}", path));
+                    throw new ConfigurationException($"configuration requested remote deployment for local-only Props at {path}");
                 }
 
                 try
