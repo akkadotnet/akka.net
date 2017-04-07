@@ -165,7 +165,7 @@ namespace Akka.Actor
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        internal protected virtual bool AroundReceive(Receive receive, object message)
+        protected internal virtual bool AroundReceive(Receive receive, object message)
         {
             var wasHandled = receive(message);
             if (!wasHandled)

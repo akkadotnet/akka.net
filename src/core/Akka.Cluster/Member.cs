@@ -171,6 +171,7 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         /// <param name="status">TBD</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
         /// <returns>TBD</returns>
         public Member Copy(MemberStatus status)
         {
@@ -179,7 +180,7 @@ namespace Akka.Cluster
 
             //TODO: Akka exception?
             if (!AllowedTransitions[oldStatus].Contains(status))
-                throw new InvalidOperationException(String.Format("Invalid member status transition {0} -> {1}", Status, status));
+                throw new InvalidOperationException($"Invalid member status transition {Status} -> {status}");
             
             return new Member(UniqueAddress, UpNumber, status, Roles);
         }

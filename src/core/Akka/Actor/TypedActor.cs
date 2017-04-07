@@ -32,7 +32,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>TBD</returns>
-        protected override sealed bool Receive(object message)
+        protected sealed override bool Receive(object message)
         {
             MethodInfo method = GetType().GetMethod("Handle", new[] {message.GetType()});
             if (method == null)

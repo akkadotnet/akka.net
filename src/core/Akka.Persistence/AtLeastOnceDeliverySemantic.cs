@@ -41,22 +41,20 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="currentDeliveryId">TBD</param>
         /// <param name="unconfirmedDeliveries">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="unconfirmedDeliveries"/> array is undefined.
+        /// </exception>
         public AtLeastOnceDeliverySnapshot(long currentDeliveryId, UnconfirmedDelivery[] unconfirmedDeliveries)
         {
             if (unconfirmedDeliveries == null)
-                throw new ArgumentNullException("unconfirmedDeliveries",
+                throw new ArgumentNullException(nameof(unconfirmedDeliveries),
                     "AtLeastOnceDeliverySnapshot expects not null array of unconfirmed deliveries");
 
             CurrentDeliveryId = currentDeliveryId;
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(AtLeastOnceDeliverySnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -66,20 +64,13 @@ namespace Akka.Persistence
                    && UnconfirmedDeliveries.SequenceEqual(other.UnconfirmedDeliveries);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as AtLeastOnceDeliverySnapshot);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -90,14 +81,10 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("AtLeastOnceDeliverySnapshot<currentDeliveryId: {0}, unconfirmedDeliveries: {1}>", CurrentDeliveryId,
-                UnconfirmedDeliveries.Length);
+            return $"AtLeastOnceDeliverySnapshot<currentDeliveryId: {CurrentDeliveryId}, unconfirmedDeliveries: {UnconfirmedDeliveries.Length}>";
         }
     }
 
@@ -117,21 +104,19 @@ namespace Akka.Persistence
         /// TBD
         /// </summary>
         /// <param name="unconfirmedDeliveries">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="unconfirmedDeliveries"/> array is undefined.
+        /// </exception>
         public UnconfirmedWarning(UnconfirmedDelivery[] unconfirmedDeliveries)
         {
             if (unconfirmedDeliveries == null)
-                throw new ArgumentNullException("unconfirmedDeliveries",
+                throw new ArgumentNullException(nameof(unconfirmedDeliveries),
                     "UnconfirmedWarning expects not null array of unconfirmed deliveries");
 
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(UnconfirmedWarning other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -140,32 +125,22 @@ namespace Akka.Persistence
             return Equals(UnconfirmedDeliveries, other.UnconfirmedDeliveries);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as UnconfirmedWarning);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("UnconfirmedWarning<unconfirmedDeliveries: {0}>", UnconfirmedDeliveries.Length);
+            return $"UnconfirmedWarning<unconfirmedDeliveries: {UnconfirmedDeliveries.Length}>";
         }
     }
 
@@ -203,11 +178,7 @@ namespace Akka.Persistence
             Message = message;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(UnconfirmedDelivery other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -218,20 +189,13 @@ namespace Akka.Persistence
                    && Equals(Message, other.Message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as UnconfirmedDelivery);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -243,14 +207,10 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("UnconfirmedDelivery<deliveryId: {0}, dest: {1}, message: {2}>", DeliveryId,
-                Destination, Message);
+            return $"UnconfirmedDelivery<deliveryId: {DeliveryId}, dest: {Destination}, message: {Message}>";
         }
     }
 
@@ -340,10 +300,15 @@ namespace Akka.Persistence
             }
 
             /// <summary>
-            /// Determines whether the specified delivery, is equal to this instance.
+            /// TBD
             /// </summary>
-            /// <param name="other">The delivery to compare.</param>
-            /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
+            /// <returns>TBD</returns>
+            public Delivery IncrementedCopy()
+            {
+                return new Delivery(Destination, Message, Timestamp, Attempt + 1);
+            }
+
+            /// <inheritdoc/>
             public bool Equals(Delivery other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -355,33 +320,13 @@ namespace Akka.Persistence
                        && Equals(Message, other.Message);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
-            public Delivery IncrementedCopy()
-            {
-                return new Delivery(Destination, Message, Timestamp, Attempt + 1);
-            }
-
-            /// <summary>
-            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-            /// </summary>
-            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 return Equals(obj as Delivery);
             }
 
-            /// <summary>
-            /// Returns a hash code for this instance.
-            /// </summary>
-            /// <returns>
-            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-            /// </returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -394,12 +339,7 @@ namespace Akka.Persistence
                 }
             }
 
-            /// <summary>
-            /// Returns a <see cref="System.String" /> that represents this instance.
-            /// </summary>
-            /// <returns>
-            /// A <see cref="System.String" /> that represents this instance.
-            /// </returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
                 return $"Delivery<dest: {Destination}, attempt: {Attempt}, timestamp: {Timestamp}, message: {Message}";
@@ -413,7 +353,7 @@ namespace Akka.Persistence
         public sealed class RedeliveryTick: INotInfluenceReceiveTimeout
         {
             /// <summary>
-            /// TBD
+            /// The singleton instance of the redelivery tick
             /// </summary>
             public static readonly RedeliveryTick Instance = new RedeliveryTick();
 
@@ -421,13 +361,7 @@ namespace Akka.Persistence
             {
             }
 
-            /// <summary>
-            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-            /// </summary>
-            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 return obj is RedeliveryTick;
@@ -535,14 +469,15 @@ namespace Akka.Persistence
         /// <param name="destination">TBD</param>
         /// <param name="deliveryMessageMapper">TBD</param>
         /// <param name="isRecovering">TBD</param>
-        /// <exception cref="MaxUnconfirmedMessagesExceededException">TBD</exception>
+        /// <exception cref="MaxUnconfirmedMessagesExceededException">
+        /// This exception is thrown when the actor exceeds the <see cref="MaxUnconfirmedMessages"/> count.
+        /// </exception>
         public void Deliver(ActorPath destination, Func<long, object> deliveryMessageMapper, bool isRecovering)
         {
             if (_unconfirmed.Count >= MaxUnconfirmedMessages)
             {
                 throw new MaxUnconfirmedMessagesExceededException(
-                    string.Format("{0} has too many unconfirmed messages. Maximum allowed is {1}", _context.Self,
-                        MaxUnconfirmedMessages));
+                    $"{_context.Self} has too many unconfirmed messages. Maximum allowed is {MaxUnconfirmedMessages}");
             }
 
             long deliveryId = NextDeliverySequenceNr();

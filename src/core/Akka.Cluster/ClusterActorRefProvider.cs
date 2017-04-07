@@ -122,22 +122,27 @@ namespace Akka.Cluster
     internal class ClusterDeployer : RemoteDeployer
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterDeployer"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings used to configure the deployer.</param>
         public ClusterDeployer(Settings settings)
             : base(settings)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor deployment to the supplied path, <paramref name="key" />, using the supplied configuration, <paramref name="config" />.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="key">The path used to deploy the actor.</param>
+        /// <param name="config">The configuration used to configure the deployed actor.</param>
+        /// <returns>A configured actor deployment to the given path.</returns>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the deployment has a scope defined in the configuration
+        /// or the router is configured as a <see cref="RemoteRouterConfig"/>.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the router is not configured as either a <see cref="Pool"/> or a <see cref="Group"/>.
+        /// </exception>
         public override Deploy ParseConfig(string key, Config config)
         {
             Config config2 = config;
@@ -193,4 +198,3 @@ namespace Akka.Cluster
         }
     }
 }
-
