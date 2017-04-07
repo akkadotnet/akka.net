@@ -1132,7 +1132,6 @@ namespace Akka.Persistence.Serialization
     {
         public MessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override bool IncludeManifest { get; }
-        public Akka.Serialization.Information TransportInformation { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
@@ -1153,7 +1152,6 @@ namespace Akka.Persistence.Serialization
     {
         public SnapshotSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override bool IncludeManifest { get; }
-        public Akka.Serialization.Information TransportInformation { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }

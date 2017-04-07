@@ -50,8 +50,8 @@ namespace Akka.Cluster.Tools.Client
     }
     public sealed class ClusterClients
     {
-        public ClusterClients(System.Collections.Immutable.ImmutableHashSet<Akka.Actor.IActorRef> clusterClientsList) { }
-        public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.IActorRef> ClusterClientsList { get; }
+        public ClusterClients(System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> clusterClientsList) { }
+        public System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> ClusterClientsList { get; }
     }
     public sealed class ClusterClientSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
@@ -69,8 +69,6 @@ namespace Akka.Cluster.Tools.Client
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithEstablishingGetContactsInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithHeartbeatInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts) { }
-        [System.ObsoleteAttribute("Use WithInitialContacts(IImmutableSet<ActorPath> initialContacts) instead")]
-        public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Generic.IEnumerable<Akka.Actor.ActorPath> initialContacts) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithReconnectTimeout(System.Nullable<System.TimeSpan> reconnectTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithRefreshContactsInterval(System.TimeSpan value) { }
     }
@@ -121,8 +119,8 @@ namespace Akka.Cluster.Tools.Client
     }
     public sealed class ContactPoints
     {
-        public ContactPoints(System.Collections.Immutable.ImmutableHashSet<Akka.Actor.ActorPath> contactPoints) { }
-        public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.ActorPath> ContactPointsList { get; }
+        public ContactPoints(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> contactPoints) { }
+        public System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> ContactPointsList { get; }
     }
     public sealed class GetClusterClients
     {
@@ -165,8 +163,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 {
     public sealed class CurrentTopics : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.CurrentTopics>
     {
-        public CurrentTopics(string[] topics) { }
-        public string[] Topics { get; }
+        public CurrentTopics(System.Collections.Immutable.IImmutableSet<string> topics) { }
+        public System.Collections.Immutable.IImmutableSet<string> Topics { get; }
         public bool Equals(Akka.Cluster.Tools.PublishSubscribe.CurrentTopics other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }

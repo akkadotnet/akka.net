@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using System.Collections.Immutable;
 
 namespace Akka.Cluster.Tools.Tests.ClusterClient
 {
@@ -55,7 +56,7 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
         public void ClusterClientSettings_must_throw_exception_on_empty_initial_contacts()
         {
             var clusterClientSettings = ClusterClientSettings.Create(Sys);
-            var exception = Assert.Throws<ArgumentException>(() => clusterClientSettings.WithInitialContacts(Enumerable.Empty<ActorPath>()));
+            var exception = Assert.Throws<ArgumentException>(() => clusterClientSettings.WithInitialContacts(ImmutableHashSet<ActorPath>.Empty));
             exception.Message.Should().Be("InitialContacts must be defined");
         }
 

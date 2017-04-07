@@ -640,7 +640,7 @@ namespace Akka.Cluster.Tools.Client
         /// TBD
         /// </summary>
         /// <param name="contactPoints">TBD</param>
-        public ContactPoints(ImmutableHashSet<ActorPath> contactPoints)
+        public ContactPoints(IImmutableSet<ActorPath> contactPoints)
         {
             ContactPointsList = contactPoints;
         }
@@ -648,6 +648,6 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public ImmutableHashSet<ActorPath> ContactPointsList { get; }
+        public IImmutableSet<ActorPath> ContactPointsList { get; }
     }
 }
