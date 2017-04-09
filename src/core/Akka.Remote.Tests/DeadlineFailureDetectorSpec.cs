@@ -97,6 +97,16 @@ namespace Akka.Remote.Tests
             fd.IsAvailable.Should().BeFalse();
         }
 
+        [Fact]
+        public void DeadlineFailureDetector_must_work_with_MonotonicClock()
+        {
+            var fd = CreateFailureDetector(4.Seconds());
+
+            fd.IsAvailable.Should().BeTrue();
+            fd.HeartBeat();
+            fd.IsAvailable.Should().BeTrue();
+        }
+
         private DeadlineFailureDetector CreateFailureDetector(TimeSpan acceptableLostDuration, Clock clock = null)
         {
             return new DeadlineFailureDetector(acceptableLostDuration, 1.Seconds(), clock);
