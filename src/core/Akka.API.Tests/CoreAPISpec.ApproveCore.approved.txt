@@ -1328,7 +1328,7 @@ namespace Akka.Actor
     public class static PipeToSupport
     {
         public static System.Threading.Tasks.Task PipeTo<T>(this System.Threading.Tasks.Task<T> taskToPipe, Akka.Actor.ICanTell recipient, Akka.Actor.IActorRef sender = null, System.Func<T, object> success = null, System.Func<System.Exception, object> failure = null) { }
-        public static System.Threading.Tasks.Task PipeTo(this System.Threading.Tasks.Task taskToPipe, Akka.Actor.ICanTell recipient, Akka.Actor.IActorRef sender = null) { }
+        public static System.Threading.Tasks.Task PipeTo(this System.Threading.Tasks.Task taskToPipe, Akka.Actor.ICanTell recipient, Akka.Actor.IActorRef sender = null, System.Func<object> success = null, System.Func<System.Exception, object> failure = null) { }
     }
     public sealed class PoisonPill : Akka.Actor.IAutoReceivedMessage, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression
     {
