@@ -894,4 +894,66 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         public override string ToString() => "TaskSource";
     }
-}
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Discards all received elements.
+    /// </summary>
+    public sealed class IgnoreSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task>
+    {
+        #region Internal classes
+
+        private sealed class Logic : InGraphStageLogic
+        {
+            private readonly IgnoreSink<T> _stage;
+            private readonly TaskCompletionSource<int> _completion;
+
+            public Logic(IgnoreSink<T> stage, TaskCompletionSource<int> completion) : base(stage.Shape)
+            {
+                _stage = stage;
+                _completion = completion;
+
+                SetHandler(stage.Inlet, this);
+            }
+
+            public override void PreStart() => Pull(_stage.Inlet);
+
+            public override void OnPush() => Pull(_stage.Inlet);
+
+            public override void OnUpstreamFinish()
+            {
+                base.OnUpstreamFinish();
+                _completion.TrySetResult(0);
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                base.OnUpstreamFailure(e);
+                _completion.TrySetException(e);
+            }
+        }
+
+        #endregion
+
+        public IgnoreSink()
+        {
+            Shape = new SinkShape<T>(Inlet);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.IgnoreSink;
+
+        public Inlet<T> Inlet { get; } = new Inlet<T>("Ignore.in");
+
+        public override SinkShape<T> Shape { get; }
+
+        public override ILogicAndMaterializedValue<Task> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var completion = new TaskCompletionSource<int>();
+            var logic = new Logic(this, completion);
+            return new LogicAndMaterializedValue<Task>(logic, completion.Task);
+        }
+
+        public override string ToString() => "IgnoreSink";
+    }
+};
