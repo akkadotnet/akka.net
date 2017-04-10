@@ -14,7 +14,7 @@ namespace Akka.Cluster.Tools.Singleton
     /// <summary>
     /// TBD
     /// </summary>
-    public sealed class ClusterSingletonProxySettings
+    public sealed class ClusterSingletonProxySettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD

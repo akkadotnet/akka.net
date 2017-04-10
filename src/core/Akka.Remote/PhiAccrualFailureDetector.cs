@@ -76,8 +76,8 @@ namespace Akka.Remote
         /// Expecting config properties named 'threshold', 'max-sample-size',
         /// 'min-std-deviation', 'acceptable-heartbeat-pause', and 'heartbeat-interval'.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="ev">TBD</param>
+        /// <param name="config">The HOCON configuration for the failure detector.</param>
+        /// <param name="ev">The <see cref="EventStream"/> for this <see cref="ActorSystem"/>.</param>
         public PhiAccrualFailureDetector(Config config, EventStream ev)
             : this(DefaultClock)
         {
@@ -222,11 +222,14 @@ namespace Akka.Remote
                 return 0.0d; //treat unmanaged connections, e.g. with zero heartbeats, as healthy connections
             else
             {
-                var timeDiff = timestamp - oldTimestamp.Value;
-                var history = oldState.History;
-                var mean = history.Mean;
-                var stdDeviation = EnsureValidStdDeviation(history.StdDeviation);
-                return Phi(timeDiff, mean + AcceptableHeartbeatPauseMillis, stdDeviation);
+                unchecked // in the extremely rare event of a clock roll-over
+                {
+                    var timeDiff = timestamp - oldTimestamp.Value;
+                    var history = oldState.History;
+                    var mean = history.Mean;
+                    var stdDeviation = EnsureValidStdDeviation(history.StdDeviation);
+                    return Phi(timeDiff, mean + AcceptableHeartbeatPauseMillis, stdDeviation);
+                }
             }
         }
 
@@ -340,11 +343,11 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Increments the <see cref="HeartbeatHistory"/>.
         /// </summary>
-        /// <param name="history">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="history">The current history.</param>
+        /// <param name="interval">The new interval which will be added.</param>
+        /// <returns>A new heartbeat history instance with the added interval.</returns>
         public static HeartbeatHistory operator +(HeartbeatHistory history, long interval)
         {
             if (history._intervals.Count < history._maxSampleSize)

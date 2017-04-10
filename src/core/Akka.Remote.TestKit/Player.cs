@@ -561,13 +561,13 @@ namespace Akka.Remote.TestKit
                 return null;
             });
 
-            OnTermination(@event =>
+            OnTermination(e =>
             {
-                _log.Info("Terminating connection to multi-node test controller...");
-                if (@event.StateData.Channel != null)
+                _log.Info("Terminating connection to multi-node test controller due to [{0}]", e.Reason);
+                if (e.StateData.Channel != null)
                 {
                     var disconnectTimeout = TimeSpan.FromSeconds(2); //todo: make into setting loaded from HOCON
-                    if (!@event.StateData.Channel.CloseAsync().Wait(disconnectTimeout))
+                    if (!e.StateData.Channel.CloseAsync().Wait(disconnectTimeout))
                     {
                         _log.Warning("Failed to disconnect from conductor within {0}", disconnectTimeout);
                     }

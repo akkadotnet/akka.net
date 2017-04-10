@@ -26,3 +26,4 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("f22db348-9ab3-4c6a-b1e8-9b835308d367")]
 [assembly: InternalsVisibleTo("Akka.DistributedData.Tests")]
+[assembly: InternalsVisibleTo("Akka.DistributedData.Tests.MultiNode")]

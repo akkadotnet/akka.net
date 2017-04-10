@@ -28,6 +28,7 @@ namespace Akka.Tests.IO
                     akka.io.udp.direct-buffer-pool-limit = 100
                     akka.io.udp.direct-buffer-size = 1024
                     akka.loglevel = INFO
+                    akka.actor.serialize-messages = off
                     akka.actor.serialize-creators = on")
         {
             _addresses = TestUtils.TemporaryServerAddresses(6, udp: true).ToArray();
