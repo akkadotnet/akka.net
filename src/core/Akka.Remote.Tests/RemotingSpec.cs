@@ -55,6 +55,7 @@ namespace Akka.Remote.Tests
 
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
+                actor.serialize-messages = off
 
                 retry-gate-closed-for = 1 s
                 log-remote-lifecycle-events = on

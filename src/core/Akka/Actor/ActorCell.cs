@@ -395,31 +395,11 @@ namespace Akka.Actor
 
             try
             {
-                if (_systemImpl.Settings.SerializeAllMessages)
-                {
-                    DeadLetter deadLetter;
-                    var unwrapped = (deadLetter = message.Message as DeadLetter) != null ? deadLetter.Message : message.Message;
-                    if (!(unwrapped is INoSerializationVerificationNeeded))
-                    {
-                        Serializer serializer = _systemImpl.Serialization.FindSerializerFor(unwrapped);
-                        byte[] serialized = serializer.ToBinary(unwrapped);
+                var messageToDispatch = _systemImpl.Settings.SerializeAllMessages
+                    ? SerializeAndDeserialize(message)
+                    : message;
 
-                        var manifestSerializer = serializer as SerializerWithStringManifest;
-                        if (manifestSerializer != null)
-                        {
-                            var manifest = manifestSerializer.Manifest(unwrapped);
-                            var deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, manifest);
-                            message = new Envelope(deserialized, message.Sender);
-                        }
-                        else
-                        {
-                            var deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, unwrapped.GetType().TypeQualifiedName());
-                            message = new Envelope(deserialized, message.Sender);
-                        }
-                    }
-                }
-
-                Dispatcher.Dispatch(this, message);
+                Dispatcher.Dispatch(this, messageToDispatch);
             }
             catch (Exception e)
             {
@@ -536,6 +516,35 @@ namespace Akka.Actor
         {
             var current = Current;
             return current != null ? current.Sender : ActorRefs.NoSender;
+        }
+
+        private Envelope SerializeAndDeserialize(Envelope envelope)
+        {
+            DeadLetter deadLetter;
+            var unwrapped = (deadLetter = envelope.Message as DeadLetter) != null ? deadLetter.Message : envelope.Message;
+
+            if (!(unwrapped is INoSerializationVerificationNeeded))
+            {
+                var deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+                return new Envelope(deserializedMsg, envelope.Sender);
+            }
+
+            return envelope;
+        }
+
+        private object SerializeAndDeserializePayload(object obj)
+        {
+            Serializer serializer = _systemImpl.Serialization.FindSerializerFor(obj);
+            byte[] bytes = serializer.ToBinary(obj);
+
+            var manifestSerializer = serializer as SerializerWithStringManifest;
+            if (manifestSerializer != null)
+            {
+                var manifest = manifestSerializer.Manifest(obj);
+                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
+            }
+
+            return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, obj.GetType().TypeQualifiedName());
         }
     }
 }

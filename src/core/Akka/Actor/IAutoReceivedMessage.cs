@@ -12,7 +12,7 @@ namespace Akka.Actor
     /// <summary>
     /// Marker trait to show which Messages are automatically handled by Akka.NET
     /// </summary>
-    public interface IAutoReceivedMessage : INoSerializationVerificationNeeded
+    public interface IAutoReceivedMessage
     {
     }
 
@@ -21,7 +21,7 @@ namespace Akka.Actor
     /// Terminated message can't be forwarded to another actor, since that actor might not be watching the subject.
     /// Instead, if you need to forward Terminated to another actor you should send the information in your own message.
     /// </summary>
-    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
+    public sealed class Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Terminated" /> class.

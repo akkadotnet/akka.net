@@ -51,7 +51,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public class FailedRegisterIncoming
+        public class FailedRegisterIncoming : INoSerializationVerificationNeeded
         {
             /// <summary>
             /// TBD
