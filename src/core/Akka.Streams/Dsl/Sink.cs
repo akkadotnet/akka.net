@@ -270,8 +270,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task> Ignore<TIn>()
-            => new Sink<TIn, Task>(new SinkholeSink<TIn>(Shape<TIn>("BlackholeSink"), DefaultAttributes.IgnoreSink));
+        public static Sink<TIn, Task> Ignore<TIn>() => FromGraph(new IgnoreSink<TIn>());
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will invoke the given <paramref name="action"/> for each received element. 
