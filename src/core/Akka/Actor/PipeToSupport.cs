@@ -35,8 +35,8 @@ namespace Akka.Actor
             {
                 if (tresult.IsCanceled || tresult.IsFaulted)
                     recipient.Tell(failure != null
-                        ? failure((Exception)tresult.Exception)
-                        : new Status.Failure((Exception)tresult.Exception), sender);
+                        ? failure(tresult.Exception)
+                        : new Status.Failure(tresult.Exception), sender);
                 else if (tresult.IsCompleted)
                     recipient.Tell(success != null
                         ? success(tresult.Result)
@@ -51,14 +51,20 @@ namespace Akka.Actor
         /// <param name="taskToPipe">TBD</param>
         /// <param name="recipient">TBD</param>
         /// <param name="sender">TBD</param>
+        /// <param name="success">TBD</param>
+        /// <param name="failure">TBD</param>
         /// <returns>TBD</returns>
-        public static Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null)
+        public static Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null, Func<object> success = null, Func<Exception, object> failure = null)
         {
             sender = sender ?? ActorRefs.NoSender;
             return taskToPipe.ContinueWith(tresult =>
             {
                 if (tresult.IsCanceled || tresult.IsFaulted)
-                    recipient.Tell(new Status.Failure(tresult.Exception), sender);
+                    recipient.Tell(failure != null
+                        ? failure(tresult.Exception)
+                        : new Status.Failure(tresult.Exception), sender);
+                else if (tresult.IsCompleted && success != null)
+                    recipient.Tell(success(), sender);
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
     }
