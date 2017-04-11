@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -69,15 +70,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
             protected override int InitialParticipantsValueFactory => 3;
 
-            private ImmutableHashSet<ActorPath> InitialContacts
+            private IEnumerable<ActorPath> InitialContacts
             {
                 get
                 {
                     //return new List<ActorPath>().ToImmutableHashSet();
-                    return ImmutableHashSet
-                        .Create(_config.First, _config.Second)
-                        .Select(r => Node(r) / "system" / "receptionist")
-                        .ToImmutableHashSet();
+                    return new List<RoleName> { _config.First, _config.Second }
+                        .Select(r => Node(r)/"system"/"receptionist");
                 }
             }
 

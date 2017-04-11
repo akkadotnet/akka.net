@@ -269,11 +269,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
         private ImmutableHashSet<RoleName> _remainingServerRoleNames;
 
-        private ImmutableHashSet<ActorPath> InitialContacts
+        private IEnumerable<ActorPath> InitialContacts
         {
             get
             {
-                return _remainingServerRoleNames.Remove(_config.First).Remove(_config.Fourth).Select(r => Node(r) / "system" / "receptionist").ToImmutableHashSet();
+                return _remainingServerRoleNames.Remove(_config.First).Remove(_config.Fourth).Select(r => Node(r) / "system" / "receptionist");
             }
         }
 
