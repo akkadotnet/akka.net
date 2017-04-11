@@ -94,12 +94,18 @@ namespace Akka.Actor
             => new TreeMachine.SpawnWF(child);
 
         protected TreeMachine.TimeoutWF Timeout(TimeSpan delay, TreeMachine.IWorkflow child, TreeMachine.IWorkflow onTimeout = null)
+            => new TreeMachine.TimeoutWF(_ => delay, child, onTimeout ?? Fail());
+
+        protected TreeMachine.TimeoutWF Timeout(Func<TreeMachine.IContext, TimeSpan> delay, TreeMachine.IWorkflow child, TreeMachine.IWorkflow onTimeout = null)
             => new TreeMachine.TimeoutWF(delay, child, onTimeout ?? Fail());
 
         protected TreeMachine.NeverWF Never()
             => new TreeMachine.NeverWF();
 
         protected TreeMachine.IWorkflow Delay(TimeSpan delay, TreeMachine.IWorkflow after = null)
+            => Delay(_ => delay, after ?? Ok());
+
+        protected TreeMachine.IWorkflow Delay(Func<TreeMachine.IContext, TimeSpan> delay, TreeMachine.IWorkflow after = null)
             => new TreeMachine.TimeoutWF(delay, Never(), after ?? Ok());
 
         protected TreeMachine.OkWF Ok()
@@ -816,7 +822,7 @@ namespace Akka.Actor
             public class TimeoutWF : WFBase, ITransmit
             {
                 private IWorkflow _child;
-                private TimeSpan _delay;
+                private Func<IContext, TimeSpan> _delay;
                 private IWorkflow _onTimeout;
                 private IDisposable _timeoutToken;
                 private Guid _timeoutId;
@@ -824,7 +830,7 @@ namespace Akka.Actor
                 private ITransmit _childScope;
                 private ITransmit _onTimeoutScope;
 
-                public TimeoutWF(TimeSpan delay, IWorkflow child, IWorkflow onTimeout)
+                public TimeoutWF(Func<IContext, TimeSpan> delay, IWorkflow child, IWorkflow onTimeout)
                 {
                     _delay = delay;
                     _child = child;
@@ -890,7 +896,7 @@ namespace Akka.Actor
                     if (_timeoutToken == null)
                     {
                         _timeoutId = Guid.NewGuid();
-                        _timeoutToken = ((WFContext)context).Host.ScheduleMessage(_delay, new WFTimeout { Id = _timeoutId });
+                        _timeoutToken = ((WFContext)context).Host.ScheduleMessage(_delay(context), new WFTimeout { Id = _timeoutId });
                         Status = WorkflowStatus.Running;
                     }
 
