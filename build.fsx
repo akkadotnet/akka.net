@@ -226,6 +226,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/cluster/Akka.Cluster.Tools"
       "contrib/cluster/Akka.Cluster.Sharding"
       "contrib/cluster/Akka.DistributedData"
+      "contrib/cluster/Akka.DistributedData.LightningDB"
       ]
     |> List.iter copyOutput
 
@@ -401,7 +402,7 @@ module Nuget =
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | "Akka.Remote.TestKit" -> ["Akka.Remote", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion;]
         | "Akka.Streams" -> ["Akka", release.NugetVersion]
-        | "Akka.Streams.TestKit" -> ["Akka.Streams", preReleaseVersion; "Akka.TestKit", release.NugetVersion]
+        | "Akka.Streams.TestKit" -> ["Akka.Streams", release.NugetVersion; "Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
     // used to add -pre suffix to pre-release packages
@@ -409,9 +410,8 @@ module Nuget =
       match project with
       | "Akka.Serialization.Wire" -> preReleaseVersion
       | "Akka.Serialization.Hyperion" -> preReleaseVersion
-      | cluster when (cluster.StartsWith("Akka.Cluster.") && not (cluster.EndsWith("TestKit"))) -> preReleaseVersion
+      | "Akka.Cluster.Sharding" -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
-      | streams when streams.StartsWith("Akka.Streams") -> preReleaseVersion
       | "Akka.DistributedData" -> preReleaseVersion
       | _ -> release.NugetVersion
 
