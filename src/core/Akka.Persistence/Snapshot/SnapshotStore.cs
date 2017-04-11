@@ -61,8 +61,8 @@ namespace Akka.Persistence.Snapshot
 
                 _breaker.WithCircuitBreaker(() => LoadAsync(msg.PersistenceId, msg.Criteria.Limit(msg.ToSequenceNr)))
                     .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
-                        ? new LoadSnapshotResult(t.Result, msg.ToSequenceNr)
-                        : new LoadSnapshotResult(null, msg.ToSequenceNr), _continuationOptions)
+                        ? new LoadSnapshotResult(t.Result, msg.ToSequenceNr) as ISnapshotResponse
+                        : new LoadSnapshotFailed(t.Exception) as ISnapshotResponse, _continuationOptions)
                     .PipeTo(Sender);
             }
             else if (message is SaveSnapshot)

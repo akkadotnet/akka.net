@@ -794,6 +794,39 @@ namespace Akka.Persistence
     }
 
     /// <summary>
+    /// Reply message to a failed <see cref="LoadSnapshot"/> request.
+    /// </summary>
+    public sealed class LoadSnapshotFailed : ISnapshotResponse
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LoadSnapshotFailed"/> class.
+        /// </summary>
+        /// <param name="cause">Failure cause.</param>
+        public LoadSnapshotFailed(Exception cause)
+        {
+            Cause = cause;
+        }
+
+        /// <summary>
+        /// Failure cause.
+        /// </summary>
+        public Exception Cause { get; }
+
+        private bool Equals(LoadSnapshotFailed other) => Equals(Cause, other.Cause);
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is LoadSnapshotFailed && Equals((LoadSnapshotFailed)obj);
+        }
+
+        public override int GetHashCode() => Cause?.GetHashCode() ?? 0;
+
+        public override string ToString() => $"LoadSnapshotFailed<Cause: {Cause}>";
+    }
+
+    /// <summary>
     /// Instructs a snapshot store to save a snapshot.
     /// </summary>
     [Serializable]

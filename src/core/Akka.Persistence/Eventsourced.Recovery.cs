@@ -80,6 +80,19 @@ namespace Akka.Persistence
                     ChangeState(Recovering(recoveryBehavior, timeout));
                     Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
                 }
+                else if (message is LoadSnapshotFailed)
+                {
+                    var res = (LoadSnapshotFailed)message;
+                    timeoutCancelable.Cancel();
+                    try
+                    {
+                        OnRecoveryFailure(res.Cause);
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
+                }
                 else if (message is RecoveryTick)
                 {
                     try

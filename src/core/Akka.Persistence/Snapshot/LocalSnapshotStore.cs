@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -63,8 +64,8 @@ namespace Akka.Persistence.Snapshot
             // This may help in situations where saving of a snapshot could not be completed because of a VM crash.
             // Hence, an attempt to load that snapshot will fail but loading an older snapshot may succeed.
             //
-            var metadata = GetSnapshotMetadata(persistenceId, criteria).Reverse().Take(_maxLoadAttempts);
-            return RunWithStreamDispatcher(() => Load(metadata.GetEnumerator()));
+            var metadata = GetSnapshotMetadata(persistenceId, criteria).Reverse().Take(_maxLoadAttempts).Reverse().ToImmutableArray();
+            return RunWithStreamDispatcher(() => Load(metadata));
         }
 
         /// <summary>
@@ -155,28 +156,38 @@ namespace Akka.Persistence.Snapshot
                 .Where(f => SnapshotSequenceNrFilenameFilter(f, metadata));
         }
 
-        private SelectedSnapshot Load(IEnumerator<SnapshotMetadata> metadata)
+        private SelectedSnapshot Load(ImmutableArray<SnapshotMetadata> metadata)
         {
-            if (metadata.MoveNext())
+            var last = metadata.LastOrDefault();
+            if (last == null)
             {
-                var md = metadata.Current;
+                return null;
+            }
+            else
+            {
                 try
                 {
-                    return WithInputStream(md, stream =>
+                    return WithInputStream(last, stream =>
                     {
                         var snapshot = Deserialize(stream);
 
-                        return new SelectedSnapshot(md, snapshot.Data);
+                        return new SelectedSnapshot(last, snapshot.Data);
                     });
                 }
                 catch (Exception ex)
                 {
-                    _log.Error(ex, "Error loading snapshot [{0}]", md);
-                    return Load(metadata);
+                    var remaining = metadata.RemoveAt(metadata.Length - 1);
+                    _log.Error(ex, $"Error loading snapshot [{last}], remaining attempts: [{remaining.Length}]");
+                    if (remaining.IsEmpty)
+                    {
+                        throw;
+                    }
+                    else
+                    {
+                        return Load(remaining);
+                    }
                 }
             }
-
-            return null;
         }
 
         /// <summary>
@@ -255,10 +266,9 @@ namespace Akka.Persistence.Snapshot
         }
 
         // only by PersistenceId and SequenceNr, timestamp is informational - accommodates for older files
-        private FileInfo GetSnapshotFileForWrite(SnapshotMetadata metadata, string extension = "")
+        protected FileInfo GetSnapshotFileForWrite(SnapshotMetadata metadata, string extension = "")
         {
-            var filename = string.Format("snapshot-{0}-{1}-{2}{3}", Uri.EscapeDataString(metadata.PersistenceId),
-                metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
+            var filename = $"snapshot-{Uri.EscapeDataString(metadata.PersistenceId)}-{metadata.SequenceNr}-{metadata.Timestamp.Ticks}{extension}";
             return new FileInfo(Path.Combine(GetSnapshotDir().FullName, filename));
         }
 
