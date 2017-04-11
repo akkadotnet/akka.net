@@ -29,7 +29,7 @@ mono $SCRIPT_PATH/src/.nuget/nuget.exe update -self
 
 mono $SCRIPT_PATH/src/.nuget/nuget.exe install FAKE -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 4.16.1
 
-mono $SCRIPT_PATH/src/.nuget/nuget.exe install xunit.runner.console -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.0.0
+mono $SCRIPT_PATH/src/.nuget/nuget.exe install xunit.runner.console -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.2.0
 mono $SCRIPT_PATH/src/.nuget/nuget.exe install NUnit.Console -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 3.2.1
 
 mono $SCRIPT_PATH/src/.nuget/nuget.exe install NBench.Runner -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 0.3.3
