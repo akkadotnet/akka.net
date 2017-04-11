@@ -51,7 +51,22 @@ You can [read more about how to use `CoordinatedShutdown` here](http://getakka.n
 **Additional Changes**
 In addition to the above changes, there have been a large number of performance improvements, bug fixes, and documentation improvements made to Akka.NET in 1.2. [Read the full list of changes in Akka.NET 1.2 here](https://github.com/akkadotnet/akka.net/milestone/13).
 
-
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 17 | 4840 | 4460 | Alex Valuyskiy |
+| 16 | 4046 | 1144 | Aaron Stannard |
+| 12 | 8591 | 2984 | Sean Gilliam |
+| 6 | 971 | 1300 | Sergey |
+| 5 | 6787 | 2073 | Bartosz Sypytkowski |
+| 4 | 6461 | 8403 | Arjen Smits |
+| 4 | 333 | 125 | ravengerUA |
+| 3 | 71 | 65 | Marc Piechura |
+| 3 | 300 | 24 | Nick Chamberlain |
+| 2 | 79 | 40 | Maxim Salamatko |
+| 2 | 305 | 20 | Ismael Hamed |
+| 1 | 136 | 12 | Sergey Kostrukov |
+| 1 | 1015 | 45 | Lukas Rieger |
+| 1 | 1 | 0 | siudeks |
 
 #### 1.1.3 January 22 2017 ####
 **Maintenance release for Akka.NET v1.1**
