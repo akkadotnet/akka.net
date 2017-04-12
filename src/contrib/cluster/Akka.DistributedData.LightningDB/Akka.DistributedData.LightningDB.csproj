@@ -66,6 +66,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.DistributedData.LightningDB.nuspec" />
     <None Include="packages.config" />
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
