@@ -55,7 +55,7 @@ namespace Akka.Cluster.Tools.Client
     }
     public sealed class ClusterClientSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
-        public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
+        public ClusterClientSettings(System.Collections.Generic.IEnumerable<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
         public System.TimeSpan AcceptableHeartbeatPause { get; }
         public int BufferSize { get; }
         public System.TimeSpan EstablishingGetContactsInterval { get; }
@@ -68,7 +68,7 @@ namespace Akka.Cluster.Tools.Client
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithEstablishingGetContactsInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithHeartbeatInterval(System.TimeSpan value) { }
-        public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Generic.IEnumerable<Akka.Actor.ActorPath> initialContacts) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithReconnectTimeout(System.Nullable<System.TimeSpan> reconnectTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithRefreshContactsInterval(System.TimeSpan value) { }
     }
