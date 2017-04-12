@@ -143,7 +143,7 @@ namespace Akka.Cluster.Tools.Client
         /// <returns>TBD</returns>
         public ClusterClientSettings WithInitialContacts(IEnumerable<ActorPath> initialContacts)
         {
-            if (initialContacts.Any())
+            if (!initialContacts.Any())
             {
                 throw new ArgumentException("InitialContacts must be defined");
             }
