@@ -1,3 +1,73 @@
+#### 1.2.0 April 11 2017 ####
+**Feature Release for Akka.NET**
+Akka.NET 1.2 is a major feature release that introduces the following major changes:
+
+**Akka.Remote now uses [DotNetty](https://github.com/azure/dotnetty) for its transport layer**
+The biggest change for 1.2 is the removal of Helios 2.0 as the default transport and the introduction of DotNetty. The new DotNetty transport is fully backwards compatible with the Helios 1.4 and 2.* transports, so you should be able to upgrade from any Akka.NET 1.* application to 1.2 without any downtime. All of the `helios.tcp` HOCON is also supported by the DotNetty transport, so none of that needs to updated for the DotNetty transport to work out of the box.
+
+In addition, the DotNetty transport supports TLS, which can be enabled via the following HOCON:
+
+```
+akka {
+  loglevel = DEBUG
+  actor {
+    provider = Akka.Remote.RemoteActorRefProvider,Akka.Remote
+  }
+  remote {
+    dot-netty.tcp {
+      port = 0
+      hostname = 127.0.0.1
+      enable-ssl = true
+      log-transport = true
+      ssl {
+        suppress-validation = true
+        certificate {
+          # valid ssl certificate must be installed on both hosts
+          path = "<valid certificate path>" 
+          password = "<certificate password>"
+          # flags is optional: defaults to "default-flag-set" key storage flag
+          # other available storage flags:
+          #   exportable | machine-key-set | persist-key-set | user-key-set | user-protected
+          flags = [ "default-flag-set" ] 
+        }
+      }
+    }
+  }
+}
+```
+
+You can [read more about Akka.Remote's TLS support here](http://getakka.net/docs/remoting/security#akka-remote-with-tls-transport-layer-security-).
+
+See [the complete DotNetty transport HOCON here](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote/Configuration/Remote.conf#L318).
+
+**Akka.Streams and Akka.Cluster.Tools RTMed**
+Akka.Streams and Akka.Cluster.Tools have graduated from beta status to stable modules and their interfaces are now considered to be stable.
+
+**CoordinatedShutdown**
+One of the major improvements in Akka.NET 1.2 is the addition of the new `CoordinatedShutdown` plugin, which is designed to make it easier for nodes that are running Akka.Cluster to automatically exit a cluster gracefully whenever `ActorSystem.Terminate` is called or when the process the node is running in attempts to exit. `CoordinatedShutdown` is fully extensible and can be used to schedule custom shutdown operations as part of `ActorSystem` termination.
+
+You can [read more about how to use `CoordinatedShutdown` here](http://getakka.net/docs/working-with-actors/coordinated-shutdown).
+
+**Additional Changes**
+In addition to the above changes, there have been a large number of performance improvements, bug fixes, and documentation improvements made to Akka.NET in 1.2. [Read the full list of changes in Akka.NET 1.2 here](https://github.com/akkadotnet/akka.net/milestone/13).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 17 | 4840 | 4460 | Alex Valuyskiy |
+| 16 | 4046 | 1144 | Aaron Stannard |
+| 12 | 8591 | 2984 | Sean Gilliam |
+| 6 | 971 | 1300 | Sergey |
+| 5 | 6787 | 2073 | Bartosz Sypytkowski |
+| 4 | 6461 | 8403 | Arjen Smits |
+| 4 | 333 | 125 | ravengerUA |
+| 3 | 71 | 65 | Marc Piechura |
+| 3 | 300 | 24 | Nick Chamberlain |
+| 2 | 79 | 40 | Maxim Salamatko |
+| 2 | 305 | 20 | Ismael Hamed |
+| 1 | 136 | 12 | Sergey Kostrukov |
+| 1 | 1015 | 45 | Lukas Rieger |
+| 1 | 1 | 0 | siudeks |
+
 #### 1.1.3 January 22 2017 ####
 **Maintenance release for Akka.NET v1.1**
 
