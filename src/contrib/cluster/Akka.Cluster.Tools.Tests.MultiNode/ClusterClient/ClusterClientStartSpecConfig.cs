@@ -74,7 +74,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             {
                 get
                 {
-                    //return new List<ActorPath>().ToImmutableHashSet();
                     return new List<RoleName> { _config.First, _config.Second }
                         .Select(r => Node(r)/"system"/"receptionist");
                 }
