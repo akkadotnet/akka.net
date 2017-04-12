@@ -176,12 +176,12 @@ namespace Akka.Actor
 
             public bool ProcessMessage(object message)
             {
-                return _scopes.Select(s => s.ProcessMessage(message)).ToList().Any();
+                return _scopes.Select(s => s.ProcessMessage(message)).ToList().Any(b => b);
             }
 
             public void Run(IWorkflow wf)
             {
-                _scopes.Add(new ScopeWF(wf, null));
+                _scopes.Add(new ScopeWF(wf));
                 Run();
             }
 
@@ -280,7 +280,7 @@ namespace Akka.Actor
                     if (IsCompleted)
                         return;
 
-                    _context = context;
+                    _context = new WFContext(context.GlobalData, context.CurrentMessage, _root, context.Host);
 
                     bool done = false;
                     do
@@ -343,7 +343,7 @@ namespace Akka.Actor
                 public bool ProcessMessage(object message)
                 {
                     var prev = _context;
-                    _context = new WFContext(_context.GlobalData, message, _root, ((WFContext)_context).Host);
+                    _context = new WFContext(_context.GlobalData, message, _root, _context.Host);
 
                     if (IsCompleted)
                         return false;
@@ -896,7 +896,7 @@ namespace Akka.Actor
                     if (_timeoutToken == null)
                     {
                         _timeoutId = Guid.NewGuid();
-                        _timeoutToken = ((WFContext)context).Host.ScheduleMessage(_delay(context), new WFTimeout { Id = _timeoutId });
+                        _timeoutToken = context.Host.ScheduleMessage(_delay(context), new WFTimeout { Id = _timeoutId });
                         Status = WorkflowStatus.Running;
                     }
 
@@ -979,7 +979,7 @@ namespace Akka.Actor
 
                 public bool ProcessMessage(object message)
                 {
-                    return _children.Select(c => c.ProcessMessage(message)).ToList().Any();
+                    return _children.Select(c => c.ProcessMessage(message)).ToList().Any(b => b);
                 }
             }
 
@@ -1090,6 +1090,8 @@ namespace Akka.Actor
                 //object CurrentItem { get; set; }
 
                 IBlackboard ScopeData { get; }
+
+                IMachineHost Host { get; }
             }
 
             public interface IWorkflow
