@@ -21,7 +21,7 @@ using Akka.Remote.Transport;
 using Akka.Util.Internal;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Client
+namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
 {
     public class ClusterClientSpecConfig : MultiNodeConfig
     {
@@ -320,8 +320,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             {
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client1");
-                    c.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client1");
+                    c.Tell(new Client.ClusterClient.Send("/user/testService", "hello", localAffinity: true));
                     ExpectMsg<ClusterClientSpecConfig.Reply>().Msg.Should().Be("hello-ack");
                     Sys.Stop(c);
                 }, _config.Client);
@@ -341,9 +341,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             {
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(
                         ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "ask-client");
-                    var reply = c.Ask<ClusterClientSpecConfig.Reply>(new ClusterClient.Send("/user/testService", "hello-request", localAffinity: true));
+                    var reply = c.Ask<ClusterClientSpecConfig.Reply>(new Client.ClusterClient.Send("/user/testService", "hello-request", localAffinity: true));
                     reply.Wait(Remaining);
                     reply.Result.Msg.Should().Be("hello-request-ack");
                     Sys.Stop(c);
@@ -389,9 +389,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                 //#client
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client");
-                    c.Tell(new ClusterClient.Send("/user/serviceA", "hello", localAffinity: true));
-                    c.Tell(new ClusterClient.SendToAll("/user/serviceB", "hi"));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client");
+                    c.Tell(new Client.ClusterClient.Send("/user/serviceA", "hello", localAffinity: true));
+                    c.Tell(new Client.ClusterClient.SendToAll("/user/serviceB", "hi"));
                 }, _config.Client);
                 //#client
 
@@ -491,8 +491,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client2");
-                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour", localAffinity: true));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client2");
+                    c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour", localAffinity: true));
                     var reply = ExpectMsg<ClusterClientSpecConfig.Reply>();
                     reply.Msg.Should().Be("bonjour-ack");
 
@@ -509,7 +509,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     {
                         AwaitAssert(() =>
                         {
-                            c.Tell(new ClusterClient.Send("/user/service2", "hi again", localAffinity: true));
+                            c.Tell(new Client.ClusterClient.Send("/user/service2", "hi again", localAffinity: true));
                             ExpectMsg<ClusterClientSpecConfig.Reply>(1.Seconds()).Msg.Should().Be("hi again-ack");
                         });
                     });
@@ -552,8 +552,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             {
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client3");
-                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour2", localAffinity: true));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client3");
+                    c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour2", localAffinity: true));
                     var reply = ExpectMsg<ClusterClientSpecConfig.Reply>();
                     reply.Msg.Should().Be("bonjour2-ack");
 
@@ -572,7 +572,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 
                     // network partition between client and server
                     TestConductor.Blackhole(_config.Client, receptionistRoleName, ThrottleTransportAdapter.Direction.Both).Wait();
-                    c.Tell(new ClusterClient.Send("/user/service2", "ping", localAffinity: true));
+                    c.Tell(new Client.ClusterClient.Send("/user/service2", "ping", localAffinity: true));
                     // if we would use remote watch the failure detector would trigger and
                     // connection quarantined
                     ExpectNoMsg(5.Seconds());
@@ -583,7 +583,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     AwaitAssert(() =>
                     {
                         var probe = CreateTestProbe();
-                        c.Tell(new ClusterClient.Send("/user/service2", "bonjour3", localAffinity: true), probe.Ref);
+                        c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour3", localAffinity: true), probe.Ref);
                         var reply2 = probe.ExpectMsg<ClusterClientSpecConfig.Reply>(1.Seconds());
                         reply2.Msg.Should().Be("bonjour3-ack");
                         reply2.Node.Should().Be(expectedAddress);
@@ -603,9 +603,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                 {
                     _remainingServerRoleNames.Count.Should().Be(1);
                     var remainingContacts = _remainingServerRoleNames.Select(r => Node(r) / "system" / "receptionist").ToImmutableHashSet();
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(remainingContacts)), "client4");
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(remainingContacts)), "client4");
 
-                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour4", localAffinity: true));
+                    c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour4", localAffinity: true));
                     var reply = ExpectMsg<ClusterClientSpecConfig.Reply>(10.Seconds());
                     reply.Msg.Should().Be("bonjour4-ack");
                     reply.Node.Should().Be(remainingContacts.First().Address);
@@ -622,7 +622,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                         });
                     });
 
-                    c.Tell(new ClusterClient.Send("/user/service2", "shutdown", localAffinity: true));
+                    c.Tell(new Client.ClusterClient.Send("/user/service2", "shutdown", localAffinity: true));
                     Thread.Sleep(2000); // to ensure that it is sent out before shutting down system
                 }, _config.Client);
 

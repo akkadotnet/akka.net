@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
@@ -16,7 +15,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Client
+namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
 {
     
     public class ClusterClientStartSpecConfig : MultiNodeConfig
@@ -112,12 +111,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     //start the cluster client 
                     RunOn(() =>
                     {
-                        var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithBufferSize(0).WithInitialContacts(InitialContacts)), "client1");
+                        var c = Sys.ActorOf(Tools.Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithBufferSize(0).WithInitialContacts(InitialContacts)), "client1");
                         //check for the debug log message that the cluster client will output in case of an 0 buffersize
                         EventFilter.Debug(start: "Receptionist not available and buffering is disabled, dropping message").ExpectOne(
                             () =>
                             {
-                                c.Tell(new ClusterClient.Send("/user/testService", "hello"));
+                                c.Tell(new Client.ClusterClient.Send("/user/testService", "hello"));
                             });
 
                         //ExpectMsg<string>(3.Seconds()).Should().Be("hello");
