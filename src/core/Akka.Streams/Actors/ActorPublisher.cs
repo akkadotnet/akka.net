@@ -83,7 +83,7 @@ namespace Akka.Streams.Actors
     /// subscriber requests more elements.
     /// </summary>
     [Serializable]
-    public sealed class Request : IActorPublisherMessage
+    public sealed class Request : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -115,7 +115,7 @@ namespace Akka.Streams.Actors
     /// subscriber cancels the subscription.
     /// </summary>
     [Serializable]
-    public sealed class Cancel : IActorPublisherMessage
+    public sealed class Cancel : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -130,7 +130,7 @@ namespace Akka.Streams.Actors
     /// publisher will already be in cancelled state, thus the actor should clean-up and stop itself.
     /// </summary>
     [Serializable]
-    public sealed class SubscriptionTimeoutExceeded : IActorPublisherMessage
+    public sealed class SubscriptionTimeoutExceeded : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD

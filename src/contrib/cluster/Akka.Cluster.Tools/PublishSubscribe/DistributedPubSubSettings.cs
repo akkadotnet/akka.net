@@ -15,7 +15,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// <summary>
     /// TBD
     /// </summary>
-    public class DistributedPubSubSettings
+    public sealed class DistributedPubSubSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Creates cluster publish/subscribe settings from the default configuration `akka.cluster.pub-sub`.
