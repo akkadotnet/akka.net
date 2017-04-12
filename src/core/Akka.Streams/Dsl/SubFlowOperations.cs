@@ -75,7 +75,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="partialFunc">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use RecoverWithRetries instead.")]
+        [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static SubFlow<TOut, TMat, TClosed> RecoverWith<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
@@ -692,7 +692,7 @@ namespace Akka.Streams.Dsl
         /// <param name="start">TBD</param>
         /// <param name="inject">TBD</param>
         /// <param name="end">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Intersperse<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TOut start, TOut inject, TOut end)
         {
@@ -722,7 +722,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="inject">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> Intersperse<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TOut inject)
         {
@@ -1101,7 +1101,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="stageFactory">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use Via(GraphStage) instead.")]
+        [Obsolete("Use Via(GraphStage) instead. [1.1.2]")]
         public static SubFlow<TOut2, TMat, TClosed> Transform<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Transform(flow, stageFactory);

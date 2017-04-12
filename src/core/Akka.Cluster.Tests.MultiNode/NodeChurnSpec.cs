@@ -37,11 +37,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class NodeChurnMultiNode1 : NodeChurnSpec { }
-    public class NodeChurnMultiNode2 : NodeChurnSpec { }
-    public class NodeChurnMultiNode3 : NodeChurnSpec { }
-
-    public abstract class NodeChurnSpec : MultiNodeClusterSpec
+    public class NodeChurnSpec : MultiNodeClusterSpec
     {
         private class LogListener : ReceiveActor
         {
@@ -72,7 +68,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
         }
 
-        protected NodeChurnSpec() : this(new NodeChurnConfig())
+        public NodeChurnSpec() : this(new NodeChurnConfig())
         {
         }
 
@@ -136,7 +132,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     }
                 }
 
-                AwaitRemoved(systems);
+                AwaitRemoved(systems, n);
                 EnterBarrier("members-removed-" + n);
                 foreach (var node in systems)
                 {
@@ -167,16 +163,17 @@ namespace Akka.Cluster.Tests.MultiNode
             });
         }
 
-        private void AwaitRemoved(ImmutableList<ActorSystem> additionaSystems)
+        private void AwaitRemoved(ImmutableList<ActorSystem> additionaSystems, int round)
         {
             AwaitMembersUp(Roles.Count, timeout: 40.Seconds());
-            Within(20.Seconds(), () =>
+            EnterBarrier("removed-" + round);
+            Within(3.Seconds(), () =>
             {
                 AwaitAssert(() =>
                 {
                     additionaSystems.ForEach(s =>
                     {
-                        Cluster.Get(s).IsTerminated.Should().BeTrue();
+                        Cluster.Get(s).IsTerminated.Should().BeTrue($"{Cluster.Get(s).SelfAddress}");
                     });
                 });
             });

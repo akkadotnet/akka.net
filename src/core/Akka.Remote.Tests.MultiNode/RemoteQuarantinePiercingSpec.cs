@@ -44,16 +44,13 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class RemoteQuarantinePiercingMultiNode1 : RemoteQuarantinePiercingSpec { }
-    public class RemoteQuarantinePiercingMultiNode2 : RemoteQuarantinePiercingSpec { }
-
-    public abstract class RemoteQuarantinePiercingSpec : MultiNodeSpec
+    public class RemoteQuarantinePiercingSpec : MultiNodeSpec
     {
         private readonly RemoteQuarantinePiercingSpecConfig _specConfig;
 
         protected override int InitialParticipantsValueFactory { get; } = 2;
 
-        protected RemoteQuarantinePiercingSpec() : this(new RemoteQuarantinePiercingSpecConfig())
+        public RemoteQuarantinePiercingSpec() : this(new RemoteQuarantinePiercingSpecConfig())
         {
         }
 
@@ -124,8 +121,8 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.WhenTerminated.Wait(30.Seconds());
 
                 var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
-                    akka.remote.helios.tcp.hostname = {addr.Host}
-                    akka.remote.helios.tcp.port = {addr.Port}
+                    akka.remote.dot-netty.tcp.hostname = {addr.Host}
+                    akka.remote.dot-netty.tcp.port = {addr.Port}
                 ").WithFallback(Sys.Settings.Config));
 
                 freshSystem.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");

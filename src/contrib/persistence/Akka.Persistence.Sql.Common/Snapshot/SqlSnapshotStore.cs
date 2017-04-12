@@ -39,6 +39,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
 
         private readonly SnapshotStoreSettings _settings;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="config">TBD</param>
         protected SqlSnapshotStore(Config config)
         {
             _settings = new SnapshotStoreSettings(config);
@@ -46,8 +50,14 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         private ILoggingAdapter _log;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log ?? Context.GetLogger());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IStash Stash { get; set; }
 
         /// <summary>
@@ -58,16 +68,22 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// Returns a new instance of database connection.
         /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract DbConnection CreateDbConnection(string connectionString);
 
         /// <summary>
         /// Returns a new instance of database connection.
         /// </summary>
+        /// <returns>TBD</returns>
         public DbConnection CreateDbConnection()
         {
             return CreateDbConnection(GetConnectionString());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             base.PreStart();
@@ -78,6 +94,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
@@ -86,13 +105,20 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             _pendingRequestsCancellation.Cancel();
         }
 
-        private async Task<Initialized> Initialize()
+        private async Task<object> Initialize()
         {
-            using (var connection = CreateDbConnection())
+            try
             {
-                await connection.OpenAsync(_pendingRequestsCancellation.Token);
-                await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
-                return Initialized.Instance;
+                using (var connection = CreateDbConnection())
+                {
+                    await connection.OpenAsync(_pendingRequestsCancellation.Token);
+                    await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
+                    return Initialized.Instance;
+                }
+            }
+            catch (Exception e)
+            {
+                return new Failure {Exception = e};
             }
         }
 
@@ -104,12 +130,16 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             })
             .With<Failure>(failure =>
             {
-                _log.Error(failure.Exception, "Error during snapshot store intiialization");
+                Log.Error(failure.Exception, "Error during snapshot store initialization");
                 Context.Stop(Self);
             })
             .Default(_ => Stash.Stash())
             .WasHandled;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected virtual string GetConnectionString()
         {
             var connectionString = _settings.ConnectionString;
@@ -121,6 +151,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// Asynchronously loads snapshot with the highest sequence number for a persistent actor/view matching specified criteria.
         /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             using (var connection = CreateDbConnection())
@@ -133,6 +166,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// Asynchronously stores a snapshot with metadata as record in SQL table.
         /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <param name="snapshot">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
             using (var connection = CreateDbConnection())
@@ -142,6 +178,11 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="metadata">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             using (var connection = CreateDbConnection())
@@ -152,6 +193,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="criteria">TBD</param>
+        /// <returns>TBD</returns>
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             using (var connection = CreateDbConnection())

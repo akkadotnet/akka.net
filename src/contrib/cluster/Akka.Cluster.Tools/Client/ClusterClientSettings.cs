@@ -15,25 +15,33 @@ using Akka.Remote;
 
 namespace Akka.Cluster.Tools.Client
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public sealed class ClusterClientSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Create settings from the default configuration 'akka.cluster.client'.
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static ClusterClientSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
 
             var config = system.Settings.Config.GetConfig("akka.cluster.client");
             if (config == null)
-                throw new ArgumentException(string.Format("Actor system [{0}] doesn't have `akka.cluster.client` config set up", system.Name));
+                throw new ArgumentException($"Actor system [{system.Name}] doesn't have `akka.cluster.client` config set up");
 
             return Create(config);
         }
 
         /// <summary>
-        /// Java API: Create settings from a configuration with the same layout as the default configuration 'akka.cluster.client'.
+        /// Create settings from a configuration with the same layout as the default configuration 'akka.cluster.client'.
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterClientSettings Create(Config config)
         {
             var initialContacts = config.GetStringList("initial-contacts").Select(ActorPath.Parse).ToImmutableSortedSet();
@@ -54,36 +62,36 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Actor paths of the <see cref="ClusterReceptionist"/> actors on the servers (cluster nodes) that the client will try to contact initially.
         /// </summary>
-        public readonly IImmutableSet<ActorPath> InitialContacts;
+        public IImmutableSet<ActorPath> InitialContacts { get; }
 
         /// <summary>
         /// Interval at which the client retries to establish contact with one of ClusterReceptionist on the servers (cluster nodes)
         /// </summary>
-        public readonly TimeSpan EstablishingGetContactsInterval;
+        public TimeSpan EstablishingGetContactsInterval { get; }
 
         /// <summary>
         /// Interval at which the client will ask the <see cref="ClusterReceptionist"/> for new contact points to be used for next reconnect.
         /// </summary>
-        public readonly TimeSpan RefreshContactsInterval;
+        public TimeSpan RefreshContactsInterval { get; }
 
         /// <summary>
         /// How often failure detection heartbeat messages for detection of failed connections should be sent.
         /// </summary>
-        public readonly TimeSpan HeartbeatInterval;
+        public TimeSpan HeartbeatInterval { get; }
 
         /// <summary>
         /// Number of potentially lost/delayed heartbeats that will be accepted before considering it to be an anomaly. 
         /// The ClusterClient is using the <see cref="DeadlineFailureDetector"/>, which will trigger if there are 
         /// no heartbeats within the duration <see cref="HeartbeatInterval"/> + <see cref="AcceptableHeartbeatPause"/>.
         /// </summary>
-        public readonly TimeSpan AcceptableHeartbeatPause;
+        public TimeSpan AcceptableHeartbeatPause { get; }
 
         /// <summary>
         /// If connection to the receptionist is not established the client will buffer this number of messages and deliver 
         /// them the connection is established. When the buffer is full old messages will be dropped when new messages are sent via the client. 
         /// Use 0 to disable buffering, i.e. messages will be dropped immediately if the location of the receptionist is unavailable.
         /// </summary>
-        public readonly int BufferSize;
+        public int BufferSize { get; }
 
         /// <summary>
         /// If the connection to the receptionist is lost and cannot
@@ -91,8 +99,19 @@ namespace Akka.Cluster.Tools.Client
         /// to watch it from another actor and possibly acquire a new list of InitialContacts from some
         /// external service registry
         /// </summary>
-        public readonly TimeSpan? ReconnectTimeout;
+        public TimeSpan? ReconnectTimeout { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialContacts">TBD</param>
+        /// <param name="establishingGetContactsInterval">TBD</param>
+        /// <param name="refreshContactsInterval">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="acceptableHeartbeatPause">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="reconnectTimeout">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
             TimeSpan establishingGetContactsInterval,
@@ -102,7 +121,7 @@ namespace Akka.Cluster.Tools.Client
             int bufferSize,
             TimeSpan? reconnectTimeout = null)
         {
-            if (bufferSize == 0 || bufferSize > 10000)
+            if (bufferSize < 0 || bufferSize > 10000)
             {
                 throw new ArgumentException("BufferSize must be >= 0 and <= 10000");
             }
@@ -116,6 +135,12 @@ namespace Akka.Cluster.Tools.Client
             ReconnectTimeout = reconnectTimeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialContacts">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithInitialContacts(IImmutableSet<ActorPath> initialContacts)
         {
             if (initialContacts.Count == 0)
@@ -126,32 +151,51 @@ namespace Akka.Cluster.Tools.Client
             return Copy(initialContacts: initialContacts);
         }
 
-        [Obsolete("Use WithInitialContacts(IImmutableSet<ActorPath> initialContacts) instead")]
-        public ClusterClientSettings WithInitialContacts(IEnumerable<ActorPath> initialContacts)
-        {
-            return WithInitialContacts(initialContacts.ToImmutableHashSet());
-        }
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithEstablishingGetContactsInterval(TimeSpan value)
         {
             return Copy(establishingGetContactsInterval: value);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithRefreshContactsInterval(TimeSpan value)
         {
             return Copy(refreshContactsInterval: value);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="value">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithHeartbeatInterval(TimeSpan value)
         {
             return Copy(heartbeatInterval: value);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bufferSize">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithBufferSize(int bufferSize)
         {
             return Copy(bufferSize: bufferSize);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reconnectTimeout">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterClientSettings WithReconnectTimeout(TimeSpan? reconnectTimeout)
         {
             return Copy(reconnectTimeout: reconnectTimeout);

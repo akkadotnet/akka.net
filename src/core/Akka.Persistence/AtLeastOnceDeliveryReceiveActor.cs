@@ -133,7 +133,7 @@ namespace Akka.Persistence
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool AroundReceive(Receive receive, object message)
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
             return _atLeastOnceDeliverySemantic.AroundReceive(receive, message) || base.AroundReceive(receive, message);
         }

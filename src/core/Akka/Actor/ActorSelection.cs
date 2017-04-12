@@ -16,26 +16,25 @@ using Akka.Util.Internal;
 using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor
-{      
+{
     /// <summary>
-    ///     Class ActorSelection.
+    /// This class represents a logical view of a section of an <see cref="ActorSystem">ActorSystem's</see>
+    /// tree of actors that allows for broadcasting of messages to that section.
     /// </summary>
     public class ActorSelection : ICanTell
     {
         /// <summary>
         /// Gets the anchor.
         /// </summary>
-        /// <value>The anchor.</value>
         public IActorRef Anchor { get; private set; }
 
         /// <summary>
         /// Gets the elements.
         /// </summary>
-        /// <value>The elements.</value>
         public SelectionPathElement[] Path { get; private set; }
 
         /// <summary>
-        /// <see cref="string"/> representation of all of the elements in the <see cref="ActorSelection"/> path,
+        /// A string representation of all of the elements in the <see cref="ActorSelection"/> path,
         /// starting with "/" and separated with "/".
         /// </summary>
         public string PathString => "/" + string.Join("/", Path.Select(x => x.ToString()));
@@ -91,10 +90,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Posts a message to this ActorSelection.
+        /// Sends a message to this ActorSelection.
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
+        /// <param name="message">The message to send</param>
+        /// <param name="sender">The actor that sent the message</param>
         public void Tell(object message, IActorRef sender = null)
         {
             if (sender == null && ActorCell.Current != null && ActorCell.Current.Self != null)
@@ -105,14 +104,16 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Resolve the <see cref="IActorRef"/> matching this selection.
+        /// Resolves the <see cref="IActorRef"/> matching this selection.
         /// The result is returned as a Task that is completed with the <see cref="IActorRef"/>
         /// if such an actor exists. It is completed with failure <see cref="ActorNotFoundException"/> if
         /// no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
         /// 
         /// Under the hood it talks to the actor to verify its existence and acquire its <see cref="IActorRef"/>
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">
+        /// The amount of time to wait while resolving the selection before terminating the operation and generating an error.
+        /// </param>
         /// <exception cref="ActorNotFoundException">
         /// This exception is thrown if no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
         /// </exception>
@@ -123,7 +124,7 @@ namespace Akka.Actor
         {
             try
             {
-                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout);
+                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout).ConfigureAwait(false);
                 if(identity.Subject == null)
                     throw new ActorNotFoundException("subject was null");
 
@@ -225,10 +226,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -238,19 +241,21 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified actor selection, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The actor selection to compare.</param>
+        /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
         protected bool Equals(ActorSelection other)
         {
             return Equals(Anchor, other.Anchor) && Equals(PathString, other.PathString);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -260,9 +265,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -295,13 +302,11 @@ namespace Akka.Actor
         /// <summary>
         /// The message that should be delivered to this ActorSelection.
         /// </summary>
-        /// <value>The message.</value>
         public object Message { get; }
 
         /// <summary>
         /// The elements, e.g. "foo/bar/baz".
         /// </summary>
-        /// <value>The elements.</value>
         public SelectionPathElement[] Elements { get; }
 
         /// <summary>
@@ -310,13 +315,15 @@ namespace Akka.Actor
         public bool WildCardFanOut { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("ActorSelectionMessage - Message: {0} - WildCartFanOut: {1} - Elements: {2}",
-                Message, WildCardFanOut, string.Join<SelectionPathElement>("/", Elements));
+            var elements = string.Join<SelectionPathElement>("/", Elements);
+            return $"ActorSelectionMessage - Message: {Message} - WildCartFanOut: {WildCardFanOut} - Elements: {elements}";
         }
     }
 
@@ -344,13 +351,14 @@ namespace Akka.Actor
         /// <summary>
         /// Gets the actor name.
         /// </summary>
-        /// <value>The name.</value>
         public string Name { get; }
 
         /// <summary>
-        /// Returns a <see cref="string" /> that represents this instance.
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="string" /> that represents this instance.</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => Name;
     }
 
@@ -371,14 +379,15 @@ namespace Akka.Actor
         /// <summary>
         /// Gets the pattern string.
         /// </summary>
-        /// <value>The pattern string.</value>
         public string PatternStr { get; }
 
         /// <summary>
-        /// Returns a <see cref="string" /> that represents this instance.
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="string" /> that represents this instance.</returns>
-        public override string ToString() => PatternStr.ToString();
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
+        public override string ToString() => PatternStr;
     }
 
 
@@ -388,10 +397,11 @@ namespace Akka.Actor
     public class SelectParent : SelectionPathElement
     {
         /// <summary>
-        /// Returns a <see cref="string" /> that represents this instance.
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="string" /> that represents this instance.</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "..";
     }
 }
-

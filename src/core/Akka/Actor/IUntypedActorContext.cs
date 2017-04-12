@@ -15,14 +15,6 @@ namespace Akka.Actor
     public interface IUntypedActorContext : IActorContext
     {
         /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        void Become(UntypedReceive receive, bool discardOld = true);
-
-        /// <summary>
         /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
         /// </summary>
         /// <param name="receive">The new message handler.</param>

@@ -12,11 +12,17 @@ using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
-    public class DistributedPubSubSettings
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class DistributedPubSubSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Creates cluster publish/subscribe settings from the default configuration `akka.cluster.pub-sub`.
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static DistributedPubSubSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(DistributedPubSub.DefaultConfig());
@@ -29,6 +35,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// Creates cluster publish subscribe settings from provided configuration with the same layout as `akka.cluster.pub-sub`.
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public static DistributedPubSubSettings Create(Config config)
         {
             RoutingLogic routingLogic = null;
@@ -62,32 +71,38 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// The mediator starts on members tagged with this role. Uses all if undefined.
         /// </summary>
-        public readonly string Role;
+        public string Role { get; }
 
         /// <summary>
         /// The routing logic to use for <see cref="DistributedPubSubMediator.Send"/>.
         /// </summary>
-        public readonly RoutingLogic RoutingLogic;
+        public RoutingLogic RoutingLogic { get; }
 
         /// <summary>
         /// How often the <see cref="DistributedPubSubMediator"/> should send out gossip information
         /// </summary>
-        public readonly TimeSpan GossipInterval;
+        public TimeSpan GossipInterval { get; }
 
         /// <summary>
         /// Removed entries are pruned after this duration.
         /// </summary>
-        public readonly TimeSpan RemovedTimeToLive;
+        public TimeSpan RemovedTimeToLive { get; }
 
         /// <summary>
         /// Maximum number of elements to transfer in one message when synchronizing the registries. 
         /// Next chunk will be transferred in next round of gossip.
         /// </summary>
-        public readonly int MaxDeltaElements;
+        public int MaxDeltaElements { get; }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="DistributedPubSubSettings"/>.
+        /// Creates a new instance of the <see cref="DistributedPubSubSettings" />.
         /// </summary>
+        /// <param name="role">TBD</param>
+        /// <param name="routingLogic">TBD</param>
+        /// <param name="gossipInterval">TBD</param>
+        /// <param name="removedTimeToLive">TBD</param>
+        /// <param name="maxDeltaElements">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public DistributedPubSubSettings(string role, RoutingLogic routingLogic, TimeSpan gossipInterval, TimeSpan removedTimeToLive, int maxDeltaElements)
         {
             if (routingLogic is ConsistentHashingRoutingLogic)
@@ -102,26 +117,51 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             MaxDeltaElements = maxDeltaElements;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <returns>TBD</returns>
         public DistributedPubSubSettings WithRole(string role)
         {
             return new DistributedPubSubSettings(role, RoutingLogic, GossipInterval, RemovedTimeToLive, MaxDeltaElements);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="routingLogic">TBD</param>
+        /// <returns>TBD</returns>
         public DistributedPubSubSettings WithRoutingLogic(RoutingLogic routingLogic)
         {
             return new DistributedPubSubSettings(Role, routingLogic, GossipInterval, RemovedTimeToLive, MaxDeltaElements);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="gossipInterval">TBD</param>
+        /// <returns>TBD</returns>
         public DistributedPubSubSettings WithGossipInterval(TimeSpan gossipInterval)
         {
             return new DistributedPubSubSettings(Role, RoutingLogic, gossipInterval, RemovedTimeToLive, MaxDeltaElements);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="removedTtl">TBD</param>
+        /// <returns>TBD</returns>
         public DistributedPubSubSettings WithRemovedTimeToLive(TimeSpan removedTtl)
         {
             return new DistributedPubSubSettings(Role, RoutingLogic, GossipInterval, removedTtl, MaxDeltaElements);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="maxDeltaElements">TBD</param>
+        /// <returns>TBD</returns>
         public DistributedPubSubSettings WithMaxDeltaElements(int maxDeltaElements)
         {
             return new DistributedPubSubSettings(Role, RoutingLogic, GossipInterval, RemovedTimeToLive, maxDeltaElements);

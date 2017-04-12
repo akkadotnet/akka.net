@@ -18,18 +18,21 @@ using Google.ProtocolBuffers;
 namespace Akka.Remote.Transport
 {
     /// <summary>
-    /// Pairs an <see cref="AkkaProtocolTransport"/> with its <see cref="Address"/> binding.
-    /// 
+    /// <para>
+    /// This class represents a pairing of an <see cref="AkkaProtocolTransport"/> with its <see cref="Address"/> binding.
+    /// </para>
+    /// <para>
     /// This is the information that's used to allow external <see cref="ActorSystem"/> messages to address
     /// this system over the network.
+    /// </para>
     /// </summary>
     internal class ProtocolTransportAddressPair
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ProtocolTransportAddressPair"/> class.
         /// </summary>
-        /// <param name="protocolTransport">TBD</param>
-        /// <param name="address">TBD</param>
+        /// <param name="protocolTransport">The protocol transport to pair with the specified <paramref name="address"/>.</param>
+        /// <param name="address">The address to pair with the specified <paramref name="protocolTransport"/>.</param>
         public ProtocolTransportAddressPair(AkkaProtocolTransport protocolTransport, Address address)
         {
             ProtocolTransport = protocolTransport;
@@ -37,12 +40,12 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// The protocol transport part of the pairing.
         /// </summary>
         public AkkaProtocolTransport ProtocolTransport { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The address part of the pairing.
         /// </summary>
         public Address Address { get; private set; }
     }
@@ -168,7 +171,7 @@ namespace Akka.Remote.Transport
 
             manager.Tell(new AssociateUnderlyingRefuseUid(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise, refuseUid));
 
-            return (AkkaProtocolHandle)await statusPromise.Task;
+            return (AkkaProtocolHandle)await statusPromise.Task.ConfigureAwait(false);
         }
 
         #region Static properties
@@ -340,10 +343,10 @@ namespace Akka.Remote.Transport
         public int Uid { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -357,9 +360,9 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -438,10 +441,12 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -451,19 +456,23 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="AkkaProtocolHandle" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="AkkaProtocolHandle" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="AkkaProtocolHandle" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         protected bool Equals(AkkaProtocolHandle other)
         {
             return base.Equals(other) && Equals(HandshakeInfo, other.HandshakeInfo) && Equals(StateActor, other.StateActor);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -718,12 +727,14 @@ namespace Akka.Remote.Transport
         public string ErrorMessage { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("Timeout: {0}", ErrorMessage);
+            return $"Timeout: {ErrorMessage}";
         }
     }
 
@@ -788,6 +799,42 @@ namespace Akka.Remote.Transport
         /// <param name="codec">TBD</param>
         /// <param name="failureDetector">TBD</param>
         /// <param name="refuseUid">TBD</param>
+        /// <exception cref="AkkaProtocolException">
+        /// This exception is thrown for a number of reasons that include the following:
+        /// <dl>
+        ///   <dt><b>when in the <see cref="AssociationState.WaitHandshake"/> state</b></dt>
+        ///   <dd>
+        ///     <dl>
+        ///       <dt><b>the event is of type <see cref="HeartbeatTimer"/></b></dt>
+        ///       <dd>This exception is thrown when there is no response from the remote system causing the timeout.</dd>
+        ///     </dl>
+        ///   </dd>
+        ///   <dt><b>when in the <see cref="AssociationState.Open"/> state</b></dt>
+        ///   <dd>
+        ///     <dl>
+        ///       <dt><b>the event is of type <see cref="InboundPayload"/></b></dt>
+        ///       <dd>This exception is thrown when the message type could not be handled.</dd>
+        ///       <dt><b>the event is of type <see cref="HeartbeatTimer"/></b></dt>
+        ///       <dd>This exception is thrown when there is no response from the remote system causing the timeout.</dd>
+        ///       <dt><b>the event is of type <see cref="DisassociateUnderlying"/></b></dt>
+        ///       <dd>This exception is thrown when the message type could not be handled.</dd>
+        ///     </dl>
+        ///   </dd>
+        ///   <dt><b>when the FSM is terminating <see cref="FSM{TState, TData}.OnTermination(Action{Akka.Actor.FSMBase.StopEvent{TState, TData}})"/></b></dt>
+        ///   <dd>
+        ///     <dl>
+        ///       <dt><b>the event is of type <see cref="OutboundUnassociated"/></b></dt>
+        ///       <dd>This exception is thrown when the transport disassociated before the handshake finished.</dd>
+        ///       <dt><b>the event is of type <see cref="OutboundUnderlyingAssociated" /> with <see cref="Akka.Actor.FSMBase.StopEvent{TState, TData}.Reason "/>
+        ///           being <see cref="Akka.Actor.FSMBase.Failure"/></b>
+        ///       </dt>
+        ///       <dd>This exception is thrown when either a timeout occurs, the remote system is shutting down,
+        ///           this system has been quarantined, or the transport disassociated before handshake finished.
+        ///       </dd>
+        ///     </dl>
+        ///   </dd>
+        /// </dl>
+        /// </exception>
         protected ProtocolStateActor(InitialProtocolStateData initialData, HandshakeInfo localHandshakeInfo, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid)
         {
             _initialData = initialData;
@@ -1001,10 +1048,7 @@ namespace Akka.Remote.Transport
                                     })
                                     .Default(msg =>
                                     {
-                                        throw new AkkaProtocolException(
-                                            string.Format(
-                                                "Unhandled message in state Open(InboundPayload) with type {0}",
-                                                msg));
+                                        throw new AkkaProtocolException($"Unhandled message in state Open(InboundPayload) with type {msg.GetType()}");
                                     });
                             })
                             .Default(d =>
@@ -1021,14 +1065,10 @@ namespace Akka.Remote.Transport
                         @event.StateData.Match()
                             .With<ListenerReady>(lr => handle = lr.WrappedHandle)
                             .With<AssociatedWaitHandler>(awh => handle = awh.WrappedHandle)
-                            .Default(
-                                msg =>
-                                {
-                                    throw new AkkaProtocolException(
-                                        string.Format(
-                                            "unhandled message in state Open(DisassociateUnderlying) with type {0}", msg));
-
-                                });
+                            .Default(msg =>
+                            {
+                                throw new AkkaProtocolException($"unhandled message in state Open(DisassociateUnderlying) with type {msg.GetType()}");
+                            });
                         SendDisassociate(handle, du.Info);
                         nextState = Stop();
                     })
@@ -1112,7 +1152,7 @@ namespace Akka.Remote.Transport
                 .With<OutboundUnassociated>(d =>
                 {
                     // attempt to open underlying transport to the remote address
-                    // if using Helios, this is where the socket connection is opened.
+                    // if using DotNetty, this is where the socket connection is opened.
                     d.Transport.Associate(d.RemoteAddress).PipeTo(Self);
                     StartWith(AssociationState.Closed, d);
                 })
@@ -1228,8 +1268,7 @@ namespace Akka.Remote.Transport
             }
             catch (Exception ex)
             {
-                throw new AkkaProtocolException(
-                    string.Format("Error while decoding incoming Akka PDU of length {0}", pdu.Length), ex);
+                throw new AkkaProtocolException($"Error while decoding incoming Akka PDU of length {pdu.Length}", ex);
             }
         }
 
@@ -1323,10 +1362,7 @@ namespace Akka.Remote.Transport
         public static Props InboundProps(HandshakeInfo handshakeInfo, AssociationHandle wrappedHandle,
             IAssociationEventListener associationEventListener, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector)
         {
-            return
-                Props.Create(
-                    () =>
-                        new ProtocolStateActor(handshakeInfo, wrappedHandle, associationEventListener, settings, codec, failureDetector));
+            return Props.Create(() => new ProtocolStateActor(handshakeInfo, wrappedHandle, associationEventListener, settings, codec, failureDetector));
         }
 
         #endregion

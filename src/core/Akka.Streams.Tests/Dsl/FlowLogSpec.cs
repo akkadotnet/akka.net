@@ -107,14 +107,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Log_on_source_must_allow_passing_in_custom_LoggingAdapter()
         {
-            var log = new BusLogging(Sys.EventStream, "com.exmaple.ImportantLogger", LogType, new DefaultLogMessageFormatter());
+            var log = new BusLogging(Sys.EventStream, "com.example.ImportantLogger", LogType, new DefaultLogMessageFormatter());
 
             Source.Single(42)
                 .Log("flow-5", log: log)
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
             var msgs = LogProbe.ReceiveN(2).Cast<Debug>().ToArray();
-            msgs.All(m => m.LogSource.Equals("com.exmaple.ImportantLogger")).Should().BeTrue();
+            msgs.All(m => m.LogSource.Equals("com.example.ImportantLogger")).Should().BeTrue();
             msgs.All(m => m.LogClass == LogType).Should().BeTrue();
             msgs[0].Message.ToString().Should().Be("[flow-5] Element: 42");
             msgs[1].Message.ToString().Should().Be("[flow-5] Upstream finished.");

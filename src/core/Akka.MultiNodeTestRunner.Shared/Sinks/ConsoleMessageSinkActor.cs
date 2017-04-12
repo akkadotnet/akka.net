@@ -42,7 +42,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             WriteSpecMessage(string.Format("Start time: {0}", new DateTime(data.StartTime, DateTimeKind.Utc)));
             foreach (var node in data.NodeFacts)
             {
-                WriteSpecMessage(string.Format(" --> Node {0}: {1} [{2} elapsed]", node.Value.NodeIndex,
+                WriteSpecMessage(string.Format(" --> Node {0}:{1} : {2} [{3} elapsed]", node.Value.NodeIndex, node.Value.NodeRole,
                     node.Value.Passed.GetValueOrDefault(false) ? "PASS" : "FAIL", node.Value.Elapsed));
             }
             WriteSpecMessage(string.Format("End time: {0}",
@@ -58,14 +58,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 {
                     if (node.Value.Passed.GetValueOrDefault(false) == false)
                     {
-                        WriteSpecMessage(string.Format("<----------- BEGIN NODE {0} ----------->", node.Key));
+                        WriteSpecMessage(string.Format("<----------- BEGIN NODE {0}:{1} ----------->", node.Key, node.Value.NodeRole));
                         foreach (var resultMessage in node.Value.ResultMessages)
                         {
                             WriteSpecMessage(String.Format(" --> {0}", resultMessage.Message));
                         }
                         if(node.Value.ResultMessages == null || node.Value.ResultMessages.Count == 0)
                             WriteSpecMessage("[received no messages - SILENT FAILURE].");
-                        WriteSpecMessage(string.Format("<----------- END NODE {0} ----------->", node.Key));
+                        WriteSpecMessage(string.Format("<----------- END NODE {0}:{1} ----------->", node.Key, node.Value.NodeRole));
                     }
                 }
             }
@@ -73,7 +73,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void HandleNodeSpecFail(NodeCompletedSpecWithFail nodeFail)
         {
-            WriteSpecFail(nodeFail.NodeIndex, nodeFail.Message);
+            WriteSpecFail(nodeFail.NodeIndex, nodeFail.NodeRole, nodeFail.Message);
 
             base.HandleNodeSpecFail(nodeFail);
         }
@@ -109,13 +109,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             base.HandleEndSpec(endSpec);
         }
 
-        protected override void HandleNodeMessage(LogMessageForNode logMessage)
-        {
-            WriteNodeMessage(logMessage);
-
-            base.HandleNodeMessage(logMessage);
-        }
-
         protected override void HandleNodeMessageFragment(LogMessageFragmentForNode logMessage)
         {
             WriteNodeMessage(logMessage);
@@ -132,7 +125,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void HandleNodeSpecPass(NodeCompletedSpecWithSuccess nodeSuccess)
         {
-            WriteSpecPass(nodeSuccess.NodeIndex, nodeSuccess.Message);
+            WriteSpecPass(nodeSuccess.NodeIndex, nodeSuccess.NodeRole, nodeSuccess.Message);
 
             base.HandleNodeSpecPass(nodeSuccess);
         }
@@ -151,28 +144,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             Console.ResetColor();
         }
 
-        private void WriteSpecPass(int nodeIndex, string message)
+        private void WriteSpecPass(int nodeIndex, string nodeRole, string message)
         {
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("[NODE{0}][{1}]: SPEC PASSED: {2}", nodeIndex, DateTime.UtcNow.ToShortTimeString(), message);
+            Console.WriteLine("[NODE{0}:{1}][{2}]: SPEC PASSED: {3}", nodeIndex, nodeRole, DateTime.UtcNow.ToShortTimeString(), message);
             Console.ResetColor();
         }
 
-        private void WriteSpecFail(int nodeIndex, string message)
+        private void WriteSpecFail(int nodeIndex, string nodeRole, string message)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("[NODE{0}][{1}]: SPEC FAILED: {2}", nodeIndex, DateTime.UtcNow.ToShortTimeString(), message);
+            Console.WriteLine("[NODE{0}:{1}][{2}]: SPEC FAILED: {3}", nodeIndex, nodeRole, DateTime.UtcNow.ToShortTimeString(), message);
             Console.ResetColor();
         }
 
         private void WriteRunnerMessage(LogMessageForTestRunner nodeMessage)
-        {
-            Console.ForegroundColor = ColorForLogLevel(nodeMessage.Level);
-            Console.WriteLine(nodeMessage.ToString());
-            Console.ResetColor();
-        }
-
-        private void WriteNodeMessage(LogMessageForNode nodeMessage)
         {
             Console.ForegroundColor = ColorForLogLevel(nodeMessage.Level);
             Console.WriteLine(nodeMessage.ToString());

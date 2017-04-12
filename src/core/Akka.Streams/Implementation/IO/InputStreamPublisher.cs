@@ -28,12 +28,14 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="inputstream">TBD</param>
         /// <param name="completionSource">TBD</param>
         /// <param name="chunkSize">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="chunkSize"/> is less than or equal to zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Props Props(Stream inputstream, TaskCompletionSource<IOResult> completionSource, int chunkSize)
         {
             if (chunkSize <= 0)
-                throw new ArgumentException($"chunkSize must be > 0 was {chunkSize}");
+                throw new ArgumentException($"chunkSize must be > 0 was {chunkSize}", nameof(chunkSize));
 
             return Actor.Props.Create(()=> new InputStreamPublisher(inputstream, completionSource, chunkSize)).WithDeploy(Deploy.Local);
         }

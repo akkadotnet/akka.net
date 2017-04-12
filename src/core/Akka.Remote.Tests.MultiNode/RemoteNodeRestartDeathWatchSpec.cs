@@ -18,11 +18,11 @@ using Akka.Util.Internal;
 
 namespace Akka.Remote.Tests.MultiNode
 {
-    public abstract class RemoteNodeRestartDeathWatchSpec : MultiNodeSpec
+    public class RemoteNodeRestartDeathWatchSpec : MultiNodeSpec
     {
         private readonly RemoteNodeRestartDeathWatchSpecConfig _specConfig;
 
-        protected RemoteNodeRestartDeathWatchSpec()
+        public RemoteNodeRestartDeathWatchSpec()
             : this(new RemoteNodeRestartDeathWatchSpecConfig())
         {
         }
@@ -87,7 +87,7 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("watch-established");
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
-                var sb = new StringBuilder().AppendLine("akka.remote.helios.tcp {").AppendLine("hostname = " + addr.Host)
+                var sb = new StringBuilder().AppendLine("akka.remote.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
                         .AppendLine("port = " + addr.Port)
                         .AppendLine("}");
                 var freshSystem = ActorSystem.Create(Sys.Name,
@@ -116,18 +116,6 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    #region Several different variations of the test
-
-    public class RemoteNodeRestartDeathWatchMultiNode1 : RemoteNodeRestartDeathWatchSpec
-    {
-    }
-
-    public class RemoteNodeRestartDeathWatchMultiNode2 : RemoteNodeRestartDeathWatchSpec
-    {
-    }
-
-    #endregion
-
     #region Config
 
     public class RemoteNodeRestartDeathWatchSpecConfig : MultiNodeConfig
@@ -142,7 +130,7 @@ namespace Akka.Remote.Tests.MultiNode
                   akka.remote.log-remote-lifecycle-events = off                    
                    akka.remote.transport-failure-detector.heartbeat-interval = 1 s
             akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s"
-                ));
+            ));
             TestTransport = true;
         }
 

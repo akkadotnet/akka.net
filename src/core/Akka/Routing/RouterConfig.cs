@@ -45,7 +45,7 @@ namespace Akka.Routing
         /// <summary>
         /// A configuration that specifies that no router is to be used.
         /// </summary>
-        [Obsolete("Use NoRouter.Instance instead")]
+        [Obsolete("Use NoRouter.Instance instead [1.1.0]")]
         public static RouterConfig NoRouter => Routing.NoRouter.Instance;
 
         /// <summary>
@@ -132,10 +132,10 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as RouterConfig);
@@ -168,8 +168,8 @@ namespace Akka.Routing
         /// <summary>
         /// Retrieves the actor paths used by this router during routee selection.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>An enumeration of actor paths used during routee selection</returns>
         public abstract IEnumerable<string> GetPaths(ActorSystem system);
 
         /// <summary>
@@ -273,14 +273,14 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves the current number of routees in the pool.
         /// </summary>
         public int NrOfInstances { get; }
 
         /// <summary>
         /// Used by the <see cref="RoutedActorCell"/> to determine the initial number of routees.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system that owns this router.</param>
         /// <returns>The number of routees associated with this pool.</returns>
         public abstract int GetNrOfInstances(ActorSystem system);
 

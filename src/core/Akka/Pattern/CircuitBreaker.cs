@@ -138,9 +138,9 @@ namespace Akka.Pattern
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        public async Task<T> WithCircuitBreaker<T>(Func<Task<T>> body)
+        public Task<T> WithCircuitBreaker<T>(Func<Task<T>> body)
         {
-            return await CurrentState.Invoke<T>(body);
+            return CurrentState.Invoke<T>(body);
         }
 
         /// <summary>
@@ -148,9 +148,9 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/></returns>
-        public async Task WithCircuitBreaker(Func<Task> body)
+        public Task WithCircuitBreaker(Func<Task> body)
         {
-            await CurrentState.Invoke(body);
+            return CurrentState.Invoke(body);
         }
 
         /// <summary>
@@ -162,7 +162,7 @@ namespace Akka.Pattern
             var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
             if (!cbTask.Wait(CallTimeout))
             {
-                //throw new TimeoutException( string.Format( "Execution did not complete within the time alotted {0} ms", CallTimeout.TotalMilliseconds ) );
+                //throw new TimeoutException( string.Format( "Execution did not complete within the time allotted {0} ms", CallTimeout.TotalMilliseconds ) );
             }
             if (cbTask.Exception != null)
             {

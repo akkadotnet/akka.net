@@ -103,37 +103,12 @@ namespace Akka.Actor
             base.BecomeStacked(m => ExecutePartialMessageHandler(m, newHandler));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="configure">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        protected void Become(Action configure, bool discardOld = true)
-        {
-            if(discardOld)
-                Become(configure);
-            else
-                BecomeStacked(configure);
-        }
-
         private PartialAction<object> CreateNewHandler(Action configure)
         {
             PrepareConfigureMessageHandlers();
             configure();
             var newHandler = BuildNewReceiveHandler(_matchHandlerBuilders.Pop());
             return newHandler;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="handler">TBD</param>
-        [Obsolete("Use ReceiveAsync instead. This method will be removed in future versions")]
-        protected void Receive<T>(Func<T, Task> handler)
-        {
-            ReceiveAsync(handler);
         }
 
         private Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
@@ -255,7 +230,6 @@ namespace Akka.Actor
             Receive<T>(handler, shouldHandle);
         }
 
-
         /// <summary>
         /// Registers a handler for incoming messages of the specified <paramref name="messageType"/>.
         /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
@@ -272,7 +246,6 @@ namespace Akka.Actor
             EnsureMayConfigureMessageHandlers();
             _matchHandlerBuilders.Peek().Match(messageType, handler, shouldHandle);
         }
-
 
         /// <summary>
         /// Registers a handler for incoming messages of the specified <paramref name="messageType"/>.

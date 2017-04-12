@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Remote.Transport.Helios;
+using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
@@ -25,7 +25,7 @@ namespace Akka.Remote.Tests
     {
         public RemoteConfigSpec():base(@"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                akka.remote.helios.tcp.port = 0
+                akka.remote.dot-netty.tcp.port = 0
             ") {}
         
 
@@ -53,7 +53,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineSilentSystemTimeout);
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
             Assert.Equal(1, remoteSettings.Transports.Length);
-            Assert.Equal(typeof(HeliosTcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
+            Assert.Equal(typeof(TcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartbeatExpectedResponseAfter);
@@ -90,8 +90,8 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_heliosTCP_values_in_ReferenceConf()
         {
-            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
-            var s = new HeliosTransportSettings(c);
+            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            var s = DotNettyTransportSettings.Create(c);
 
             Assert.Equal(TimeSpan.FromSeconds(15), s.ConnectTimeout);
             Assert.Null(s.WriteBufferHighWaterMark);
@@ -108,14 +108,16 @@ namespace Akka.Remote.Tests
             Assert.Equal(2, s.ClientSocketWorkerPoolSize);
             Assert.False(s.BackwardsCompatibilityModeEnabled);
             Assert.False(s.DnsUseIpv6);
+            Assert.False(s.LogTransport);
+            Assert.False(s.EnableSsl);
         }
 
         [Fact]
         public void When_remoting_works_in_Mono_ip_enforcement_should_be_defaulted_to_true()
         {
             if (!IsMono) return; // skip IF NOT using Mono
-            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
-            var s = new HeliosTransportSettings(c);
+            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            var s = DotNettyTransportSettings.Create(c);
             
             Assert.True(s.EnforceIpFamily);
         }
@@ -124,8 +126,8 @@ namespace Akka.Remote.Tests
         public void When_remoting_works_not_in_Mono_ip_enforcement_should_be_defaulted_to_false()
         {
             if (IsMono) return; // skip IF using Mono
-            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
-            var s = new HeliosTransportSettings(c);
+            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            var s = DotNettyTransportSettings.Create(c);
 
             Assert.False(s.EnforceIpFamily);
         }
@@ -134,7 +136,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_socket_worker_pool_configuration_values_in_ReferenceConf()
         {
-            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
+            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
 
             // server-socket-worker-pool
             {
@@ -156,8 +158,8 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_hostname_values_in_ReferenceConf()
         {
-           var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
-           var s = new HeliosTransportSettings(c);
+           var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
+           var s = DotNettyTransportSettings.Create(c);
 
            //Non-specified hostnames should default to IPAddress.Any
            Assert.Equal(IPAddress.Any.ToString(), s.Hostname);

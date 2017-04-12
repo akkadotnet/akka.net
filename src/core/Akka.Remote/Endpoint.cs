@@ -18,6 +18,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Remote.Proto;
 using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
@@ -181,17 +182,17 @@ namespace Akka.Remote
     internal class EndpointException : AkkaException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="cause">TBD</param>
-        public EndpointException(string msg, Exception cause = null) : base(msg, cause) { }
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
+        public EndpointException(string message, Exception cause = null) : base(message, cause) { }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected EndpointException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
@@ -211,6 +212,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
+        /// <param name="message">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <param name="remoteAddress">TBD</param>
         /// <param name="cause">TBD</param>
@@ -311,11 +313,11 @@ namespace Akka.Remote
     internal sealed class EndpointDisassociatedException : EndpointException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointDisassociatedException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        public EndpointDisassociatedException(string msg)
-            : base(msg)
+        /// <param name="message">The message that describes the error.</param>
+        public EndpointDisassociatedException(string message)
+            : base(message)
         {
         }
     }
@@ -326,20 +328,20 @@ namespace Akka.Remote
     internal sealed class EndpointAssociationException : EndpointException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointAssociationException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        public EndpointAssociationException(string msg)
-            : base(msg)
+        /// <param name="message">The message that describes the error.</param>
+        public EndpointAssociationException(string message)
+            : base(message)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EndpointAssociationException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="inner">TBD</param>
-        public EndpointAssociationException(string msg, Exception inner) : base(msg, inner) { }
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
+        public EndpointAssociationException(string message, Exception innerException) : base(message, innerException) { }
     }
 
     /// <summary>
@@ -348,11 +350,11 @@ namespace Akka.Remote
     internal sealed class OversizedPayloadException : EndpointException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="OversizedPayloadException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        public OversizedPayloadException(string msg)
-            : base(msg)
+        /// <param name="message">The message that describes the error.</param>
+        public OversizedPayloadException(string message)
+            : base(message)
         {
         }
     }
@@ -548,10 +550,12 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <exception cref="IllegalActorStateException">TBD</exception>
+        /// <param name="reason">N/A</param>
+        /// <exception cref="IllegalActorStateException">
+        /// This exception is thrown automatically since <see cref="ReliableDeliverySupervisor"/> must not be restarted.
+        /// </exception>
         protected override void PostRestart(Exception reason)
         {
             throw new IllegalActorStateException("BUG: ReliableDeliverySupervisor has been attempted to be restarted. This must not happen.");
@@ -1101,11 +1105,11 @@ namespace Akka.Remote
         {
             try
             {
-                return new Handle(await Transport.Associate(RemoteAddress, _refuseUid));
+                return new Handle(await Transport.Associate(RemoteAddress, _refuseUid).ConfigureAwait(false));
             }
             catch (Exception e)
             {
-                return new Status.Failure(e.InnerException);
+                return new Status.Failure(e.InnerException ?? e);
             }
         }
 
@@ -1429,7 +1433,7 @@ namespace Akka.Remote
                 }
 
                 var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                    SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                    this.SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
 
                 _remoteMetrics.LogPayloadBytes(send.Message, pdu.Length);
 
@@ -2060,4 +2064,3 @@ namespace Akka.Remote
         #endregion
     }
 }
-

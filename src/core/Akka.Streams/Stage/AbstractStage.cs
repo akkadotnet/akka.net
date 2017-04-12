@@ -199,18 +199,14 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <param name="element">TBD</param>
         /// <returns>TBD</returns>
         public IUpstreamDirective HoldUpstreamAndPush(object element) => HoldUpstreamAndPush((TOut) element);
 
         /// <summary>
         /// TBD
         /// </summary>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <param name="element">TBD</param>
         /// <returns>TBD</returns>
         public IUpstreamDirective HoldUpstreamAndPush(TOut element)
         {
@@ -221,9 +217,6 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
         /// <returns>TBD</returns>
         public IDownstreamDirective HoldDownstreamAndPull()
         {
@@ -385,7 +378,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.2]")]
     public abstract class AbstractStage<TIn, TOut> : IStage<TIn, TOut>
     {
         /// <summary>
@@ -524,7 +517,7 @@ namespace Akka.Streams.Stage
     /// <typeparam name="TPushDirective">TBD</typeparam>
     /// <typeparam name="TPullDirective">TBD</typeparam>
     /// <typeparam name="TContext">TBD</typeparam>
-    [Obsolete("Please use GraphStage instead.")]
+    [Obsolete("Please use GraphStage instead. [1.1.2]")]
     public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext> : AbstractStage<TIn, TOut> where TPushDirective : IDirective where TPullDirective : IDirective where TContext : IContext
     {
         /// <summary>

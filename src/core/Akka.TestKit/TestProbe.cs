@@ -81,11 +81,13 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="name">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown since a <see cref="TestProbe"/> cannot be created from a <see cref="TestProbe"/>.
+        /// </exception>
+        /// <returns>N/A</returns>
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
         public override TestProbe CreateTestProbe(string name=null)
         {
@@ -153,32 +155,44 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a system message to the test probe
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to send</param>
+        /// <param name="sender">NOT USED.</param>
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a system message to the test probe
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message to send</param>
         public void SendSystemMessage(ISystemMessage message)
         {
             ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares the underlying actor ref to the object.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The object to be compared to; ideally an <see cref="IActorRef"/>.</param>
+        /// <returns>An integer indicating if the actor sorts higher, lower, or equal to <paramref name="obj"/>.</returns>
         public int CompareTo(object obj)
         {
             return TestActor.CompareTo(obj);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            return TestActor.Equals(obj);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return TestActor.GetHashCode();
         }
     }
 }

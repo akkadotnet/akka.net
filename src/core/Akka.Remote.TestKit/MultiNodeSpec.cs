@@ -21,7 +21,6 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Akka.Util.Internal;
-using Helios.Topology;
 
 namespace Akka.Remote.TestKit
 {
@@ -116,11 +115,25 @@ namespace Akka.Remote.TestKit
 
         protected MultiNodeConfig()
         {
-            _myself = new Lazy<RoleName>(() =>
+            var roleName = CommandLine.GetPropertyOrDefault("multinode.role", null);
+
+            if (String.IsNullOrEmpty(roleName))
             {
-                if (MultiNodeSpec.SelfIndex > _roles.Count) throw new ArgumentException("not enough roles declared for this test");
-                return _roles[MultiNodeSpec.SelfIndex];
-            });
+                _myself = new Lazy<RoleName>(() =>
+                {
+                    if (MultiNodeSpec.SelfIndex > _roles.Count) throw new ArgumentException("not enough roles declared for this test");
+                    return _roles[MultiNodeSpec.SelfIndex];
+                });
+            }
+            else
+            {
+                _myself = new Lazy<RoleName>(() =>
+                {
+                    var myself = _roles.FirstOrDefault(r => r.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase));
+                    if (myself == default(RoleName)) throw new ArgumentException($"cannot find {roleName} among configured roles");
+                    return myself;
+                });
+            }
         }
 
         public RoleName Myself
@@ -133,7 +146,7 @@ namespace Akka.Remote.TestKit
             get
             {
                 var transportConfig = _testTransport ?
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.applied-adapters = [trttl, gremlin]")
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.applied-adapters = [trttl, gremlin]")
                         : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
@@ -335,8 +348,8 @@ namespace Akka.Remote.TestKit
             {
                 const string config = @"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                akka.remote.helios.tcp.hostname = ""{0}""
-                akka.remote.helios.tcp.port = {1}";
+                akka.remote.dot-netty.tcp.hostname = ""{0}""
+                akka.remote.dot-netty.tcp.port = {1}";
 
                 return ConfigurationFactory.ParseString(String.Format(config, SelfName, SelfPort));
             }
@@ -631,7 +644,7 @@ namespace Akka.Remote.TestKit
         protected ActorSystem StartNewSystem()
         {
             var sb =
-                new StringBuilder("akka.remote.helios.tcp{").AppendLine()
+                new StringBuilder("akka.remote.dot-netty.tcp{").AppendLine()
                     .AppendFormat("port={0}", _myAddress.Port)
                     .AppendLine()
                     .AppendFormat(@"hostname=""{0}""", _myAddress.Host)

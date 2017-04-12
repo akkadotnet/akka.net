@@ -54,16 +54,12 @@ namespace Akka.Remote.Tests.MultiNode
         }
     }
 
-    public class RemoteRestartedQuarantinedMultiNode1 : RemoteRestartedQuarantinedSpec { }
-
-    public class RemoteRestartedQuarantinedMultiNode2 : RemoteRestartedQuarantinedSpec { }
-
-    public abstract class RemoteRestartedQuarantinedSpec : MultiNodeSpec
+    public class RemoteRestartedQuarantinedSpec : MultiNodeSpec
     {
         private readonly RemoteRestartedQuarantinedMultiNetSpec _config;
         private readonly Func<RoleName, string, Tuple<int, IActorRef>> _identifyWithUid;
 
-        protected RemoteRestartedQuarantinedSpec()
+        public RemoteRestartedQuarantinedSpec()
             : this(new RemoteRestartedQuarantinedMultiNetSpec())
         {
         }
@@ -141,7 +137,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 var sb = new StringBuilder()
                     .AppendLine("akka.remote.retry-gate-closed-for = 0.5 s")
-                    .AppendLine("akka.remote.helios.tcp {")
+                    .AppendLine("akka.remote.dot-netty.tcp {")
                     .AppendLine("hostname = " + addr.Host)
                     .AppendLine("port = " + addr.Port)
                     .AppendLine("}");

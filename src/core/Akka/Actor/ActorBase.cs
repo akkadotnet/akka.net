@@ -76,18 +76,6 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Interface used on Actors that have an explicit requirement for a logger
-    /// </summary>
-    [Obsolete()]
-    public interface IActorLogging
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        ILoggingAdapter Log { get; }
-    }
-
-    /// <summary>
     /// Contains things needed by the framework
     /// </summary>
     public interface IInternalActor
@@ -145,7 +133,8 @@ namespace Akka.Actor
         /// </exception>
         IActorContext IInternalActor.ActorContext
         {
-            get {
+            get
+            {
                 return Context;
             }
         }
@@ -176,10 +165,10 @@ namespace Akka.Actor
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        internal protected virtual bool AroundReceive(Receive receive, object message)
+        protected internal virtual bool AroundReceive(Receive receive, object message)
         {
             var wasHandled = receive(message);
-            if(!wasHandled)
+            if (!wasHandled)
             {
                 Unhandled(message);
             }
@@ -211,25 +200,11 @@ namespace Akka.Actor
         protected virtual void Unhandled(object message)
         {
             var terminatedMessage = message as Terminated;
-            if(terminatedMessage != null)
+            if (terminatedMessage != null)
             {
                 throw new DeathPactException(terminatedMessage.ActorRef);
             }
             Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        protected void Become(Receive receive, bool discardOld = true)
-        {
-            if(discardOld)
-                Context.Become(receive);
-            else
-                Context.BecomeStacked(receive);
         }
 
         /// <summary>
@@ -264,15 +239,6 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
-        protected void Unbecome()
-        {
-            UnbecomeStacked();
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <param name="self">TBD</param>
         internal void Clear(IActorRef self)
         {
@@ -286,7 +252,6 @@ namespace Akka.Actor
         {
             _clearedSelf = null;
         }
-
 
         /// <summary>
         /// <para>

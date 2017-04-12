@@ -302,7 +302,7 @@ namespace Akka.Tests.Actor.Dispatch
                 _instance = new MessageDispatcherInterceptor(this,
                     config.GetString("id"),
                     config.GetInt("throughput"),
-                    config.GetTimeSpan("thoughput-deadline-time").Ticks,
+                    config.GetTimeSpan("throughput-deadline-time").Ticks,
                     ConfigureExecutor(),
                     Config.GetTimeSpan("shutdown-timeout"));
             }

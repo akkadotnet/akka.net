@@ -2073,15 +2073,16 @@ namespace Akka.Streams.Stage
     public class StageActorRefNotInitializedException : Exception
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of this exception
         /// </summary>
         public static readonly StageActorRefNotInitializedException Instance = new StageActorRefNotInitializedException();
         private StageActorRefNotInitializedException() : base("You must first call getStageActorRef, to initialize the Actors behaviour") { }
+
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="StageActorRefNotInitializedException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected StageActorRefNotInitializedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
@@ -2093,7 +2094,6 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        /// <returns>TBD</returns>
         public static readonly EagerTerminateInput Instance = new EagerTerminateInput();
         private EagerTerminateInput() { }
         /// <summary>

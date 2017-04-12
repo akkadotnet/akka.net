@@ -38,58 +38,16 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode1 : LeaderDowningNodeThatIsUnreachableSpec
+    public class LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode : LeaderDowningNodeThatIsUnreachableSpec
     {
-        public LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode1() : base(true)
+        public LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode() : base(true)
         {
         }
     }
 
-    public class LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode2 : LeaderDowningNodeThatIsUnreachableSpec
+    public class LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode : LeaderDowningNodeThatIsUnreachableSpec
     {
-        public LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode2() : base(true)
-        {
-        }
-    }
-
-    public class LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode3 : LeaderDowningNodeThatIsUnreachableSpec
-    {
-        public LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode3() : base(true)
-        {
-        }
-    }
-
-    public class LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode4 : LeaderDowningNodeThatIsUnreachableSpec
-    {
-        public LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode4() : base(true)
-        {
-        }
-    }
-
-    public class LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode1 : LeaderDowningNodeThatIsUnreachableSpec
-    {
-        public LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode1() : base(false)
-        {
-        }
-    }
-
-    public class LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode2 : LeaderDowningNodeThatIsUnreachableSpec
-    {
-        public LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode2() : base(false)
-        {
-        }
-    }
-
-    public class LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode3 : LeaderDowningNodeThatIsUnreachableSpec
-    {
-        public LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode3() : base(false)
-        {
-        }
-    }
-
-    public class LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode4 : LeaderDowningNodeThatIsUnreachableSpec
-    {
-        public LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode4() : base(false)
+        public LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode() : base(false)
         {
         }
     }

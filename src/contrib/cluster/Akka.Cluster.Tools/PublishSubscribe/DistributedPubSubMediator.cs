@@ -21,7 +21,6 @@ using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
-
     /// <summary>
     /// <para>
     /// This actor manages a registry of actor references and replicates
@@ -102,6 +101,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// </summary>
     public class DistributedPubSubMediator : ReceiveActor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(DistributedPubSubSettings settings)
         {
             return Actor.Props.Create(() => new DistributedPubSubMediator(settings)).WithDeploy(Deploy.Local);
@@ -119,8 +123,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private ILoggingAdapter _log;
         private IDictionary<Address, Bucket> _registry = new Dictionary<Address, Bucket>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IDictionary<Address, long> OwnVersions
         {
             get
@@ -131,6 +141,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="settings">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
         public DistributedPubSubMediator(DistributedPubSubSettings settings)
         {
             if (settings.RoutingLogic is ConsistentHashingRoutingLogic)
@@ -139,7 +155,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             _settings = settings;
 
             if (!string.IsNullOrEmpty(_settings.Role) && !_cluster.SelfRoles.Contains(_settings.Role))
-                throw new ArgumentException(string.Format("The cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, _settings.Role));
+                throw new ArgumentException($"The cluster member [{_cluster.SelfAddress}] doesn't have the role [{_settings.Role}]");
 
             //Start periodic gossip to random nodes in cluster
             _gossipCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, GossipTick.Instance, Self);
@@ -252,7 +268,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<GetTopics>(getTopics =>
             {
-                Sender.Tell(new CurrentTopics(GetCurrentTopics().ToArray()));
+                Sender.Tell(new CurrentTopics(GetCurrentTopics().ToImmutableHashSet()));
             });
             Receive<Subscribed>(subscribed =>
             {
@@ -387,11 +403,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return versions.Any(entry =>
             {
                 Bucket bucket;
-	            if (_registry.TryGetValue(entry.Key, out bucket))
-	            {
-		            return entry.Value > bucket.Version;
-	            }
-	            return entry.Value > 0L;
+                if (_registry.TryGetValue(entry.Key, out bucket))
+                {
+                    return entry.Value > bucket.Version;
+                }
+                return entry.Value > 0L;
             });
         }
 
@@ -587,6 +603,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return addresses[ThreadLocalRandom.Current.Next(addresses.Count)];
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             base.PreStart();
@@ -594,6 +613,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();

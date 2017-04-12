@@ -56,12 +56,12 @@ namespace Akka.Cluster
         internal int UpNumber { get; }
 
         /// <summary>
-        /// TBD
+        /// The status of the current member.
         /// </summary>
         public MemberStatus Status { get; }
 
         /// <summary>
-        /// TBD
+        /// The set of roles for the current member. Can be empty.
         /// </summary>
         public ImmutableHashSet<string> Roles { get; }
 
@@ -171,6 +171,7 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         /// <param name="status">TBD</param>
+        /// <exception cref="InvalidOperationException">TBD</exception>
         /// <returns>TBD</returns>
         public Member Copy(MemberStatus status)
         {
@@ -179,7 +180,7 @@ namespace Akka.Cluster
 
             //TODO: Akka exception?
             if (!AllowedTransitions[oldStatus].Contains(status))
-                throw new InvalidOperationException(String.Format("Invalid member status transition {0} -> {1}", Status, status));
+                throw new InvalidOperationException($"Invalid member status transition {Status} -> {status}");
             
             return new Member(UniqueAddress, UpNumber, status, Roles);
         }
@@ -347,7 +348,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// All of the legal state transitions for a cluster member
         /// </summary>
         internal static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
             new Dictionary<MemberStatus, ImmutableHashSet<MemberStatus>>
@@ -370,27 +371,27 @@ namespace Akka.Cluster
     public enum MemberStatus
     {
         /// <summary>
-        /// TBD
+        /// Indicates that a new node is joining the cluster.
         /// </summary>
         Joining,
         /// <summary>
-        /// TBD
+        /// Indicates that a node is a current member of the cluster.
         /// </summary>
         Up,
         /// <summary>
-        /// TBD
+        /// Indicates that a node is beginning to leave the cluster.
         /// </summary>
         Leaving,
         /// <summary>
-        /// TBD
+        /// Indicates that all nodes are aware that this node is leaving the cluster.
         /// </summary>
         Exiting,
         /// <summary>
-        /// TBD
+        /// Node was forcefully removed from the cluster by means of <see cref="Cluster.Down"/>
         /// </summary>
         Down,
         /// <summary>
-        /// TBD
+        /// Node was removed as a member from the cluster.
         /// </summary>
         Removed
     }
@@ -403,20 +404,20 @@ namespace Akka.Cluster
     public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>
     {
         /// <summary>
-        /// TBD
+        /// The bound listening address for Akka.Remote.
         /// </summary>
         public Address Address { get; }
 
         /// <summary>
-        /// TBD
+        /// A random long integer used to signal the incarnation of this cluster instance.
         /// </summary>
         public int Uid { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a new unique address instance.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <param name="uid">TBD</param>
+        /// <param name="address">The original Akka <see cref="Address"/></param>
+        /// <param name="uid">The UID for the cluster instance.</param>
         public UniqueAddress(Address address, int uid)
         {
             Uid = uid;
@@ -424,10 +425,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two unique address instances to each other.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The other address to compare to.</param>
+        /// <returns><c>true</c> if equal, <c>false</c> otherwise.</returns>
         public bool Equals(UniqueAddress other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -436,17 +437,10 @@ namespace Akka.Cluster
             return Uid == other.Uid && Address.Equals(other.Address);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object.Equals(object)"/>
         public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress) obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()
         {
             return Uid;
@@ -467,31 +461,28 @@ namespace Akka.Cluster
             return result;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object.ToString"/>
         public override string ToString() => $"UniqueAddress: ({Address}, {Uid})";
 
         #region operator overloads
 
         /// <summary>
-        /// TBD
+        /// Compares two specified unique addresses for equality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first unique address used for comparison</param>
+        /// <param name="right">The second unique address used for comparison</param>
+        /// <returns><c>true</c> if both unique addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(UniqueAddress left, UniqueAddress right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// TBD
+        /// Compares two specified unique addresses for inequality.
         /// </summary>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="left">The first unique address used for comparison</param>
+        /// <param name="right">The second unique address used for comparison</param>
+        /// <returns><c>true</c> if both unique addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(UniqueAddress left, UniqueAddress right)
         {
             return !Equals(left, right);

@@ -22,20 +22,22 @@ namespace Akka.Remote
     internal class RemoteDeployer : Deployer
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RemoteDeployer"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings used to configure the deployer.</param>
         public RemoteDeployer(Settings settings) : base(settings)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor deployment to the supplied path, <paramref name="key" />, using the supplied configuration, <paramref name="config" />.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="key">The path used to deploy the actor.</param>
+        /// <param name="config">The configuration used to configure the deployed actor.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when a remote node name in the specified <paramref name="config"/> is unparseable.
+        /// </exception>
+        /// <returns>A configured actor deployment to the given path.</returns>
         public override Deploy ParseConfig(string key, Config config)
         {
             var deploy = base.ParseConfig(key, config);
@@ -52,14 +54,11 @@ namespace Akka.Remote
             }
             
             if (!string.IsNullOrWhiteSpace(remote))
-                throw new ConfigurationException(string.Format("unparseable remote node name [{0}]", remote));
+                throw new ConfigurationException($"unparseable remote node name [{remote}]");
 
             return CheckRemoteRouterConfig(deploy);
         }
 
-        /// <summary>
-        /// Used to determine if a given <paramref name="deploy"/> is an instance of <see cref="RemoteRouterConfig"/>.
-        /// </summary>
         private static Deploy CheckRemoteRouterConfig(Deploy deploy)
         {
             var nodes = deploy.Config.GetStringList("target.nodes").Select(Address.Parse).ToList();
@@ -78,4 +77,3 @@ namespace Akka.Remote
         }
     }
 }
-

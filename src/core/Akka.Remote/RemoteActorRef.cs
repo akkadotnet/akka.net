@@ -97,7 +97,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Use Context.Watch and Receive<Terminated>")]
+        [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get { return false; } }
 
 

@@ -29,9 +29,15 @@ namespace Akka.Cluster.Sharding
     {
         #region messages
         
+        /// <summary>
+        /// TBD
+        /// </summary>
         [Serializable]
         internal sealed class Retry : IShardRegionCommand
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly Retry Instance = new Retry();
             private Retry() { }
         }
@@ -43,7 +49,14 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         internal sealed class RestartShard
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly ShardId ShardId;
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardId">TBD</param>
             public RestartShard(string shardId)
             {
                 ShardId = shardId;
@@ -57,11 +70,26 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal class HandOffStopper : ReceiveActor
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="replyTo">TBD</param>
+            /// <param name="entities">TBD</param>
+            /// <param name="stopMessage">TBD</param>
+            /// <returns>TBD</returns>
             public static Actor.Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage)
             {
                 return Actor.Props.Create(() => new HandOffStopper(shard, replyTo, entities, stopMessage)).WithDeploy(Deploy.Local);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shard">TBD</param>
+            /// <param name="replyTo">TBD</param>
+            /// <param name="entities">TBD</param>
+            /// <param name="stopMessage">TBD</param>
             public HandOffStopper(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage)
             {
                 var remaining = new HashSet<IActorRef>(entities);
@@ -100,6 +128,14 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="ShardRegion"/> actor.
         /// </summary>
+        /// <param name="typeName">TBD</param>
+        /// <param name="entityProps">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="coordinatorPath">TBD</param>
+        /// <param name="extractEntityId">TBD</param>
+        /// <param name="extractShardId">TBD</param>
+        /// <param name="handOffStopMessage">TBD</param>
+        /// <returns>TBD</returns>
         internal static Props Props(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId, object handOffStopMessage)
         {
             return Actor.Props.Create(() => new ShardRegion(typeName, entityProps, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
@@ -108,30 +144,81 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="ShardRegion"/> actor when used in proxy only mode.
         /// </summary>
+        /// <param name="typeName">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="coordinatorPath">TBD</param>
+        /// <param name="extractEntityId">TBD</param>
+        /// <param name="extractShardId">TBD</param>
+        /// <returns>TBD</returns>
         internal static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId)
         {
             return Actor.Props.Create(() => new ShardRegion(typeName, null, settings, coordinatorPath, extractEntityId, extractShardId, PoisonPill.Instance)).WithDeploy(Deploy.Local);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string TypeName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Props EntityProps;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ClusterShardingSettings Settings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string CoordinatorPath;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IdExtractor IdExtractor;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ShardResolver ShardResolver;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly object HandOffStopMessage;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Cluster Cluster = Cluster.Get(Context.System);
 
         // sort by age, oldest first
         private static readonly IComparer<Member> AgeOrdering = MemberAgeComparer.Instance;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<IActorRef, IImmutableSet<ShardId>> Regions = ImmutableDictionary<IActorRef, IImmutableSet<ShardId>>.Empty;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<ShardId, IActorRef> RegionByShard = ImmutableDictionary<ShardId, IActorRef>.Empty;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<ShardId, IImmutableList<KeyValuePair<Msg, IActorRef>>> ShardBuffers = ImmutableDictionary<ShardId, IImmutableList<KeyValuePair<Msg, IActorRef>>>.Empty;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<ShardId, IActorRef> Shards = ImmutableDictionary<ShardId, IActorRef>.Empty;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableDictionary<IActorRef, ShardId> ShardsByRef = ImmutableDictionary<IActorRef, ShardId>.Empty;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableSet<Member> MembersByAge;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IImmutableSet<IActorRef> HandingOff = ImmutableHashSet<IActorRef>.Empty;
 
         private readonly ICancelable _retryTask;
@@ -140,6 +227,19 @@ namespace Akka.Cluster.Sharding
         private bool _loggedFullBufferWarning = false;
         private const int RetryCountThreshold = 5;
 
+        private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
+        private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new TaskCompletionSource<Done>();
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeName">TBD</param>
+        /// <param name="entityProps">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="coordinatorPath">TBD</param>
+        /// <param name="extractEntityId">TBD</param>
+        /// <param name="extractShardId">TBD</param>
+        /// <param name="handOffStopMessage">TBD</param>
         public ShardRegion(string typeName, Props entityProps, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId, object handOffStopMessage)
         {
             TypeName = typeName;
@@ -156,13 +256,36 @@ namespace Akka.Cluster.Sharding
             MembersByAge = membersByAgeBuilder.ToImmutable();
 
             _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RetryInterval, Settings.TunningParameters.RetryInterval, Self, Retry.Instance, Self);
+            SetupCoordinatedShutdown();
+        }
+
+        private void SetupCoordinatedShutdown()
+        {
+            var self = Self;
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShardingShutdownRegion, "region-shutdown", () =>
+            {
+                self.Tell(GracefulShutdown.Instance);
+                return _gracefulShutdownProgress.Task;
+            });
         }
 
         private ILoggingAdapter _log;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
-        public bool GracefulShutdownInProgres { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public bool GracefulShutdownInProgress { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int TotalBufferSize { get { return ShardBuffers.Aggregate(0, (acc, entity) => acc + entity.Value.Count); } }
         
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ActorSelection CoordinatorSelection
         {
             get
@@ -172,6 +295,9 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected object RegistrationMessage
         {
             get
@@ -182,18 +308,26 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
         }
 
+        /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
             base.PostStop();
             Cluster.Unsubscribe(Self);
+            _gracefulShutdownProgress.TrySetResult(Done.Instance);
             _retryTask.Cancel();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="member">TBD</param>
+        /// <returns>TBD</returns>
         protected bool MatchingRole(Member member)
         {
             return string.IsNullOrEmpty(Settings.Role) || member.HasRole(Settings.Role);
@@ -216,6 +350,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        /// <inheritdoc cref="ActorBase.Receive"/>
         protected override bool Receive(object message)
         {
             if (message is Terminated) HandleTerminated(message as Terminated);
@@ -379,7 +514,7 @@ namespace Akka.Cluster.Sharding
             else if (command is GracefulShutdown)
             {
                 Log.Debug("Starting graceful shutdown of region and all its shards");
-                GracefulShutdownInProgres = true;
+                GracefulShutdownInProgress = true;
                 SendGracefulShutdownToCoordinator();
                 TryCompleteGracefulShutdown();
             }
@@ -425,16 +560,28 @@ namespace Akka.Cluster.Sharding
             return Task.WhenAll(tasks);
         }
 
+        private List<ActorSelection> GracefulShutdownCoordinatorSelections
+        {
+            get
+            {
+                return
+                    MembersByAge.Take(2)
+                        .Select(m => Context.ActorSelection(new RootActorPath(m.Address) + CoordinatorPath))
+                        .ToList();
+            }
+        }
+
         private void TryCompleteGracefulShutdown()
         {
-            if(GracefulShutdownInProgres && Shards.Count == 0 && ShardBuffers.Count == 0)
+            if(GracefulShutdownInProgress && Shards.Count == 0 && ShardBuffers.Count == 0)
                 Context.Stop(Self);     // all shards have been rebalanced, complete graceful shutdown
         }
 
         private void SendGracefulShutdownToCoordinator()
         {
-            if (GracefulShutdownInProgres && _coordinator != null)
-                _coordinator.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self));
+            if (GracefulShutdownInProgress)
+                GracefulShutdownCoordinatorSelections
+                    .ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
         }
 
         private void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)
@@ -679,5 +826,4 @@ namespace Akka.Cluster.Sharding
             }
         }
     }
-
 }

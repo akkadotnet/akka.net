@@ -116,10 +116,17 @@ namespace Akka.Tests.Actor
         {
             var actorCell = actor as ActorRefWithCell;
             Assert.True(actorCell != null, "Test method only valid with ActorRefWithCell actors.");
+            // ReSharper disable once PossibleNullReferenceException
             var container = actorCell.Provider.TempContainer as VirtualPathContainer;
-            int childCounter = 0;
-            container.ForEachChild(x => childCounter++);
-            Assert.True(childCounter == 0, "Temp actors not all removed.");
+
+            AwaitAssert(() =>
+            {
+                var childCounter = 0;
+                // ReSharper disable once PossibleNullReferenceException
+                container.ForEachChild(x => childCounter++);
+                Assert.True(childCounter == 0, "Temp actors not all removed.");
+            });
+            
         }
 
         /// <summary>

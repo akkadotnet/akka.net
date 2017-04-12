@@ -296,7 +296,7 @@ namespace Akka.Streams.Implementation.IO
             // has to be in this order as module depends on shape
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0)
-                throw new ArgumentException("Buffer size must be greather than 0");
+                throw new ArgumentException("Buffer size must be greater than 0");
 
             var dataQueue = new BlockingCollection<ByteString>(maxBuffer);
             var downstreamStatus = new AtomicReference<IDownstreamStatus>(Ok.Instance);

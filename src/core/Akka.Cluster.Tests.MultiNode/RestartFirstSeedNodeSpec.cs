@@ -39,11 +39,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class RestartFirstSeedNodeNode1 : RestartFirstSeedNodeSpec { }
-    public class RestartFirstSeedNodeNode2 : RestartFirstSeedNodeSpec { }
-    public class RestartFirstSeedNodeNode3 : RestartFirstSeedNodeSpec { }
-
-    public abstract class RestartFirstSeedNodeSpec : MultiNodeClusterSpec
+    public class RestartFirstSeedNodeSpec : MultiNodeClusterSpec
     {
         private readonly RestartFirstSeedNodeSpecConfig _config;
         private Address _missedSeed;
@@ -56,7 +52,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        public RestartFirstSeedNodeSpec(RestartFirstSeedNodeSpecConfig config) : base(config)
+        protected RestartFirstSeedNodeSpec(RestartFirstSeedNodeSpecConfig config) : base(config)
         {
             _config = config;
             _missedSeed = GetAddress(config.Seed3).WithPort(61313);
@@ -69,7 +65,7 @@ namespace Akka.Cluster.Tests.MultiNode
             restartedSeed1System = new Lazy<ActorSystem>(() =>
             {
                 var localConfig = ConfigurationFactory
-                    .ParseString("akka.remote.helios.tcp.port=" + GetSeedNodes().First().Port)
+                    .ParseString("akka.remote.dot-netty.tcp.port=" + GetSeedNodes().First().Port)
                     .WithFallback(Sys.Settings.Config);
                 return ActorSystem.Create(Sys.Name, localConfig);
             });

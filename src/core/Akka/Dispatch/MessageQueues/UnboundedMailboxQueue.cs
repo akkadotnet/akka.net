@@ -6,12 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-#if MONO
-using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
-#else
 using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
-
-#endif
 
 namespace Akka.Dispatch.MessageQueues
 {
@@ -20,51 +15,31 @@ namespace Akka.Dispatch.MessageQueues
     {
         private readonly TQueue _queue = new TQueue();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="IMessageQueue"/>
         public bool HasMessages
         {
-#if MONO
-            get { return _queue.Count > 0; }
-#else
             get { return !_queue.IsEmpty; }
-#endif
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="IMessageQueue"/>
         public int Count
         {
             get { return _queue.Count; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receiver">TBD</param>
-        /// <param name="envelope">TBD</param>
+        /// <inheritdoc cref="IMessageQueue"/>
         public void Enqueue(IActorRef receiver, Envelope envelope)
         {
             _queue.Enqueue(envelope);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="envelope">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IMessageQueue"/>
         public bool TryDequeue(out Envelope envelope)
         {
             return _queue.TryDequeue(out envelope);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="owner">TBD</param>
-        /// <param name="deadletters">TBD</param>
+        /// <inheritdoc cref="IMessageQueue"/>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
             Envelope msg;

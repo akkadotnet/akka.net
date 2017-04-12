@@ -20,7 +20,7 @@ namespace Akka.Persistence
         public int WarnAfterNumberOfUnconfirmedAttempts { get; }
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public bool ConfirmDelivery(long deliveryId) { }
         public void Deliver(Akka.Actor.ActorPath destination, System.Func<long, object> deliveryMessageMapper) { }
         public void Deliver(Akka.Actor.ActorSelection destination, System.Func<long, object> deliveryMessageMapper) { }
@@ -39,7 +39,7 @@ namespace Akka.Persistence
         public int WarnAfterNumberOfUnconfirmedAttempts { get; }
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public bool ConfirmDelivery(long deliveryId) { }
         public void Deliver(Akka.Actor.ActorPath destination, System.Func<long, object> deliveryMessageMapper) { }
         public void Deliver(Akka.Actor.ActorSelection destination, System.Func<long, object> deliveryMessageMapper) { }
@@ -225,11 +225,7 @@ namespace Akka.Persistence
         public override void AroundPostStop() { }
         public override void AroundPreRestart(System.Exception cause, object message) { }
         public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
-        [System.ObsoleteAttribute("Use DeferAsync instead")]
-        public void Defer<TEvent>(TEvent evt, System.Action<TEvent> handler) { }
-        [System.ObsoleteAttribute("Use DeferAsync instead")]
-        public void Defer<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public void DeferAsync<TEvent>(TEvent evt, System.Action<TEvent> handler) { }
         public void DeleteMessages(long toSequenceNr) { }
         public void DeleteSnapshot(long sequenceNr) { }
@@ -240,13 +236,9 @@ namespace Akka.Persistence
         protected virtual void OnRecoveryFailure(System.Exception reason, object message = null) { }
         protected virtual void OnReplaySuccess() { }
         public void Persist<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
-        [System.ObsoleteAttribute("Use PersistAll instead")]
-        public void Persist<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         public void PersistAsync<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
-        [System.ObsoleteAttribute("Use PersistAllAsync instead")]
-        public void PersistAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
         protected abstract bool ReceiveCommand(object message);
         protected abstract bool ReceiveRecover(object message);
         public void SaveSnapshot(object snapshot) { }
@@ -315,11 +307,6 @@ namespace Akka.Persistence
     public interface IStashOverflowStrategyConfigurator
     {
         Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config);
-    }
-    [System.ObsoleteAttribute("DeleteMessages will be removed.")]
-    public interface IWithPersistenceId
-    {
-        string PersistenceId { get; }
     }
     public sealed class LoadSnapshot : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.LoadSnapshot>
     {
@@ -456,7 +443,7 @@ namespace Akka.Persistence
         public Akka.Actor.IStash Stash { get; set; }
         public abstract string ViewId { get; }
         public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public void DeleteSnapshot(long sequenceNr) { }
         public void DeleteSnapshots(Akka.Persistence.SnapshotSelectionCriteria criteria) { }
         public void LoadSnapshot(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, long toSequenceNr) { }
@@ -716,9 +703,6 @@ namespace Akka.Persistence
     {
         protected UntypedPersistentActor() { }
         protected static Akka.Actor.IUntypedActorContext Context { get; }
-        [System.ObsoleteAttribute("Use Become or BecomeStacked instead. This method will be removed in future versio" +
-            "ns")]
-        protected void Become(Akka.Actor.UntypedReceive receive, bool discardOld = True) { }
         protected void Become(Akka.Actor.UntypedReceive receive) { }
         protected void BecomeStacked(Akka.Actor.UntypedReceive receive) { }
         protected abstract void OnCommand(object message);
@@ -846,14 +830,14 @@ namespace Akka.Persistence.Fsm
         public void WhenUnhandled(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction stateFunction) { }
         public class State<TState, TData, TEvent> : Akka.Actor.FSMBase.State<TState, TData>
         {
-            public State(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
+            public State(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
             public System.Action<TData> AfterTransitionHandler { get; }
             public Akka.Util.ILinearSeq<TEvent> DomainEvents { get; }
-            public bool Notifies { get; set; }
+            public new bool Notifies { get; set; }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State AndThen(System.Action<TData> handler) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(Akka.Util.ILinearSeq<TEvent> events) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(TEvent e) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
+            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State ForMax(System.TimeSpan timeout) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Replying(object replyValue) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Using(TData nextStateData) { }
@@ -870,7 +854,7 @@ namespace Akka.Persistence.Fsm
             public System.Action<TData> AfterTransitionHandler { get; }
             public Akka.Util.ILinearSeq<TEvent> DomainEvents { get; }
             public bool Notifies { get; set; }
-            public System.Collections.Generic.List<object> Replies { get; }
+            public System.Collections.Generic.IReadOnlyList<object> Replies { get; }
             public TData StateData { get; }
             public TState StateName { get; }
             public Akka.Actor.FSMBase.Reason StopReason { get; }
@@ -942,7 +926,7 @@ namespace Akka.Persistence.Journal
         public Akka.Actor.IStash Stash { get; set; }
         public abstract System.TimeSpan Timeout { get; }
         public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
+        protected internal override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr) { }
         public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
@@ -1148,7 +1132,6 @@ namespace Akka.Persistence.Serialization
     {
         public MessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override bool IncludeManifest { get; }
-        public Akka.Serialization.Information TransportInformation { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
@@ -1169,7 +1152,6 @@ namespace Akka.Persistence.Serialization
     {
         public SnapshotSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override bool IncludeManifest { get; }
-        public Akka.Serialization.Information TransportInformation { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }

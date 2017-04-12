@@ -15,6 +15,7 @@ using Akka.Actor;
 using Akka.Cluster.PubSub.Serializers.Proto;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Serialization;
+using Akka.Util;
 using Google.ProtocolBuffers;
 using Address = Akka.Cluster.PubSub.Serializers.Proto.Address;
 using Delta = Akka.Cluster.Tools.PublishSubscribe.Internal.Delta;
@@ -25,20 +26,27 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
     /**
      * Protobuf serializer of DistributedPubSubMediator messages.
      */
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class DistributedPubSubMessageSerializer : SerializerWithStringManifest
     {
-        public const int BufferSize = 1024 * 4;
+        private const int BufferSize = 1024 * 4;
 
-        public const string StatusManifest = "A";
-        public const string DeltaManifest = "B";
-        public const string SendManifest = "C";
-        public const string SendToAllManifest = "D";
-        public const string PublishManifest = "E";
+        private const string StatusManifest = "A";
+        private const string DeltaManifest = "B";
+        private const string SendManifest = "C";
+        private const string SendToAllManifest = "D";
+        private const string PublishManifest = "E";
 
         private readonly IDictionary<string, Func<byte[], object>> _fromBinaryMap;
 
         private readonly int _identifier;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DistributedPubSubMessageSerializer"/> class.
+        /// </summary>
+        /// <param name="system">The actor system to associate with this serializer.</param>
         public DistributedPubSubMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
@@ -52,8 +60,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             };
         }
 
-        public override int Identifier { get { return _identifier; } }
+        /// <summary>
+        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
+        /// Values from 0 to 16 is reserved for Akka internal usage
+        /// </summary>
+        public override int Identifier => _identifier;
 
+        /// <summary>
+        /// Serializes the given object into a byte array
+        /// </summary>
+        /// <param name="obj">The object to serialize</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="obj"/> is of an unknown type.
+        /// Acceptable types include:
+        /// <see cref="Akka.Cluster.Tools.PublishSubscribe.Internal.Status"/> | <see cref="Akka.Cluster.Tools.PublishSubscribe.Internal.Delta"/> | <see cref="Send"/> | <see cref="SendToAll"/> | <see cref="Publish"/>
+        /// </exception>
+        /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is Internal.Status) return Compress(StatusToProto(obj as Internal.Status));
@@ -62,20 +84,40 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             if (obj is SendToAll) return SendToAllToProto(obj as SendToAll).ToByteArray();
             if (obj is Publish) return PublishToProto(obj as Publish).ToByteArray();
 
-            throw new ArgumentException(string.Format("Can't serialize object of type {0} with {1}", obj.GetType(), GetType()));
+            throw new ArgumentException($"Can't serialize object of type {obj.GetType()} with {GetType()}");
         }
 
-        public override object FromBinary(byte[] bytes, string manifestString)
+        /// <summary>
+        /// Deserializes a byte array into an object using an optional <paramref name="manifest" /> (type hint).
+        /// </summary>
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="manifest">The type hint used to deserialize the object contained in the array.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="bytes"/>cannot be deserialized using the specified <paramref name="manifest"/>.
+        /// </exception>
+        /// <returns>The object contained in the array</returns>
+        public override object FromBinary(byte[] bytes, string manifest)
         {
             Func<byte[], object> deserializer;
-            if (_fromBinaryMap.TryGetValue(manifestString, out deserializer))
+            if (_fromBinaryMap.TryGetValue(manifest, out deserializer))
             {
                 return deserializer(bytes);
             }
 
-            throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in serializer {1}", manifestString, GetType()));
+            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {GetType()}");
         }
 
+        /// <summary>
+        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(System.Byte[],System.String)" /> method.
+        /// <note>
+        /// This method returns <see cref="String.Empty" /> if a manifest is not needed.
+        /// </note>
+        /// </summary>
+        /// <param name="o">The object for which the manifest is needed.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="o"/> does not have an associated manifest.
+        /// </exception>
+        /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
         public override string Manifest(object o)
         {
             if (o is Internal.Status) return StatusManifest;
@@ -84,7 +126,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             if (o is SendToAll) return SendToAllManifest;
             if (o is Publish) return PublishManifest;
 
-            throw new ArgumentException(string.Format("Serializer {0} cannot serialize message of type {1}", this.GetType(), o.GetType()));
+            throw new ArgumentException($"Serializer {this.GetType()} cannot serialize message of type {o.GetType()}");
         }
 
         private byte[] Compress(IMessageLite message)
@@ -117,7 +159,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         private Address.Builder AddressToProto(Actor.Address address)
         {
             if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
-                throw new ArgumentException(string.Format("Address [{0}] could not be serialized: host or port missing", address));
+                throw new ArgumentException($"Address [{address}] could not be serialized: host or port missing");
 
             return Address.CreateBuilder()
                 .SetSystem(address.System)
@@ -279,7 +321,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             else
             {
                 if (serializer.IncludeManifest)
-                    builder.SetMessageManifest(ByteString.CopyFromUtf8(TypeQualifiedNameForManifest(message.GetType())));
+                    builder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().TypeQualifiedName()));
             }
 
             return builder.Build();

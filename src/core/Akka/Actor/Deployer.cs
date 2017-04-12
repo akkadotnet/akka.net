@@ -29,9 +29,9 @@ namespace Akka.Actor
         private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Deployer"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings used to configure the deployer.</param>
         public Deployer(Settings settings)
         {
             _settings = settings;
@@ -54,10 +54,13 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public Deploy Lookup(ActorPath path)
         {
-            if (path.Elements.Head() != "user" || path.Elements.Count() < 2)
+            var rawElements = path.Elements;
+            if (rawElements[0] != "user" || rawElements.Count < 2)
+            {
                 return Deploy.None;
+            }
 
-            var elements = path.Elements.Drop(1);
+            var elements = rawElements.Drop(1);
             return Lookup(elements);
         }
 
@@ -110,18 +113,18 @@ namespace Akka.Actor
                         }
                     }
                     set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
-                } while(!set);
+                } while (!set);
             };
             var elements = deploy.Path.Split('/').Drop(1).ToList();
             add(elements, deploy);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor deployment to the supplied path, <paramref name="key"/>, using the supplied configuration, <paramref name="config"/>.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="key">The path used to deploy the actor.</param>
+        /// <param name="config">The configuration used to configure the deployed actor.</param>
+        /// <returns>A configured actor deployment to the given path.</returns>
         public virtual Deploy ParseConfig(string key, Config config)
         {
             var deployment = config.WithFallback(Default);
@@ -148,4 +151,3 @@ namespace Akka.Actor
         }
     }
 }
-

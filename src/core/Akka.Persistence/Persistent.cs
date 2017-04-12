@@ -17,18 +17,6 @@ namespace Akka.Persistence
     /// <summary>
     /// TBD
     /// </summary>
-    [Obsolete("DeleteMessages will be removed.")]
-    public interface IWithPersistenceId
-    {
-        /// <summary>
-        /// Identifier of the persistent identity for which messages should be replayed.
-        /// </summary>
-        string PersistenceId { get; }
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
     public interface IPersistentIdentity
     {
         /// <summary>
@@ -128,18 +116,24 @@ namespace Akka.Persistence
         /// TBD
         /// </summary>
         /// <param name="payload">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="payload"/> is empty
+        /// or the specified <paramref name="payload"/> contains messages from different <see cref="IPersistentRepresentation.PersistenceId"/>.
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="payload"/> is undefined.
+        /// </exception>
         public AtomicWrite(IImmutableList<IPersistentRepresentation> payload)
         {
             if (payload == null)
-                throw new ArgumentNullException("payload", "Payload of AtomicWrite must not be null.");
+                throw new ArgumentNullException(nameof(payload), "Payload of AtomicWrite must not be null.");
 
             if (payload.Count == 0)
-                throw new ArgumentException("Payload of AtomicWrite must not be empty.", "payload");
+                throw new ArgumentException("Payload of AtomicWrite must not be empty.", nameof(payload));
 
             var firstMessage = payload[0];
             if (payload.Count > 1 && !payload.Skip(1).All(m => m.PersistenceId.Equals(firstMessage.PersistenceId)))
-                throw new ArgumentException(string.Format("AtomicWrite must contain messages for the same persistenceId, yet difference persistenceIds found: {0}.", payload.Select(m => m.PersistenceId).Distinct()), "payload");
+                throw new ArgumentException($"AtomicWrite must contain messages for the same persistenceId, yet difference persistenceIds found: {payload.Select(m => m.PersistenceId).Distinct()}.", nameof(payload));
 
             Payload = payload;
             Sender = ActorRefs.NoSender;
@@ -176,11 +170,7 @@ namespace Akka.Persistence
         /// </summary>
         public long HighestSequenceNr { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(AtomicWrite other)
         {
             return Equals(Payload, other.Payload)
@@ -191,11 +181,7 @@ namespace Akka.Persistence
                    && HighestSequenceNr == other.HighestSequenceNr;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -203,10 +189,7 @@ namespace Akka.Persistence
             return obj is AtomicWrite && Equals((AtomicWrite) obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -221,13 +204,10 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("AtomicWrite<pid: {0}, lowSeqNr: {1}, highSeqNr: {2}, size: {3}, sender: {4}>", PersistenceId, LowestSequenceNr, HighestSequenceNr, Size, Sender);
+            return $"AtomicWrite<pid: {PersistenceId}, lowSeqNr: {LowestSequenceNr}, highSeqNr: {HighestSequenceNr}, size: {Size}, sender: {Sender}>";
         }
     }
 
@@ -401,11 +381,7 @@ namespace Akka.Persistence
             return new Persistent(payload: Payload, sequenceNr: sequenceNr, persistenceId: persistenceId, manifest: Manifest, isDeleted: isDeleted, sender: sender, writerGuid: writerGuid);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(IPersistentRepresentation other)
         {
             if (other == null) return false;
@@ -420,21 +396,13 @@ namespace Akka.Persistence
                    && string.Equals(WriterGuid, other.WriterGuid);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as IPersistentRepresentation);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Persistent other)
         {
             return Equals(Payload, other.Payload)
@@ -446,10 +414,7 @@ namespace Akka.Persistence
                    && string.Equals(WriterGuid, other.WriterGuid);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -465,14 +430,10 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("Persistent<pid: {0}, seqNr: {1}, deleted: {2}, manifest: {3}, sender: {4}, payload: {5}, writerGuid: {6}>", PersistenceId, SequenceNr, IsDeleted, Manifest, Sender, Payload, WriterGuid);
+            return $"Persistent<pid: {PersistenceId}, seqNr: {SequenceNr}, deleted: {IsDeleted}, manifest: {Manifest}, sender: {Sender}, payload: {Payload}, writerGuid: {WriterGuid}>";
         }
     }
 }
-

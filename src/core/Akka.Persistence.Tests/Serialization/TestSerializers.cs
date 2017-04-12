@@ -9,6 +9,7 @@ using System;
 using System.Text;
 using Akka.Actor;
 using Akka.Serialization;
+using Akka.Util;
 
 namespace Akka.Persistence.Tests.Serialization
 {
@@ -47,7 +48,7 @@ namespace Akka.Persistence.Tests.Serialization
 
     public class MyPayload2Serializer : SerializerWithStringManifest
     {
-        private readonly string _manifestV1 = TypeQualifiedNameForManifest(typeof (MyPayload));
+        private readonly string _manifestV1 = typeof(MyPayload).TypeQualifiedName();
         private readonly string _manifestV2 = "MyPayload-V2";
 
         public MyPayload2Serializer(ExtendedActorSystem system) : base(system)
@@ -119,7 +120,7 @@ namespace Akka.Persistence.Tests.Serialization
 
     public class MySnapshotSerializer2 : SerializerWithStringManifest
     {
-        private readonly string _oldManifest = TypeQualifiedNameForManifest(typeof (MySnapshot));
+        private readonly string _oldManifest = typeof(MySnapshot).TypeQualifiedName();
         private readonly string _currentManifest = "MySnapshot-V2";
 
         public MySnapshotSerializer2(ExtendedActorSystem system) : base(system)
@@ -154,7 +155,7 @@ namespace Akka.Persistence.Tests.Serialization
     public class OldPayloadSerializer : SerializerWithStringManifest
     {
         private readonly string _oldPayloadTypeName = "Akka.Persistence.Tests.Serialization.OldPayload,Akka.Persistence.Tests";
-        private readonly string _myPayloadTypeName = TypeQualifiedNameForManifest(typeof(MyPayload));
+        private readonly string _myPayloadTypeName = typeof(MyPayload).TypeQualifiedName();
 
         public OldPayloadSerializer(ExtendedActorSystem system) : base(system)
         {
@@ -167,14 +168,14 @@ namespace Akka.Persistence.Tests.Serialization
 
         public override string Manifest(object o)
         {
-            return TypeQualifiedNameForManifest(o.GetType());
+            return o.GetType().TypeQualifiedName();
         }
 
         public override byte[] ToBinary(object obj)
         {
             if (obj is MyPayload)
                 return Encoding.UTF8.GetBytes(string.Format(".{0}", ((MyPayload) obj).Data));
-            if (TypeQualifiedNameForManifest(obj.GetType()).Equals(_oldPayloadTypeName))
+            if (obj.GetType().TypeQualifiedName().Equals(_oldPayloadTypeName))
                 return Encoding.UTF8.GetBytes(obj.ToString());
             return null;
         }

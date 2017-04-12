@@ -106,10 +106,10 @@ namespace Akka.DistributedData
         public Flag SwitchOn() => Enabled ? this : new Flag(true);
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.Flag" /> to <see cref="System.Boolean" />.
         /// </summary>
-        /// <param name="flag">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="flag">The flag to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator bool(Flag flag) => flag.Enabled;
     }
 

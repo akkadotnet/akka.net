@@ -108,9 +108,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Select";
     }
 
@@ -182,9 +184,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Where";
     }
 
@@ -262,9 +266,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "TakeWhile";
     }
 
@@ -362,9 +368,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "SkipWhile";
     }
 
@@ -394,6 +402,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="function">TBD</param>
+        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
         /// <returns>TBD</returns>
         protected Option<T> WithSupervision<T>(Func<T> function)
         {
@@ -534,9 +543,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Collect";
     }
 
@@ -638,9 +649,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Recover";
     }
 
@@ -714,9 +727,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Take";
     }
 
@@ -782,9 +797,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Drop";
     }
 
@@ -911,9 +928,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Scan";
     }
 
@@ -1031,9 +1050,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Aggregate";
     }
 
@@ -1200,9 +1221,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "AggregateAsync";
     }
 
@@ -1402,7 +1425,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="count">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="count"/> is less than or equal to zero.
+        /// </exception>
         public Grouped(int count)
         {
             if (count <= 0)
@@ -1441,9 +1466,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Grouped";
     }
 
@@ -1552,9 +1579,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "LimitWeighted";
     }
 
@@ -1629,7 +1658,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="count">TBD</param>
         /// <param name="step">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="count"/>
+        /// or <paramref name="step"/> is less than or equal to zero.
+        /// </exception>
         public Sliding(int count, int step)
         {
             if (count <= 0)
@@ -1671,9 +1703,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Sliding";
     }
 
@@ -1692,6 +1726,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="count">TBD</param>
         /// <param name="overflowStrategy">TBD</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown when the specified <paramref name="overflowStrategy"/>  has an unknown <see cref="OverflowStrategy"/>.
+        /// </exception>
         public Buffer(int count, OverflowStrategy overflowStrategy)
         {
             _count = count;
@@ -2197,9 +2234,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Expand";
     }
 
@@ -2674,9 +2713,11 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Log";
     }
 
@@ -2719,7 +2760,7 @@ namespace Akka.Streams.Implementation.Fusing
             //       AND
             // - timer fired OR group is full
             private bool _groupClosed;
-            private bool _groupEmitted;
+            private bool _groupEmitted = true;
             private bool _finished;
             private int _elements;
 
@@ -3020,9 +3061,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Delay";
     }
 
@@ -3217,9 +3260,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "Sum";
     }
 
@@ -3312,12 +3357,13 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="partialFunction">TBD</param>
         /// <param name="maximumRetries">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="maximumRetries"/> is less than zero or not equal to -1.
+        /// </exception>
         public RecoverWith(Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunction, int maximumRetries)
         {
             if (maximumRetries < -1)
-                throw new ArgumentException("number of retries must be non-negative or equal to -1",
-                    nameof(maximumRetries));
+                throw new ArgumentException("number of retries must be non-negative or equal to -1", nameof(maximumRetries));
 
             _partialFunction = partialFunction;
             _maximumRetries = maximumRetries;
@@ -3336,9 +3382,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "RecoverWith";
     }
 
@@ -3465,9 +3513,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString() => "StatefulSelectMany";
     }
 }

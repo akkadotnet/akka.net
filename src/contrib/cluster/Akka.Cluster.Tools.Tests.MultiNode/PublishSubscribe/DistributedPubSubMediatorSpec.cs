@@ -37,6 +37,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.actor.serialize-messages = off
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500
@@ -44,11 +45,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         }
     }
 
-    public class DistributedPubSubMediatorNode1 : DistributedPubSubMediatorSpec { }
-    public class DistributedPubSubMediatorNode2 : DistributedPubSubMediatorSpec { }
-    public class DistributedPubSubMediatorNode3 : DistributedPubSubMediatorSpec { }
-
-    public abstract class DistributedPubSubMediatorSpec : MultiNodeClusterSpec
+    public class DistributedPubSubMediatorSpec : MultiNodeClusterSpec
     {
         #region setup 
 
@@ -240,7 +237,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new ConcurrentDictionary<string, IActorRef>();
 
-        protected DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
+        public DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
         {
         }
 

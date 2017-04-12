@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using Akka.Actor;
 using Akka.Serialization;
 using Google.ProtocolBuffers;
@@ -18,9 +17,12 @@ using Contacts = Akka.Cluster.Client.Serializers.Proto.Contacts;
 
 namespace Akka.Cluster.Tools.Client.Serialization
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ClusterClientMessageSerializer : SerializerWithStringManifest
     {
-        public const int BufferSize = 1024 * 4;
+        private const int BufferSize = 1024 * 4;
 
         private const string ContactsManifest = "A";
         private const string GetContactsManifest = "B";
@@ -30,8 +32,16 @@ namespace Akka.Cluster.Tools.Client.Serialization
         private static readonly byte[] EmptyBytes = new byte[0];
         private readonly IDictionary<string, Func<byte[], IClusterClientMessage>> _fromBinaryMap;
 
+        /// <summary>
+        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
+        /// Values from 0 to 16 is reserved for Akka internal usage
+        /// </summary>
         public override int Identifier { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClusterClientMessageSerializer"/> class.
+        /// </summary>
+        /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterClientMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             Identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system);
@@ -44,27 +54,57 @@ namespace Akka.Cluster.Tools.Client.Serialization
             };
         }
 
+        /// <summary>
+        /// Serializes the given object into a byte array
+        /// </summary>
+        /// <param name="obj">The object to serialize</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="obj"/> is of an unknown type.
+        /// Acceptable values include:
+        /// <see cref="ClusterReceptionist.Contacts"/> | <see cref="ClusterReceptionist.GetContacts"/> | <see cref="ClusterReceptionist.Heartbeat"/> | <see cref="ClusterReceptionist.HeartbeatRsp"/>
+        /// </exception>
+        /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is ClusterReceptionist.Contacts) return Compress(ContactsToProto(obj as ClusterReceptionist.Contacts));
-            if(obj is ClusterReceptionist.GetContacts) return EmptyBytes;
-            if(obj is ClusterReceptionist.Heartbeat) return EmptyBytes;
-            if(obj is ClusterReceptionist.HeartbeatRsp) return EmptyBytes;
+            if (obj is ClusterReceptionist.GetContacts) return EmptyBytes;
+            if (obj is ClusterReceptionist.Heartbeat) return EmptyBytes;
+            if (obj is ClusterReceptionist.HeartbeatRsp) return EmptyBytes;
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
 
-        public override object FromBinary(byte[] bytes, string manifestString)
+        /// <summary>
+        /// Deserializes a byte array into an object using an optional <paramref name="manifest" /> (type hint).
+        /// </summary>
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="manifest">The type hint used to deserialize the object contained in the array.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="bytes"/>cannot be deserialized using the specified <paramref name="manifest"/>.
+        /// </exception>
+        /// <returns>The object contained in the array</returns>
+        public override object FromBinary(byte[] bytes, string manifest)
         {
             Func<byte[], IClusterClientMessage> deserializer;
-            if (_fromBinaryMap.TryGetValue(manifestString, out deserializer))
+            if (_fromBinaryMap.TryGetValue(manifest, out deserializer))
             {
                 return deserializer(bytes);
             }
 
-            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifestString}] in serializer {GetType()}");
+            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {GetType()}");
         }
 
+        /// <summary>
+        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(System.Byte[],System.String)" /> method.
+        /// <note>
+        /// This method returns <see cref="String.Empty" /> if a manifest is not needed.
+        /// </note>
+        /// </summary>
+        /// <param name="o">The object for which the manifest is needed.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="o"/> does not have an associated manifest.
+        /// </exception>
+        /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
         public override string Manifest(object o)
         {
             if (o is ClusterReceptionist.Contacts) return ContactsManifest;

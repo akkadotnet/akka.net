@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="TailChoppingRoutingLogic.cs" company="Akka.NET Project">
+// <copyright file="TailChopping.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -123,13 +123,13 @@ namespace Akka.Routing
                     try
                     {
 
-                        completion.TrySetResult(await ((Task<object>)_routees[currentIndex].Ask(message, _within)));
+                        completion.TrySetResult(await ((Task<object>)_routees[currentIndex].Ask(message, _within)).ConfigureAwait(false));
                     }
                     catch (TaskCanceledException)
                     {
                         completion.TrySetResult(
                             new Status.Failure(
-                                new AskTimeoutException(String.Format("Ask timed out on {0} after {1}", sender, _within))));
+                                new AskTimeoutException($"Ask timed out on {sender} after {_within}")));
                     }
                 }, cancelable);
             }
@@ -199,7 +199,7 @@ namespace Akka.Routing
         public TimeSpan Within { get; }
 
         /// <summary>
-        /// TBD
+        /// The amount of time to wait before sending to the next routee.
         /// </summary>
         public TimeSpan Interval { get; }
 
@@ -214,10 +214,10 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Used by the <see cref="RoutedActorCell" /> to determine the initial number of routees.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The number of routees associated with this pool.</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return NrOfInstances;
@@ -445,7 +445,7 @@ namespace Akka.Routing
         public TimeSpan Within { get; }
 
         /// <summary>
-        /// TBD
+        /// The amount of time to wait before sending to the next routee.
         /// </summary>
         public TimeSpan Interval { get; }
 
@@ -461,10 +461,10 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves the actor paths used by this router during routee selection.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
             return Paths;
@@ -515,13 +515,19 @@ namespace Akka.Routing
                 return new TailChoppingGroup(Paths, Within, Interval, Dispatchers.DefaultDispatcherId);
             }
 
+            /// <summary>
             /// The actor paths used by this router during routee selection.
+            /// </summary>
             public IEnumerable<string> Paths { get; set; }
 
+            /// <summary>
             /// The amount of time to wait for a response.
+            /// </summary>
             public TimeSpan Within { get; set; }
 
+            /// <summary>
             /// The interval to wait before sending to the next routee.
+            /// </summary>
             public TimeSpan Interval { get; set; }
 
             /// <summary>

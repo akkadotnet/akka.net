@@ -26,12 +26,12 @@ namespace Akka.DI.Core
         /// <param name="dependencyResolver">The resolver used to resolve the given actor type.</param>
         /// <param name="actorType">The type of actor that this producer creates.</param>
         /// <exception cref="ArgumentNullException">
-        /// Either the <paramref name="dependencyResolver"/> or the <paramref name="actorType"/> was null.
+        /// This exception is thrown when either the specified <paramref name="dependencyResolver"/> or the specified <paramref name="actorType"/> is undefined.
         /// </exception>
         public DIActorProducer(IDependencyResolver dependencyResolver, Type actorType)
         {
-            if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
-            if (actorType == null) throw new ArgumentNullException("actorType");
+            if (dependencyResolver == null) throw new ArgumentNullException(nameof(dependencyResolver), $"DIActorProducer requires {nameof(dependencyResolver)} to be provided");
+            if (actorType == null) throw new ArgumentNullException(nameof(actorType), $"DIActorProducer requires {nameof(actorType)} to be provided");
 
             this.dependencyResolver = dependencyResolver;
             this.actorType = actorType;

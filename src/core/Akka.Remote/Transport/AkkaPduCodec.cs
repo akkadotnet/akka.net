@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Google.ProtocolBuffers;
 using System.Runtime.Serialization;
+using Akka.Remote.Proto;
 
 namespace Akka.Remote.Transport
 {
@@ -19,19 +20,17 @@ namespace Akka.Remote.Transport
     internal class PduCodecException : AkkaException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PduCodecException"/> class.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <returns>TBD</returns>
-        public PduCodecException(string msg, Exception cause = null) : base(msg, cause) { }
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
+        public PduCodecException(string message, Exception cause = null) : base(message, cause) { }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PduCodecException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected PduCodecException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
@@ -136,9 +135,6 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <returns>TBD</returns>
         public IInternalActorRef Recipient { get; private set; }
 
         /// <summary>
@@ -293,7 +289,14 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         /// <param name="raw">TBD</param>
-        /// <exception cref="PduCodecException">TBD</exception>
+        /// <exception cref="PduCodecException">
+        /// This exception is thrown when the Akka PDU in the specified byte string,
+        /// <paramref name="raw" />, mets one of the following conditions:
+        /// <ul>
+        /// <li>The PDU is neither a message or a control message.</li>
+        /// <li>The PDU is a control message with an invalid format. </li>
+        /// </ul>
+        /// </exception>
         /// <returns>TBD</returns>
         public override IAkkaPdu DecodePdu(ByteString raw)
         {
@@ -324,6 +327,9 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         /// <param name="info">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="info"/> contains an invalid address.
+        /// </exception>
         /// <returns>TBD</returns>
         public override ByteString ConstructAssociate(HandshakeInfo info)
         {
@@ -476,7 +482,7 @@ namespace Akka.Remote.Transport
                     return new Heartbeat();
             }
 
-            throw new PduCodecException(string.Format("Decoding of control PDU failed, invalid format, unexpected {0}", controlPdu));
+            throw new PduCodecException($"Decoding of control PDU failed, invalid format, unexpected {controlPdu}");
         }
 
 
@@ -525,7 +531,8 @@ namespace Akka.Remote.Transport
 
         private AddressData SerializeAddress(Address address)
         {
-            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue) throw new ArgumentException(string.Format("Address {0} could not be serialized: host or port missing", address));
+            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
+                throw new ArgumentException($"Address {address} could not be serialized: host or port missing");
             return AddressData.CreateBuilder()
                 .SetHostname(address.Host)
                 .SetPort((uint)address.Port.Value)

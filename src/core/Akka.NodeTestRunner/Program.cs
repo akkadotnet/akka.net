@@ -27,9 +27,10 @@ namespace Akka.NodeTestRunner
         private static readonly TimeSpan MaxProcessWaitTimeout = TimeSpan.FromMinutes(5);
         private static IActorRef _logger;
 
-        static int Main(string[] args)
+        static int Main(string[] args) 
         {
             var nodeIndex = CommandLine.GetInt32("multinode.index");
+            var nodeRole = CommandLine.GetProperty("multinode.role");
             var assemblyFileName = CommandLine.GetProperty("multinode.test-assembly");
             var typeName = CommandLine.GetProperty("multinode.test-class");
             var testName = CommandLine.GetProperty("multinode.test-method");
@@ -49,13 +50,13 @@ namespace Akka.NodeTestRunner
                 /* need to pass in just the assembly name to Discovery, not the full path
                  * i.e. "Akka.Cluster.Tests.MultiNode.dll"
                  * not "bin/Release/Akka.Cluster.Tests.MultiNode.dll" - this will cause
-                 * the Discovery class to actually not find any indivudal specs to run
+                 * the Discovery class to actually not find any individual specs to run
                  */
                 var assemblyName = Path.GetFileName(assemblyFileName);
                 Console.WriteLine("Running specs for {0} [{1}]", assemblyName, assemblyFileName);
                 using (var discovery = new Discovery(assemblyName, typeName))
                 {
-                    using (var sink = new Sink(nodeIndex, tcpClient))
+                    using (var sink = new Sink(nodeIndex, nodeRole, tcpClient))
                     {
                         try
                         {
@@ -65,7 +66,7 @@ namespace Akka.NodeTestRunner
                         }
                         catch (AggregateException ex)
                         {
-                            var specFail = new SpecFail(nodeIndex, displayName);
+                            var specFail = new SpecFail(nodeIndex, nodeRole, displayName);
                             specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
                             specFail.FailureMessages.Add(ex.Message);
                             specFail.FailureStackTraces.Add(ex.StackTrace);
@@ -85,7 +86,7 @@ namespace Akka.NodeTestRunner
                         }
                         catch (Exception ex)
                         {
-                            var specFail = new SpecFail(nodeIndex, displayName);
+                            var specFail = new SpecFail(nodeIndex, nodeRole, displayName);
                             specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
                             specFail.FailureMessages.Add(ex.Message);
                             specFail.FailureStackTraces.Add(ex.StackTrace);

@@ -103,7 +103,7 @@ namespace Akka.Remote.Transport
                 }
                 catch (Exception ex)
                 {
-                    throw new ArgumentException(string.Format("Cannot initiate transport adapter {0}", adapter.Value), ex);
+                    throw new ArgumentException($"Cannot initiate transport adapter {adapter.Value}", ex);
                 }
             }
 
@@ -123,7 +123,7 @@ namespace Akka.Remote.Transport
                 return _adaptersTable[name];
             }
 
-            throw new ArgumentException(string.Format("There is no registered transport adapter provider with name {0}", name));
+            throw new ArgumentException($"There is no registered transport adapter provider with name {name}");
         }
     }
 
@@ -275,7 +275,7 @@ namespace Akka.Remote.Transport
             {
                 var listenAddress = listenerTask.Result.Item1;
                 var listenerPromise = listenerTask.Result.Item2;
-                listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task));
+                listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task).ConfigureAwait(false));
                 return
                     new Tuple<Address, TaskCompletionSource<IAssociationEventListener>>(
                         SchemeAugmenter.AugmentScheme(listenAddress), upstreamListenerPromise);

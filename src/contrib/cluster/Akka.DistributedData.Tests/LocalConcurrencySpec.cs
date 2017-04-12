@@ -39,7 +39,7 @@ namespace Akka.DistributedData.Tests
         public LocalConcurrencySpec(ITestOutputHelper output)
             : base(ConfigurationFactory.ParseString(@"
               akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-              akka.remote.helios.tcp.port = 0"),
+              akka.remote.dot-netty.tcp.port = 0"),
             "LocalConcurrencySpec", output)
         {
             _replicator = DistributedData.Get(Sys).Replicator;
@@ -67,7 +67,7 @@ namespace Akka.DistributedData.Tests
             AwaitAssert(() =>
             {
                 _replicator.Tell(Dsl.Get(Updater.Key, ReadLocal.Instance));
-                var msg = ExpectMsg<Replicator.GetSuccess>();
+                var msg = ExpectMsg<GetSuccess>();
                 var elements = msg.Get(Updater.Key).Elements;
                 Assert.Equal(expected, elements);
             });

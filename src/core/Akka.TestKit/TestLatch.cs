@@ -20,7 +20,7 @@ namespace Akka.TestKit
     /// <para>
     /// When created using <see cref="TestKitBase.CreateTestLatch">TestKit.CreateTestLatch</see> the default
     /// timeout from <see cref="TestKitSettings.DefaultTimeout"/> is used and all timeouts are dilated, i.e. multiplied by 
-    /// <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>
+    /// <see cref="TestKitSettings.TestTimeFactor"/>
     /// </para>
     /// Timeouts will always throw an exception.
     /// </summary>
@@ -31,9 +31,9 @@ namespace Akka.TestKit
         private readonly TimeSpan _defaultTimeout;
 
         /// <summary>
-        /// TBD
+        /// Obsolete. This field will be removed. <see cref="TestKitSettings.DefaultTimeout"/> is an alternative.
         /// </summary>
-        [Obsolete("This field will be removed. TestKit.TestKitSetting.DefaultTimeout is an alternative.")]
+        [Obsolete("This field will be removed. TestKitSettings.DefaultTimeout is an alternative.")]
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
 
         /// <summary>
@@ -98,25 +98,12 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="count">TBD</param>
-        [Obsolete("Use another constructor instead")]
-        public TestLatch(ActorSystem system, int count = 1)
-        {
-            _latch = new CountdownEvent(count);
-        }
-
-
-        /// <summary>
         /// Gets a value indicating whether the latch is open.
         /// </summary>
         public bool IsOpen
         {
             get { return _latch.CurrentCount == 0; }
         }
-
 
         /// <summary>
         /// Count down the latch.
@@ -147,20 +134,25 @@ namespace Akka.TestKit
         /// <see cref="TimeoutException"/> is thrown.
         /// <para>
         /// If this instance has been created using <see cref="TestKitBase.CreateTestLatch">TestKit.CreateTestLatch</see> 
-        /// <paramref name="timeout"/> is dilated, i.e. multiplied by <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>
+        /// <paramref name="timeout"/> is dilated, i.e. multiplied by <see cref="TestKitSettings.TestTimeFactor"/>
         /// </para>
         /// </summary>
         /// <param name="timeout">TBD</param>
-        /// <exception cref="ArgumentException">Thrown when a too large timeout has been specified</exception>
-        /// <exception cref="TimeoutException">Thrown when the timeout is reached</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when a too large timeout has been specified.
+        /// </exception>
+        /// <exception cref="TimeoutException">
+        /// This exception is thrown when the timeout is reached.
+        /// </exception>
         public void Ready(TimeSpan timeout)
         {
-            if(timeout == TimeSpan.MaxValue) throw new ArgumentException(string.Format("TestLatch does not support waiting for {0}", timeout));
+            if(timeout == TimeSpan.MaxValue)
+                throw new ArgumentException($"TestLatch does not support waiting for {timeout}");
             if(_dilate != null)
                 timeout = _dilate(timeout);
             var opened = _latch.Wait(timeout);
-            if(!opened) throw new TimeoutException(
-                string.Format("Timeout of {0}", timeout));
+            if(!opened)
+                throw new TimeoutException($"Timeout of {timeout}");
         }
 
         /// <summary>
@@ -169,39 +161,15 @@ namespace Akka.TestKit
         /// <para>If no timeout was specified when creating this instance, 5 seconds is used.</para>
         /// <para>If this instance has been created using <see cref="TestKitBase.CreateTestLatch">TestKit.CreateTestLatch</see> the default
         /// timeout from <see cref="TestKitSettings.DefaultTimeout"/> is used and dilated, i.e. multiplied by 
-        /// <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>
+        /// <see cref="TestKitSettings.TestTimeFactor"/>
         /// </para>
         /// </summary>
-        /// <exception cref="TimeoutException">Thrown when the timeout is reached</exception>
+        /// <exception cref="TimeoutException">
+        /// This exception is thrown when the timeout is reached.
+        /// </exception>
         public void Ready()
         {
             Ready(_defaultTimeout);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="atMost">TBD</param>
-        [Obsolete("Use Ready instead. This method will be removed in future versions")]
-        public void Result(TimeSpan atMost)
-        {
-            Ready(atMost);
-        }
-
-        #region Static methods
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="count">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use the constructor instead. This method will be removed in future versions")]
-        public static TestLatch Apply(ActorSystem system, int count = 1)
-        {
-            return new TestLatch(count);
-        }
-
-        #endregion
     }
 }

@@ -38,11 +38,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class RestartNode3SpecMultiNode1 : RestartNode3Spec { }
-    public class RestartNode3SpecMultiNode2 : RestartNode3Spec { }
-    public class RestartNode3SpecMultiNode3 : RestartNode3Spec { }
-
-    public abstract class RestartNode3Spec : MultiNodeClusterSpec
+    public class RestartNode3Spec : MultiNodeClusterSpec
     {
         private class Watcher : ReceiveActor
         {
@@ -61,8 +57,8 @@ namespace Akka.Cluster.Tests.MultiNode
         private Lazy<ActorSystem> secondSystem;
         private Lazy<ActorSystem> restartedSecondSystem;
         private static UniqueAddress secondUniqueAddress = null;
-        
-        protected RestartNode3Spec() : this(new RestartNode3SpecConfig())
+
+        public RestartNode3Spec() : this(new RestartNode3SpecConfig())
         {
         }
 
@@ -72,7 +68,7 @@ namespace Akka.Cluster.Tests.MultiNode
             secondSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
             restartedSecondSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(
                 Sys.Name,
-                ConfigurationFactory.ParseString("akka.remote.helios.tcp.port=" + secondUniqueAddress.Address.Port)
+                ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + secondUniqueAddress.Address.Port)
                     .WithFallback(Sys.Settings.Config)));
         }
 

@@ -83,7 +83,7 @@ namespace Akka.Persistence.Query
         /// Query events for a specific <see cref="PersistentActor"/> identified by <paramref name="persistenceId"/>.
         /// <para>
         /// You can retrieve a subset of all events by specifying <paramref name="fromSequenceNr"/> and <paramref name="toSequenceNr"/>
-        /// or use <see cref="0L"/> and <see cref="long.MaxValue"/> respectively to retrieve all events.
+        /// or use <c>0L</c> and <see cref="long.MaxValue"/> respectively to retrieve all events.
         /// </para>
         /// The returned event stream should be ordered by sequence number.
         /// <para>

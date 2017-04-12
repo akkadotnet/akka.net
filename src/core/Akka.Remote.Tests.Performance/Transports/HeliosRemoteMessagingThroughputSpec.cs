@@ -20,7 +20,7 @@ namespace Akka.Remote.Tests.Performance.Transports
               remote {
                 log-remote-lifecycle-events = off
 
-                helios.tcp {
+                dot-netty.tcp {
                     port = 0
                     hostname = ""localhost""
 
@@ -58,8 +58,8 @@ namespace Akka.Remote.Tests.Performance.Transports
             ");
 
             var bindingConfig =
-                ConfigurationFactory.ParseString(@"akka.remote.helios.tcp.hostname = """ + ipOrHostname + @"""")
-                .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.helios.tcp.port = " + port));
+                ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
+                .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port = " + port));
 
             return bindingConfig.WithFallback(baseConfig);
         }

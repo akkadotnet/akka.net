@@ -13,7 +13,7 @@ using System.Text;
 
 namespace Akka.DistributedData
 {
-    internal interface IPruningPhase { }
+    public interface IPruningPhase { }
 
     internal sealed class PruningInitialized : IPruningPhase, IEquatable<PruningInitialized>
     {
@@ -70,7 +70,7 @@ namespace Akka.DistributedData
         public override int GetHashCode() => -1798412870; // "PruningPerformed".GetHashCode()
     }
 
-    internal sealed class PruningState
+    public sealed class PruningState
     {
         public UniqueAddress Owner { get; }
 

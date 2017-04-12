@@ -59,8 +59,8 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Configuration" />
@@ -87,6 +87,7 @@
     <Compile Include="Actor\Cancellation\AlreadyCanceledCancelable.cs" />
     <Compile Include="Actor\Cancellation\CancelableExtensions.cs" />
     <Compile Include="Actor\Cancellation\Cancelable.cs" />
+    <Compile Include="Actor\CoordinatedShutdown.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Cancellation\ICancelable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
@@ -151,11 +152,9 @@
     <Compile Include="Actor\Stash\Internal\BoundedStashImpl.cs" />
     <Compile Include="Actor\Stash\IActorStash.cs" />
     <Compile Include="Actor\Stash\IStash.cs" />
-    <Compile Include="Actor\Stash\UntypedActorWithBoundedStash.cs" />
     <Compile Include="Actor\Stash\StashFactory.cs" />
     <Compile Include="Actor\Stash\StashOverflowException.cs" />
     <Compile Include="Actor\Stash\Internal\UnboundedStashImpl.cs" />
-    <Compile Include="Actor\Stash\UntypedActorWithUnboundedStash.cs" />
     <Compile Include="Actor\Stash\IWithBoundedStash.cs" />
     <Compile Include="Actor\Stash\IWithUnboundedStash.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />
@@ -206,6 +205,7 @@
     <Compile Include="Dispatch\PinnedDispatcher.cs" />
     <Compile Include="Dispatch\SysMsg\ISystemMessage.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
+    <Compile Include="Done.cs" />
     <Compile Include="Event\ActorEventBus.cs" />
     <Compile Include="Event\AddressTerminatedTopic.cs" />
     <Compile Include="Event\BusLogging.cs" />
@@ -234,6 +234,8 @@
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
+    <Compile Include="Pattern\BackoffOnRestartSupervisor.cs" />
+    <Compile Include="Pattern\BackoffOptions.cs" />
     <Compile Include="Pattern\BackoffSupervisor.cs" />
     <Compile Include="IO\DatagramChannel.cs" />
     <Compile Include="IO\Dns.cs" />
@@ -250,8 +252,10 @@
     <Compile Include="IO\UdpManager.cs" />
     <Compile Include="IO\UdpSender.cs" />
     <Compile Include="IO\WithUdpSend.cs" />
+    <Compile Include="Pattern\BackoffSupervisorBase.cs" />
     <Compile Include="Pattern\CircuitBreaker.cs" />
     <Compile Include="Pattern\CircuitBreakerState.cs" />
+    <Compile Include="Pattern\FutureTimeoutSupport.cs" />
     <Compile Include="Pattern\OpenCircuitException.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
@@ -277,14 +281,21 @@
     <Compile Include="Util\Internal\AtomicState.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
+    <Compile Include="Util\Internal\Collections\ListExtensions.cs" />
     <Compile Include="Util\Internal\DictionaryExtensions.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
     <Compile Include="Util\Internal\Collections\IKeyValuePair.cs" />
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
+    <Compile Include="Util\Internal\TaskEx.cs" />
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
+    <Compile Include="Util\MatchHandler\PartialHandlerArgumentsCapture.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>PartialHandlerArgumentsCapture.tt</DependentUpon>
+    </Compile>
     <Compile Include="Util\RuntimeDetector.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
     <Compile Include="Util\Result.cs" />
@@ -331,7 +342,6 @@
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\Internal\IAtomicCounter.cs" />
     <Compile Include="Util\ListPriorityQueue.cs" />
-    <Compile Include="Util\MonoConcurrentQueue.cs" />
     <Compile Include="Util\MurmurHash.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
     <Compile Include="PatternMatch.cs" />
@@ -349,7 +359,6 @@
     <Compile Include="Util\MatchHandler\MatchExpressionBuilderResult.cs" />
     <Compile Include="Util\MatchHandler\MatchExpressionBuilder.cs" />
     <Compile Include="Util\MatchHandler\PartialActionBuilder.cs" />
-    <Compile Include="Util\MatchHandler\PartialHandlerArgumentsCapture.cs" />
     <Compile Include="Util\MatchHandler\HandlerKind.cs" />
     <Compile Include="Util\MatchHandler\IMatchCompiler.cs" />
     <Compile Include="Util\MatchHandler\MatchBuilder.cs" />
@@ -381,8 +390,14 @@
     <Content Include="Akka.ExternalAnnotations.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PartialHandlerArgumentsCapture.cs</LastGenOutput>
+    </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -13,7 +13,7 @@ namespace Akka.Cluster
 {
     /// <summary>
     /// API for plugins that will handle downing of cluster nodes. Concrete plugins must subclass and
-    /// have a public one argument constructor accepting an [[akka.actor.ActorSystem]].
+    /// have a public one argument constructor accepting an <see cref="ActorSystem"/>.
     /// </summary>
     public interface IDowningProvider
     {
@@ -59,6 +59,7 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public TimeSpan DownRemovalMargin => Cluster.Get(_system).Settings.DownRemovalMargin;
+
         /// <summary>
         /// TBD
         /// </summary>

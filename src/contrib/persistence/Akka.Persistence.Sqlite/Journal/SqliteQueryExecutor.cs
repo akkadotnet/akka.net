@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteQueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,8 +11,17 @@ using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class SqliteQueryExecutor : AbstractQueryExecutor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="configuration">TBD</param>
+        /// <param name="serialization">TBD</param>
+        /// <param name="timestampProvider">TBD</param>
         public SqliteQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization, ITimestampProvider timestampProvider) 
             : base(configuration, serialization, timestampProvider)
         {
@@ -38,12 +47,26 @@ namespace Akka.Persistence.Sqlite.Journal
                     PRIMARY KEY ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
                 );";
         }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string CreateEventsJournalSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string CreateMetaTableSql { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string ByTagSql { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <returns>TBD</returns>
         protected override DbCommand CreateCommand(DbConnection connection)
         {
             return new SQLiteCommand((SQLiteConnection)connection);

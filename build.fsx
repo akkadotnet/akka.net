@@ -226,6 +226,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/cluster/Akka.Cluster.Tools"
       "contrib/cluster/Akka.Cluster.Sharding"
       "contrib/cluster/Akka.DistributedData"
+      "contrib/cluster/Akka.DistributedData.LightningDB"
       ]
     |> List.iter copyOutput
 
@@ -309,7 +310,9 @@ Target "MultiNodeTests" <| fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "bin" @@ "core" @@ "Akka.MultiNodeTestRunner*")
     let multiNodeTestAssemblies = !! "src/**/bin/Release/Akka.Remote.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/Akka.Cluster.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll"
+                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.DistributedData.Tests.MultiNode.dll"
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -364,7 +367,7 @@ Target "NBench" <| fun _ ->
         let result = ExecProcess(fun info -> 
             info.FileName <- nbenchTestPath
             info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
-            info.Arguments <- args) (System.TimeSpan.FromMinutes 15.0) (* Reasonably long-running task. *)
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
         if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
     
     nbenchTestAssemblies |> Seq.iter (runNBench)
@@ -399,7 +402,7 @@ module Nuget =
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | "Akka.Remote.TestKit" -> ["Akka.Remote", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion;]
         | "Akka.Streams" -> ["Akka", release.NugetVersion]
-        | "Akka.Streams.TestKit" -> ["Akka.Streams", preReleaseVersion; "Akka.TestKit", release.NugetVersion]
+        | "Akka.Streams.TestKit" -> ["Akka.Streams", release.NugetVersion; "Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
     // used to add -pre suffix to pre-release packages
@@ -407,9 +410,8 @@ module Nuget =
       match project with
       | "Akka.Serialization.Wire" -> preReleaseVersion
       | "Akka.Serialization.Hyperion" -> preReleaseVersion
-      | cluster when (cluster.StartsWith("Akka.Cluster.") && not (cluster.EndsWith("TestKit"))) -> preReleaseVersion
+      | "Akka.Cluster.Sharding" -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
-      | streams when streams.StartsWith("Akka.Streams") -> preReleaseVersion
       | "Akka.DistributedData" -> preReleaseVersion
       | _ -> release.NugetVersion
 

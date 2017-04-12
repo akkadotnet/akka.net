@@ -15,55 +15,56 @@ using System.Threading;
 namespace Akka.TestKit.Internal
 {
     /// <summary>
-    /// This behaves exactly like a <see cref="BlockingCollection{T}"/> with a queue as the underlying storage
-    /// except it adds the possibility to add an item first, making it a LIFO.
+    /// This class represents a queue with the same characteristics of a <see cref="BlockingCollection{T}"/>.
+    /// The queue can enqueue items at either the front (FIFO) or the end (LIFO) of the collection.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    /// <typeparam name="T">The type of item to store</typeparam>
+    /// <typeparam name="T">The type of item to store.</typeparam>
     public class BlockingQueue<T>
     {
         private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>();
 
         /// <summary>
-        /// TBD
+        /// The number of items that are currently in the queue.
         /// </summary>
         public int Count { get { return _collection.Count; } }
 
         /// <summary>
-        /// TBD
+        /// Adds the specified item to the end of the queue.
         /// </summary>
-        /// <param name="item">TBD</param>
+        /// <param name="item">The item to add to the queue.</param>
         public void Enqueue(T item)
         {
             _collection.TryAdd(new Positioned(item));
         }
 
         /// <summary>
-        /// TBD
+        /// Adds the specified item to the front of the queue. 
         /// </summary>
-        /// <param name="item">TBD</param>
+        /// <param name="item">The item to add to the queue.</param>
         public void AddFirst(T item)
         {
             _collection.TryAdd(new Positioned(item, first:true));
         }
 
         /// <summary>
-        /// TBD
+        /// Tries to add the specified item to the end of the queue within the specified time period.
+        /// A token can be provided to cancel the operation if needed.
         /// </summary>
-        /// <param name="item">TBD</param>
-        /// <param name="millisecondsTimeout">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="item">The item to add to the queue.</param>
+        /// <param name="millisecondsTimeout">The number of milliseconds to wait for the add to complete.</param>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
+        /// <returns><c>true</c> if the add completed within the specified timeout; otherwise, <c>false</c>.</returns>
         public bool TryEnqueue(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-           return  _collection.TryAdd(new Positioned(item),millisecondsTimeout, cancellationToken);
+            return _collection.TryAdd(new Positioned(item), millisecondsTimeout, cancellationToken);
         }
 
         /// <summary>
-        /// TBD
+        /// Tries to remove the specified item from the queue.
         /// </summary>
-        /// <param name="item">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="item">The item to remove from the queue.</param>
+        /// <returns><c>true</c> if the item was removed; otherwise, <c>false</c>.</returns>
         public bool TryTake(out T item)
         {
             Positioned p;
@@ -77,12 +78,13 @@ namespace Akka.TestKit.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Tries to remove the specified item from the queue within the specified time period.
+        /// A token can be provided to cancel the operation if needed.
         /// </summary>
-        /// <param name="item">TBD</param>
-        /// <param name="millisecondsTimeout">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="item">The item to remove from the queue.</param>
+        /// <param name="millisecondsTimeout">The number of milliseconds to wait for the remove to complete.</param>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
+        /// <returns><c>true</c> if the remove completed within the specified timeout; otherwise, <c>false</c>.</returns>
         public bool TryTake(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
             Positioned p;
@@ -98,9 +100,11 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Removes an item from the collection.
         /// </summary>
-        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation..</param>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation.</param>
+        /// <exception cref="OperationCanceledException">
+        /// This exception is thrown when the operation is canceled.
+        /// </exception>
         /// <returns>The item removed from the collection.</returns>
-        /// <exception cref="OperationCanceledException">Thrown if the operation was cancelled</exception>
         public T Take(CancellationToken cancellationToken)
         {
             var p = _collection.Take(cancellationToken);

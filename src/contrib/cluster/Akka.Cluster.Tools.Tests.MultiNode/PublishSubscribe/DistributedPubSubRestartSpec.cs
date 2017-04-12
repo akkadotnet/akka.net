@@ -50,15 +50,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         }
     }
 
-    public class DistributedPubSubRestartMultiNode1 : DistributedPubSubRestartSpec { }
-    public class DistributedPubSubRestartMultiNode2 : DistributedPubSubRestartSpec { }
-    public class DistributedPubSubRestartMultiNode3 : DistributedPubSubRestartSpec { }
-
-    public abstract class DistributedPubSubRestartSpec : MultiNodeClusterSpec
+    public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
     {
         private readonly DistributedPubSubRestartSpecConfig _config;
 
-        protected DistributedPubSubRestartSpec() : this(new DistributedPubSubRestartSpecConfig())
+        public DistributedPubSubRestartSpec() : this(new DistributedPubSubRestartSpecConfig())
         {
         }
 
@@ -146,7 +142,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     var newSystem = ActorSystem.Create(
                         Sys.Name,
                         ConfigurationFactory
-                            .ParseString($"akka.remote.helios.tcp.port={Cluster.Get(Sys).SelfAddress.Port}")
+                            .ParseString($"akka.remote.dot-netty.tcp.port={Cluster.Get(Sys).SelfAddress.Port}")
                             .WithFallback(Sys.Settings.Config));
 
                     try

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="JournalDbEngine.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+// <copyright file="Messages.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -17,13 +17,40 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public sealed class JournalEntry
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string PersistenceId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long SequenceNr;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly bool IsDeleted;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string Manifest;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly DateTime Timestamp;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly object Payload;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="sequenceNr">TBD</param>
+        /// <param name="isDeleted">TBD</param>
+        /// <param name="manifest">TBD</param>
+        /// <param name="timestamp">TBD</param>
+        /// <param name="payload">TBD</param>
         public JournalEntry(string persistenceId, long sequenceNr, bool isDeleted, string manifest, DateTime timestamp, object payload)
         {
             PersistenceId = persistenceId;
@@ -55,6 +82,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public readonly string PersistenceId;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <param name="sequenceNr">TBD</param>
+        /// <param name="persistenceId">TBD</param>
         public EventId(long id, long sequenceNr, string persistenceId)
         {
             Id = id;
@@ -68,8 +101,15 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public sealed class WriteJournalBatch
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IDictionary<IPersistentRepresentation, IImmutableSet<string>> EntryTags;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="entryTags">TBD</param>
         public WriteJournalBatch(IDictionary<IPersistentRepresentation, IImmutableSet<string>> entryTags)
         {
             EntryTags = entryTags;
@@ -81,8 +121,15 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public sealed class AllPersistenceIds
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ImmutableArray<string> Ids;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ids">TBD</param>
         public AllPersistenceIds(ImmutableArray<string> ids)
         {
             Ids = ids;

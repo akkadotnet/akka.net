@@ -22,7 +22,7 @@ namespace Akka.Tests.Actor
                 _testActor = testActor;
                 Receive<string>(m => { _testActor.Tell(m); });
 
-                // if RunTask is ommitted, everything works fine
+                // if RunTask is omitted, everything works fine
                 // otherwise actor2 never receives messages from its child actor
                 RunTask(() => { Context.ActorOf(Props.Create<Actor2>(), "actor-2"); });
             }

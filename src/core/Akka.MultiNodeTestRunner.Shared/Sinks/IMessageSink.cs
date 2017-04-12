@@ -70,36 +70,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// Report that an individual node has passed its test.
         /// </summary>
         /// <param name="nodeIndex">The Id of the node in the 0-N index.</param>
-        void Success(int nodeIndex);
-
-        /// <summary>
-        /// Report that an individual node has passed its test.
-        /// </summary>
-        /// <param name="nodeIndex">The Id of the node in the 0-N index.</param>
+        /// <param name="nodeRole">The Role of the node.</param>
         /// <param name="message">A string message included with the notification.</param>
-        void Success(int nodeIndex, string message);
-
-        /// <summary>
-        /// Report that an individual node has failed its test.
-        /// </summary>
-        /// <param name="nodeIndex">The Id of the node in the 0-N index.</param>
-        void Fail(int nodeIndex);
-
-        /// <summary>
-        /// Report that an individual node has failed its test.
-        /// </summary>
-        /// <param name="nodeIndex">The Id of the node in the 0-N index.</param>
-        /// <param name="message">A string message included with the notification.</param>
-        void Fail(int nodeIndex, string message);
-
-        /// <summary>
-        /// Report a log message for an individual node.
-        /// </summary>
-        /// <param name="nodeIndex">The Id of the node in the 0-N index.</param>
-        /// <param name="message">A string message included with the notification.</param>
-        /// <param name="logSource">The source of a log message.</param>
-        /// <param name="level">The <see cref="LogLevel"/> of this message.</param>
-        void Log(int nodeIndex, string message,  string logSource, LogLevel level);
+        void Success(int nodeIndex, string nodeRole, string message);
 
         /// <summary>
         /// Report a log message from the MultiNodeTestRunner itself.

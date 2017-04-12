@@ -164,7 +164,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         private void PublishToChildren(NodeCompletedSpecWithSuccess message)
         {
             foreach(var sink in Sinks)
-                sink.Success(message.NodeIndex, message.Message);
+                sink.Success(message.NodeIndex, message.NodeRole, message.Message);
         }
 
 

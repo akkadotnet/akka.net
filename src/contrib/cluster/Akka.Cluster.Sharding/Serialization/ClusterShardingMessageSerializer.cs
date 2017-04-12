@@ -17,6 +17,9 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Cluster.Sharding.Serialization
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ClusterShardingMessageSerializer : SerializerWithStringManifest
     {
         #region manifests
@@ -53,11 +56,18 @@ namespace Akka.Cluster.Sharding.Serialization
 
         private readonly Dictionary<string, Func<byte[], object>> _fromBinaryMap;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const int BufferSize = 1024 << 2;
 
         private readonly int _identifier;
         private ExtendedActorSystem _system;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClusterShardingMessageSerializer"/> class.
+        /// </summary>
+        /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterShardingMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _system = system;
@@ -95,8 +105,20 @@ namespace Akka.Cluster.Sharding.Serialization
             };
         }
 
+        /// <summary>
+        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
+        /// Values from 0 to 16 is reserved for Akka internal usage
+        /// </summary>
         public override int Identifier { get { return _identifier; } }
 
+        /// <summary>
+        /// Serializes the given object into a byte array
+        /// </summary>
+        /// <param name="obj">The object to serialize</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="obj"/> is of an unknown type.
+        /// </exception>
+        /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
             if (obj is PersistentShardCoordinator.State) return Compress(CoordinatorStateToProto((PersistentShardCoordinator.State)obj));
@@ -124,20 +146,40 @@ namespace Akka.Cluster.Sharding.Serialization
             if (obj is Shard.GetShardStats) return new byte[0];
             if (obj is Shard.ShardStats) return ShardStatsToProto((Shard.ShardStats)obj).ToByteArray();
 
-            throw new ArgumentException(string.Format("Can't serialize object of type [{0}] in [{1}]", obj.GetType(), this.GetType()));
+            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{this.GetType()}]");
         }
 
-        public override object FromBinary(byte[] binary, string manifest)
+        /// <summary>
+        /// Deserializes a byte array into an object using an optional <paramref name="manifest" /> (type hint).
+        /// </summary>
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="manifest">The type hint used to deserialize the object contained in the array.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="bytes"/>cannot be deserialized using the specified <paramref name="manifest"/>.
+        /// </exception>
+        /// <returns>The object contained in the array</returns>
+        public override object FromBinary(byte[] bytes, string manifest)
         {
             Func<byte[], object> factory;
             if (_fromBinaryMap.TryGetValue(manifest, out factory))
             {
-                return factory(binary);
+                return factory(bytes);
             }
 
-            throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in [{1}]", manifest, this.GetType()));
+            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{this.GetType()}]");
         }
 
+        /// <summary>
+        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(System.Byte[],System.String)" /> method.
+        /// <note>
+        /// This method returns <see cref="String.Empty" /> if a manifest is not needed.
+        /// </note>
+        /// </summary>
+        /// <param name="o">The object for which the manifest is needed.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="o"/> does not have an associated manifest.
+        /// </exception>
+        /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
         public override string Manifest(object o)
         {
             if (o is Shard.ShardState) return EntityStateManifest;
@@ -165,7 +207,7 @@ namespace Akka.Cluster.Sharding.Serialization
             if (o is Shard.GetShardStats) return GetShardStatsManifest;
             if (o is Shard.ShardStats) return ShardStatsManifest;
 
-            throw new ArgumentException(string.Format("Can't serialize object of type [{0}] in [{1}]", o.GetType(), this.GetType()));
+            throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{this.GetType()}]");
         }
 
         private ShardStats ShardStatsToProto(Shard.ShardStats o)
@@ -317,9 +359,6 @@ namespace Akka.Cluster.Sharding.Serialization
             }
         }
 
-        /// <summary>
-        /// Compresses the protobuf message using GZIP compression
-        /// </summary>
         private static byte[] Compress(IMessageLite message)
         {
             using (var bos = new MemoryStream(BufferSize))
@@ -331,9 +370,6 @@ namespace Akka.Cluster.Sharding.Serialization
             }
         }
 
-        /// <summary>
-        /// Decompresses the protobuf message using GZIP compression
-        /// </summary>
         private static Stream Decompress(byte[] bytes)
         {
             return new GZipStream(new MemoryStream(bytes), CompressionMode.Decompress);

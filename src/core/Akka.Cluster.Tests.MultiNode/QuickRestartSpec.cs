@@ -38,11 +38,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public class QuickRestartMultiNode1 : QuickRestartSpec { }
-    public class QuickRestartMultiNode2 : QuickRestartSpec { }
-    public class QuickRestartMultiNode3 : QuickRestartSpec { }
-
-    public abstract class QuickRestartSpec : MultiNodeClusterSpec
+    public class QuickRestartSpec : MultiNodeClusterSpec
     {
         private readonly QuickRestartSpecConfig _config;
         private readonly Lazy<ImmutableList<Address>> _seedNodes;
@@ -50,7 +46,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         protected override TimeSpan ShutdownTimeout => TimeSpan.FromSeconds(45 * _rounds);
 
-        protected QuickRestartSpec() : this(new QuickRestartSpecConfig())
+        public QuickRestartSpec() : this(new QuickRestartSpecConfig())
         {
 
         }
@@ -96,7 +92,7 @@ namespace Akka.Cluster.Tests.MultiNode
                             .WithFallback(Sys.Settings.Config))
                         : ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[round-{round}]")
                             .WithFallback(
-                                $"akka.remote.helios.tcp.port={Cluster.Get(restartingSystem).SelfAddress.Port}")
+                                $"akka.remote.dot-netty.tcp.port={Cluster.Get(restartingSystem).SelfAddress.Port}")
                             .WithFallback(Sys.Settings.Config));
                     Log.Info("Restarting node has address {0}", Cluster.Get(restartingSystem).SelfUniqueAddress);
                     Cluster.Get(restartingSystem).JoinSeedNodes(_seedNodes.Value);

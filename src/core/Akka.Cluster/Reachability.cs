@@ -375,15 +375,8 @@ namespace Akka.Cluster
         {
             var nodesSet = nodes.ToImmutableHashSet();
             var newRecords = _records.FindAll(r => !nodesSet.Contains(r.Observer) && !nodesSet.Contains(r.Subject));
-            if (newRecords.Count == _records.Count)
-            {
-                return this;
-            }
-            else
-            {
-                var newVersions = _versions.RemoveRange(nodes);
-                return new Reachability(newRecords, newVersions);
-            }
+            var newVersions = _versions.RemoveRange(nodes);
+            return new Reachability(newRecords, newVersions);
         }
 
         /// <summary>
@@ -400,15 +393,8 @@ namespace Akka.Cluster
             else
             {
                 var newRecords = _records.FindAll(r => !nodes.Contains(r.Observer));
-                if (newRecords.Count == _records.Count)
-                {
-                    return this;
-                }
-                else
-                {
-                    var newVersions = _versions.RemoveRange(nodes);
-                    return new Reachability(newRecords, newVersions);
-                }
+                var newVersions = _versions.RemoveRange(nodes);
+                return new Reachability(newRecords, newVersions);
             }
         }
 
@@ -575,21 +561,19 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            var builder = new StringBuilder();
+            var builder = new StringBuilder("Reachability(");
 
             foreach (var observer in _versions.Keys)
             {
                 var rows = ObserverRows(observer);
-                if(rows == null) continue;
-                foreach(var row in rows)
-                {
-                    //TODO: ", " is wrong
-                    builder.Append(String.Format("{0} -> {1}: {2} [{3}] ({4}), ", observer.Address, row.Key, row.Value.Status,
-                        Status(row.Key), row.Value.Version));
-                }
+                if (rows == null) continue;
+
+                builder.AppendJoin(", ", rows, (b, row, index) =>
+                    b.AppendFormat("[{0} -> {1}: {2} [{3}] ({4})]",
+                        observer.Address, row.Key, row.Value.Status, Status(row.Key), row.Value.Version));
             }
 
-            return builder.ToString();
+            return builder.Append(')').ToString();
         }
     }
 }

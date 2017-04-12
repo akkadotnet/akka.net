@@ -23,7 +23,7 @@ namespace Akka.Configuration.Hocon
         private readonly Stack<int> _indexStack = new Stack<int>();
 
         /// <summary>
-        /// TBD
+        /// Adds the current index to the tokenizer's bookkeeping stack.
         /// </summary>
         public void Push()
         {
@@ -31,7 +31,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// TBD
+        /// Removes an index from the tokenizer's bookkeeping stack. 
         /// </summary>
         public void Pop()
         {
@@ -455,18 +455,18 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the current token is whitespace.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if token is whitespace; otherwise, <c>false</c>.</returns>
         public bool IsWhitespace()
         {
             return char.IsWhiteSpace(Peek());
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the current token is whitespace or a comment.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if token is whitespace or a comment; otherwise, <c>false</c>.</returns>
         public bool IsWhitespaceOrComment()
         {
             return IsWhitespace() || IsStartOfComment();
@@ -585,9 +585,9 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the current token is the start of a comment.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if token is the start of a comment; otherwise, <c>false</c>.</returns>
         public bool IsStartOfComment()
         {
             return (Matches("#", "//"));
@@ -649,10 +649,10 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the current token is the start of an include directive.
         /// </summary>
         /// <exception cref="FormatException">This exception is thrown if an unknown escape code is encountered.</exception>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if token is the start of an include directive; otherwise, <c>false</c>.</returns>
         public bool IsInclude()
         {
             Push();

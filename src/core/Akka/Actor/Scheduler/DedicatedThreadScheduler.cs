@@ -19,7 +19,7 @@ namespace Akka.Actor
     /// <summary>
     /// TBD
     /// </summary>
-    [Obsolete("Replaced with HashedWheelTimerScheduler")]
+    [Obsolete("Replaced with HashedWheelTimerScheduler [1.1.2]")]
     public class DedicatedThreadScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
         private readonly ConcurrentQueue<ScheduledWork> _workQueue = new ConcurrentQueue<ScheduledWork>();
@@ -54,7 +54,7 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="sys">TBD</param>
-        [Obsolete("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter log) instead.")]
+        [Obsolete("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter log) instead. [1.1.2]")]
         public DedicatedThreadScheduler(ActorSystem sys) : this(sys.Settings.Config, sys.Log) { }
 
         /// <summary>
@@ -230,7 +230,7 @@ namespace Akka.Actor
         private void AddWork(TimeSpan delay, Action work, CancellationToken token)
         {
             if (_stopped.Value != null)
-                throw new SchedulerException("cannot enque after timer shutdown");
+                throw new SchedulerException("cannot enqueue after timer shutdown");
             var expected = HighResMonotonicClock + delay;
             var scheduledWord = new ScheduledWork(expected.Ticks, work, token);
             _workQueue.Enqueue(scheduledWord);

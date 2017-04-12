@@ -29,8 +29,10 @@ namespace Akka.DistributedData.Tests
                 IWriteConsistency consistency, 
                 IImmutableDictionary<Address, IActorRef> probes,
                 IImmutableSet<Address> nodes,
-                IActorRef replyTo) 
-                : base(Key, new DataEnvelope(data), consistency, null, nodes, replyTo)
+                IImmutableSet<Address> unreachable,
+                IActorRef replyTo,
+                bool durable) 
+                : base(Key, new DataEnvelope(data), consistency, null, nodes, unreachable, replyTo, durable)
             {
                 _probes = probes;
             }
@@ -68,7 +70,7 @@ namespace Akka.DistributedData.Tests
 
         public WriteAggregatorSpec(ITestOutputHelper output) : base(ConfigurationFactory.ParseString(@"
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            akka.remote.helios.tcp.port = 0"), "WriteAggregatorSpec", output)
+            akka.remote.dot-netty.tcp.port = 0"), "WriteAggregatorSpec", output)
         {
             _nodes = ImmutableHashSet.CreateRange(new[] {_nodeA, _nodeB, _nodeC, _nodeD});
         }
@@ -77,13 +79,13 @@ namespace Akka.DistributedData.Tests
         public void WriteAggregator_should_send_at_least_half_N_plus_1_replicas_when_WriteMajority()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(Props.Create(() => new TestWriteAggregator(_data, _writeMajority, Probes(probe.Ref), _nodes, TestActor)));
+            var aggregator = Sys.ActorOf(Props.Create(() => new TestWriteAggregator(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false)));
 
             probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteAck.Instance);
             probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteAck.Instance);
-            ExpectMsg(new Replicator.UpdateSuccess(Key, null));
+            ExpectMsg(new UpdateSuccess(Key, null));
             Watch(aggregator);
             ExpectTerminated(aggregator);
         }
@@ -92,7 +94,7 @@ namespace Akka.DistributedData.Tests
         public void WriteAggregator_should_send_to_more_when_no_immediate_reply()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(Props.Create(() => new TestWriteAggregator(_data, _writeMajority, Probes(probe.Ref), _nodes, TestActor)));
+            var aggregator = Sys.ActorOf(Props.Create(() => new TestWriteAggregator(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false)));
 
             probe.ExpectMsg<Write>();
             // no reply
@@ -103,7 +105,7 @@ namespace Akka.DistributedData.Tests
             probe.LastSender.Tell(WriteAck.Instance);
             probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteAck.Instance);
-            ExpectMsg(new Replicator.UpdateSuccess(Key, null));
+            ExpectMsg(new UpdateSuccess(Key, null));
             Watch(aggregator);
             ExpectTerminated(aggregator);
         }
@@ -112,7 +114,7 @@ namespace Akka.DistributedData.Tests
         public void WriteAggregator_should_timeout_when_less_than_required_ACKs()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(Props.Create(() => new TestWriteAggregator(_data, _writeMajority, Probes(probe.Ref), _nodes, TestActor)));
+            var aggregator = Sys.ActorOf(Props.Create(() => new TestWriteAggregator(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false)));
 
             probe.ExpectMsg<Write>();
             // no reply
@@ -122,7 +124,7 @@ namespace Akka.DistributedData.Tests
             // no reply
             probe.ExpectMsg<Write>();
             // no reply
-            ExpectMsg(new Replicator.UpdateTimeout(Key, null));
+            ExpectMsg(new UpdateTimeout(Key, null));
             Watch(aggregator);
             ExpectTerminated(aggregator);
         }

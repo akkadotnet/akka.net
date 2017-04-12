@@ -19,11 +19,20 @@ namespace Akka.Cluster.Tools.Client
     /// </summary>
     public sealed class ClusterClientReceptionist : IExtension
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterClient>("Akka.Cluster.Tools.Client.reference.conf");
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterClientReceptionist Get(ActorSystem system)
         {
             return system.WithExtension<ClusterClientReceptionist, ClusterClientReceptionistExtensionProvider>();
@@ -34,6 +43,10 @@ namespace Akka.Cluster.Tools.Client
         private readonly Config _config;
         private readonly IActorRef _receptionist;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public ClusterClientReceptionist(ExtendedActorSystem system)
         {
             _system = system;
@@ -70,6 +83,7 @@ namespace Akka.Cluster.Tools.Client
         /// <see cref="Send"/> or <see cref="SendToAll"/> using the path elements 
         /// of the <see cref="IActorRef"/>, e.g. "/user/myservice".
         /// </summary>
+        /// <param name="actorRef">TBD</param>
         public void RegisterService(IActorRef actorRef)
         {
             PubSubMediator.Tell(new PublishSubscribe.Put(actorRef));
@@ -79,6 +93,7 @@ namespace Akka.Cluster.Tools.Client
         /// A registered actor will be automatically unregistered when terminated, 
         /// but it can also be explicitly unregistered before termination.
         /// </summary>
+        /// <param name="actorRef">TBD</param>
         public void UnregisterService(IActorRef actorRef)
         {
             PubSubMediator.Tell(new PublishSubscribe.Remove(actorRef.Path.ToStringWithoutAddress()));
@@ -90,6 +105,8 @@ namespace Akka.Cluster.Tools.Client
         /// published messages.
         /// The client can publish messages to this topic with <see cref="Publish"/>.
         /// </summary>
+        /// <param name="topic">TBD</param>
+        /// <param name="actorRef">TBD</param>
         public void RegisterSubscriber(string topic, IActorRef actorRef)
         {
             PubSubMediator.Tell(new PublishSubscribe.Subscribe(topic, actorRef));
@@ -99,6 +116,8 @@ namespace Akka.Cluster.Tools.Client
         /// A registered subscriber will be automatically unregistered when terminated, 
         /// but it can also be explicitly unregistered before termination.
         /// </summary>
+        /// <param name="topic">TBD</param>
+        /// <param name="actorRef">TBD</param>
         public void UnregisterSubscriber(string topic, IActorRef actorRef)
         {
             PubSubMediator.Tell(new PublishSubscribe.Unsubscribe(topic, actorRef));
@@ -133,8 +152,16 @@ namespace Akka.Cluster.Tools.Client
         public IActorRef Underlying => _receptionist;
     }
 
-    public class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override ClusterClientReceptionist CreateExtension(ExtendedActorSystem system)
         {
             return new ClusterClientReceptionist(system);

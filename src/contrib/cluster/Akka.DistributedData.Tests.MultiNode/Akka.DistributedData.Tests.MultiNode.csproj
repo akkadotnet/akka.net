@@ -30,9 +30,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FluentAssertions, Version=4.19.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\FluentAssertions.4.19.0\lib\net45\FluentAssertions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FluentAssertions.Core, Version=4.19.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\FluentAssertions.4.19.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.1.37.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\System.Collections.Immutable.1.1.37\lib\dotnet\System.Collections.Immutable.dll</HintPath>
+    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Core" />
@@ -57,6 +65,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DurableDataSpec.cs" />
+    <Compile Include="DurablePrunningSpec.cs" />
     <Compile Include="JepsenInspiredInsertSpec.cs" />
     <Compile Include="ReplicatorChaosSpec.cs" />
     <Compile Include="ReplicatorPruningSpec.cs" />
@@ -95,6 +105,14 @@
     <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\transports\Akka.Remote.Transport.Helios\Akka.Remote.Transport.Helios.csproj">
+      <Project>{29feaabc-e326-450a-9008-b5fcecf0115f}</Project>
+      <Name>Akka.Remote.Transport.Helios</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj">
+      <Project>{26103500-0dfe-498d-8fcf-efe66bb4fd69}</Project>
+      <Name>Akka.DistributedData.LightningDB</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj">
       <Project>{59cffc88-8a73-445d-b191-281e40be9421}</Project>

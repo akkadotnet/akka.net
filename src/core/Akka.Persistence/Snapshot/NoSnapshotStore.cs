@@ -26,34 +26,34 @@ namespace Akka.Persistence.Snapshot
         public class NoSnapshotStoreException : Exception
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="NoSnapshotStoreException"/> class.
             /// </summary>
             public NoSnapshotStoreException()
             {
             }
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="NoSnapshotStoreException"/> class.
             /// </summary>
-            /// <param name="message">TBD</param>
+            /// <param name="message">The message that describes the error.</param>
             public NoSnapshotStoreException(string message) : base(message)
             {
             }
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="NoSnapshotStoreException"/> class.
             /// </summary>
-            /// <param name="message">TBD</param>
-            /// <param name="innerException">TBD</param>
+            /// <param name="message">The message that describes the error.</param>
+            /// <param name="innerException">The exception that is the cause of the current exception.</param>
             public NoSnapshotStoreException(string message, Exception innerException) : base(message, innerException)
             {
             }
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="NoSnapshotStoreException"/> class.
             /// </summary>
-            /// <param name="info">TBD</param>
-            /// <param name="context">TBD</param>
+            /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+            /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
             protected NoSnapshotStoreException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }

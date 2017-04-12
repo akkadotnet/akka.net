@@ -19,9 +19,17 @@ namespace Akka.Persistence.Sqlite
     {
         private static readonly ConcurrentDictionary<string, SQLiteConnection> Remembered = new ConcurrentDictionary<string, SQLiteConnection>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="connectionString"/> is undefined.
+        /// </exception>
+        /// <returns>TBD</returns>
         public static SQLiteConnection Remember(string connectionString)
         {
-            if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException("connectionString", "No connection string with connection to remember");
+            if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString), "No connection string with connection to remember");
 
             var conn = Remembered.GetOrAdd(connectionString, s => new SQLiteConnection(connectionString));
 
@@ -31,6 +39,10 @@ namespace Akka.Persistence.Sqlite
             return conn;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connectionString">TBD</param>
         public static void Forget(string connectionString)
         {
             SQLiteConnection conn;

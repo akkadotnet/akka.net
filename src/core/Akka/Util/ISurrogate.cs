@@ -23,7 +23,7 @@ namespace Akka.Util
     }
 
     /// <summary>
-    /// TBD
+    /// Used for surrogate serialization.
     /// </summary>
     public interface ISurrogated
     {

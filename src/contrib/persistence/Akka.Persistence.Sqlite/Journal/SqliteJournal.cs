@@ -13,9 +13,19 @@ using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class SqliteJournal : SqlJournal
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="journalConfig">TBD</param>
         public SqliteJournal(Config journalConfig) : base(journalConfig.WithFallback(Extension.DefaultJournalConfig))
         {
             var config = journalConfig.WithFallback(Extension.DefaultJournalConfig);
@@ -36,19 +46,36 @@ namespace Akka.Persistence.Sqlite.Journal
                     GetTimestampProvider(config.GetString("timestamp-provider")));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IJournalQueryExecutor QueryExecutor { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string JournalConfigPath => SqliteJournalSettings.ConfigPath;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <returns>TBD</returns>
         protected override DbConnection CreateDbConnection(string connectionString)
         {
             return new SQLiteConnection(connectionString);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             ConnectionContext.Remember(GetConnectionString());
             base.PreStart();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();

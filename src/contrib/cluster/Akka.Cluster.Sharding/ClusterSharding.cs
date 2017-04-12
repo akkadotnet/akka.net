@@ -26,8 +26,16 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     public interface IClusterShardingSerializable { }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ClusterShardingExtensionProvider : ExtensionIdProvider<ClusterSharding>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public override ClusterSharding CreateExtension(ExtendedActorSystem system)
         {
             var extension = new ClusterSharding(system);
@@ -42,20 +50,42 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     public abstract class HashCodeMessageExtractor : IMessageExtractor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly int MaxNumberOfShards;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="maxNumberOfShards">TBD</param>
         protected HashCodeMessageExtractor(int maxNumberOfShards)
         {
             MaxNumberOfShards = maxNumberOfShards;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public abstract string EntityId(object message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public virtual object EntityMessage(object message)
         {
             return message;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public virtual string ShardId(object message)
         {
             return (Math.Abs(EntityId(message).GetHashCode())%MaxNumberOfShards).ToString();
@@ -193,11 +223,20 @@ namespace Akka.Cluster.Sharding
         private readonly ExtendedActorSystem _system;
         private readonly Cluster _cluster;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static ClusterSharding Get(ActorSystem system)
         {
             return system.WithExtension<ClusterSharding, ClusterShardingExtensionProvider>();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
         public ClusterSharding(ExtendedActorSystem system)
         {
             _system = system;
@@ -223,7 +262,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Default HOCON settings for cluster sharding.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterSharding>("Akka.Cluster.Sharding.reference.conf");
@@ -252,6 +291,9 @@ namespace Akka.Cluster.Sharding
         /// The message that will be sent to entities when they are to be stopped for a rebalance or 
         /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
         /// </param>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
+        /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef Start(
             string typeName, //TODO: change type name to type instance?
@@ -296,6 +338,9 @@ namespace Akka.Cluster.Sharding
         /// The message that will be sent to entities when they are to be stopped for a rebalance or 
         /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
         /// </param>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
+        /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public async Task<IActorRef> StartAsync(
             string typeName, //TODO: change type name to type instance?
@@ -610,9 +655,11 @@ namespace Akka.Cluster.Sharding
         /// The entity type must be registered with the <see cref="ClusterShardingGuardian.Start"/> method before it can be used here.
         /// Messages to the entity is always sent via the <see cref="Sharding.ShardRegion"/>.
         /// </summary>
+        /// <param name="typeName">TBD</param>
         /// <exception cref="ArgumentException">
         /// Thrown when shard region for provided <paramref name="typeName"/> has not been started yet.
         /// </exception>
+        /// <returns>TBD</returns>
         public IActorRef ShardRegion(string typeName)
         {
             IActorRef region;
@@ -620,14 +667,15 @@ namespace Akka.Cluster.Sharding
             {
                 return region;
             }
-            throw new ArgumentException(string.Format("Shard type [{0}] must be started first", typeName));
+            throw new ArgumentException($"Shard type [{typeName}] must be started first");
         }
 
         private void RequireClusterRole(string role)
         {
             if (!(string.IsNullOrEmpty(role) || _cluster.SelfRoles.Contains(role)))
             {
-                throw new IllegalStateException(string.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
+                throw new IllegalStateException(
+                    $"This cluster member [{_cluster.SelfAddress}] doesn't have the role [{role}]");
             }
         }
     }
@@ -640,8 +688,14 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     public delegate ShardId ShardResolver(Msg message);
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public static class ShardResolvers
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly ShardResolver Default = msg => (ShardId)msg;
     }
 
@@ -668,6 +722,8 @@ namespace Akka.Cluster.Sharding
         /// If `null` is returned the message will be `unhandled`, i.e. posted as `Unhandled`
         ///  messages on the event stream
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         EntityId EntityId(object message);
 
         /// <summary>
@@ -676,17 +732,29 @@ namespace Akka.Cluster.Sharding
         /// message to support wrapping in message envelope that is unwrapped before
         /// sending to the entity actor.
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         object EntityMessage(object message);
 
         /// <summary>
         /// Extract the entity id from an incoming <paramref name="message"/>. Only messages that 
         /// passed the <see cref="EntityId"/> method will be used as input to this method.
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         string ShardId(object message);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class Extensions
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="self">TBD</param>
+        /// <returns>TBD</returns>
         public static IdExtractor ToIdExtractor(this IMessageExtractor self)
         {
             IdExtractor idExtractor = msg =>
@@ -707,6 +775,9 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     internal sealed class RebalanceTick
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly RebalanceTick Instance = new RebalanceTick();
         private RebalanceTick() { }
     }
@@ -716,9 +787,20 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     internal sealed class RebalanceDone
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ShardId Shard;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly bool Ok;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shard">TBD</param>
+        /// <param name="ok">TBD</param>
         public RebalanceDone(string shard, bool ok)
         {
             Shard = shard;
@@ -736,6 +818,14 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     internal class RebalanceWorker : ActorBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shard">TBD</param>
+        /// <param name="from">TBD</param>
+        /// <param name="handOffTimeout">TBD</param>
+        /// <param name="regions">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
         {
             return Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
@@ -745,6 +835,13 @@ namespace Akka.Cluster.Sharding
         private readonly IActorRef _from;
         private readonly ISet<IActorRef> _remaining;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shard">TBD</param>
+        /// <param name="from">TBD</param>
+        /// <param name="handOffTimeout">TBD</param>
+        /// <param name="regions">TBD</param>
         public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
         {
             _shard = shard;
@@ -757,6 +854,11 @@ namespace Akka.Cluster.Sharding
             Context.System.Scheduler.ScheduleTellOnce(handOffTimeout, Self, ReceiveTimeout.Instance, Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if (message is PersistentShardCoordinator.BeginHandOffAck)
@@ -798,9 +900,20 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     internal sealed class ResendShardHost
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ShardId Shard;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Region;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shard">TBD</param>
+        /// <param name="region">TBD</param>
         public ResendShardHost(string shard, IActorRef region)
         {
             Shard = shard;
@@ -808,11 +921,21 @@ namespace Akka.Cluster.Sharding
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     internal sealed class DelayedShardRegionTerminated
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IActorRef Region;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="region">TBD</param>
         public DelayedShardRegionTerminated(IActorRef region)
         {
             Region = region;

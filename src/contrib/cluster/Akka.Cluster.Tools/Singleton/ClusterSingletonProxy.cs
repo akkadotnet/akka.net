@@ -38,14 +38,21 @@ namespace Akka.Cluster.Tools.Singleton
     /// </summary>
     public sealed class ClusterSingletonProxy : ReceiveActor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class TryToIdentifySingleton
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly TryToIdentifySingleton Instance = new TryToIdentifySingleton();
             private TryToIdentifySingleton() { }
         }
         /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
+        /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterSingletonManager>("Akka.Cluster.Tools.Singleton.reference.conf");
@@ -53,13 +60,14 @@ namespace Akka.Cluster.Tools.Singleton
 
 
         /// <summary>
-        /// Faactory method for <see cref="ClusterSingletonProxy"/> <see cref="Actor.Props"/>.
+        /// Factory method for <see cref="ClusterSingletonProxy"/> <see cref="Actor.Props"/>.
         /// </summary>
         /// <param name="singletonManagerPath">
         /// The logical path of the singleton manager, e.g. `/user/singletonManager`, 
         /// which ends with the name you defined in `actorOf` when creating the <see cref="ClusterSingletonManager"/>.
         /// </param>
         /// <param name="settings">Cluster singleton proxy settings.</param>
+        /// <returns>TBD</returns>
         public static Props Props(string singletonManagerPath, ClusterSingletonProxySettings settings)
         {
             return Actor.Props.Create(() => new ClusterSingletonProxy(singletonManagerPath, settings)).WithDeploy(Deploy.Local);
@@ -76,6 +84,11 @@ namespace Akka.Cluster.Tools.Singleton
         private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
         private ILoggingAdapter _log;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="singletonManagerPath">TBD</param>
+        /// <param name="settings">TBD</param>
         public ClusterSingletonProxy(string singletonManagerPath, ClusterSingletonProxySettings settings)
         {
             _settings = settings;
@@ -134,14 +147,20 @@ namespace Akka.Cluster.Tools.Singleton
                 });
         }
 
-        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PreStart()
         {
             CancelTimer();
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             CancelTimer();

@@ -18,7 +18,7 @@ namespace Akka.Cluster.Tests
     {
         const string Config = @"    
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            akka.remote.helios.tcp.port = 0";
+            akka.remote.dot-netty.tcp.port = 0";
 
         readonly IActorRef _publisher;
         static readonly Member aUp = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Up);

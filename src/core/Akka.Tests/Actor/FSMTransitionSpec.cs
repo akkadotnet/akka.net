@@ -8,123 +8,176 @@
 using System;
 using Akka.Actor;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
+using static Akka.Actor.FSMBase;
 
 namespace Akka.Tests.Actor
 {
-    
     public class FSMTransitionSpec : AkkaSpec
     {
-        public IActorRef Self { get { return TestActor; } }
+        [Fact]
+        public void FSMTransitionNotifier_must_not_trigger_onTransition_for_stay()
+        {
+            var fsm = Sys.ActorOf(Props.Create(() => new SendAnyTransitionFSM(TestActor)));
+            ExpectMsg(new Tuple<int, int>(0, 0)); // caused by initialize(), OK.
+            fsm.Tell("stay"); // no transition event
+            ExpectNoMsg(500.Milliseconds());
+            fsm.Tell("goto"); // goto(current state)
+            ExpectMsg(new Tuple<int, int>(0, 0));
+        }
 
-        
-            
         [Fact]
         public void FSMTransitionNotifier_must_notify_listeners()
         {
-            //arrange
             var fsm = Sys.ActorOf(Props.Create(() => new MyFSM(TestActor)));
 
-            //act
-            Within(TimeSpan.FromSeconds(1), () =>
+            Within(1.Seconds(), () =>
             {
-                fsm.Tell(new FSMBase.SubscribeTransitionCallBack(TestActor));
-                ExpectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector<int>());
+                fsm.Tell(new SubscribeTransitionCallBack(TestActor));
+                ExpectMsg(new CurrentState<int>(fsm, 0));
                 fsm.Tell("tick");
-                ExpectMsg(new FSMBase.Transition<int>(fsm, 0, 1), FSMSpecHelpers.TransitionStateExpector<int>());
+                ExpectMsg(new Transition<int>(fsm, 0, 1));
                 fsm.Tell("tick");
-                ExpectMsg(new FSMBase.Transition<int>(fsm, 1, 0), FSMSpecHelpers.TransitionStateExpector<int>());
-                return true;
+                ExpectMsg(new Transition<int>(fsm, 1, 0));
             });
-
-            //assert
         }
 
         [Fact]
         public void FSMTransitionNotifier_must_not_fail_when_listener_goes_away()
         {
-            //arrange
             var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
             var fsm = Sys.ActorOf(Props.Create(() => new MyFSM(TestActor)));
 
-            //act
-            Within(TimeSpan.FromSeconds(1), async () =>
+            Within(1.Seconds(), () =>
             {
-                fsm.Tell(new FSMBase.SubscribeTransitionCallBack(forward));
-                ExpectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector<int>());
-                await forward.GracefulStop(TimeSpan.FromSeconds(5));
+                fsm.Tell(new SubscribeTransitionCallBack(forward));
+                ExpectMsg(new CurrentState<int>(fsm, 0));
+                forward.GracefulStop(5.Seconds()).Wait();
                 fsm.Tell("tick");
-                ExpectNoMsg(TimeSpan.FromMilliseconds(300));
-                return true;
+                ExpectNoMsg(200.Milliseconds());
             });
-
-            //assert
         }
 
         [Fact]
         public void FSM_must_make_previous_and_next_state_data_available_in_OnTransition()
         {
-            //arrange
             var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
 
-            //act
-            Within(TimeSpan.FromSeconds(1), () =>
+            Within(1.Seconds(), () =>
             {
                 fsm.Tell("tick");
                 ExpectMsg(new Tuple<int, int>(0, 1));
-                return true;
             });
+        }
 
-            //assert
+        [Fact]
+        public void FSM_must_trigger_transition_event_when_goto_the_same_state()
+        {
+            var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
+            var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
+
+            Within(1.Seconds(), () =>
+            {
+                fsm.Tell(new SubscribeTransitionCallBack(forward));
+                ExpectMsg(new CurrentState<int>(fsm, 0));
+                fsm.Tell("tick");
+                ExpectMsg(new Tuple<int, int>(0, 1));
+                ExpectMsg(new Transition<int>(fsm, 0, 1));
+                fsm.Tell("tick");
+                ExpectMsg(new Tuple<int, int>(1, 1));
+                ExpectMsg(new Transition<int>(fsm, 1, 1));
+            });
+        }
+
+        [Fact]
+        public void FSM_must_not_trigger_transition_event_on_stay()
+        {
+            var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
+            var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
+
+            Within(1.Seconds(), () =>
+            {
+                fsm.Tell(new SubscribeTransitionCallBack(forward));
+                ExpectMsg(new CurrentState<int>(fsm, 0));
+                fsm.Tell("stay");
+                ExpectNoMsg(500.Milliseconds());
+            });
         }
 
         [Fact]
         public void FSM_must_not_leak_memory_in_nextState()
         {
-            //arrange
             var fsmref = Sys.ActorOf<LeakyFSM>();
 
-            //act
-            fsmref.Tell("switch", Self);
+            fsmref.Tell("switch");
             ExpectMsg(Tuple.Create(0, 1));
-            fsmref.Tell("test", Self);
+            fsmref.Tell("test");
             ExpectMsg("ok");
-
-            //assert
         }
 
         #region Test actors
+
+        public class SendAnyTransitionFSM : FSM<int, int>
+        {
+            public SendAnyTransitionFSM(IActorRef target)
+            {
+                Target = target;
+
+                StartWith(0, 0);
+
+                When(0, @event =>
+                {
+                    if (@event.FsmEvent.Equals("stay"))
+                        return Stay();
+                    else
+                        return GoTo(0);
+                });
+
+                OnTransition((state1, state2) =>
+                {
+                    Target.Tell(Tuple.Create(state1, state2));
+                });
+
+                Initialize();
+            }
+
+            public IActorRef Target { get; }
+        }
 
         public class MyFSM : FSM<int, object>
         {
             public MyFSM(IActorRef target)
             {
                 Target = target;
+
                 StartWith(0, new object());
+
                 When(0, @event =>
                 {
-                    if (@event.FsmEvent.Equals("tick")) return GoTo(1);
+                    if (@event.FsmEvent.Equals("tick"))
+                        return GoTo(1);
                     return null;
                 });
 
                 When(1, @event =>
                 {
-                    if (@event.FsmEvent.Equals("tick")) return GoTo(0);
+                    if (@event.FsmEvent.Equals("tick"))
+                        return GoTo(0);
                     return null;
                 });
 
                 WhenUnhandled(@event =>
                 {
-                    if (@event.FsmEvent.Equals("reply")) return Stay().Replying("reply");
+                    if (@event.FsmEvent.Equals("reply"))
+                        return Stay().Replying("reply");
                     return null;
                 });
 
                 Initialize();
             }
 
-            
-
-            public IActorRef Target { get; private set; }
+            public IActorRef Target { get; }
 
             protected override void PreRestart(Exception reason, object message)
             {
@@ -137,21 +190,31 @@ namespace Akka.Tests.Actor
             public OtherFSM(IActorRef target)
             {
                 Target = target;
+
                 StartWith(0, 0);
+
                 When(0, @event =>
                 {
                     if (@event.FsmEvent.Equals("tick"))
                     {
                         return GoTo(1).Using(1);
                     }
+                    else if (@event.FsmEvent.Equals("stay"))
+                    {
+                        return Stay();
+                    }
                     return null;
                 });
 
-                When(1, @event => Stay());
+                When(1, @event => GoTo(1));
 
-                OnTransition((state, i) =>
+                OnTransition((state1, state2) =>
                 {
-                    if (state == 0 && i == 1) target.Tell(Tuple.Create(StateData, NextStateData));
+                    if (state1 == 0 && state2 == 1)
+                        target.Tell(Tuple.Create(StateData, NextStateData));
+
+                    if (state1 == 1 && state2 == 1)
+                        target.Tell(Tuple.Create(StateData, NextStateData));
                 });
             }
 
@@ -163,6 +226,7 @@ namespace Akka.Tests.Actor
             public LeakyFSM()
             {
                 StartWith(0, null);
+
                 When(0, @event =>
                 {
                     if (@event.FsmEvent.Equals("switch"))
@@ -173,9 +237,9 @@ namespace Akka.Tests.Actor
                     return null;
                 });
 
-                OnTransition((state, i) =>
+                OnTransition((state1, state2) =>
                 {
-                    NextStateData.Tell(Tuple.Create(state, i));
+                    NextStateData.Tell(Tuple.Create(state1, state2));
                 });
 
                 When(1, @event =>
@@ -184,7 +248,7 @@ namespace Akka.Tests.Actor
                     {
                         try
                         {
-                            Sender.Tell(string.Format("failed: {0}", NextStateData));
+                            Sender.Tell($"failed: {NextStateData}");
                         }
                         catch (InvalidOperationException)
                         {
@@ -205,7 +269,7 @@ namespace Akka.Tests.Actor
                 Target = target;
             }
 
-            public IActorRef Target { get; private set; }
+            public IActorRef Target { get; }
 
             protected override void OnReceive(object message)
             {

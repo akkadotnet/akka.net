@@ -28,8 +28,11 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the event sourced PersistentShardCoordinator.
         /// </summary>
         [Serializable]
-        internal protected sealed class State
+        protected internal sealed class State
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static readonly State Empty = new State();
 
             /// <summary>
@@ -41,7 +44,13 @@ namespace Akka.Cluster.Sharding
             /// Shards for each region.
             /// </summary>
             public readonly IImmutableDictionary<IActorRef, IImmutableList<ShardId>> Regions;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IImmutableSet<IActorRef> RegionProxies;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public readonly IImmutableSet<ShardId> UnallocatedShards;
 
             private State() : this(
@@ -51,6 +60,13 @@ namespace Akka.Cluster.Sharding
                 unallocatedShards: ImmutableHashSet<ShardId>.Empty)
             { }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shards">TBD</param>
+            /// <param name="regions">TBD</param>
+            /// <param name="regionProxies">TBD</param>
+            /// <param name="unallocatedShards">TBD</param>
             public State(
                 IImmutableDictionary<ShardId, IActorRef> shards,
                 IImmutableDictionary<IActorRef, IImmutableList<ShardId>> regions,
@@ -63,19 +79,25 @@ namespace Akka.Cluster.Sharding
                 UnallocatedShards = unallocatedShards;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="e">TBD</param>
+            /// <exception cref="ArgumentException">TBD</exception>
+            /// <returns>TBD</returns>
             public State Updated(IDomainEvent e)
             {
                 if (e is ShardRegionRegistered)
                 {
                     var message = e as ShardRegionRegistered;
-                    if (Regions.ContainsKey(message.Region)) throw new ArgumentException(string.Format("Region {0} is already registered", message.Region));
+                    if (Regions.ContainsKey(message.Region)) throw new ArgumentException($"Region {message.Region} is already registered", nameof(e));
 
                     return Copy(regions: Regions.SetItem(message.Region, ImmutableList<ShardId>.Empty));
                 }
                 else if (e is ShardRegionProxyRegistered)
                 {
                     var message = e as ShardRegionProxyRegistered;
-                    if (RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException(string.Format("Region proxy {0} is already registered", message.RegionProxy));
+                    if (RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException($"Region proxy {message.RegionProxy} is already registered", nameof(e));
 
                     return Copy(regionProxies: RegionProxies.Add(message.RegionProxy));
                 }
@@ -83,7 +105,7 @@ namespace Akka.Cluster.Sharding
                 {
                     IImmutableList<ShardId> shardRegions;
                     var message = e as ShardRegionTerminated;
-                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException(string.Format("Region {0} not registered", message.Region));
+                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
 
                     return Copy(
                         regions: Regions.Remove(message.Region),
@@ -93,7 +115,7 @@ namespace Akka.Cluster.Sharding
                 else if (e is ShardRegionProxyTerminated)
                 {
                     var message = e as ShardRegionProxyTerminated;
-                    if (!RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException(string.Format("Region proxy {0} not registered", message.RegionProxy));
+                    if (!RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException($"Region proxy {message.RegionProxy} not registered", nameof(e));
 
                     return Copy(regionProxies: RegionProxies.Remove(message.RegionProxy));
                 }
@@ -101,8 +123,8 @@ namespace Akka.Cluster.Sharding
                 {
                     IImmutableList<ShardId> shardRegions;
                     var message = e as ShardHomeAllocated;
-                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException(string.Format("Region {0} not registered", message.Region));
-                    if (Shards.ContainsKey(message.Shard)) throw new ArgumentException(string.Format("Shard {0} is already allocated", message.Shard));
+                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
+                    if (Shards.ContainsKey(message.Shard)) throw new ArgumentException($"Shard {message.Shard} is already allocated", nameof(e));
 
                     return Copy(
                         shards: Shards.SetItem(message.Shard, message.Region),
@@ -114,8 +136,8 @@ namespace Akka.Cluster.Sharding
                     IActorRef region;
                     IImmutableList<ShardId> shardRegions;
                     var message = e as ShardHomeDeallocated;
-                    if (!Shards.TryGetValue(message.Shard, out region)) throw new ArgumentException(string.Format("Shard {0} not allocated", message.Shard));
-                    if (!Regions.TryGetValue(region, out shardRegions)) throw new ArgumentException(string.Format("Region {0} for shard {1} not registered", region, message.Shard));
+                    if (!Shards.TryGetValue(message.Shard, out region)) throw new ArgumentException($"Shard {message.Shard} not allocated", nameof(e));
+                    if (!Regions.TryGetValue(region, out shardRegions)) throw new ArgumentException($"Region {region} for shard {message.Shard} not registered", nameof(e));
 
                     return Copy(
                         shards: Shards.Remove(message.Shard),
@@ -125,6 +147,14 @@ namespace Akka.Cluster.Sharding
                 else return this;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shards">TBD</param>
+            /// <param name="regions">TBD</param>
+            /// <param name="regionProxies">TBD</param>
+            /// <param name="unallocatedShards">TBD</param>
+            /// <returns>TBD</returns>
             public State Copy(IImmutableDictionary<ShardId, IActorRef> shards = null,
                 IImmutableDictionary<IActorRef, IImmutableList<ShardId>> regions = null,
                 IImmutableSet<IActorRef> regionProxies = null,
@@ -137,6 +167,11 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as State;
@@ -150,6 +185,10 @@ namespace Akka.Cluster.Sharding
                     && UnallocatedShards.SequenceEqual(other.UnallocatedShards);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -188,15 +227,34 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="PersistentShardCoordinator"/> actor.
         /// </summary>
+        /// <param name="typeName">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="allocationStrategy">TBD</param>
+        /// <returns>TBD</returns>
         internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy)
         {
             return Actor.Props.Create(() => new PersistentShardCoordinator(typeName, settings, allocationStrategy)).WithDeploy(Deploy.Local);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly Cluster Cluster = Cluster.Get(Context.System);
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly TimeSpan DownRemovalMargin;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly string TypeName;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly ClusterShardingSettings Settings;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly IShardAllocationStrategy AllocationStrategy;
 
         private IImmutableDictionary<string, ICancelable> _unAckedHostShards = ImmutableDictionary<string, ICancelable>.Empty;
@@ -211,6 +269,12 @@ namespace Akka.Cluster.Sharding
         private int _persistCount = 0;
         private State _currentState = State.Empty;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeName">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="allocationStrategy">TBD</param>
         public PersistentShardCoordinator(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy)
         {
             TypeName = typeName;
@@ -227,11 +291,20 @@ namespace Akka.Cluster.Sharding
         }
 
         private ILoggingAdapter _log;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected State CurrentState { get { return _currentState; } }
 
         #region shared part
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
@@ -245,6 +318,11 @@ namespace Akka.Cluster.Sharding
             return addr == Self.Path.Address || Cluster.ReadView.Members.Any(m => m.Address == addr && m.Status == MemberStatus.Up);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected bool Active(object message)
         {
             if (message is Register) HandleRegister(message as Register);
@@ -260,7 +338,7 @@ namespace Akka.Cluster.Sharding
             else if (message is ShardHome)
             {
                 // On rebalance, we send ourselves a GetShardHome message to reallocate a
-                // shard. This recieve handles the "response" from that message. i.e. Ingores it.
+                // shard. This receive handles the "response" from that message. i.e. Ignores it.
             }
             else if (message is ClusterEvent.ClusterShuttingDown)
             {
@@ -300,6 +378,9 @@ namespace Akka.Cluster.Sharding
             _unAckedHostShards = _unAckedHostShards.SetItem(shard, cancelable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected void ApplyStateInitialized()
         {
             foreach (var entry in _currentState.Shards)
@@ -622,8 +703,16 @@ namespace Akka.Cluster.Sharding
 
         #region persistent part
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override String PersistenceId { get { return Self.Path.ToStringWithoutAddress(); } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool ReceiveRecover(Object message)
         {
             if (message is IDomainEvent)
@@ -677,6 +766,11 @@ namespace Akka.Cluster.Sharding
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool ReceiveCommand(object message)
         {
             return WaitingForStateInitialized(message);
@@ -702,7 +796,14 @@ namespace Akka.Cluster.Sharding
             return true;
         }
 
-        protected void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
+         /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="e">TBD</param>
+        /// <param name="handler">TBD</param>
+        /// <returns>TBD</returns>
+       protected void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
         {
             SaveSnapshotIfNeeded();
             Persist(e, handler);
@@ -710,5 +811,4 @@ namespace Akka.Cluster.Sharding
 
         #endregion
     }
-
 }

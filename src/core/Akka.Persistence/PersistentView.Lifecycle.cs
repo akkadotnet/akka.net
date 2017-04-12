@@ -42,7 +42,7 @@ namespace Akka.Persistence
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool AroundReceive(Receive receive, object message)
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
             _currentState.StateReceive(receive, message);
             return true;
