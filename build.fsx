@@ -413,6 +413,7 @@ module Nuget =
       | "Akka.Cluster.Sharding" -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | "Akka.DistributedData" -> preReleaseVersion
+      | "Akka.DistributedData.LightningDB" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
