@@ -100,13 +100,13 @@ namespace Akka.Cluster.Serialization
                 return UniqueAddressToProto(exitingConfirmed.Address).ToByteArray();
             }
 
-            var pool = obj as Routing.ClusterRouterPool;
+            var pool = obj as ClusterRouterPool;
             if (pool != null)
             {
                 return ClusterRouterPoolToByteArray(pool);
             }
 
-            throw new ArgumentException($"Can't serialize object of type {obj.GetType()}");
+            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(ClusterMessageSerializer)}]");
         }
 
         public override object FromBinary(byte[] bytes, Type type)
@@ -171,7 +171,7 @@ namespace Akka.Cluster.Serialization
                 return new InternalClusterAction.ExitingConfirmed(UniqueAddressFrom(Proto.Msg.UniqueAddress.Parser.ParseFrom(bytes)));
             }
 
-            if (type == typeof(Routing.ClusterRouterPool))
+            if (type == typeof(ClusterRouterPool))
             {
                 return ClusterRouterPoolFrom(bytes);
             }
@@ -290,7 +290,7 @@ namespace Akka.Cluster.Serialization
             return (Akka.Routing.Pool)system.Serialization.Deserialize(poolProto.Data.ToByteArray(), (int)poolProto.SerializerId, poolProto.Manifest);
         }
 
-        private static Proto.Msg.ClusterRouterPoolSettings ClusterRouterPoolSettingsToProto(Routing.ClusterRouterPoolSettings clusterRouterPoolSettings)
+        private static Proto.Msg.ClusterRouterPoolSettings ClusterRouterPoolSettingsToProto(ClusterRouterPoolSettings clusterRouterPoolSettings)
         {
             var message = new Proto.Msg.ClusterRouterPoolSettings();
             message.TotalInstances = (uint)clusterRouterPoolSettings.TotalInstances;
@@ -307,17 +307,6 @@ namespace Akka.Cluster.Serialization
                 (int)clusterRouterPoolSettingsProto.MaxInstancesPerNode,
                 clusterRouterPoolSettingsProto.AllowLocalRoutees,
                 clusterRouterPoolSettingsProto.UseRole == string.Empty ? null : clusterRouterPoolSettingsProto.UseRole);
-        }
-
-        private static string GetObjectManifest(Serializer serializer, object obj)
-        {
-            var manifestSerializer = serializer as SerializerWithStringManifest;
-            if (manifestSerializer != null)
-            {
-                return manifestSerializer.Manifest(obj);
-            }
-
-            return obj.GetType().TypeQualifiedName();
         }
 
         //
@@ -455,7 +444,7 @@ namespace Akka.Cluster.Serialization
         //
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Proto.Msg.Address AddressToProto(Actor.Address address)
+        private static Proto.Msg.Address AddressToProto(Address address)
         {
             var message = new Proto.Msg.Address();
             message.System = address.System;
@@ -488,6 +477,18 @@ namespace Akka.Cluster.Serialization
         private static UniqueAddress UniqueAddressFrom(Proto.Msg.UniqueAddress uniqueAddressProto)
         {
             return new UniqueAddress(AddressFrom(uniqueAddressProto.Address), (int)uniqueAddressProto.Uid);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static string GetObjectManifest(Serializer serializer, object obj)
+        {
+            var manifestSerializer = serializer as SerializerWithStringManifest;
+            if (manifestSerializer != null)
+            {
+                return manifestSerializer.Manifest(obj);
+            }
+
+            return obj.GetType().TypeQualifiedName();
         }
     }
 }
