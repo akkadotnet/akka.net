@@ -617,6 +617,27 @@ namespace Akka.Tests.Actor
                         ));
         }
 
+        public class ReceiveNoChild : BT<object>
+        {
+            public ReceiveNoChild()
+            {
+                StartWith(Test(), null);
+            }
+
+            TreeMachine.IWorkflow Test() =>
+                If(ReceiveAny(),
+                    AllComplete(
+                        Execute(_ => Sender.Tell("ANY")),
+                        If(ReceiveAny(s => s.Equals("ONE")),
+                            AllComplete(
+                                Execute(_ => Sender.Tell("ANYONE")),
+                                If(Receive<int>(),
+                                    AllComplete(
+                                        Execute(_ => Sender.Tell("THREE")),
+                                        If(Receive<int>(i => i % 2 == 0),
+                                            Execute(_ => Sender.Tell("THREEEVEN")))))))));
+        }
+
         #endregion
 
         [Fact]
@@ -1125,6 +1146,36 @@ namespace Akka.Tests.Actor
             assertReply("MEOWCAT", "UCAT");
             bt.Tell("BARKPAL", TestActor);
             assertReply("BARKDOG", "UDOG");
+        }
+
+        [Fact]
+        public void BTActor_ReceiveNoChild_Only_Succeeds()
+        {
+            var bt = Sys.ActorOf(Props.Create(() => new ReceiveNoChild()));
+
+            Sys.EventStream.Subscribe(TestActor, typeof(UnhandledMessage));
+
+            Action<object> assertUnhandled = s =>
+            {
+                bt.Tell(s, TestActor);
+                ExpectMsg<UnhandledMessage>(m => m.Message.Equals(s));
+            };
+
+            Action<object, object> assertReply = (s, r) =>
+            {
+                bt.Tell(s, TestActor);
+                ExpectMsg(r);
+            };
+
+            assertReply(new object(), "ANY");
+            assertUnhandled("TWO");
+            assertReply("ONE", "ANYONE");
+            assertUnhandled("STR");
+            assertReply(5, "THREE");
+            assertUnhandled(3);
+            assertReply(4, "THREEEVEN");
+
+            Sys.EventStream.Unsubscribe(TestActor, typeof(UnhandledMessage));
         }
     }
 }

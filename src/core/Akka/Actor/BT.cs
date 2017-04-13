@@ -39,16 +39,16 @@ namespace Akka.Actor
         protected TreeMachine.ConditionWF Condition(Func<TreeMachine.IContext, bool> pred)
             => new TreeMachine.ConditionWF(pred);
 
-        protected TreeMachine.ReceiveAnyWF ReceiveAny(TreeMachine.IWorkflow child)
+        protected TreeMachine.ReceiveAnyWF ReceiveAny(TreeMachine.IWorkflow child = null)
             => new TreeMachine.ReceiveAnyWF(child);
 
-        protected TreeMachine.ReceiveAnyWF ReceiveAny(Func<object, bool> shouldHandle, TreeMachine.IWorkflow child)
+        protected TreeMachine.ReceiveAnyWF ReceiveAny(Func<object, bool> shouldHandle, TreeMachine.IWorkflow child = null)
             => new TreeMachine.ReceiveAnyWF(shouldHandle, child);
 
-        protected TreeMachine.ReceiveWF<T> Receive<T>(TreeMachine.IWorkflow child)
+        protected TreeMachine.ReceiveWF<T> Receive<T>(TreeMachine.IWorkflow child = null)
             => new TreeMachine.ReceiveWF<T>(child);
 
-        protected TreeMachine.ReceiveWF<T> Receive<T>(Func<T, bool> shouldHandle, TreeMachine.IWorkflow child)
+        protected TreeMachine.ReceiveWF<T> Receive<T>(Func<T, bool> shouldHandle, TreeMachine.IWorkflow child = null)
             => new TreeMachine.ReceiveWF<T>(shouldHandle, child);
 
         protected TreeMachine.SelectorWF AnySucceed(params TreeMachine.IWorkflow[] children)
@@ -354,19 +354,19 @@ namespace Akka.Actor
                     {
                         if (processor.ProcessMessage(message))
                         {
-                            if (!IsCompleted)
+                            var receiver = processor as IReceive;
+                            if (receiver != null)
                             {
-                                var receiver = processor as IReceive;
+                                _contexts.Push(prev);
 
-                                if (receiver != null)
+                                if (!receiver.Status.IsCompleted())
                                 {
-                                    _contexts.Push(prev);
-                                    _stack.Push(_current);
+                                    _stack.Push(receiver);
                                     _current = receiver.Child;
                                 }
-
-                                Run(_context);
                             }
+
+                            Run(_context);
 
                             return true;
                         }
@@ -516,7 +516,6 @@ namespace Akka.Actor
                 private readonly IWorkflow _then;
                 private readonly IWorkflow _else;
                 private IWorkflow _next;
-                private bool _condHasRun;
 
                 public IfWF(IWorkflow cond, IWorkflow then = null, IWorkflow @else = null)
                 {
@@ -537,41 +536,32 @@ namespace Akka.Actor
                     _cond.Reset();
                     _then?.Reset();
                     _else?.Reset();
-                    _condHasRun = false;
                 }
 
                 public override void Run(IContext context)
                 {
+                    if (IsCompleted)
+                        return;
+
                     if (_next == null)
                     {
-                        Status = WorkflowStatus.Running;
                         _next = _cond;
-                        return;
                     }
 
-                    try
+                    if (_next == _cond)
                     {
-                        if (!_condHasRun)
+                        if (_cond.Status.IsCompleted())
                         {
-                            _condHasRun = true;
+                            var next = _cond.Status == WorkflowStatus.Success ? _then : _else;
 
-                            var status = _cond.Status;
-
-                            _next = status == WorkflowStatus.Success ? _then : _else;
-
-                            Status = _next != null ? WorkflowStatus.Running : status;
-
-                        }
-                        else
-                        {
-                            Status = _next.Status;
+                            if (next != null)
+                            {
+                                _next = next;
+                            }
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        Status = WorkflowStatus.Failure;
-                        Result = ex;
-                    }
+
+                    Status = _next.Status;
                 }
             }
 
@@ -591,7 +581,15 @@ namespace Akka.Actor
 
                 public override void Run(IContext context)
                 {
-                    Status = _pred(context) ? WorkflowStatus.Success : WorkflowStatus.Failure;
+                    try
+                    {
+                        Status = _pred(context) ? WorkflowStatus.Success : WorkflowStatus.Failure;
+                    }
+                    catch (Exception ex)
+                    {
+                        Status = WorkflowStatus.Failure;
+                        Result = ex;
+                    }
                 }
             }
 
