@@ -18,6 +18,9 @@
 
   <ItemGroup>
     <PackageReference Include="LightningDB" Version="0.9.8" />
+    <None Include="Akka.DistributedData.LightningDB.nuspec" />
+    <None Include="packages.config" />
+    <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
