@@ -2,17 +2,20 @@
  * Copyright (C) 2009-2013 Lightbend Inc. <http://www.lightbend.com>
  */
 
+syntax = 'proto3';
 option optimize_for = SPEED;
+
+package Akka.Remote.Proto;
 
 /******************************************
   ActorSelection related formats
 *******************************************/
 
 message SelectionEnvelope {
-  required bytes enclosedMessage = 1;
-  required int32 serializerId = 2;
+  bytes enclosedMessage = 1;	// required
+  int32 serializerId = 2;       // required
   repeated Selection pattern = 3;
-  optional bytes messageManifest = 4;
+  bytes messageManifest = 4;
 }
 
 enum PatternType {
@@ -22,6 +25,6 @@ enum PatternType {
 }
 
 message Selection {
-  required PatternType type = 1;
-  optional string matcher = 2;
+  PatternType type = 1;		// required
+  string matcher = 2;
 }

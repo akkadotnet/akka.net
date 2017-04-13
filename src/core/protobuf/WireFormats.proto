@@ -1,117 +1,115 @@
 /**
  * Copyright (C) 2009-2013 Lightbend Inc. <http://www.lightbend.com>
  */
-syntax = 'proto3';
+
 option optimize_for = SPEED;
 
 /******************************************
  * Remoting message formats
  ******************************************/
 
-package Akka.Remote.Proto;
 
 message AckAndEnvelopeContainer {
-  AcknowledgementInfo ack = 1;
-  RemoteEnvelope envelope = 2;
+  optional AcknowledgementInfo ack = 1;
+  optional RemoteEnvelope envelope = 2;
 }
 
 /**
-* Defines a remote message.
-*/
+ * Defines a remote message.
+ */
 message RemoteEnvelope {
-  ActorRefData recipient = 1;	 // required
-  SerializedMessage message = 2; // required
-  ActorRefData sender = 4;
-  fixed64 seq = 5;
+  required ActorRefData recipient = 1;
+  required SerializedMessage message = 2;
+  optional ActorRefData sender = 4;
+  optional fixed64 seq = 5;
 }
 
 message AcknowledgementInfo {
-  fixed64 cumulativeAck = 1;	// required
-  repeated fixed64 nacks = 2; 		// required
+  required fixed64 cumulativeAck = 1;
+  repeated fixed64 nacks = 2;
 }
 
 /**
-* Defines a remote ActorRef that "remembers" and uses its original Actor instance
-* on the original node.
-*/
+ * Defines a remote ActorRef that "remembers" and uses its original Actor instance
+ * on the original node.
+ */
 message ActorRefData {
-  string path = 1;	// required
+  required string path = 1;
 }
 
 /**
-* Defines a message.
-*/
+ * Defines a message.
+ */
 message SerializedMessage {
-  bytes message = 1; // required
-  int32 serializerId = 2; // required
-  bytes messageManifest = 3;
+  required bytes message = 1;
+  required int32 serializerId = 2;
+  optional bytes messageManifest = 3;
 }
 
 /**
-* Defines akka.remote.DaemonMsgCreate
-*/
+ * Defines akka.remote.DaemonMsgCreate
+ */
 message DaemonMsgCreateData {
-  PropsData props = 1; // required
-  DeployData deploy = 2; // required
-  string path = 3; // required
-  ActorRefData supervisor = 4; // required
+  required PropsData props = 1;
+  required DeployData deploy = 2;
+  required string path = 3;
+  required ActorRefData supervisor = 4;
 }
 
 /**
-* Serialization of akka.actor.Props
-*/
+ * Serialization of akka.actor.Props
+ */
 message PropsData {
-  DeployData deploy = 2; // required
-  string clazz = 3;		// required
+  required DeployData deploy = 2;
+  required string clazz = 3;
   repeated bytes args = 4;
   repeated string classes = 5;
 }
 
 /**
-* Serialization of akka.actor.Deploy
-*/
+ * Serialization of akka.actor.Deploy
+ */
 message DeployData {
-  string path = 1;  // required
-  bytes config = 2;
-  bytes routerConfig = 3;
-  bytes scope = 4;
-  string dispatcher = 5;
+  required string path = 1;
+  optional bytes config = 2;
+  optional bytes routerConfig = 3;
+  optional bytes scope = 4;
+  optional string dispatcher = 5;
 }
 
 
 /******************************************
-* Akka Protocol message formats
-******************************************/
+ * Akka Protocol message formats
+ ******************************************/
 
 /**
-* Message format of Akka Protocol.
-* Message contains either a payload or an instruction.
-*/
+ * Message format of Akka Protocol.
+ * Message contains either a payload or an instruction.
+ */
 message AkkaProtocolMessage {
-  bytes payload = 1;
-  AkkaControlMessage instruction = 2;
+  optional bytes payload = 1;
+  optional AkkaControlMessage instruction = 2;
 }
 
 /**
-* Defines some control messages for the remoting
-*/
+ * Defines some control messages for the remoting
+ */
 message AkkaControlMessage {
-  CommandType commandType = 1; // required
-  AkkaHandshakeInfo handshakeInfo = 2;
+  required CommandType commandType = 1;
+  optional AkkaHandshakeInfo handshakeInfo = 2;
 }
 
 message AkkaHandshakeInfo {
-  AddressData origin = 1; // required
-  fixed64 uid = 2;	// required
-  string cookie = 3;
+  required AddressData origin = 1;
+  required fixed64 uid = 2;
+  optional string cookie = 3;
 
 }
 
 /**
-* Defines the type of the AkkaControlMessage command type
-*/
+ * Defines the type of the AkkaControlMessage command type
+ */
 enum CommandType {
-  __NONE__ = 0;
   ASSOCIATE = 1;
   DISASSOCIATE = 2;
   HEARTBEAT = 3;
@@ -120,11 +118,11 @@ enum CommandType {
 }
 
 /**
-* Defines a remote address.
-*/
+ * Defines a remote address.
+ */
 message AddressData {
-  string system = 1;	// required
-  string hostname = 2; // required
-  uint32 port = 3;	// required
-  string protocol = 4;
+  required string system = 1;
+  required string hostname = 2;
+  required uint32 port = 3;
+  optional string protocol = 4;
 }

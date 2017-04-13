@@ -14,7 +14,7 @@ using Akka.Remote.Proto;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Xunit;
 
 namespace Akka.Remote.Tests.Transport
@@ -33,7 +33,7 @@ namespace Akka.Remote.Tests.Transport
         AkkaPduCodec codec = new AkkaPduProtobuffCodec();
 
         SerializedMessage testMsg =
-            SerializedMessage.CreateBuilder().SetSerializerId(0).SetMessage(ByteString.CopyFromUtf8("foo")).Build();
+            new SerializedMessage { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
 
         private ByteString testEnvelope;
         private ByteString testMsgPdu;
