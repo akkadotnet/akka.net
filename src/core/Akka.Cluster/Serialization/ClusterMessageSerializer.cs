@@ -8,11 +8,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Serialization;
 using Akka.Util;
+using Akka.Util.Internal;
 using Google.Protobuf;
 
 namespace Akka.Cluster.Serialization
@@ -245,16 +247,20 @@ namespace Akka.Cluster.Serialization
 
         private static byte[] GossipStatusToProto(GossipStatus gossipStatus)
         {
+            var allHashes = gossipStatus.Version.Versions.Keys.Select(x => x.ToString()).ToList();
+            var hashMapping = allHashes.ZipWithIndex();
+
             var message = new Proto.Msg.GossipStatus();
             message.From = UniqueAddressToProto(gossipStatus.From);
-            message.Version = VectorClockToProto(gossipStatus.Version);
+            message.AllHashes.AddRange(allHashes);
+            message.Version = VectorClockToProto(gossipStatus.Version, hashMapping);
             return message.ToByteArray();
         }
 
         private static GossipStatus GossipStatusFrom(byte[] bytes)
         {
             var gossipStatusProto = Proto.Msg.GossipStatus.Parser.ParseFrom(bytes);
-            return new GossipStatus(UniqueAddressFrom(gossipStatusProto.From), VectorClockFrom(gossipStatusProto.Version));
+            return new GossipStatus(UniqueAddressFrom(gossipStatusProto.From), VectorClockFrom(gossipStatusProto.Version, gossipStatusProto.AllHashes));
         }
 
         //
@@ -315,128 +321,133 @@ namespace Akka.Cluster.Serialization
 
         private static Proto.Msg.Gossip GossipToProto(Gossip gossip)
         {
-            var message = new Proto.Msg.Gossip();
+            var allMembers = gossip.Members.ToList();
+            var allAddresses = gossip.Members.Select(x => x.UniqueAddress).ToList();
+            var addressMapping = allAddresses.ZipWithIndex();
+            var allRoles = allMembers.Aggregate(ImmutableHashSet.Create<string>(), (set, member) => set.Union(member.Roles));
+            var roleMapping = allRoles.ZipWithIndex();
+            var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToList();
+            var hashMapping = allHashes.ZipWithIndex();
 
-            foreach (var member in gossip.Members)
+            Func<UniqueAddress, int> mapUniqueAddress = address => MapWithErrorMessage(addressMapping, address, "address");
+
+            Func<string, int> mapRole = s => MapWithErrorMessage(roleMapping, s, "role");
+
+            Func<Member, Proto.Msg.Member> memberToProto = m =>
             {
                 var protoMember = new Proto.Msg.Member();
-                protoMember.UniqueAddress = UniqueAddressToProto(member.UniqueAddress);
-                protoMember.UpNumber = member.UpNumber;
-                protoMember.Status = (Proto.Msg.Member.Types.MemberStatus)member.Status;
+                protoMember.AddressIndex = mapUniqueAddress(m.UniqueAddress);
+                protoMember.UpNumber = m.UpNumber;
+                protoMember.Status = (Proto.Msg.Member.Types.MemberStatus)m.Status;
+                protoMember.RolesIndexes.AddRange(m.Roles.Select(mapRole));
+                return protoMember;
+            };
 
-                foreach (var role in member.Roles)
+            Func<Reachability, IEnumerable<Proto.Msg.ObserverReachability>> reachabilityToProto = reachability =>
+            {
+                var builderList = new List<Proto.Msg.ObserverReachability>();
+                foreach (var version in reachability.Versions)
                 {
-                    protoMember.Roles.Add(role);
+                    var subjectReachability = reachability.RecordsFrom(version.Key).Select(
+                        r =>
+                        {
+                            var sr = new Proto.Msg.SubjectReachability();
+                            sr.AddressIndex = mapUniqueAddress(r.Subject);
+                            sr.Status = (Proto.Msg.SubjectReachability.Types.ReachabilityStatus)r.Status;
+                            sr.Version = r.Version;
+                            return sr;
+                        });
+
+                    var observerReachability = new Proto.Msg.ObserverReachability();
+                    observerReachability.AddressIndex = mapUniqueAddress(version.Key);
+                    observerReachability.Version = version.Value;
+                    observerReachability.SubjectReachability.AddRange(subjectReachability);
+                    builderList.Add(observerReachability);
                 }
+                return builderList;
+            };
 
-                message.Members.Add(protoMember);
-            }
+            var reachabilityProto = reachabilityToProto(gossip.Overview.Reachability);
+            var membersProtos = gossip.Members.Select(memberToProto);
+            var seenProtos = gossip.Overview.Seen.Select(mapUniqueAddress);
 
-            message.Overview = new Proto.Msg.GossipOverview();
-            foreach (var seen in gossip.Overview.Seen)
-            {
-                message.Overview.Seen.Add(UniqueAddressToProto(seen));
-            }
+            var overview = new Proto.Msg.GossipOverview();
+            overview.Seen.AddRange(seenProtos);
+            overview.ObserverReachability.AddRange(reachabilityProto);
 
-            message.Overview.Reachability = new Proto.Msg.Reachability();
-            foreach (var record in gossip.Overview.Reachability.Records)
-            {
-                var protoRecord = new Proto.Msg.Record();
-                protoRecord.Observer = UniqueAddressToProto(record.Observer);
-                protoRecord.Subject = UniqueAddressToProto(record.Subject);
-                protoRecord.Status = (Proto.Msg.Record.Types.ReachabilityStatus)record.Status;
-                protoRecord.Version = record.Version;
-                message.Overview.Reachability.Records.Add(protoRecord);
-            }
-
-            foreach (var version in gossip.Overview.Reachability.Versions)
-            {
-                var reachabilityVersion = new Proto.Msg.Reachability.Types.ReachabilityVersion();
-                reachabilityVersion.UniqueAddress = UniqueAddressToProto(version.Key);
-                reachabilityVersion.Version = version.Value;
-                message.Overview.Reachability.Versions.Add(reachabilityVersion);
-            }
-
-            message.Version = VectorClockToProto(gossip.Version);
-
+            var message = new Proto.Msg.Gossip();
+            message.AllAddresses.AddRange(allAddresses.Select(UniqueAddressToProto));
+            message.AllRoles.AddRange(allRoles);
+            message.AllHashes.AddRange(allHashes);
+            message.Members.AddRange(membersProtos);
+            message.Overview = overview;
+            message.Version = VectorClockToProto(gossip.Version, hashMapping);
             return message;
         }
 
-        private static Gossip GossipFrom(Proto.Msg.Gossip gossipProto)
+        private static Gossip GossipFrom(Proto.Msg.Gossip gossip)
         {
-            var members = new SortedSet<Member>();
-            foreach (var protoMember in gossipProto.Members)
-            {
-                var roles = new HashSet<string>();
+            var addressMapping = gossip.AllAddresses.Select(UniqueAddressFrom).ToList();
+            var roleMapping = gossip.AllRoles.ToList();
+            var hashMapping = gossip.AllHashes.ToList();
 
-                foreach (var role in protoMember.Roles)
+            Func<IEnumerable<Proto.Msg.ObserverReachability>, Reachability> reachabilityFromProto = reachabilityProto =>
+            {
+                var recordBuilder = ImmutableList.CreateBuilder<Reachability.Record>();
+                var versionsBuilder = ImmutableDictionary.CreateBuilder<UniqueAddress, long>();
+                foreach (var o in reachabilityProto)
                 {
-                    roles.Add(role);
+                    var observer = addressMapping[o.AddressIndex];
+                    versionsBuilder.Add(observer, o.Version);
+                    foreach (var s in o.SubjectReachability)
+                    {
+                        var subject = addressMapping[s.AddressIndex];
+                        var record = new Reachability.Record(observer, subject, (Reachability.ReachabilityStatus)s.Status,
+                            s.Version);
+                        recordBuilder.Add(record);
+                    }
                 }
 
-                var member = new Member(
-                    UniqueAddressFrom(protoMember.UniqueAddress),
-                    protoMember.UpNumber,
-                    (MemberStatus)protoMember.Status,
-                    roles.ToImmutableHashSet());
-                members.Add(member);
-            }
+                return new Reachability(recordBuilder.ToImmutable(), versionsBuilder.ToImmutable());
+            };
 
-            var seens = new HashSet<UniqueAddress>();
-            foreach (var protoSeen in gossipProto.Overview.Seen)
-            {
-                seens.Add(UniqueAddressFrom(protoSeen));
-            }
+            Func<Proto.Msg.Member, Member> memberFromProto = member => Member.Create(addressMapping[member.AddressIndex], member.UpNumber, (MemberStatus)member.Status,
+                member.RolesIndexes.Select(x => roleMapping[x]).ToImmutableHashSet());
 
-            var records = new List<Reachability.Record>();
-            foreach (var protoRecord in gossipProto.Overview.Reachability.Records)
-            {
-                var record = new Reachability.Record(
-                    UniqueAddressFrom(protoRecord.Observer),
-                    UniqueAddressFrom(protoRecord.Subject),
-                    (Reachability.ReachabilityStatus)protoRecord.Status,
-                    protoRecord.Version);
+            var members = gossip.Members.Select(memberFromProto).ToImmutableSortedSet(Member.Ordering);
+            var reachability = reachabilityFromProto(gossip.Overview.ObserverReachability);
+            var seen = gossip.Overview.Seen.Select(x => addressMapping[x]).ToImmutableHashSet();
+            var overview = new GossipOverview(seen, reachability);
 
-                records.Add(record);
-            }
-
-            var versions = new Dictionary<UniqueAddress, long>();
-            foreach (var protoVersion in gossipProto.Overview.Reachability.Versions)
-            {
-                versions.Add(UniqueAddressFrom(protoVersion.UniqueAddress), protoVersion.Version);
-            }
-
-            var reachability = new Reachability(records.ToImmutableList(), versions.ToImmutableDictionary());
-
-            var gossipOverview = new GossipOverview(seens.ToImmutableHashSet(), reachability);
-            var version = VectorClockFrom(gossipProto.Version);
-            return new Gossip(members.ToImmutableSortedSet(), gossipOverview, version);
+            return new Gossip(members, overview, VectorClockFrom(gossip.Version, hashMapping));
         }
 
-        private static Proto.Msg.VectorClock VectorClockToProto(VectorClock vectorClock)
+        private static Proto.Msg.VectorClock VectorClockToProto(VectorClock vectorClock, Dictionary<string, int> hashMapping)
         {
             var message = new Proto.Msg.VectorClock();
 
-            foreach (var version in vectorClock.Versions)
+            foreach (var clock in vectorClock.Versions)
             {
-                var versionProto = new Proto.Msg.VectorClock.Types.Version();
-                versionProto.Node = version.Key.ToString();
-                versionProto.Timestamp = version.Value;
-                message.Versions.Add(versionProto);
+                var version = new Proto.Msg.VectorClock.Types.Version();
+                version.HashIndex = MapWithErrorMessage(hashMapping, clock.Key.ToString(), "hash");
+                version.Timestamp = clock.Value;
+                message.Versions.Add(version);
             }
+            message.Timestamp = 0L;
 
             return message;
         }
 
-        private static VectorClock VectorClockFrom(Proto.Msg.VectorClock vectorClockProto)
+        private static VectorClock VectorClockFrom(Proto.Msg.VectorClock version, IList<string> hashMapping)
         {
-            var versions = new SortedDictionary<VectorClock.Node, long>();
-            foreach (var versionProto in vectorClockProto.Versions)
-            {
-                versions.Add(new VectorClock.Node(versionProto.Node), versionProto.Timestamp);
-            }
+            return VectorClock.Create(version.Versions.ToImmutableSortedDictionary(version1 => 
+                    VectorClock.Node.FromHash(hashMapping[version1.HashIndex]), version1 => version1.Timestamp));
+        }
 
-            return VectorClock.Create(versions.ToImmutableSortedDictionary());
+        private static int MapWithErrorMessage<T>(Dictionary<T, int> map, T value, string unknown)
+        {
+            if (map.ContainsKey(value)) return map[value];
+            throw new ArgumentException($"Unknown {unknown} [{value}] in cluster message");
         }
 
         //

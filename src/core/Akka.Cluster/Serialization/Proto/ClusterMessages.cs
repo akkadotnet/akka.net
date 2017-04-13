@@ -36,50 +36,46 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
             "ASABKAsyMy5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
             "VW5pcXVlQWRkcmVzcxIRCglhbGxIYXNoZXMYAiADKAkSQgoHdmVyc2lvbhgD",
             "IAEoCzIxLkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5W",
-            "ZWN0b3JDbG9jayLTAQoGR29zc2lwEj0KB21lbWJlcnMYASADKAsyLC5Ba2th",
-            "LkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuTWVtYmVyEkYKCG92",
-            "ZXJ2aWV3GAIgASgLMjQuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJv",
-            "dG8uTXNnLkdvc3NpcE92ZXJ2aWV3EkIKB3ZlcnNpb24YAyABKAsyMS5Ba2th",
-            "LkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVmVjdG9yQ2xvY2si",
-            "nQEKDkdvc3NpcE92ZXJ2aWV3EkEKBHNlZW4YASADKAsyMy5Ba2thLkNsdXN0",
-            "ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxJICgxy",
-            "ZWFjaGFiaWxpdHkYAiABKAsyMi5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuUmVhY2hhYmlsaXR5IpsCCgxSZWFjaGFiaWxpdHkSPQoH",
-            "cmVjb3JkcxgBIAMoCzIsLkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlBy",
-            "b3RvLk1zZy5SZWNvcmQSWAoIdmVyc2lvbnMYAiADKAsyRi5Ba2thLkNsdXN0",
-            "ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUmVhY2hhYmlsaXR5LlJlYWNo",
-            "YWJpbGl0eVZlcnNpb24acgoTUmVhY2hhYmlsaXR5VmVyc2lvbhJKCg11bmlx",
-            "dWVBZGRyZXNzGAEgASgLMjMuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLlVuaXF1ZUFkZHJlc3MSDwoHdmVyc2lvbhgCIAEoAyK9AgoG",
-            "UmVjb3JkEkUKCG9ic2VydmVyGAEgASgLMjMuQWtrYS5DbHVzdGVyLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLlVuaXF1ZUFkZHJlc3MSRAoHc3ViamVjdBgC",
-            "IAEoCzIzLkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5V",
-            "bmlxdWVBZGRyZXNzEk8KBnN0YXR1cxgDIAEoDjI/LkFra2EuQ2x1c3Rlci5T",
-            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5SZWNvcmQuUmVhY2hhYmlsaXR5U3Rh",
-            "dHVzEg8KB3ZlcnNpb24YBCABKAMiRAoSUmVhY2hhYmlsaXR5U3RhdHVzEg0K",
-            "CVJlYWNoYWJsZRAAEg8KC1VucmVhY2hhYmxlEAESDgoKVGVybWluYXRlZBAC",
-            "IpYCCgZNZW1iZXISSgoNdW5pcXVlQWRkcmVzcxgBIAEoCzIzLkFra2EuQ2x1",
-            "c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzEhAK",
-            "CHVwTnVtYmVyGAIgASgFEkkKBnN0YXR1cxgDIAEoDjI5LkFra2EuQ2x1c3Rl",
-            "ci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5NZW1iZXIuTWVtYmVyU3RhdHVz",
-            "Eg0KBXJvbGVzGAQgAygJIlQKDE1lbWJlclN0YXR1cxILCgdKb2luaW5nEAAS",
-            "BgoCVXAQARILCgdMZWF2aW5nEAISCwoHRXhpdGluZxADEggKBERvd24QBBIL",
-            "CgdSZW1vdmVkEAUihgEKC1ZlY3RvckNsb2NrEksKCHZlcnNpb25zGAEgAygL",
-            "MjkuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlZlY3Rv",
-            "ckNsb2NrLlZlcnNpb24aKgoHVmVyc2lvbhIMCgRub2RlGAEgASgJEhEKCXRp",
-            "bWVzdGFtcBgCIAEoAyIHCgVFbXB0eSJLCgdBZGRyZXNzEg4KBnN5c3RlbRgB",
-            "IAEoCRIQCghob3N0bmFtZRgCIAEoCRIMCgRwb3J0GAMgASgNEhAKCHByb3Rv",
-            "Y29sGAQgASgJIlwKDVVuaXF1ZUFkZHJlc3MSPgoHYWRkcmVzcxgBIAEoCzIt",
-            "LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5BZGRyZXNz",
-            "EgsKA3VpZBgCIAEoDSKgAQoRQ2x1c3RlclJvdXRlclBvb2wSOAoEcG9vbBgB",
-            "IAEoCzIqLkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5Q",
-            "b29sElEKCHNldHRpbmdzGAIgASgLMj8uQWtrYS5DbHVzdGVyLlNlcmlhbGl6",
-            "YXRpb24uUHJvdG8uTXNnLkNsdXN0ZXJSb3V0ZXJQb29sU2V0dGluZ3MiPAoE",
-            "UG9vbBIUCgxzZXJpYWxpemVySWQYASABKA0SEAoIbWFuaWZlc3QYAiABKAkS",
-            "DAoEZGF0YRgDIAEoDCJ8ChlDbHVzdGVyUm91dGVyUG9vbFNldHRpbmdzEhYK",
-            "DnRvdGFsSW5zdGFuY2VzGAEgASgNEhsKE21heEluc3RhbmNlc1Blck5vZGUY",
-            "AiABKA0SGQoRYWxsb3dMb2NhbFJvdXRlZXMYAyABKAgSDwoHdXNlUm9sZRgE",
-            "IAEoCUICSAFiBnByb3RvMw=="));
+            "ZWN0b3JDbG9jayLDAgoGR29zc2lwEkkKDGFsbEFkZHJlc3NlcxgBIAMoCzIz",
+            "LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5VbmlxdWVB",
+            "ZGRyZXNzEhAKCGFsbFJvbGVzGAIgAygJEhEKCWFsbEhhc2hlcxgDIAMoCRI9",
+            "CgdtZW1iZXJzGAQgAygLMiwuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLk1lbWJlchJGCghvdmVydmlldxgFIAEoCzI0LkFra2EuQ2x1",
+            "c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5Hb3NzaXBPdmVydmlldxJC",
+            "Cgd2ZXJzaW9uGAYgASgLMjEuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLlZlY3RvckNsb2NrIngKDkdvc3NpcE92ZXJ2aWV3EgwKBHNl",
+            "ZW4YASADKAUSWAoUb2JzZXJ2ZXJSZWFjaGFiaWxpdHkYAiADKAsyOi5Ba2th",
+            "LkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT2JzZXJ2ZXJSZWFj",
+            "aGFiaWxpdHkilQEKFE9ic2VydmVyUmVhY2hhYmlsaXR5EhQKDGFkZHJlc3NJ",
+            "bmRleBgBIAEoBRIPCgd2ZXJzaW9uGAQgASgDElYKE3N1YmplY3RSZWFjaGFi",
+            "aWxpdHkYAiADKAsyOS5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90",
+            "by5Nc2cuU3ViamVjdFJlYWNoYWJpbGl0eSLgAQoTU3ViamVjdFJlYWNoYWJp",
+            "bGl0eRIUCgxhZGRyZXNzSW5kZXgYASABKAUSXAoGc3RhdHVzGAMgASgOMkwu",
+            "QWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlN1YmplY3RS",
+            "ZWFjaGFiaWxpdHkuUmVhY2hhYmlsaXR5U3RhdHVzEg8KB3ZlcnNpb24YBCAB",
+            "KAMiRAoSUmVhY2hhYmlsaXR5U3RhdHVzEg0KCVJlYWNoYWJsZRAAEg8KC1Vu",
+            "cmVhY2hhYmxlEAESDgoKVGVybWluYXRlZBACIusBCgZNZW1iZXISFAoMYWRk",
+            "cmVzc0luZGV4GAEgASgFEhAKCHVwTnVtYmVyGAIgASgFEkkKBnN0YXR1cxgD",
+            "IAEoDjI5LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5N",
+            "ZW1iZXIuTWVtYmVyU3RhdHVzEhgKDHJvbGVzSW5kZXhlcxgEIAMoBUICEAEi",
+            "VAoMTWVtYmVyU3RhdHVzEgsKB0pvaW5pbmcQABIGCgJVcBABEgsKB0xlYXZp",
+            "bmcQAhILCgdFeGl0aW5nEAMSCAoERG93bhAEEgsKB1JlbW92ZWQQBSKeAQoL",
+            "VmVjdG9yQ2xvY2sSEQoJdGltZXN0YW1wGAEgASgDEksKCHZlcnNpb25zGAIg",
+            "AygLMjkuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlZl",
+            "Y3RvckNsb2NrLlZlcnNpb24aLwoHVmVyc2lvbhIRCgloYXNoSW5kZXgYASAB",
+            "KAUSEQoJdGltZXN0YW1wGAIgASgDIgcKBUVtcHR5IksKB0FkZHJlc3MSDgoG",
+            "c3lzdGVtGAEgASgJEhAKCGhvc3RuYW1lGAIgASgJEgwKBHBvcnQYAyABKA0S",
+            "EAoIcHJvdG9jb2wYBCABKAkiXAoNVW5pcXVlQWRkcmVzcxI+CgdhZGRyZXNz",
+            "GAEgASgLMi0uQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
+            "LkFkZHJlc3MSCwoDdWlkGAIgASgNIqABChFDbHVzdGVyUm91dGVyUG9vbBI4",
+            "CgRwb29sGAEgASgLMiouQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLlBvb2wSUQoIc2V0dGluZ3MYAiABKAsyPy5Ba2thLkNsdXN0ZXIu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQ2x1c3RlclJvdXRlclBvb2xTZXR0",
+            "aW5ncyI8CgRQb29sEhQKDHNlcmlhbGl6ZXJJZBgBIAEoDRIQCghtYW5pZmVz",
+            "dBgCIAEoCRIMCgRkYXRhGAMgASgMInwKGUNsdXN0ZXJSb3V0ZXJQb29sU2V0",
+            "dGluZ3MSFgoOdG90YWxJbnN0YW5jZXMYASABKA0SGwoTbWF4SW5zdGFuY2Vz",
+            "UGVyTm9kZRgCIAEoDRIZChFhbGxvd0xvY2FsUm91dGVlcxgDIAEoCBIPCgd1",
+            "c2VSb2xlGAQgASgJQgJIAWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -87,12 +83,12 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Welcome), global::Akka.Cluster.Serialization.Proto.Msg.Welcome.Parser, new[]{ "From", "Gossip" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipEnvelope), global::Akka.Cluster.Serialization.Proto.Msg.GossipEnvelope.Parser, new[]{ "From", "To", "SerializedGossip" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipStatus), global::Akka.Cluster.Serialization.Proto.Msg.GossipStatus.Parser, new[]{ "From", "AllHashes", "Version" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Gossip), global::Akka.Cluster.Serialization.Proto.Msg.Gossip.Parser, new[]{ "Members", "Overview", "Version" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview), global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview.Parser, new[]{ "Seen", "Reachability" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Reachability), global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Parser, new[]{ "Records", "Versions" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Types.ReachabilityVersion), global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Types.ReachabilityVersion.Parser, new[]{ "UniqueAddress", "Version" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Record), global::Akka.Cluster.Serialization.Proto.Msg.Record.Parser, new[]{ "Observer", "Subject", "Status", "Version" }, null, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.Record.Types.ReachabilityStatus) }, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member), global::Akka.Cluster.Serialization.Proto.Msg.Member.Parser, new[]{ "UniqueAddress", "UpNumber", "Status", "Roles" }, null, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member.Types.MemberStatus) }, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.VectorClock), global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Parser, new[]{ "Versions" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version), global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version.Parser, new[]{ "Node", "Timestamp" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Gossip), global::Akka.Cluster.Serialization.Proto.Msg.Gossip.Parser, new[]{ "AllAddresses", "AllRoles", "AllHashes", "Members", "Overview", "Version" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview), global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview.Parser, new[]{ "Seen", "ObserverReachability" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability), global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability.Parser, new[]{ "AddressIndex", "Version", "SubjectReachability" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability), global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Parser, new[]{ "AddressIndex", "Status", "Version" }, null, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Types.ReachabilityStatus) }, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member), global::Akka.Cluster.Serialization.Proto.Msg.Member.Parser, new[]{ "AddressIndex", "UpNumber", "Status", "RolesIndexes" }, null, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member.Types.MemberStatus) }, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.VectorClock), global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Parser, new[]{ "Timestamp", "Versions" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version), global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version.Parser, new[]{ "HashIndex", "Timestamp" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Empty), global::Akka.Cluster.Serialization.Proto.Msg.Empty.Parser, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Address), global::Akka.Cluster.Serialization.Proto.Msg.Address.Parser, new[]{ "System", "Hostname", "Port", "Protocol" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress), global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress.Parser, new[]{ "Address", "Uid" }, null, null, null),
@@ -811,6 +807,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public Gossip(Gossip other) : this() {
+      allAddresses_ = other.allAddresses_.Clone();
+      allRoles_ = other.allRoles_.Clone();
+      allHashes_ = other.allHashes_.Clone();
       members_ = other.members_.Clone();
       Overview = other.overview_ != null ? other.Overview.Clone() : null;
       Version = other.version_ != null ? other.Version.Clone() : null;
@@ -821,10 +820,40 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       return new Gossip(this);
     }
 
+    /// <summary>Field number for the "allAddresses" field.</summary>
+    public const int AllAddressesFieldNumber = 1;
+    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress> _repeated_allAddresses_codec
+        = pb::FieldCodec.ForMessage(10, global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress> allAddresses_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress> AllAddresses {
+      get { return allAddresses_; }
+    }
+
+    /// <summary>Field number for the "allRoles" field.</summary>
+    public const int AllRolesFieldNumber = 2;
+    private static readonly pb::FieldCodec<string> _repeated_allRoles_codec
+        = pb::FieldCodec.ForString(18);
+    private readonly pbc::RepeatedField<string> allRoles_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<string> AllRoles {
+      get { return allRoles_; }
+    }
+
+    /// <summary>Field number for the "allHashes" field.</summary>
+    public const int AllHashesFieldNumber = 3;
+    private static readonly pb::FieldCodec<string> _repeated_allHashes_codec
+        = pb::FieldCodec.ForString(26);
+    private readonly pbc::RepeatedField<string> allHashes_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<string> AllHashes {
+      get { return allHashes_; }
+    }
+
     /// <summary>Field number for the "members" field.</summary>
-    public const int MembersFieldNumber = 1;
+    public const int MembersFieldNumber = 4;
     private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.Member> _repeated_members_codec
-        = pb::FieldCodec.ForMessage(10, global::Akka.Cluster.Serialization.Proto.Msg.Member.Parser);
+        = pb::FieldCodec.ForMessage(34, global::Akka.Cluster.Serialization.Proto.Msg.Member.Parser);
     private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Member> members_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Member>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Member> Members {
@@ -832,7 +861,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     }
 
     /// <summary>Field number for the "overview" field.</summary>
-    public const int OverviewFieldNumber = 2;
+    public const int OverviewFieldNumber = 5;
     private global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview overview_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview Overview {
@@ -843,7 +872,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     }
 
     /// <summary>Field number for the "version" field.</summary>
-    public const int VersionFieldNumber = 3;
+    public const int VersionFieldNumber = 6;
     private global::Akka.Cluster.Serialization.Proto.Msg.VectorClock version_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public global::Akka.Cluster.Serialization.Proto.Msg.VectorClock Version {
@@ -866,6 +895,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if(!allAddresses_.Equals(other.allAddresses_)) return false;
+      if(!allRoles_.Equals(other.allRoles_)) return false;
+      if(!allHashes_.Equals(other.allHashes_)) return false;
       if(!members_.Equals(other.members_)) return false;
       if (!object.Equals(Overview, other.Overview)) return false;
       if (!object.Equals(Version, other.Version)) return false;
@@ -875,6 +907,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override int GetHashCode() {
       int hash = 1;
+      hash ^= allAddresses_.GetHashCode();
+      hash ^= allRoles_.GetHashCode();
+      hash ^= allHashes_.GetHashCode();
       hash ^= members_.GetHashCode();
       if (overview_ != null) hash ^= Overview.GetHashCode();
       if (version_ != null) hash ^= Version.GetHashCode();
@@ -888,13 +923,16 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
+      allAddresses_.WriteTo(output, _repeated_allAddresses_codec);
+      allRoles_.WriteTo(output, _repeated_allRoles_codec);
+      allHashes_.WriteTo(output, _repeated_allHashes_codec);
       members_.WriteTo(output, _repeated_members_codec);
       if (overview_ != null) {
-        output.WriteRawTag(18);
+        output.WriteRawTag(42);
         output.WriteMessage(Overview);
       }
       if (version_ != null) {
-        output.WriteRawTag(26);
+        output.WriteRawTag(50);
         output.WriteMessage(Version);
       }
     }
@@ -902,6 +940,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
+      size += allAddresses_.CalculateSize(_repeated_allAddresses_codec);
+      size += allRoles_.CalculateSize(_repeated_allRoles_codec);
+      size += allHashes_.CalculateSize(_repeated_allHashes_codec);
       size += members_.CalculateSize(_repeated_members_codec);
       if (overview_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Overview);
@@ -917,6 +958,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (other == null) {
         return;
       }
+      allAddresses_.Add(other.allAddresses_);
+      allRoles_.Add(other.allRoles_);
+      allHashes_.Add(other.allHashes_);
       members_.Add(other.members_);
       if (other.overview_ != null) {
         if (overview_ == null) {
@@ -941,17 +985,29 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
             input.SkipLastField();
             break;
           case 10: {
-            members_.AddEntriesFrom(input, _repeated_members_codec);
+            allAddresses_.AddEntriesFrom(input, _repeated_allAddresses_codec);
             break;
           }
           case 18: {
+            allRoles_.AddEntriesFrom(input, _repeated_allRoles_codec);
+            break;
+          }
+          case 26: {
+            allHashes_.AddEntriesFrom(input, _repeated_allHashes_codec);
+            break;
+          }
+          case 34: {
+            members_.AddEntriesFrom(input, _repeated_members_codec);
+            break;
+          }
+          case 42: {
             if (overview_ == null) {
               overview_ = new global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview();
             }
             input.ReadMessage(overview_);
             break;
           }
-          case 26: {
+          case 50: {
             if (version_ == null) {
               version_ = new global::Akka.Cluster.Serialization.Proto.Msg.VectorClock();
             }
@@ -993,7 +1049,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public GossipOverview(GossipOverview other) : this() {
       seen_ = other.seen_.Clone();
-      Reachability = other.reachability_ != null ? other.Reachability.Clone() : null;
+      observerReachability_ = other.observerReachability_.Clone();
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1003,23 +1059,25 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "seen" field.</summary>
     public const int SeenFieldNumber = 1;
-    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress> _repeated_seen_codec
-        = pb::FieldCodec.ForMessage(10, global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress.Parser);
-    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress> seen_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress>();
+    private static readonly pb::FieldCodec<int> _repeated_seen_codec
+        = pb::FieldCodec.ForInt32(10);
+    private readonly pbc::RepeatedField<int> seen_ = new pbc::RepeatedField<int>();
+    /// <summary>
+    /// This is the address indexes for the nodes that have seen this gossip 
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress> Seen {
+    public pbc::RepeatedField<int> Seen {
       get { return seen_; }
     }
 
-    /// <summary>Field number for the "reachability" field.</summary>
-    public const int ReachabilityFieldNumber = 2;
-    private global::Akka.Cluster.Serialization.Proto.Msg.Reachability reachability_;
+    /// <summary>Field number for the "observerReachability" field.</summary>
+    public const int ObserverReachabilityFieldNumber = 2;
+    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability> _repeated_observerReachability_codec
+        = pb::FieldCodec.ForMessage(18, global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability> observerReachability_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Cluster.Serialization.Proto.Msg.Reachability Reachability {
-      get { return reachability_; }
-      set {
-        reachability_ = value;
-      }
+    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability> ObserverReachability {
+      get { return observerReachability_; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1036,7 +1094,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         return true;
       }
       if(!seen_.Equals(other.seen_)) return false;
-      if (!object.Equals(Reachability, other.Reachability)) return false;
+      if(!observerReachability_.Equals(other.observerReachability_)) return false;
       return true;
     }
 
@@ -1044,7 +1102,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     public override int GetHashCode() {
       int hash = 1;
       hash ^= seen_.GetHashCode();
-      if (reachability_ != null) hash ^= Reachability.GetHashCode();
+      hash ^= observerReachability_.GetHashCode();
       return hash;
     }
 
@@ -1056,19 +1114,14 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
       seen_.WriteTo(output, _repeated_seen_codec);
-      if (reachability_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(Reachability);
-      }
+      observerReachability_.WriteTo(output, _repeated_observerReachability_codec);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
       size += seen_.CalculateSize(_repeated_seen_codec);
-      if (reachability_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Reachability);
-      }
+      size += observerReachability_.CalculateSize(_repeated_observerReachability_codec);
       return size;
     }
 
@@ -1078,12 +1131,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         return;
       }
       seen_.Add(other.seen_);
-      if (other.reachability_ != null) {
-        if (reachability_ == null) {
-          reachability_ = new global::Akka.Cluster.Serialization.Proto.Msg.Reachability();
-        }
-        Reachability.MergeFrom(other.Reachability);
-      }
+      observerReachability_.Add(other.observerReachability_);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1094,15 +1142,13 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
           default:
             input.SkipLastField();
             break;
-          case 10: {
+          case 10:
+          case 8: {
             seen_.AddEntriesFrom(input, _repeated_seen_codec);
             break;
           }
           case 18: {
-            if (reachability_ == null) {
-              reachability_ = new global::Akka.Cluster.Serialization.Proto.Msg.Reachability();
-            }
-            input.ReadMessage(reachability_);
+            observerReachability_.AddEntriesFrom(input, _repeated_observerReachability_codec);
             break;
           }
         }
@@ -1115,10 +1161,10 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   ///*
   /// Reachability
   /// </summary>
-  public sealed partial class Reachability : pb::IMessage<Reachability> {
-    private static readonly pb::MessageParser<Reachability> _parser = new pb::MessageParser<Reachability>(() => new Reachability());
+  public sealed partial class ObserverReachability : pb::IMessage<ObserverReachability> {
+    private static readonly pb::MessageParser<ObserverReachability> _parser = new pb::MessageParser<ObserverReachability>(() => new ObserverReachability());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Reachability> Parser { get { return _parser; } }
+    public static pb::MessageParser<ObserverReachability> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
@@ -1131,66 +1177,81 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Reachability() {
+    public ObserverReachability() {
       OnConstruction();
     }
 
     partial void OnConstruction();
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Reachability(Reachability other) : this() {
-      records_ = other.records_.Clone();
-      versions_ = other.versions_.Clone();
+    public ObserverReachability(ObserverReachability other) : this() {
+      addressIndex_ = other.addressIndex_;
+      version_ = other.version_;
+      subjectReachability_ = other.subjectReachability_.Clone();
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Reachability Clone() {
-      return new Reachability(this);
+    public ObserverReachability Clone() {
+      return new ObserverReachability(this);
     }
 
-    /// <summary>Field number for the "records" field.</summary>
-    public const int RecordsFieldNumber = 1;
-    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.Record> _repeated_records_codec
-        = pb::FieldCodec.ForMessage(10, global::Akka.Cluster.Serialization.Proto.Msg.Record.Parser);
-    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Record> records_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Record>();
+    /// <summary>Field number for the "addressIndex" field.</summary>
+    public const int AddressIndexFieldNumber = 1;
+    private int addressIndex_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Record> Records {
-      get { return records_; }
+    public int AddressIndex {
+      get { return addressIndex_; }
+      set {
+        addressIndex_ = value;
+      }
     }
 
-    /// <summary>Field number for the "versions" field.</summary>
-    public const int VersionsFieldNumber = 2;
-    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Types.ReachabilityVersion> _repeated_versions_codec
-        = pb::FieldCodec.ForMessage(18, global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Types.ReachabilityVersion.Parser);
-    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Types.ReachabilityVersion> versions_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Types.ReachabilityVersion>();
+    /// <summary>Field number for the "version" field.</summary>
+    public const int VersionFieldNumber = 4;
+    private long version_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Types.ReachabilityVersion> Versions {
-      get { return versions_; }
+    public long Version {
+      get { return version_; }
+      set {
+        version_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "subjectReachability" field.</summary>
+    public const int SubjectReachabilityFieldNumber = 2;
+    private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability> _repeated_subjectReachability_codec
+        = pb::FieldCodec.ForMessage(18, global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability> subjectReachability_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability> SubjectReachability {
+      get { return subjectReachability_; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
-      return Equals(other as Reachability);
+      return Equals(other as ObserverReachability);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(Reachability other) {
+    public bool Equals(ObserverReachability other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if(!records_.Equals(other.records_)) return false;
-      if(!versions_.Equals(other.versions_)) return false;
+      if (AddressIndex != other.AddressIndex) return false;
+      if (Version != other.Version) return false;
+      if(!subjectReachability_.Equals(other.subjectReachability_)) return false;
       return true;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override int GetHashCode() {
       int hash = 1;
-      hash ^= records_.GetHashCode();
-      hash ^= versions_.GetHashCode();
+      if (AddressIndex != 0) hash ^= AddressIndex.GetHashCode();
+      if (Version != 0L) hash ^= Version.GetHashCode();
+      hash ^= subjectReachability_.GetHashCode();
       return hash;
     }
 
@@ -1201,25 +1262,42 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
-      records_.WriteTo(output, _repeated_records_codec);
-      versions_.WriteTo(output, _repeated_versions_codec);
+      if (AddressIndex != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(AddressIndex);
+      }
+      subjectReachability_.WriteTo(output, _repeated_subjectReachability_codec);
+      if (Version != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(Version);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
-      size += records_.CalculateSize(_repeated_records_codec);
-      size += versions_.CalculateSize(_repeated_versions_codec);
+      if (AddressIndex != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(AddressIndex);
+      }
+      if (Version != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(Version);
+      }
+      size += subjectReachability_.CalculateSize(_repeated_subjectReachability_codec);
       return size;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(Reachability other) {
+    public void MergeFrom(ObserverReachability other) {
       if (other == null) {
         return;
       }
-      records_.Add(other.records_);
-      versions_.Add(other.versions_);
+      if (other.AddressIndex != 0) {
+        AddressIndex = other.AddressIndex;
+      }
+      if (other.Version != 0L) {
+        Version = other.Version;
+      }
+      subjectReachability_.Add(other.subjectReachability_);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1230,182 +1308,28 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
           default:
             input.SkipLastField();
             break;
-          case 10: {
-            records_.AddEntriesFrom(input, _repeated_records_codec);
+          case 8: {
+            AddressIndex = input.ReadInt32();
             break;
           }
           case 18: {
-            versions_.AddEntriesFrom(input, _repeated_versions_codec);
+            subjectReachability_.AddEntriesFrom(input, _repeated_subjectReachability_codec);
+            break;
+          }
+          case 32: {
+            Version = input.ReadInt64();
             break;
           }
         }
       }
     }
 
-    #region Nested types
-    /// <summary>Container for nested types declared in the Reachability message type.</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static partial class Types {
-      public sealed partial class ReachabilityVersion : pb::IMessage<ReachabilityVersion> {
-        private static readonly pb::MessageParser<ReachabilityVersion> _parser = new pb::MessageParser<ReachabilityVersion>(() => new ReachabilityVersion());
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public static pb::MessageParser<ReachabilityVersion> Parser { get { return _parser; } }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public static pbr::MessageDescriptor Descriptor {
-          get { return global::Akka.Cluster.Serialization.Proto.Msg.Reachability.Descriptor.NestedTypes[0]; }
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        pbr::MessageDescriptor pb::IMessage.Descriptor {
-          get { return Descriptor; }
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public ReachabilityVersion() {
-          OnConstruction();
-        }
-
-        partial void OnConstruction();
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public ReachabilityVersion(ReachabilityVersion other) : this() {
-          UniqueAddress = other.uniqueAddress_ != null ? other.UniqueAddress.Clone() : null;
-          version_ = other.version_;
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public ReachabilityVersion Clone() {
-          return new ReachabilityVersion(this);
-        }
-
-        /// <summary>Field number for the "uniqueAddress" field.</summary>
-        public const int UniqueAddressFieldNumber = 1;
-        private global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress uniqueAddress_;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress UniqueAddress {
-          get { return uniqueAddress_; }
-          set {
-            uniqueAddress_ = value;
-          }
-        }
-
-        /// <summary>Field number for the "version" field.</summary>
-        public const int VersionFieldNumber = 2;
-        private long version_;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public long Version {
-          get { return version_; }
-          set {
-            version_ = value;
-          }
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public override bool Equals(object other) {
-          return Equals(other as ReachabilityVersion);
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public bool Equals(ReachabilityVersion other) {
-          if (ReferenceEquals(other, null)) {
-            return false;
-          }
-          if (ReferenceEquals(other, this)) {
-            return true;
-          }
-          if (!object.Equals(UniqueAddress, other.UniqueAddress)) return false;
-          if (Version != other.Version) return false;
-          return true;
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public override int GetHashCode() {
-          int hash = 1;
-          if (uniqueAddress_ != null) hash ^= UniqueAddress.GetHashCode();
-          if (Version != 0L) hash ^= Version.GetHashCode();
-          return hash;
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public override string ToString() {
-          return pb::JsonFormatter.ToDiagnosticString(this);
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public void WriteTo(pb::CodedOutputStream output) {
-          if (uniqueAddress_ != null) {
-            output.WriteRawTag(10);
-            output.WriteMessage(UniqueAddress);
-          }
-          if (Version != 0L) {
-            output.WriteRawTag(16);
-            output.WriteInt64(Version);
-          }
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public int CalculateSize() {
-          int size = 0;
-          if (uniqueAddress_ != null) {
-            size += 1 + pb::CodedOutputStream.ComputeMessageSize(UniqueAddress);
-          }
-          if (Version != 0L) {
-            size += 1 + pb::CodedOutputStream.ComputeInt64Size(Version);
-          }
-          return size;
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public void MergeFrom(ReachabilityVersion other) {
-          if (other == null) {
-            return;
-          }
-          if (other.uniqueAddress_ != null) {
-            if (uniqueAddress_ == null) {
-              uniqueAddress_ = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
-            }
-            UniqueAddress.MergeFrom(other.UniqueAddress);
-          }
-          if (other.Version != 0L) {
-            Version = other.Version;
-          }
-        }
-
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public void MergeFrom(pb::CodedInputStream input) {
-          uint tag;
-          while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
-              default:
-                input.SkipLastField();
-                break;
-              case 10: {
-                if (uniqueAddress_ == null) {
-                  uniqueAddress_ = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
-                }
-                input.ReadMessage(uniqueAddress_);
-                break;
-              }
-              case 16: {
-                Version = input.ReadInt64();
-                break;
-              }
-            }
-          }
-        }
-
-      }
-
-    }
-    #endregion
-
   }
 
-  public sealed partial class Record : pb::IMessage<Record> {
-    private static readonly pb::MessageParser<Record> _parser = new pb::MessageParser<Record>(() => new Record());
+  public sealed partial class SubjectReachability : pb::IMessage<SubjectReachability> {
+    private static readonly pb::MessageParser<SubjectReachability> _parser = new pb::MessageParser<SubjectReachability>(() => new SubjectReachability());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Record> Parser { get { return _parser; } }
+    public static pb::MessageParser<SubjectReachability> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
@@ -1418,52 +1342,40 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Record() {
+    public SubjectReachability() {
       OnConstruction();
     }
 
     partial void OnConstruction();
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Record(Record other) : this() {
-      Observer = other.observer_ != null ? other.Observer.Clone() : null;
-      Subject = other.subject_ != null ? other.Subject.Clone() : null;
+    public SubjectReachability(SubjectReachability other) : this() {
+      addressIndex_ = other.addressIndex_;
       status_ = other.status_;
       version_ = other.version_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Record Clone() {
-      return new Record(this);
+    public SubjectReachability Clone() {
+      return new SubjectReachability(this);
     }
 
-    /// <summary>Field number for the "observer" field.</summary>
-    public const int ObserverFieldNumber = 1;
-    private global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress observer_;
+    /// <summary>Field number for the "addressIndex" field.</summary>
+    public const int AddressIndexFieldNumber = 1;
+    private int addressIndex_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress Observer {
-      get { return observer_; }
+    public int AddressIndex {
+      get { return addressIndex_; }
       set {
-        observer_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "subject" field.</summary>
-    public const int SubjectFieldNumber = 2;
-    private global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress subject_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress Subject {
-      get { return subject_; }
-      set {
-        subject_ = value;
+        addressIndex_ = value;
       }
     }
 
     /// <summary>Field number for the "status" field.</summary>
     public const int StatusFieldNumber = 3;
-    private global::Akka.Cluster.Serialization.Proto.Msg.Record.Types.ReachabilityStatus status_ = 0;
+    private global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Types.ReachabilityStatus status_ = 0;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Cluster.Serialization.Proto.Msg.Record.Types.ReachabilityStatus Status {
+    public global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Types.ReachabilityStatus Status {
       get { return status_; }
       set {
         status_ = value;
@@ -1483,19 +1395,18 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
-      return Equals(other as Record);
+      return Equals(other as SubjectReachability);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(Record other) {
+    public bool Equals(SubjectReachability other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!object.Equals(Observer, other.Observer)) return false;
-      if (!object.Equals(Subject, other.Subject)) return false;
+      if (AddressIndex != other.AddressIndex) return false;
       if (Status != other.Status) return false;
       if (Version != other.Version) return false;
       return true;
@@ -1504,8 +1415,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override int GetHashCode() {
       int hash = 1;
-      if (observer_ != null) hash ^= Observer.GetHashCode();
-      if (subject_ != null) hash ^= Subject.GetHashCode();
+      if (AddressIndex != 0) hash ^= AddressIndex.GetHashCode();
       if (Status != 0) hash ^= Status.GetHashCode();
       if (Version != 0L) hash ^= Version.GetHashCode();
       return hash;
@@ -1518,13 +1428,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
-      if (observer_ != null) {
-        output.WriteRawTag(10);
-        output.WriteMessage(Observer);
-      }
-      if (subject_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(Subject);
+      if (AddressIndex != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(AddressIndex);
       }
       if (Status != 0) {
         output.WriteRawTag(24);
@@ -1539,11 +1445,8 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
-      if (observer_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Observer);
-      }
-      if (subject_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Subject);
+      if (AddressIndex != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(AddressIndex);
       }
       if (Status != 0) {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Status);
@@ -1555,21 +1458,12 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(Record other) {
+    public void MergeFrom(SubjectReachability other) {
       if (other == null) {
         return;
       }
-      if (other.observer_ != null) {
-        if (observer_ == null) {
-          observer_ = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
-        }
-        Observer.MergeFrom(other.Observer);
-      }
-      if (other.subject_ != null) {
-        if (subject_ == null) {
-          subject_ = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
-        }
-        Subject.MergeFrom(other.Subject);
+      if (other.AddressIndex != 0) {
+        AddressIndex = other.AddressIndex;
       }
       if (other.Status != 0) {
         Status = other.Status;
@@ -1587,22 +1481,12 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
           default:
             input.SkipLastField();
             break;
-          case 10: {
-            if (observer_ == null) {
-              observer_ = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
-            }
-            input.ReadMessage(observer_);
-            break;
-          }
-          case 18: {
-            if (subject_ == null) {
-              subject_ = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
-            }
-            input.ReadMessage(subject_);
+          case 8: {
+            AddressIndex = input.ReadInt32();
             break;
           }
           case 24: {
-            status_ = (global::Akka.Cluster.Serialization.Proto.Msg.Record.Types.ReachabilityStatus) input.ReadEnum();
+            status_ = (global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Types.ReachabilityStatus) input.ReadEnum();
             break;
           }
           case 32: {
@@ -1614,7 +1498,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     }
 
     #region Nested types
-    /// <summary>Container for nested types declared in the Record message type.</summary>
+    /// <summary>Container for nested types declared in the SubjectReachability message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
       public enum ReachabilityStatus {
@@ -1656,10 +1540,10 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public Member(Member other) : this() {
-      UniqueAddress = other.uniqueAddress_ != null ? other.UniqueAddress.Clone() : null;
+      addressIndex_ = other.addressIndex_;
       upNumber_ = other.upNumber_;
       status_ = other.status_;
-      roles_ = other.roles_.Clone();
+      rolesIndexes_ = other.rolesIndexes_.Clone();
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1667,14 +1551,14 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       return new Member(this);
     }
 
-    /// <summary>Field number for the "uniqueAddress" field.</summary>
-    public const int UniqueAddressFieldNumber = 1;
-    private global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress uniqueAddress_;
+    /// <summary>Field number for the "addressIndex" field.</summary>
+    public const int AddressIndexFieldNumber = 1;
+    private int addressIndex_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress UniqueAddress {
-      get { return uniqueAddress_; }
+    public int AddressIndex {
+      get { return addressIndex_; }
       set {
-        uniqueAddress_ = value;
+        addressIndex_ = value;
       }
     }
 
@@ -1700,14 +1584,14 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       }
     }
 
-    /// <summary>Field number for the "roles" field.</summary>
-    public const int RolesFieldNumber = 4;
-    private static readonly pb::FieldCodec<string> _repeated_roles_codec
-        = pb::FieldCodec.ForString(34);
-    private readonly pbc::RepeatedField<string> roles_ = new pbc::RepeatedField<string>();
+    /// <summary>Field number for the "rolesIndexes" field.</summary>
+    public const int RolesIndexesFieldNumber = 4;
+    private static readonly pb::FieldCodec<int> _repeated_rolesIndexes_codec
+        = pb::FieldCodec.ForInt32(34);
+    private readonly pbc::RepeatedField<int> rolesIndexes_ = new pbc::RepeatedField<int>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pbc::RepeatedField<string> Roles {
-      get { return roles_; }
+    public pbc::RepeatedField<int> RolesIndexes {
+      get { return rolesIndexes_; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1723,20 +1607,20 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!object.Equals(UniqueAddress, other.UniqueAddress)) return false;
+      if (AddressIndex != other.AddressIndex) return false;
       if (UpNumber != other.UpNumber) return false;
       if (Status != other.Status) return false;
-      if(!roles_.Equals(other.roles_)) return false;
+      if(!rolesIndexes_.Equals(other.rolesIndexes_)) return false;
       return true;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override int GetHashCode() {
       int hash = 1;
-      if (uniqueAddress_ != null) hash ^= UniqueAddress.GetHashCode();
+      if (AddressIndex != 0) hash ^= AddressIndex.GetHashCode();
       if (UpNumber != 0) hash ^= UpNumber.GetHashCode();
       if (Status != 0) hash ^= Status.GetHashCode();
-      hash ^= roles_.GetHashCode();
+      hash ^= rolesIndexes_.GetHashCode();
       return hash;
     }
 
@@ -1747,9 +1631,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
-      if (uniqueAddress_ != null) {
-        output.WriteRawTag(10);
-        output.WriteMessage(UniqueAddress);
+      if (AddressIndex != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(AddressIndex);
       }
       if (UpNumber != 0) {
         output.WriteRawTag(16);
@@ -1759,14 +1643,14 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         output.WriteRawTag(24);
         output.WriteEnum((int) Status);
       }
-      roles_.WriteTo(output, _repeated_roles_codec);
+      rolesIndexes_.WriteTo(output, _repeated_rolesIndexes_codec);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
-      if (uniqueAddress_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(UniqueAddress);
+      if (AddressIndex != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(AddressIndex);
       }
       if (UpNumber != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(UpNumber);
@@ -1774,7 +1658,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (Status != 0) {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Status);
       }
-      size += roles_.CalculateSize(_repeated_roles_codec);
+      size += rolesIndexes_.CalculateSize(_repeated_rolesIndexes_codec);
       return size;
     }
 
@@ -1783,11 +1667,8 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (other == null) {
         return;
       }
-      if (other.uniqueAddress_ != null) {
-        if (uniqueAddress_ == null) {
-          uniqueAddress_ = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
-        }
-        UniqueAddress.MergeFrom(other.UniqueAddress);
+      if (other.AddressIndex != 0) {
+        AddressIndex = other.AddressIndex;
       }
       if (other.UpNumber != 0) {
         UpNumber = other.UpNumber;
@@ -1795,7 +1676,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (other.Status != 0) {
         Status = other.Status;
       }
-      roles_.Add(other.roles_);
+      rolesIndexes_.Add(other.rolesIndexes_);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1806,11 +1687,8 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
           default:
             input.SkipLastField();
             break;
-          case 10: {
-            if (uniqueAddress_ == null) {
-              uniqueAddress_ = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
-            }
-            input.ReadMessage(uniqueAddress_);
+          case 8: {
+            AddressIndex = input.ReadInt32();
             break;
           }
           case 16: {
@@ -1821,8 +1699,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
             status_ = (global::Akka.Cluster.Serialization.Proto.Msg.Member.Types.MemberStatus) input.ReadEnum();
             break;
           }
-          case 34: {
-            roles_.AddEntriesFrom(input, _repeated_roles_codec);
+          case 34:
+          case 32: {
+            rolesIndexes_.AddEntriesFrom(input, _repeated_rolesIndexes_codec);
             break;
           }
         }
@@ -1875,6 +1754,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public VectorClock(VectorClock other) : this() {
+      timestamp_ = other.timestamp_;
       versions_ = other.versions_.Clone();
     }
 
@@ -1883,10 +1763,24 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       return new VectorClock(this);
     }
 
+    /// <summary>Field number for the "timestamp" field.</summary>
+    public const int TimestampFieldNumber = 1;
+    private long timestamp_;
+    /// <summary>
+    /// the timestamp could be removed but left for test data compatibility
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long Timestamp {
+      get { return timestamp_; }
+      set {
+        timestamp_ = value;
+      }
+    }
+
     /// <summary>Field number for the "versions" field.</summary>
-    public const int VersionsFieldNumber = 1;
+    public const int VersionsFieldNumber = 2;
     private static readonly pb::FieldCodec<global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version> _repeated_versions_codec
-        = pb::FieldCodec.ForMessage(10, global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version.Parser);
+        = pb::FieldCodec.ForMessage(18, global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version.Parser);
     private readonly pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version> versions_ = new pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public pbc::RepeatedField<global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version> Versions {
@@ -1906,6 +1800,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if (Timestamp != other.Timestamp) return false;
       if(!versions_.Equals(other.versions_)) return false;
       return true;
     }
@@ -1913,6 +1808,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override int GetHashCode() {
       int hash = 1;
+      if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
       hash ^= versions_.GetHashCode();
       return hash;
     }
@@ -1924,12 +1820,19 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
+      if (Timestamp != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(Timestamp);
+      }
       versions_.WriteTo(output, _repeated_versions_codec);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
+      if (Timestamp != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(Timestamp);
+      }
       size += versions_.CalculateSize(_repeated_versions_codec);
       return size;
     }
@@ -1938,6 +1841,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     public void MergeFrom(VectorClock other) {
       if (other == null) {
         return;
+      }
+      if (other.Timestamp != 0L) {
+        Timestamp = other.Timestamp;
       }
       versions_.Add(other.versions_);
     }
@@ -1950,7 +1856,11 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
           default:
             input.SkipLastField();
             break;
-          case 10: {
+          case 8: {
+            Timestamp = input.ReadInt64();
+            break;
+          }
+          case 18: {
             versions_.AddEntriesFrom(input, _repeated_versions_codec);
             break;
           }
@@ -1986,7 +1896,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public Version(Version other) : this() {
-          node_ = other.node_;
+          hashIndex_ = other.hashIndex_;
           timestamp_ = other.timestamp_;
         }
 
@@ -1995,14 +1905,14 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
           return new Version(this);
         }
 
-        /// <summary>Field number for the "node" field.</summary>
-        public const int NodeFieldNumber = 1;
-        private string node_ = "";
+        /// <summary>Field number for the "hashIndex" field.</summary>
+        public const int HashIndexFieldNumber = 1;
+        private int hashIndex_;
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        public string Node {
-          get { return node_; }
+        public int HashIndex {
+          get { return hashIndex_; }
           set {
-            node_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+            hashIndex_ = value;
           }
         }
 
@@ -2030,7 +1940,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
           if (ReferenceEquals(other, this)) {
             return true;
           }
-          if (Node != other.Node) return false;
+          if (HashIndex != other.HashIndex) return false;
           if (Timestamp != other.Timestamp) return false;
           return true;
         }
@@ -2038,7 +1948,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public override int GetHashCode() {
           int hash = 1;
-          if (Node.Length != 0) hash ^= Node.GetHashCode();
+          if (HashIndex != 0) hash ^= HashIndex.GetHashCode();
           if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
           return hash;
         }
@@ -2050,9 +1960,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public void WriteTo(pb::CodedOutputStream output) {
-          if (Node.Length != 0) {
-            output.WriteRawTag(10);
-            output.WriteString(Node);
+          if (HashIndex != 0) {
+            output.WriteRawTag(8);
+            output.WriteInt32(HashIndex);
           }
           if (Timestamp != 0L) {
             output.WriteRawTag(16);
@@ -2063,8 +1973,8 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public int CalculateSize() {
           int size = 0;
-          if (Node.Length != 0) {
-            size += 1 + pb::CodedOutputStream.ComputeStringSize(Node);
+          if (HashIndex != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeInt32Size(HashIndex);
           }
           if (Timestamp != 0L) {
             size += 1 + pb::CodedOutputStream.ComputeInt64Size(Timestamp);
@@ -2077,8 +1987,8 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
           if (other == null) {
             return;
           }
-          if (other.Node.Length != 0) {
-            Node = other.Node;
+          if (other.HashIndex != 0) {
+            HashIndex = other.HashIndex;
           }
           if (other.Timestamp != 0L) {
             Timestamp = other.Timestamp;
@@ -2093,8 +2003,8 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
               default:
                 input.SkipLastField();
                 break;
-              case 10: {
-                Node = input.ReadString();
+              case 8: {
+                HashIndex = input.ReadInt32();
                 break;
               }
               case 16: {

@@ -96,41 +96,39 @@ message GossipStatus {
  * Gossip
  */
 message Gossip {
-  repeated Member members = 1;
-  GossipOverview overview = 2;
-  VectorClock version = 3;
+  repeated UniqueAddress allAddresses = 1;
+  repeated string allRoles = 2;
+  repeated string allHashes = 3;
+  repeated Member members = 4;
+  GossipOverview overview = 5;
+  VectorClock version = 6;
 }
 
 /**
  * Gossip Overview
  */
 message GossipOverview {
-  repeated UniqueAddress seen = 1;
-  Reachability reachability = 2;
+  /* This is the address indexes for the nodes that have seen this gossip */
+  repeated int32 seen = 1;
+  repeated ObserverReachability observerReachability = 2;
 }
 
 /**
  * Reachability
  */
-message Reachability {
-  message ReachabilityVersion {
-	UniqueAddress uniqueAddress = 1;
-	int64 version = 2;
-  }
-
-  repeated Record records = 1;
-  repeated ReachabilityVersion versions = 2;
+message ObserverReachability {
+  int32 addressIndex = 1;
+  int64 version = 4;
+  repeated SubjectReachability subjectReachability = 2;
 }
 
-message Record {
+message SubjectReachability {
   enum ReachabilityStatus {
     Reachable = 0;
     Unreachable = 1;
     Terminated = 2;
   }
-  
-  UniqueAddress observer = 1;
-  UniqueAddress subject = 2;
+  int32 addressIndex = 1;
   ReachabilityStatus status = 3;
   int64 version = 4;
 }
@@ -148,10 +146,10 @@ message Member {
     Removed = 5;
   }
 
-  UniqueAddress uniqueAddress = 1;
+  int32 addressIndex = 1;
   int32 upNumber = 2;
   MemberStatus status = 3;
-  repeated string roles = 4;
+  repeated int32 rolesIndexes = 4 [packed = true];
 }
 
 /**
@@ -159,10 +157,12 @@ message Member {
  */
 message VectorClock {
   message Version {
-    string node = 1;
+    int32 hashIndex = 1;
     int64 timestamp = 2;
   }
-  repeated Version versions = 1;
+  // the timestamp could be removed but left for test data compatibility
+  int64 timestamp = 1;
+  repeated Version versions = 2;
 }
 
 /****************************************
