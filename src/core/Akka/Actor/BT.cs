@@ -254,7 +254,7 @@ namespace Akka.Actor
 
                 public override void Reset()
                 {
-
+                    throw new NotImplementedException();
                 }
 
                 public void Become(Func<IWorkflow> factory, IContext context)
@@ -1194,6 +1194,11 @@ namespace Akka.Actor
             return GetStatus(states, CalcAllComplete);
         }
 
+        public static WorkflowStatus AnyComplete(this IEnumerable<WorkflowStatus> states)
+        {
+            return GetStatus(states, CalcAnyComplete);
+        }
+
         private static WorkflowStatus GetStatus(IEnumerable<WorkflowStatus> states, CalcStatus calc)
         {
             bool hasFailure = false;
@@ -1204,10 +1209,10 @@ namespace Akka.Actor
 
             foreach (var s in states)
             {
-                hasFailure = s == WorkflowStatus.Failure;
-                hasSuccess = s == WorkflowStatus.Success;
-                hasRunning = s == WorkflowStatus.Running;
-                hasUnknown = s == WorkflowStatus.Undetermined;
+                hasFailure |= s == WorkflowStatus.Failure;
+                hasSuccess |= s == WorkflowStatus.Success;
+                hasRunning |= s == WorkflowStatus.Running;
+                hasUnknown |= s == WorkflowStatus.Undetermined;
                 hasAny = true;
             }
 
@@ -1237,6 +1242,13 @@ namespace Akka.Actor
             return hasRunning || hasUnknown
                 ? WorkflowStatus.Running
                 : WorkflowStatus.Success;
+        }
+
+        private static WorkflowStatus CalcAnyComplete(bool hasFailure, bool hasSuccess, bool hasRunning, bool hasUnknown, bool hasAny)
+        {
+            return !hasAny || hasFailure || hasSuccess
+                ? WorkflowStatus.Success
+                : WorkflowStatus.Running;
         }
 
         private static WorkflowStatus CalcAnySucceed(bool hasFailure, bool hasSuccess, bool hasRunning, bool hasUnknown, bool hasAny)

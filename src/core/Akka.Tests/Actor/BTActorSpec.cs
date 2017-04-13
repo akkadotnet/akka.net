@@ -580,6 +580,43 @@ namespace Akka.Tests.Actor
                         Become(Awake))); // But the Parallel in Connected also has a DisconnectedMsg listener
         }
 
+        public class IfNoElse : BT<object>
+        {
+            public IfNoElse()
+            {
+                StartWith(Test(), null);
+            }
+
+            TreeMachine.IWorkflow Test() =>
+                ReceiveAny(
+                    If(
+                        If(ctx => ctx.CurrentMessage.Equals("TRUE"),
+                            Execute(_ => Sender.Tell("SUCCESS"))),
+                        @else: Execute(_ => Sender.Tell("FAILURE"))));
+        }
+
+        public class ForeverParallelReceiveIfNoElse : BT<object>
+        {
+            public ForeverParallelReceiveIfNoElse()
+            {
+                StartWith(Test(), null);
+            }
+
+            TreeMachine.IWorkflow Test() =>
+                Forever(
+                    Parallel(ss => ss.AnyComplete(),
+                        Receive<string>(s => s.StartsWith("MEOW"),
+                            If(ctx => ctx.CurrentMessage.Equals("MEOWCAT"),
+                                Execute(_ => Sender.Tell("UCAT")))),
+                        Receive<string>(s => s.StartsWith("BARK"),
+                            If(ctx => ctx.CurrentMessage.Equals("BARKDOG"),
+                                Execute(_ => Sender.Tell("UDOG")))),
+                        Receive<string>(s => s.StartsWith("BLAH"),
+                            If(ctx => ctx.CurrentMessage.Equals("BLAHPAL"),
+                                Execute(_ => Sender.Tell("UPAL"))))
+                        ));
+        }
+
         #endregion
 
         [Fact]
@@ -1062,6 +1099,32 @@ namespace Akka.Tests.Actor
             bt.Tell(new ToyTest.Message.DisconnectedMsg(), TestActor);
             assertUnhandled(new ToyTest.Message.DoBark());
             assertReply(new ToyTest.Message.ConnectedMsg(), "YAWN");
+        }
+
+        [Fact]
+        public void BTActor_IfNoElse_False_Fails()
+        {
+            var bt = Sys.ActorOf(Props.Create(() => new IfNoElse()));
+
+            bt.Tell("FALSE");
+
+            ExpectMsg("FAILURE");
+        }
+
+        [Fact]
+        public void BTActor_Parallel_IfNoElse_Bug()
+        {
+            var bt = Sys.ActorOf(Props.Create(() => new ForeverParallelReceiveIfNoElse()));
+
+            Action<object, object> assertReply = (s, r) =>
+            {
+                bt.Tell(s, TestActor);
+                ExpectMsg(r, 5.Minutes());
+            };
+
+            assertReply("MEOWCAT", "UCAT");
+            bt.Tell("BARKPAL", TestActor);
+            assertReply("BARKDOG", "UDOG");
         }
     }
 }
