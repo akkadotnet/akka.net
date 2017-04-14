@@ -175,19 +175,19 @@ namespace Akka.Remote.Serialization
         private Deploy GetDeploy(DeployData protoDeploy)
         {
             Config config;
-            if (protoDeploy.Config != null) // TODO GPB HasConfig
+            if (!protoDeploy.Config.IsEmpty)
                 config = (Config) Deserialize(protoDeploy.Config, typeof (Config));
             else
                 config = ConfigurationFactory.Empty;
 
             RouterConfig routerConfig;
-            if (protoDeploy.RouterConfig != null) // TODO GPB HasRouterConfig
+            if (!protoDeploy.RouterConfig.IsEmpty)
                 routerConfig = (RouterConfig)Deserialize(protoDeploy.RouterConfig, typeof(RouterConfig));
             else
                 routerConfig = NoRouter.Instance;
 
             Scope scope;
-            if (protoDeploy.Scope != null)
+            if (!protoDeploy.Scope.IsEmpty)
                 scope = (Scope) Deserialize(protoDeploy.Scope, typeof (Scope));
             else
                 scope = Deploy.NoScopeGiven;
