@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Cluster.Tools.Client.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from ClusterClientMessages.proto</summary>
-  public static partial class ClusterClientMessagesReflection {
+  internal static partial class ClusterClientMessagesReflection {
 
     #region Descriptor
     /// <summary>File descriptor for ClusterClientMessages.proto</summary>
@@ -35,7 +35,7 @@ namespace Akka.Cluster.Tools.Client.Serialization.Proto.Msg {
 
   }
   #region Messages
-  public sealed partial class Contacts : pb::IMessage<Contacts> {
+  internal sealed partial class Contacts : pb::IMessage<Contacts> {
     private static readonly pb::MessageParser<Contacts> _parser = new pb::MessageParser<Contacts>(() => new Contacts());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Contacts> Parser { get { return _parser; } }

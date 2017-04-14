@@ -25,17 +25,13 @@ option optimize_for = SPEED;
  * Internal Cluster Action Messages
  ****************************************/
 
-/**
- * Join
- */
+// Join
 message Join {
   UniqueAddress node = 1;
   repeated string roles = 2;
 }
 
-/**
- * Welcome, reply to Join
- */
+// Welcome, reply to Join
 message Welcome {
   UniqueAddress from = 1;
   Gossip gossip = 2;
@@ -74,27 +70,21 @@ message Welcome {
  * Cluster Gossip Messages
  ****************************************/
 
-/**
- * Gossip Envelope
- */
+// Gossip Envelope
 message GossipEnvelope {
   UniqueAddress from = 1;
   UniqueAddress to = 2;
   bytes serializedGossip = 3;
 }
 
-/**
- * Gossip Status
- */
+// Gossip Status
 message GossipStatus {
   UniqueAddress from = 1;
   repeated string allHashes = 2;
   VectorClock version = 3;
 }
 
-/**
- * Gossip
- */
+// Gossip
 message Gossip {
   repeated UniqueAddress allAddresses = 1;
   repeated string allRoles = 2;
@@ -104,18 +94,14 @@ message Gossip {
   VectorClock version = 6;
 }
 
-/**
- * Gossip Overview
- */
+// Gossip Overview
 message GossipOverview {
   /* This is the address indexes for the nodes that have seen this gossip */
   repeated int32 seen = 1;
   repeated ObserverReachability observerReachability = 2;
 }
 
-/**
- * Reachability
- */
+// Reachability
 message ObserverReachability {
   int32 addressIndex = 1;
   int64 version = 4;
@@ -133,9 +119,7 @@ message SubjectReachability {
   int64 version = 4;
 }
 
-/**
- * Member
- */
+// Member
 message Member {
   enum MemberStatus {
     Joining = 0;
@@ -152,9 +136,7 @@ message Member {
   repeated int32 rolesIndexes = 4 [packed = true];
 }
 
-/**
- * Vector Clock
- */
+// Vector Clock
 message VectorClock {
   message Version {
     int32 hashIndex = 1;
@@ -169,9 +151,7 @@ message VectorClock {
  * Common Datatypes and Messages
  ****************************************/
 
-/**
- * An empty message
- */
+// An empty message
 message Empty {
 }
 
@@ -182,9 +162,7 @@ message Address {
   string protocol = 4;
 }
  
-/**
- * Defines a remote address with uid.
- */
+// Defines a remote address with uid.
 message UniqueAddress {
   Address address = 1;
   uint32 uid = 2;

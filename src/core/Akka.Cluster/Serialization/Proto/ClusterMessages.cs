@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Cluster.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from ClusterMessages.proto</summary>
-  public static partial class ClusterMessagesReflection {
+  internal static partial class ClusterMessagesReflection {
 
     #region Descriptor
     /// <summary>File descriptor for ClusterMessages.proto</summary>
@@ -102,10 +102,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
   #region Messages
   /// <summary>
-  ///*
   /// Join
   /// </summary>
-  public sealed partial class Join : pb::IMessage<Join> {
+  internal sealed partial class Join : pb::IMessage<Join> {
     private static readonly pb::MessageParser<Join> _parser = new pb::MessageParser<Join>(() => new Join());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Join> Parser { get { return _parser; } }
@@ -249,10 +248,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Welcome, reply to Join
   /// </summary>
-  public sealed partial class Welcome : pb::IMessage<Welcome> {
+  internal sealed partial class Welcome : pb::IMessage<Welcome> {
     private static readonly pb::MessageParser<Welcome> _parser = new pb::MessageParser<Welcome>(() => new Welcome());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Welcome> Parser { get { return _parser; } }
@@ -410,10 +408,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Gossip Envelope
   /// </summary>
-  public sealed partial class GossipEnvelope : pb::IMessage<GossipEnvelope> {
+  internal sealed partial class GossipEnvelope : pb::IMessage<GossipEnvelope> {
     private static readonly pb::MessageParser<GossipEnvelope> _parser = new pb::MessageParser<GossipEnvelope>(() => new GossipEnvelope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GossipEnvelope> Parser { get { return _parser; } }
@@ -599,10 +596,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Gossip Status
   /// </summary>
-  public sealed partial class GossipStatus : pb::IMessage<GossipStatus> {
+  internal sealed partial class GossipStatus : pb::IMessage<GossipStatus> {
     private static readonly pb::MessageParser<GossipStatus> _parser = new pb::MessageParser<GossipStatus>(() => new GossipStatus());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GossipStatus> Parser { get { return _parser; } }
@@ -780,10 +776,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Gossip
   /// </summary>
-  public sealed partial class Gossip : pb::IMessage<Gossip> {
+  internal sealed partial class Gossip : pb::IMessage<Gossip> {
     private static readonly pb::MessageParser<Gossip> _parser = new pb::MessageParser<Gossip>(() => new Gossip());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Gossip> Parser { get { return _parser; } }
@@ -1021,10 +1016,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Gossip Overview
   /// </summary>
-  public sealed partial class GossipOverview : pb::IMessage<GossipOverview> {
+  internal sealed partial class GossipOverview : pb::IMessage<GossipOverview> {
     private static readonly pb::MessageParser<GossipOverview> _parser = new pb::MessageParser<GossipOverview>(() => new GossipOverview());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GossipOverview> Parser { get { return _parser; } }
@@ -1158,10 +1152,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Reachability
   /// </summary>
-  public sealed partial class ObserverReachability : pb::IMessage<ObserverReachability> {
+  internal sealed partial class ObserverReachability : pb::IMessage<ObserverReachability> {
     private static readonly pb::MessageParser<ObserverReachability> _parser = new pb::MessageParser<ObserverReachability>(() => new ObserverReachability());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ObserverReachability> Parser { get { return _parser; } }
@@ -1326,7 +1319,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class SubjectReachability : pb::IMessage<SubjectReachability> {
+  internal sealed partial class SubjectReachability : pb::IMessage<SubjectReachability> {
     private static readonly pb::MessageParser<SubjectReachability> _parser = new pb::MessageParser<SubjectReachability>(() => new SubjectReachability());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<SubjectReachability> Parser { get { return _parser; } }
@@ -1513,10 +1506,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Member
   /// </summary>
-  public sealed partial class Member : pb::IMessage<Member> {
+  internal sealed partial class Member : pb::IMessage<Member> {
     private static readonly pb::MessageParser<Member> _parser = new pb::MessageParser<Member>(() => new Member());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Member> Parser { get { return _parser; } }
@@ -1727,10 +1719,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Vector Clock
   /// </summary>
-  public sealed partial class VectorClock : pb::IMessage<VectorClock> {
+  internal sealed partial class VectorClock : pb::IMessage<VectorClock> {
     private static readonly pb::MessageParser<VectorClock> _parser = new pb::MessageParser<VectorClock>(() => new VectorClock());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<VectorClock> Parser { get { return _parser; } }
@@ -2023,10 +2014,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// An empty message
   /// </summary>
-  public sealed partial class Empty : pb::IMessage<Empty> {
+  internal sealed partial class Empty : pb::IMessage<Empty> {
     private static readonly pb::MessageParser<Empty> _parser = new pb::MessageParser<Empty>(() => new Empty());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Empty> Parser { get { return _parser; } }
@@ -2115,7 +2105,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Address : pb::IMessage<Address> {
+  internal sealed partial class Address : pb::IMessage<Address> {
     private static readonly pb::MessageParser<Address> _parser = new pb::MessageParser<Address>(() => new Address());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Address> Parser { get { return _parser; } }
@@ -2317,10 +2307,9 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Defines a remote address with uid.
   /// </summary>
-  public sealed partial class UniqueAddress : pb::IMessage<UniqueAddress> {
+  internal sealed partial class UniqueAddress : pb::IMessage<UniqueAddress> {
     private static readonly pb::MessageParser<UniqueAddress> _parser = new pb::MessageParser<UniqueAddress>(() => new UniqueAddress());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<UniqueAddress> Parser { get { return _parser; } }
@@ -2471,7 +2460,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ClusterRouterPool : pb::IMessage<ClusterRouterPool> {
+  internal sealed partial class ClusterRouterPool : pb::IMessage<ClusterRouterPool> {
     private static readonly pb::MessageParser<ClusterRouterPool> _parser = new pb::MessageParser<ClusterRouterPool>(() => new ClusterRouterPool());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ClusterRouterPool> Parser { get { return _parser; } }
@@ -2628,7 +2617,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Pool : pb::IMessage<Pool> {
+  internal sealed partial class Pool : pb::IMessage<Pool> {
     private static readonly pb::MessageParser<Pool> _parser = new pb::MessageParser<Pool>(() => new Pool());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Pool> Parser { get { return _parser; } }
@@ -2801,7 +2790,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ClusterRouterPoolSettings : pb::IMessage<ClusterRouterPoolSettings> {
+  internal sealed partial class ClusterRouterPoolSettings : pb::IMessage<ClusterRouterPoolSettings> {
     private static readonly pb::MessageParser<ClusterRouterPoolSettings> _parser = new pb::MessageParser<ClusterRouterPoolSettings>(() => new ClusterRouterPoolSettings());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ClusterRouterPoolSettings> Parser { get { return _parser; } }

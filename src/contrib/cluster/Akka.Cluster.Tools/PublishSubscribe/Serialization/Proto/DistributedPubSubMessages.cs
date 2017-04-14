@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from DistributedPubSubMessages.proto</summary>
-  public static partial class DistributedPubSubMessagesReflection {
+  internal static partial class DistributedPubSubMessagesReflection {
 
     #region Descriptor
     /// <summary>File descriptor for DistributedPubSubMessages.proto</summary>
@@ -74,7 +74,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
 
   }
   #region Messages
-  public sealed partial class Status : pb::IMessage<Status> {
+  internal sealed partial class Status : pb::IMessage<Status> {
     private static readonly pb::MessageParser<Status> _parser = new pb::MessageParser<Status>(() => new Status());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Status> Parser { get { return _parser; } }
@@ -369,7 +369,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Delta : pb::IMessage<Delta> {
+  internal sealed partial class Delta : pb::IMessage<Delta> {
     private static readonly pb::MessageParser<Delta> _parser = new pb::MessageParser<Delta>(() => new Delta());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Delta> Parser { get { return _parser; } }
@@ -802,10 +802,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Defines a remote address.
   /// </summary>
-  public sealed partial class Address : pb::IMessage<Address> {
+  internal sealed partial class Address : pb::IMessage<Address> {
     private static readonly pb::MessageParser<Address> _parser = new pb::MessageParser<Address>(() => new Address());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Address> Parser { get { return _parser; } }
@@ -1007,10 +1006,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Send normally local, but it is also used by the ClusterClient.
   /// </summary>
-  public sealed partial class Send : pb::IMessage<Send> {
+  internal sealed partial class Send : pb::IMessage<Send> {
     private static readonly pb::MessageParser<Send> _parser = new pb::MessageParser<Send>(() => new Send());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Send> Parser { get { return _parser; } }
@@ -1190,10 +1188,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// SendToAll normally local, but it is also used by the ClusterClient.
   /// </summary>
-  public sealed partial class SendToAll : pb::IMessage<SendToAll> {
+  internal sealed partial class SendToAll : pb::IMessage<SendToAll> {
     private static readonly pb::MessageParser<SendToAll> _parser = new pb::MessageParser<SendToAll>(() => new SendToAll());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<SendToAll> Parser { get { return _parser; } }
@@ -1373,10 +1370,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Publish normally local, but it is also used by the ClusterClient.
   /// </summary>
-  public sealed partial class Publish : pb::IMessage<Publish> {
+  internal sealed partial class Publish : pb::IMessage<Publish> {
     private static readonly pb::MessageParser<Publish> _parser = new pb::MessageParser<Publish>(() => new Publish());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Publish> Parser { get { return _parser; } }
@@ -1528,10 +1524,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  ///*
   /// Send a message to only one subscriber of a group.
   /// </summary>
-  public sealed partial class SendToOneSubscriber : pb::IMessage<SendToOneSubscriber> {
+  internal sealed partial class SendToOneSubscriber : pb::IMessage<SendToOneSubscriber> {
     private static readonly pb::MessageParser<SendToOneSubscriber> _parser = new pb::MessageParser<SendToOneSubscriber>(() => new SendToOneSubscriber());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<SendToOneSubscriber> Parser { get { return _parser; } }
@@ -1654,7 +1649,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Payload : pb::IMessage<Payload> {
+  internal sealed partial class Payload : pb::IMessage<Payload> {
     private static readonly pb::MessageParser<Payload> _parser = new pb::MessageParser<Payload>(() => new Payload());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Payload> Parser { get { return _parser; } }

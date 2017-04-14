@@ -28,9 +28,7 @@ message Delta {
   repeated Bucket buckets = 1;
 }
 
-/**
- * Defines a remote address.
- */
+// Defines a remote address.
 message Address {
   string system = 1;
   string hostname = 2;
@@ -38,35 +36,27 @@ message Address {
   string protocol = 4;
 }
 
-/**
- * Send normally local, but it is also used by the ClusterClient.
- */
+// Send normally local, but it is also used by the ClusterClient.
 message Send {
   string path = 1;
   bool localAffinity = 2;
   Payload payload = 3; 
 }
 
-/**
- * SendToAll normally local, but it is also used by the ClusterClient.
- */
+// SendToAll normally local, but it is also used by the ClusterClient.
 message SendToAll {
   string path = 1;
   bool allButSelf = 2;
   Payload payload = 3; 
 }
 
-/**
- * Publish normally local, but it is also used by the ClusterClient.
- */
+// Publish normally local, but it is also used by the ClusterClient.
 message Publish {
   string topic = 1;
   Payload payload = 3; 
 }
 
-/**
- * Send a message to only one subscriber of a group.
- */
+// Send a message to only one subscriber of a group.
 message SendToOneSubscriber {
   Payload payload = 1;
 }
