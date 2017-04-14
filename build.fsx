@@ -261,15 +261,12 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let xunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/*.Tests.dll" -- 
+    let xunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (
+                                 !! "src/**/bin/Release/*.Tests.dll"
                                  // Akka.Streams.Tests is referencing Akka.Streams.TestKit.Tests
-                                 "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll" --
+                                 -- "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll"
                                  // Akka.Streams.Tests.Performance is referencing Akka.Streams.Tests and Akka.Streams.TestKit.Tests
-                                 "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll"
-                                 // TESTS THAT DON"T PASS...
-                                 -- "src/**/Akka.FSharp.Tests/bin/Release/*.Tests.dll"
-                                 -- "src/**/Akka.Remote.TestKit.Tests/bin/Release/*.Tests.dll"
-                                 -- "src/**/Akka.Remote.Tests/bin/Release/*.Tests.dll")
+                                 -- "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll")
 
     let nunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/Akka.Streams.Tests.TCK.dll")
 
@@ -285,7 +282,7 @@ Target "RunTests" <| fun _ ->
     let runSingleAssembly assembly =
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
         xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; NoAppDomain = true; ForceTeamCity = false; }) 
+            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; NoAppDomain = true; ForceTeamCity = true; }) 
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
