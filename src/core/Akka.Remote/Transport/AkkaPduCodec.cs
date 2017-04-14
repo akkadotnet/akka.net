@@ -371,6 +371,11 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
+        /// Indicated RemoteEnvelope.Seq is not defined (order is irrelevant)
+        /// </summary>
+        private const ulong SeqUndefined = ulong.MaxValue;
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="raw">TBD</param>
@@ -383,14 +388,14 @@ namespace Akka.Remote.Transport
 
             Ack ackOption = null;
 
-            if (ackAndEnvelope.Ack != null)  // TODO GPB HasAck
+            if (ackAndEnvelope.Ack != null)
             {
                 ackOption = new Ack(new SeqNo((long)ackAndEnvelope.Ack.CumulativeAck), ackAndEnvelope.Ack.Nacks.Select(x => new SeqNo((long)x)));
             }
 
             Message messageOption = null;
 
-            if (ackAndEnvelope.Envelope != null) // TODO GPB HasEnvelope
+            if (ackAndEnvelope.Envelope != null)
             {
                 var envelopeContainer = ackAndEnvelope.Envelope;
                 if (envelopeContainer != null)
@@ -400,12 +405,12 @@ namespace Akka.Remote.Transport
                     ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
                     var serializedMessage = envelopeContainer.Message;
                     IActorRef senderOption = null;
-                    if (envelopeContainer.Sender != null)    // TODO GPB HasSender
+                    if (envelopeContainer.Sender != null)
                     {
                         senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
                     }
                     SeqNo seqOption = null;
-                    if (envelopeContainer.Seq != 0)   // TODO GPB HasSeq
+                    if (envelopeContainer.Seq != SeqUndefined)
                     {
                         unchecked
                         {
@@ -445,7 +450,7 @@ namespace Akka.Remote.Transport
             var ackAndEnvelope = new AckAndEnvelopeContainer();
             var envelope = new RemoteEnvelope() { Recipient = SerializeActorRef(recipient.Path.Address, recipient) };
             if (senderOption != null && senderOption.Path != null) { envelope.Sender = SerializeActorRef(localAddress, senderOption); }
-            if (seqOption != null) { envelope.Seq = (ulong)seqOption.RawValue; }
+            if (seqOption != null) { envelope.Seq = (ulong)seqOption.RawValue; } else envelope.Seq = SeqUndefined;
             if (ackOption != null) { ackAndEnvelope.Ack = AckBuilder(ackOption); }
             envelope.Message = serializedMessage;
             ackAndEnvelope.Envelope = envelope;
