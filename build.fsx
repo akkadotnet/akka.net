@@ -226,6 +226,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/cluster/Akka.Cluster.Tools"
       "contrib/cluster/Akka.Cluster.Sharding"
       "contrib/cluster/Akka.DistributedData"
+      "contrib/cluster/Akka.DistributedData.LightningDB"
       ]
     |> List.iter copyOutput
 
@@ -388,11 +389,11 @@ module Nuget =
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
         | "Akka.Cluster.TestKit" -> ["Akka.Remote.TestKit", release.NugetVersion; "Akka.Cluster", release.NugetVersion]
-        | "Akka.Cluster.Sharding" -> ["Akka.Cluster.Tools", preReleaseVersion; "Akka.Persistence", preReleaseVersion]
+        | "Akka.Cluster.Sharding" -> ["Akka.Cluster.Tools", release.NugetVersion; "Akka.Persistence", preReleaseVersion]
         | "Akka.Cluster.Tools" -> ["Akka.Cluster", release.NugetVersion]
         | "Akka.MultiNodeTestRunner" -> [] // all binaries for the multinodetest runner have to be included locally
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
-        | "Akka.Persistence.Query" -> ["Akka.Persistence", preReleaseVersion; "Akka.Streams", preReleaseVersion]
+        | "Akka.Persistence.Query" -> ["Akka.Persistence", preReleaseVersion; "Akka.Streams", release.NugetVersion]
         | "Akka.Persistence.Query.Sql" -> ["Akka.Persistence.Query", preReleaseVersion; "Akka.Persistence.Sql.Common", preReleaseVersion]
         | "Akka.Persistence.Sql.TestKit" -> ["Akka.Persistence.Query.Sql", preReleaseVersion; "Akka.Persistence.TestKit", preReleaseVersion; "Akka.Streams.TestKit", preReleaseVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
@@ -401,7 +402,7 @@ module Nuget =
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | "Akka.Remote.TestKit" -> ["Akka.Remote", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion;]
         | "Akka.Streams" -> ["Akka", release.NugetVersion]
-        | "Akka.Streams.TestKit" -> ["Akka.Streams", preReleaseVersion; "Akka.TestKit", release.NugetVersion]
+        | "Akka.Streams.TestKit" -> ["Akka.Streams", release.NugetVersion; "Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
     // used to add -pre suffix to pre-release packages
@@ -409,10 +410,10 @@ module Nuget =
       match project with
       | "Akka.Serialization.Wire" -> preReleaseVersion
       | "Akka.Serialization.Hyperion" -> preReleaseVersion
-      | cluster when (cluster.StartsWith("Akka.Cluster.") && not (cluster.EndsWith("TestKit"))) -> preReleaseVersion
+      | "Akka.Cluster.Sharding" -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
-      | streams when streams.StartsWith("Akka.Streams") -> preReleaseVersion
       | "Akka.DistributedData" -> preReleaseVersion
+      | "Akka.DistributedData.LightningDB" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
