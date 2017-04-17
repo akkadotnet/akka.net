@@ -23,7 +23,8 @@ namespace Akka.DistributedData
     /// with <see cref="PNCounter"/> values. 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
-    public class PNCounterDictionary<TKey> : IReplicatedData<PNCounterDictionary<TKey>>, 
+    public class PNCounterDictionary<TKey> : 
+        IDeltaReplicatedData<PNCounterDictionary<TKey>, ORDictionary<TKey, PNCounter>.IDeltaOperation>, 
         IRemovedNodePruning<PNCounterDictionary<TKey>>, 
         IReplicatedDataSerialization, 
         IEquatable<PNCounterDictionary<TKey>>,
@@ -179,6 +180,23 @@ namespace Akka.DistributedData
             sb.Append(')');
             return sb.ToString();
         }
+
+        #region delta 
+
+        public ORDictionary<TKey, PNCounter>.IDeltaOperation Delta => _underlying.Delta;
+
+        public PNCounterDictionary<TKey> MergeDelta(ORDictionary<TKey, PNCounter>.IDeltaOperation delta) => 
+            new PNCounterDictionary<TKey>(_underlying.MergeDelta(delta));
+
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) =>
+            MergeDelta((ORDictionary<TKey, PNCounter>.IDeltaOperation) delta);
+
+        public PNCounterDictionary<TKey> ResetDelta() => 
+            new PNCounterDictionary<TKey>(_underlying.ResetDelta());
+
+        #endregion
     }
 
     public class PNCounterDictionaryKey<T> : Key<PNCounterDictionary<T>>

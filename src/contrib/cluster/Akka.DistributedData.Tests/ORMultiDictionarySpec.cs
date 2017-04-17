@@ -29,7 +29,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void A_ORMultiDictionary_should_be_able_to_add_entries()
         {
-            var m = ORMultiDictionary<string, string>.Empty.AddItem(_node1, "a", "A").AddItem(_node1, "b", "B");
+            var m = ORMultiValueDictionary<string, string>.Empty.AddItem(_node1, "a", "A").AddItem(_node1, "b", "B");
             Assert.Equal(ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A")),
@@ -47,7 +47,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void A_ORMultiDictionary_should_be_able_to_remove_entries()
         {
-            var m = ORMultiDictionary<string, string>.Empty
+            var m = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node1, "a", "A")
                 .AddItem(_node1, "b", "B")
                 .RemoveItem(_node1, "a", "A");
@@ -61,7 +61,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void A_ORMultiDictionary_should_be_able_to_replace_entries()
         {
-            var m = ORMultiDictionary<string, string>.Empty
+            var m = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node1, "a", "A")
                 .ReplaceItem(_node1, "a", "A", "B");
 
@@ -74,11 +74,11 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void A_ORMultiDictionary_should_be_able_to_have_its_entries_correctly_merged_with_another_ORMultiDictionary_with_other_entries()
         {
-            var m1 = ORMultiDictionary<string, string>.Empty
+            var m1 = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node1, "a", "A")
                 .AddItem(_node1, "b", "B");
 
-            var m2 = ORMultiDictionary<string, string>.Empty
+            var m2 = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node2, "c", "C");
 
             // merge both ways
@@ -99,13 +99,13 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void A_ORMultiDictionary_should_be_able_to_have_its_entries_correctly_merged_with_another_ORMultiDictionary_with_overlaping_entries()
         {
-            var m1 = ORMultiDictionary<string, string>.Empty
+            var m1 = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node1, "a", "A1")
                 .AddItem(_node1, "b", "B1")
                 .RemoveItem(_node1, "a", "A1")
                 .AddItem(_node1, "d", "D1");
 
-            var m2 = ORMultiDictionary<string, string>.Empty
+            var m2 = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node2, "c", "C2")
                 .AddItem(_node2, "a", "A2")
                 .AddItem(_node2, "b", "B2")
@@ -131,7 +131,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void A_ORMultiDictionary_should_be_able_to_get_all_bindings_for_an_entry_and_then_reduce_them_upon_putting_them_back()
         {
-            var m = ORMultiDictionary<string, string>.Empty
+            var m = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node1, "a", "A1")
                 .AddItem(_node1, "a", "A2")
                 .AddItem(_node1, "b", "B1");
@@ -151,7 +151,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void A_ORMultiDictionary_should_return_the_value_for_an_existing_key_and_the_default_for_a_non_existing_one()
         {
-            var m = ORMultiDictionary<string, string>.Empty
+            var m = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node1, "a", "A");
 
             IImmutableSet<string> v;
@@ -164,7 +164,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void A_ORMultiDictionary_should_remove_all_bindings_for_a_given_key()
         {
-            var m = ORMultiDictionary<string, string>.Empty
+            var m = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node1, "a", "A1")
                 .AddItem(_node1, "a", "A2")
                 .AddItem(_node1, "b", "B1");

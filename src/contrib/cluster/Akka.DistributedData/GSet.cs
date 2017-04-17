@@ -62,7 +62,14 @@ namespace Akka.DistributedData
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     [Serializable]
-    public sealed class GSet<T> : FastMerge<GSet<T>>, IReplicatedDataSerialization, IGSet, IEquatable<GSet<T>>, IEnumerable<T>
+    public sealed class GSet<T> :
+        FastMerge<GSet<T>>,
+        IReplicatedDataSerialization,
+        IGSet,
+        IEquatable<GSet<T>>,
+        IEnumerable<T>,
+        IDeltaReplicatedData<GSet<T>, GSet<T>>,
+        IReplicatedDelta
     {
         /// <summary>
         /// TBD
@@ -83,9 +90,17 @@ namespace Akka.DistributedData
         /// TBD
         /// </summary>
         /// <param name="elements">TBD</param>
-        public GSet(IImmutableSet<T> elements)
+        public GSet(IImmutableSet<T> elements) : this(elements, null) { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="elements">TBD</param>
+        /// <param name="delta"></param>
+        public GSet(IImmutableSet<T> elements, GSet<T> delta)
         {
             Elements = elements;
+            _delta = delta;
         }
 
         /// <summary>
@@ -126,7 +141,13 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="element">TBD</param>
         /// <returns>TBD</returns>
-        public GSet<T> Add(T element) => AssignAncestor(new GSet<T>(Elements.Add(element)));
+        public GSet<T> Add(T element)
+        {
+            var newDelta = Delta != null
+                ? new GSet<T>(Delta.Elements.Add(element))
+                : new GSet<T>(ImmutableHashSet.Create(element));
+            return AssignAncestor(new GSet<T>(Elements.Add(element), newDelta));
+        }
 
         IImmutableSet<object> IGSet.Elements => Elements.Cast<object>().ToImmutableHashSet();
 
@@ -154,13 +175,18 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="obj">TBD</param>
         /// <returns>TBD</returns>
-        public override bool Equals(object obj) => obj is GSet<T> && Equals((GSet<T>) obj);
+        public override bool Equals(object obj) => obj is GSet<T> && Equals((GSet<T>)obj);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
         public override int GetHashCode() => Elements.GetHashCode();
+
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((GSet<T>) delta);
+
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <summary>
@@ -174,6 +200,15 @@ namespace Akka.DistributedData
 
             return sb.ToString();
         }
+
+        [NonSerialized]
+        private readonly GSet<T> _delta;
+
+        public GSet<T> Delta => _delta;
+        public GSet<T> MergeDelta(GSet<T> delta) => Merge(delta);
+
+        public GSet<T> ResetDelta() => Delta == null ? this : AssignAncestor(new GSet<T>(Elements));
+        IDeltaReplicatedData IReplicatedDelta.Zero => Empty;
     }
 
     /// <summary>

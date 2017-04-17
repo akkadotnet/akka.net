@@ -808,4 +808,99 @@ namespace Akka.DistributedData.Internal
             return $"Gossip(sendBack={SendBack}, updatedData={sb})";
         }
     }
+
+    public sealed class Delta : IEquatable<Delta>
+    {
+        public readonly DataEnvelope DataEnvelope;
+        public readonly long FromSeqNr;
+        public readonly long ToSeqNr;
+
+        public Delta(DataEnvelope dataEnvelope, long fromSeqNr, long toSeqNr)
+        {
+            DataEnvelope = dataEnvelope;
+            FromSeqNr = fromSeqNr;
+            ToSeqNr = toSeqNr;
+        }
+
+        public bool Equals(Delta other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(DataEnvelope, other.DataEnvelope) && FromSeqNr == other.FromSeqNr && ToSeqNr == other.ToSeqNr;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is Delta && Equals((Delta)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = DataEnvelope.GetHashCode();
+                hashCode = (hashCode * 397) ^ FromSeqNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ ToSeqNr.GetHashCode();
+                return hashCode;
+            }
+        }
+    }
+
+    public sealed class DeltaPropagation : IReplicatorMessage, IEquatable<DeltaPropagation>
+    {
+        public readonly UniqueAddress FromNode;
+        public readonly bool ShouldReply;
+        public readonly ImmutableDictionary<string, Delta> Deltas;
+
+        public DeltaPropagation(UniqueAddress fromNode, bool shouldReply, ImmutableDictionary<string, Delta> deltas)
+        {
+            FromNode = fromNode;
+            ShouldReply = shouldReply;
+            Deltas = deltas;
+        }
+
+        public bool Equals(DeltaPropagation other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            if (!Equals(FromNode, other.FromNode) || !ShouldReply == other.ShouldReply || Deltas.Count != other.Deltas.Count)
+                return false;
+
+            foreach (var entry in Deltas)
+            {
+                if (!Equals(other.Deltas.GetValueOrDefault(entry.Key), entry.Value)) return false;
+            }
+
+            return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is DeltaPropagation && Equals((DeltaPropagation)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (FromNode != null ? FromNode.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ShouldReply.GetHashCode();
+                hashCode = (hashCode * 397) ^ Deltas.GetHashCode();
+                return hashCode;
+            }
+        }
+    }
+
+    public sealed class DeltaNack : IReplicatorMessage, IDeadLetterSuppression, IEquatable<DeltaNack>
+    {
+        public static readonly DeltaNack Instance = new DeltaNack();
+        private DeltaNack() { }
+        public bool Equals(DeltaNack other) => true;
+        public override bool Equals(object obj) => obj is DeltaNack;
+        public override int GetHashCode() => nameof(DeltaNack).GetHashCode();
+    }
 }

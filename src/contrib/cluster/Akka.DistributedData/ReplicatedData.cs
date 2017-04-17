@@ -73,4 +73,94 @@ namespace Akka.DistributedData
     {
 
     }
+
+    /// <summary>
+    /// <see cref="IReplicatedData"/> with additional support for delta-CRDT replication.
+    /// delta-CRDT is a way to reduce the need for sending the full state
+    /// for updates. For example adding element 'c' and 'd' to set {'a', 'b'} would
+    /// result in sending the delta {'c', 'd'} and merge that with the state on the
+    /// receiving side, resulting in set {'a', 'b', 'c', 'd'}.
+    /// 
+    /// Learn more about this in the paper
+    /// <a href="paper http://arxiv.org/abs/1603.01529">Delta State Replicated Data Types</a>.
+    /// </summary>
+    public interface IDeltaReplicatedData : IReplicatedData
+    {
+        IReplicatedDelta Delta { get; }
+        IReplicatedData MergeDelta(IReplicatedDelta delta);
+    }
+
+    /// <summary>
+    /// <see cref="IReplicatedData{T}"/> with additional support for delta-CRDT replication.
+    /// delta-CRDT is a way to reduce the need for sending the full state
+    /// for updates. For example adding element 'c' and 'd' to set {'a', 'b'} would
+    /// result in sending the delta {'c', 'd'} and merge that with the state on the
+    /// receiving side, resulting in set {'a', 'b', 'c', 'd'}.
+    /// 
+    /// Learn more about this in the paper
+    /// <a href="paper http://arxiv.org/abs/1603.01529">Delta State Replicated Data Types</a>.
+    /// </summary>
+    /// <typeparam name="TDelta">
+    /// The type of the delta. To be specified by subclass. It may be the same type as `T` or 
+    /// a different type if needed. For example <see cref="GSet{T}"/> uses the same type and 
+    /// <see cref="ORSet{T}"/> uses different types.
+    /// </typeparam>
+    /// <typeparam name="T">Replicated data type</typeparam>
+    public interface IDeltaReplicatedData<T, TDelta> : IDeltaReplicatedData, IReplicatedData<T> 
+        where T : IReplicatedData
+        where TDelta : IReplicatedDelta
+    {
+        /// <summary>
+        /// The accumulated delta of mutator operations since previous
+        /// <see cref="ResetDelta"/>. When the <see cref="Replicator"/> invokes the `modify` function
+        /// of the <see cref="Update"/> message and the user code is invoking one or more mutator
+        /// operations the data is collecting the delta of the operations and makes
+        /// it available for the <see cref="Replicator"/> with the <see cref="Delta"/> accessor. The
+        /// `modify` function shall still return the full state in the same way as
+        /// <see cref="IReplicatedData{T}"/> without support for deltas.
+        /// </summary>
+        TDelta Delta { get; }
+
+        /// <summary>
+        /// When delta is merged into the full state this method is used.
+        /// When the type <typeparamref name="TDelta"/> of the delta is of the same type as the full 
+        /// state <typeparamref name="T"/> this method can be implemented by delegating to 
+        /// <see cref="IReplicatedData{T}.Merge(T)"/>.
+        /// </summary>
+        T MergeDelta(TDelta delta);
+
+        /// <summary>
+        /// Reset collection of deltas from mutator operations. When the <see cref="Replicator"/>
+        /// invokes the `modify` function of the <see cref="Update"/> message the delta is always
+        /// "reset" and when the user code is invoking one or more mutator operations the
+        /// data is collecting the delta of the operations and makes it available for
+        /// the <see cref="Replicator"/> with the <see cref="Delta"/> accessor. When the
+        /// <see cref="Replicator"/> has grabbed the <see cref="Delta"/> it will invoke this method 
+        /// to get a clean data instance without the delta.
+        /// </summary>
+        T ResetDelta();
+    }
+
+    /// <summary>
+    /// The delta must implement this type.
+    /// </summary>
+    public interface IReplicatedDelta : IReplicatedData
+    {
+        /// <summary>
+        /// The empty full state. This is used when a delta is received
+        /// and no existing full state exists on the receiving side. Then
+        /// the delta is merged into the <see cref="Zero"/> to create the initial full state.
+        /// </summary>
+        IDeltaReplicatedData Zero { get; }
+    }
+
+    /// <summary>
+    /// Marker that specifies that the deltas must be applied in causal order.
+    /// There is some overhead of managing the causal delivery so it should only
+    /// be used for types that need it.
+    /// 
+    /// Note that if the full state type `T` is different from the delta type `D`
+    /// it is the delta `D` that should be marked with this.
+    /// </summary>
+    public interface IRequireCausualDeliveryOfDeltas : IReplicatedDelta { }
 }
