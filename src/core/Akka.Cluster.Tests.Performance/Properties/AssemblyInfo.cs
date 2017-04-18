@@ -12,20 +12,14 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Akka.Cluster")]
+[assembly: AssemblyTitle("Akka.Remote.Tests.Performance")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyProduct("Akka.Cluster")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("Akka.Remote.Tests.Performance")]
+[assembly: AssemblyCopyright("Copyright ©  2015")]
+[assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Tests.Performance")]
-[assembly: InternalsVisibleTo("Akka.Cluster.TestKit")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Tools.Tests.MultiNode")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
@@ -33,5 +27,17 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
+[assembly: Guid("453dd4b1-64b8-4b50-bfda-3489e32d30d8")]
 
+// Version information for an assembly consists of the following four values:
+//
+//      Major Version
+//      Minor Version 
+//      Build Number
+//      Revision
+//
+// You can specify all the values or you can default the Build and Revision Numbers 
+// by using the '*' as shown below:
+// [assembly: AssemblyVersion("1.0.*")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
