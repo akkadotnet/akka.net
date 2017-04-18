@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Xunit;
 using Xunit.Abstractions;
 using Address = Akka.Actor.Address;
