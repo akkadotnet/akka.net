@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
-using Akka.Dispatch.SysMsg;
 using Akka.Remote.Configuration;
 using Akka.Remote.Routing;
 using Akka.Remote.Serialization;
@@ -18,34 +17,13 @@ using Akka.Routing;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Akka.Util.Internal;
 using FluentAssertions;
-using FsCheck.Experimental;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Serialization
 {
     public class MiscMessageSerializerSpec : AkkaSpec
     {
-        #region actor
-        public class Watchee : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-
-            }
-        }
-
-        public class Watcher : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-
-            }
-        }
-        #endregion
-
         public MiscMessageSerializerSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
         {
         }
@@ -111,7 +89,7 @@ namespace Akka.Remote.Tests.Serialization
         public void Can_serialize_RemoteWatcher_HearthbeatRsp()
         {
             var heartbeatRsp = new RemoteWatcher.HeartbeatRsp(34);
-            AssertEqual(heartbeatRsp);
+            AssertAndReturn(heartbeatRsp).AddressUid.Should().Be(heartbeatRsp.AddressUid); //TODO: add Equals to RemoteWatcher.HeartbeatRsp
         }
 
         [Fact]
@@ -143,6 +121,10 @@ namespace Akka.Remote.Tests.Serialization
             AssertEqual(message);
         }
 
+        //
+        // Routers
+        //
+
         [Fact]
         public void Can_serialize_FromConfig()
         {
@@ -155,6 +137,61 @@ namespace Akka.Remote.Tests.Serialization
         {
             var defaultResizer = new DefaultResizer(2, 4, 1, 0.5D, 0.3D, 0.1D, 55);
             AssertEqual(defaultResizer);
+        }
+
+        [Fact]
+        public void Can_serialize_RoundRobinPool()
+        {
+            var message = new RoundRobinPool(nrOfInstances: 25);
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_RoundRobinPoolWithCustomResizer()
+        {
+            var defaultResizer = new DefaultResizer(2, 4, 1, 0.5, 0.2, 0.1, 55);
+            var message = new RoundRobinPool(nrOfInstances: 25, resizer: defaultResizer);
+
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_RoundRobinPoolWithCustomDispatcher()
+        {
+            var defaultResizer = new DefaultResizer(2, 4, 1, 0.5, 0.2, 0.1, 55);
+
+            var message = new RoundRobinPool(
+                nrOfInstances: 25,
+                resizer: defaultResizer,
+                supervisorStrategy: Pool.DefaultSupervisorStrategy,
+                routerDispatcher: "my-dispatcher",
+                usePoolDispatcher: true);
+
+            AssertEqual(message);
+        }
+
+        [Fact(Skip = "Not implemented yet")]
+        public void Can_serialize_RoundRobinPoolWithCustomSupervisorStrategy()
+        {
+            var defaultResizer = new DefaultResizer(2, 4, 1, 0.5, 0.2, 0.1, 55);
+
+            var decider = Decider.From(
+                Directive.Restart,
+                Directive.Stop.When<ArgumentException>(),
+                Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new RoundRobinPool(
+                nrOfInstances: 25,
+                resizer: defaultResizer,
+                supervisorStrategy: supervisor,
+                routerDispatcher: Dispatchers.DefaultDispatcherId,
+                usePoolDispatcher: true);
+
+            var actual = AssertAndReturn(message);
+            actual.Should().Be(message);
+            actual.SupervisorStrategy.Should().Be(message.SupervisorStrategy); // TODO: supervisor strategy is not using in the serialization
         }
 
         [Fact]
@@ -186,31 +223,10 @@ namespace Akka.Remote.Tests.Serialization
         }
 
         [Fact]
-        public void Can_serialize_RandomPoolWithDispatcher()
+        public void Can_serialize_RandomPoolWithDispatcherAndResizer()
         {
-            var defaultResizer = new DefaultResizer(2, 4, 1, 0.5D, 4D, 0.1D, 55);
+            var defaultResizer = new DefaultResizer(2, 4, 1, 0.5, 0.4, 0.1, 55);
             var message = new RandomPool(
-                nrOfInstances: 25,
-                routerDispatcher: "my-dispatcher",
-                usePoolDispatcher: true,
-                resizer: defaultResizer,
-                supervisorStrategy: SupervisorStrategy.DefaultStrategy);
-
-            AssertEqual(message);
-        }
-
-        [Fact]
-        public void Can_serialize_RoundRobinPool()
-        {
-            var message = new RoundRobinPool(nrOfInstances: 25);
-            AssertEqual(message);
-        }
-
-        [Fact]
-        public void Can_serialize_RoundRobinPoolWithDispatcher()
-        {
-            var defaultResizer = new DefaultResizer(2, 4, 1, 0.5D, 4D, 0.1D, 55);
-            var message = new RoundRobinPool(
                 nrOfInstances: 25,
                 routerDispatcher: "my-dispatcher",
                 usePoolDispatcher: true,
@@ -246,6 +262,7 @@ namespace Akka.Remote.Tests.Serialization
         private T AssertAndReturn<T>(T message)
         {
             var serializer = Sys.Serialization.FindSerializerFor(message);
+            serializer.Should().BeOfType<MiscMessageSerializer>();
             var serializedBytes = serializer.ToBinary(message);
 
             if (serializer is SerializerWithStringManifest)
