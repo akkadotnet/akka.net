@@ -488,7 +488,7 @@ namespace Akka.Remote.Serialization
 
             payloadProto.SerializerId = serializer.Identifier;
             payloadProto.MessageManifest = ByteString.CopyFromUtf8(manifest);
-            payloadProto.EnclosedMessage = ByteString.CopyFrom(serializer.ToBinary(message));
+            payloadProto.Message = ByteString.CopyFrom(serializer.ToBinary(message));
             return payloadProto;
         }
 
@@ -499,7 +499,7 @@ namespace Akka.Remote.Serialization
                 : string.Empty;
 
             return system.Serialization.Deserialize(
-                payload.EnclosedMessage.ToByteArray(),
+                payload.Message.ToByteArray(),
                 payload.SerializerId,
                 manifest);
         }

@@ -6,20 +6,18 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Remote.Proto;
 using Akka.Routing;
 using Akka.Serialization;
+using Akka.Util;
+using Akka.Util.Internal;
 using Google.Protobuf;
 
 namespace Akka.Remote.Serialization
 {
     /// <summary>
-    /// This is a special <see cref="Serializer"/> that serializes and deserializes <see cref="DaemonMsgCreate"/> only.
-    /// Serialization of contained <see cref="RouterConfig"/>, <see cref="Config"/>, and <see cref="Scope"/> is done with the
-    /// configured serializer for those classes.
+    /// Serializes Akka's internal <see cref="DaemonMsgCreate"/> using protobuf.
     /// </summary>
     public class DaemonMsgCreateSerializer : Serializer
     {
@@ -31,202 +29,204 @@ namespace Akka.Remote.Serialization
         {
         }
 
-        /// <summary>
-        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
-        /// </summary>
-        public override int Identifier
-        {
-            get { return 3; }
-        }
+        /// <inheritdoc />
+        public override int Identifier => 3;
 
-        /// <summary>
-        /// Returns whether this serializer needs a manifest in the fromBinary method
-        /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return false; }
-        }
+        /// <inheritdoc />
+        public override bool IncludeManifest => false;
 
-        private ActorRefData SerializeActorRef(IActorRef @ref)
-        {
-            return new ActorRefData
-            {
-                Path = Akka.Serialization.Serialization.SerializedActorPath(@ref)
-            };
-        }
-
-        private ByteString Serialize(object obj)
-        {
-            var serializer = system.Serialization.FindSerializerFor(obj);
-            var bytes = serializer.ToBinary(obj);
-            return ByteString.CopyFrom(bytes);
-        }
-
-        private object Deserialize(ByteString bytes, Type type)
-        {
-            var serializer = system.Serialization.FindSerializerForType(type);
-            var o = serializer.FromBinary(bytes.ToByteArray(), type);
-            return o;
-        }
-
-        /// <summary>
-        /// Serializes the given object into a byte array
-        /// </summary>
-        /// <param name="obj">The object to serialize </param>
-        /// <returns>A byte array containing the serialized object</returns>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the specified <paramref name="obj" /> is not of type <see cref="DaemonMsgCreate"/>.
-        /// </exception>
+        /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
             var msg = obj as DaemonMsgCreate;
-            if (msg == null)
+            if (msg != null)
             {
-                throw new ArgumentException(
-                    "Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer");
+                var message = new Proto.Msg.DaemonMsgCreateData();
+                message.Props = PropsToProto(msg.Props);
+                message.Deploy = DeployToProto(msg.Deploy);
+                message.Path = msg.Path;
+                message.Supervisor = SerializeActorRef(msg.Supervisor);
+
+                return message.ToByteArray();
             }
 
-            var daemon = new DaemonMsgCreateData
-            {
-                Props = GetPropsData(msg.Props),
-                Deploy = GetDeployData(msg.Deploy),
-                Path = msg.Path,
-                Supervisor = SerializeActorRef(msg.Supervisor)
-            };
-
-            return daemon.ToByteArray();
+            throw new ArgumentException($"Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer [{obj.GetType()}]");
         }
 
-        private PropsData GetPropsData(Props props)
-        {
-            var propsData = new PropsData
-            {
-                Clazz = props.Type.AssemblyQualifiedName,
-                Deploy = GetDeployData(props.Deploy)
-            };
-
-            foreach (object arg in props.Arguments)
-            {
-                if (arg == null)
-                {
-                    propsData.Args.Add(ByteString.Empty);
-                    propsData.Classes.Add("");
-                }
-                else
-                {
-                    propsData.Args.Add(Serialize(arg));
-                    propsData.Classes.Add(arg.GetType().AssemblyQualifiedName);
-                }
-            }
-
-            return propsData;
-        }
-
-        private DeployData GetDeployData(Deploy deploy)
-        {
-            var res = new DeployData { Path = deploy.Path };
-
-            if (deploy.Config != ConfigurationFactory.Empty)
-                res.Config = Serialize(deploy.Config);
-            if (deploy.RouterConfig != NoRouter.Instance)
-                res.RouterConfig = Serialize(deploy.RouterConfig);
-            if (deploy.Scope != Deploy.NoScopeGiven)
-                res.Scope = Serialize(deploy.Scope);
-            if (deploy.Dispatcher != Deploy.NoDispatcherGiven)
-                res.Dispatcher = deploy.Dispatcher;
-
-            return res;
-        }
-
-        /// <summary>
-        /// Deserializes a byte array into an object of type <paramref name="type"/>.
-        /// </summary>
-        /// <param name="bytes">The array containing the serialized object</param>
-        /// <param name="type">The type of object contained in the array</param>
-        /// <returns>The object contained in the array</returns>
-        /// <exception cref="TypeLoadException">
-        /// This exception is thrown when the type could not be found on the remote system.
-        /// </exception>
+        /// <inheritdoc />
         public override object FromBinary(byte[] bytes, Type type)
         {
-            var proto = DaemonMsgCreateData.Parser.ParseFrom(bytes);
-            Type clazz; 
+            var proto = Proto.Msg.DaemonMsgCreateData.Parser.ParseFrom(bytes);
 
-            try
-            {
-                clazz = Type.GetType(proto.Props.Clazz, true);
-            }
-            catch (TypeLoadException ex)
-            {
-                var msg = $"Could not find type '{proto.Props.Clazz}' on the remote system. Ensure that the remote system has an assembly that contains the type {proto.Props.Clazz} in its assembly search path";
-                throw new TypeLoadException(msg, ex);
-            }
-
-            var args = GetArgs(proto);
-            var props = new Props(GetDeploy(proto.Props.Deploy), clazz, args);
             return new DaemonMsgCreate(
-                props,
-                GetDeploy(proto.Deploy),
+                PropsFromProto(proto.Props),
+                DeployFromProto(proto.Deploy),
                 proto.Path,
-                DeserializeActorRef( proto.Supervisor));
+                DeserializeActorRef(proto.Supervisor));
         }
 
-        private Deploy GetDeploy(DeployData protoDeploy)
+        //
+        // Props
+        //
+        private Proto.Msg.PropsData PropsToProto(Props props)
+        {
+            var propsBuilder = new Proto.Msg.PropsData();
+            propsBuilder.Clazz = props.Type.TypeQualifiedName();
+            propsBuilder.Deploy = DeployToProto(props.Deploy);
+            foreach (object arg in props.Arguments)
+            {
+                var tuple = Serialize(arg);
+
+                propsBuilder.Args.Add(ByteString.CopyFrom(tuple.Item4));
+                propsBuilder.Manifests.Add(tuple.Item3);
+                propsBuilder.SerializerIds.Add(tuple.Item1);
+                propsBuilder.HasManifest.Add(tuple.Item2);
+            }
+
+            return propsBuilder;
+        }
+
+        private Props PropsFromProto(Proto.Msg.PropsData protoProps)
+        {
+            var actorClass = Type.GetType(protoProps.Clazz);
+            var args = new object[protoProps.Args.Count];
+            for (int i = 0; i < args.Length; i++)
+            {
+                args[i] = system.Serialization.Deserialize(
+                    protoProps.Args[i].ToByteArray(),
+                    protoProps.SerializerIds[i],
+                    protoProps.Manifests[i]
+                );
+            }
+
+            return new Props(DeployFromProto(protoProps.Deploy), actorClass, args);
+        }
+
+        //
+        // Deploy
+        //
+        private Proto.Msg.DeployData DeployToProto(Deploy deploy)
+        {
+            var deployBuilder = new Proto.Msg.DeployData();
+            deployBuilder.Path = deploy.Path;
+
+            {
+                var tuple = Serialize(deploy.Config);
+                deployBuilder.ConfigSerializerId = tuple.Item1;
+                deployBuilder.ConfigManifest = tuple.Item3;
+                deployBuilder.Config = ByteString.CopyFrom(tuple.Item4);
+            }
+
+            if (deploy.RouterConfig != NoRouter.Instance)
+            {
+                var tuple = Serialize(deploy.RouterConfig);
+                deployBuilder.RouterConfigSerializerId = tuple.Item1;
+                deployBuilder.RouterConfigManifest = tuple.Item3;
+                deployBuilder.RouterConfig = ByteString.CopyFrom(tuple.Item4);
+            }
+
+            if (deploy.Scope != Deploy.NoScopeGiven)
+            {
+                var tuple = Serialize(deploy.Scope);
+                deployBuilder.ScopeSerializerId = tuple.Item1;
+                deployBuilder.ScopeManifest = tuple.Item3;
+                deployBuilder.Scope = ByteString.CopyFrom(tuple.Item4);
+            }
+
+            if (deploy.Dispatcher != Deploy.NoDispatcherGiven)
+            {
+                deployBuilder.Dispatcher = deploy.Dispatcher;
+            }
+
+            return deployBuilder;
+        }
+
+        private Deploy DeployFromProto(Proto.Msg.DeployData protoDeploy)
         {
             Config config;
-            if (!protoDeploy.Config.IsEmpty)
-                config = (Config) Deserialize(protoDeploy.Config, typeof (Config));
+            if (protoDeploy.ConfigSerializerId > 0) // TODO: should be protoDeploy.Config != null. But it always not null
+            {
+                config = system.Serialization.Deserialize(
+                    protoDeploy.Config.ToByteArray(),
+                    protoDeploy.ConfigSerializerId,
+                    protoDeploy.ConfigManifest).AsInstanceOf<Config>();
+            }
             else
-                config = ConfigurationFactory.Empty;
+            {
+                config = Config.Empty;
+            }
 
+            
             RouterConfig routerConfig;
-            if (!protoDeploy.RouterConfig.IsEmpty)
-                routerConfig = (RouterConfig)Deserialize(protoDeploy.RouterConfig, typeof(RouterConfig));
+            if (protoDeploy.RouterConfigSerializerId > 0) // TODO: should be protoDeploy.RouterConfig != null. But it always not null
+            {
+                routerConfig = system.Serialization.Deserialize(
+                    protoDeploy.RouterConfig.ToByteArray(),
+                    protoDeploy.RouterConfigSerializerId,
+                    protoDeploy.RouterConfigManifest).AsInstanceOf<RouterConfig>();
+            }
             else
+            {
                 routerConfig = NoRouter.Instance;
+            }
 
             Scope scope;
-            if (!protoDeploy.Scope.IsEmpty)
-                scope = (Scope) Deserialize(protoDeploy.Scope, typeof (Scope));
+            if (protoDeploy.ScopeSerializerId > 0) // TODO: should be protoDeploy.Scope != null. But it always not null
+            {
+                scope = system.Serialization.Deserialize(
+                    protoDeploy.Scope.ToByteArray(),
+                    protoDeploy.ScopeSerializerId,
+                    protoDeploy.ScopeManifest).AsInstanceOf<Scope>();
+            }
             else
+            {
                 scope = Deploy.NoScopeGiven;
+            }
 
-            // expect missing field to be serialized as empty string (https://developers.google.com/protocol-buffers/docs/reference/csharp-generated#singular)
-            // empty string is the same as Deploy.NoDispatcherGiven
-            var dispatcher = protoDeploy.Dispatcher;
+            var dispatcher = !string.IsNullOrEmpty(protoDeploy.Dispatcher)
+                ? protoDeploy.Dispatcher
+                : Deploy.NoDispatcherGiven;
 
             return new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher);
         }
 
-        private IEnumerable<object> GetArgs(DaemonMsgCreateData proto)
+        //
+        // IActorRef
+        //
+        private Proto.Msg.ActorRefData SerializeActorRef(IActorRef actorRef)
         {
-            var args = new object[proto.Props.Args.Count];
-            for (int i = 0; i < args.Length; i++)
+            return new Proto.Msg.ActorRefData
             {
-                var typeName = proto.Props.Classes[i];
-                var arg = proto.Props.Args[i];
-                if (typeName == "" && ByteString.Empty.Equals(arg))
-                {
-                    //HACK: no typename and empty arg gives null 
-                    args[i] = null;
-                }
-                else
-                {
-                    Type t = null;
-                    if (typeName != null)
-                        t = Type.GetType(typeName);
-                    args[i] = Deserialize(arg, t);
-                }
-            }
-            return args;
+                Path = Akka.Serialization.Serialization.SerializedActorPath(actorRef)
+            };
         }
 
-        private IActorRef DeserializeActorRef(ActorRefData actorRefData)
+        private IActorRef DeserializeActorRef(Proto.Msg.ActorRefData actorRefData)
         {
-            var path = actorRefData.Path;
-            var @ref = system.Provider.ResolveActorRef(path);
-            return @ref;
+            return system.Provider.ResolveActorRef(actorRefData.Path);
+        }
+
+        private Tuple<int, bool, string, byte[]> Serialize(object obj)
+        {
+            var serializer = system.Serialization.FindSerializerFor(obj);
+
+            bool hasManifest;
+            string manifest;
+
+            var serializerWithStringManifest = serializer as SerializerWithStringManifest;
+            if (serializerWithStringManifest != null)
+            {
+                var ser = serializerWithStringManifest;
+                hasManifest = true;
+                manifest = ser.Manifest(obj);
+            }
+            else
+            {
+                hasManifest = serializer.IncludeManifest;
+                manifest = obj == null ? "null" : obj.GetType().TypeQualifiedName();
+            }
+
+            return Tuple.Create(serializer.Identifier, hasManifest, manifest, serializer.ToBinary(obj));
         }
     }
 }

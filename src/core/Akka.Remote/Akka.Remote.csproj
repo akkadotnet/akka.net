@@ -152,7 +152,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
     <Compile Include="IPExtensions.cs" />
+    <Compile Include="Serialization\Proto\Address.cs" />
     <Compile Include="Serialization\Proto\MiscMessageSerializer.cs" />
+    <Compile Include="Serialization\Proto\Payload.cs" />
+    <Compile Include="Serialization\Proto\WireFormats.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\DotNetty\AkkaLoggingHandler.cs" />
     <Compile Include="Transport\DotNetty\DotNettyTransportSettings.cs" />
@@ -172,7 +175,10 @@
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="Serialization\Proto\Payload.proto" />
     <None Include="Serialization\Proto\MiscMessageSerializer.proto" />
+    <None Include="Serialization\Proto\Address.proto" />
+    <None Include="Serialization\Proto\WireFormats.proto" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj">

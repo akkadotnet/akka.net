@@ -2,11 +2,12 @@
  * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
  */
 
-syntax = "proto3";
+syntax = 'proto3';
 package Akka.Remote.Serialization.Proto.Msg;
 option optimize_for = SPEED;
 
-
+import 'Address.proto';
+import 'Payload.proto';
 
 message ActorRef {
   string path = 1;
@@ -65,21 +66,6 @@ message TailChoppingPool {
 message RemoteRouterConfig {
   Payload local = 1;
   repeated Address nodes = 2;
-}
-
-// Defines a remote address.
-message Address {
-  string system = 1;
-  string hostname = 2;
-  uint32 port = 3;
-  string protocol = 4;
-}
-
-// Defines a payload.
-message Payload {
-  bytes enclosedMessage = 1;
-  int32 serializerId = 2;
-  bytes messageManifest = 3;
 }
 
 message Timespan {

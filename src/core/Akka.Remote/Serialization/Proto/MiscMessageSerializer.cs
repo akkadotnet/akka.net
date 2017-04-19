@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from MiscMessageSerializer.proto</summary>
-  internal static partial class MiscMessageSerializerReflection {
+  public static partial class MiscMessageSerializerReflection {
 
     #region Descriptor
     /// <summary>File descriptor for MiscMessageSerializer.proto</summary>
@@ -23,42 +23,39 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChtNaXNjTWVzc2FnZVNlcmlhbGl6ZXIucHJvdG8SI0Fra2EuUmVtb3RlLlNl",
-            "cmlhbGl6YXRpb24uUHJvdG8uTXNnIhgKCEFjdG9yUmVmEgwKBHBhdGgYASAB",
-            "KAkiSwoISWRlbnRpZnkSPwoJbWVzc2FnZUlkGAEgASgLMiwuQWtrYS5SZW1v",
-            "dGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGF5bG9hZCJiCg1BY3Rvcklk",
-            "ZW50aXR5EkMKDWNvcnJlbGF0aW9uSWQYASABKAsyLC5Ba2thLlJlbW90ZS5T",
-            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEgwKBHBhdGgYAiABKAki",
-            "LQoeUmVtb3RlV2F0Y2hlckhlYXJ0YmVhdFJlc3BvbnNlEgsKA3VpZBgBIAEo",
-            "BCJJCgtSZW1vdGVTY29wZRI6CgRub2RlGAEgASgLMiwuQWtrYS5SZW1vdGUu",
-            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRkcmVzcyJlCgpGcm9tQ29uZmln",
-            "Ej0KB3Jlc2l6ZXIYASABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9u",
-            "LlByb3RvLk1zZy5QYXlsb2FkEhgKEHJvdXRlckRpc3BhdGNoZXIYAiABKAki",
-            "sQEKDkRlZmF1bHRSZXNpemVyEhIKCmxvd2VyQm91bmQYASABKA0SEgoKdXBw",
-            "ZXJCb3VuZBgCIAEoDRIZChFwcmVzc3VyZVRocmVzaG9sZBgDIAEoDRISCgpy",
-            "YW1wdXBSYXRlGAQgASgBEhgKEGJhY2tvZmZUaHJlc2hvbGQYBSABKAESEwoL",
-            "YmFja29mZlJhdGUYBiABKAESGQoRbWVzc2FnZXNQZXJSZXNpemUYByABKA0i",
-            "nwEKEkdlbmVyaWNSb3V0aW5nUG9vbBIVCg1uck9mSW5zdGFuY2VzGAEgASgN",
-            "EhgKEHJvdXRlckRpc3BhdGNoZXIYAiABKAkSGQoRdXNlUG9vbERpc3BhdGNo",
-            "ZXIYAyABKAgSPQoHcmVzaXplchgEIAEoCzIsLkFra2EuUmVtb3RlLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQinAEKEVNjYXR0ZXJHYXRoZXJQ",
-            "b29sEkgKB2dlbmVyaWMYASABKAsyNy5Ba2thLlJlbW90ZS5TZXJpYWxpemF0",
-            "aW9uLlByb3RvLk1zZy5HZW5lcmljUm91dGluZ1Bvb2wSPQoGd2l0aGluGAIg",
-            "ASgLMi0uQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVGlt",
-            "ZXNwYW4i3AEKEFRhaWxDaG9wcGluZ1Bvb2wSSAoHZ2VuZXJpYxgBIAEoCzI3",
-            "LkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkdlbmVyaWNS",
-            "b3V0aW5nUG9vbBI9CgZ3aXRoaW4YAiABKAsyLS5Ba2thLlJlbW90ZS5TZXJp",
-            "YWxpemF0aW9uLlByb3RvLk1zZy5UaW1lc3BhbhI/CghpbnRlcnZhbBgDIAEo",
-            "CzItLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlRpbWVz",
-            "cGFuIo4BChJSZW1vdGVSb3V0ZXJDb25maWcSOwoFbG9jYWwYASABKAsyLC5B",
-            "a2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEjsK",
-            "BW5vZGVzGAIgAygLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90",
-            "by5Nc2cuQWRkcmVzcyJLCgdBZGRyZXNzEg4KBnN5c3RlbRgBIAEoCRIQCgho",
-            "b3N0bmFtZRgCIAEoCRIMCgRwb3J0GAMgASgNEhAKCHByb3RvY29sGAQgASgJ",
-            "IlEKB1BheWxvYWQSFwoPZW5jbG9zZWRNZXNzYWdlGAEgASgMEhQKDHNlcmlh",
-            "bGl6ZXJJZBgCIAEoBRIXCg9tZXNzYWdlTWFuaWZlc3QYAyABKAwiGQoIVGlt",
-            "ZXNwYW4SDQoFdGlja3MYASABKARCAkgBYgZwcm90bzM="));
+            "cmlhbGl6YXRpb24uUHJvdG8uTXNnGg1BZGRyZXNzLnByb3RvGg1QYXlsb2Fk",
+            "LnByb3RvIhgKCEFjdG9yUmVmEgwKBHBhdGgYASABKAkiSwoISWRlbnRpZnkS",
+            "PwoJbWVzc2FnZUlkGAEgASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlv",
+            "bi5Qcm90by5Nc2cuUGF5bG9hZCJiCg1BY3RvcklkZW50aXR5EkMKDWNvcnJl",
+            "bGF0aW9uSWQYASABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5QYXlsb2FkEgwKBHBhdGgYAiABKAkiLQoeUmVtb3RlV2F0Y2hl",
+            "ckhlYXJ0YmVhdFJlc3BvbnNlEgsKA3VpZBgBIAEoBCJJCgtSZW1vdGVTY29w",
+            "ZRI6CgRub2RlGAEgASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuQWRkcmVzcyJlCgpGcm9tQ29uZmlnEj0KB3Jlc2l6ZXIYASAB",
+            "KAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXls",
+            "b2FkEhgKEHJvdXRlckRpc3BhdGNoZXIYAiABKAkisQEKDkRlZmF1bHRSZXNp",
+            "emVyEhIKCmxvd2VyQm91bmQYASABKA0SEgoKdXBwZXJCb3VuZBgCIAEoDRIZ",
+            "ChFwcmVzc3VyZVRocmVzaG9sZBgDIAEoDRISCgpyYW1wdXBSYXRlGAQgASgB",
+            "EhgKEGJhY2tvZmZUaHJlc2hvbGQYBSABKAESEwoLYmFja29mZlJhdGUYBiAB",
+            "KAESGQoRbWVzc2FnZXNQZXJSZXNpemUYByABKA0inwEKEkdlbmVyaWNSb3V0",
+            "aW5nUG9vbBIVCg1uck9mSW5zdGFuY2VzGAEgASgNEhgKEHJvdXRlckRpc3Bh",
+            "dGNoZXIYAiABKAkSGQoRdXNlUG9vbERpc3BhdGNoZXIYAyABKAgSPQoHcmVz",
+            "aXplchgEIAEoCzIsLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8u",
+            "TXNnLlBheWxvYWQinAEKEVNjYXR0ZXJHYXRoZXJQb29sEkgKB2dlbmVyaWMY",
+            "ASABKAsyNy5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5H",
+            "ZW5lcmljUm91dGluZ1Bvb2wSPQoGd2l0aGluGAIgASgLMi0uQWtrYS5SZW1v",
+            "dGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVGltZXNwYW4i3AEKEFRhaWxD",
+            "aG9wcGluZ1Bvb2wSSAoHZ2VuZXJpYxgBIAEoCzI3LkFra2EuUmVtb3RlLlNl",
+            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLkdlbmVyaWNSb3V0aW5nUG9vbBI9CgZ3",
+            "aXRoaW4YAiABKAsyLS5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3Rv",
+            "Lk1zZy5UaW1lc3BhbhI/CghpbnRlcnZhbBgDIAEoCzItLkFra2EuUmVtb3Rl",
+            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlRpbWVzcGFuIo4BChJSZW1vdGVS",
+            "b3V0ZXJDb25maWcSOwoFbG9jYWwYASABKAsyLC5Ba2thLlJlbW90ZS5TZXJp",
+            "YWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEjsKBW5vZGVzGAIgAygLMiwu",
+            "QWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRkcmVzcyIZ",
+            "CghUaW1lc3BhbhINCgV0aWNrcxgBIAEoBEICSAFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { },
+          new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.AddressReflection.Descriptor, global::Akka.Remote.Serialization.Proto.Msg.PayloadReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ActorRef), global::Akka.Remote.Serialization.Proto.Msg.ActorRef.Parser, new[]{ "Path" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Identify), global::Akka.Remote.Serialization.Proto.Msg.Identify.Parser, new[]{ "MessageId" }, null, null, null),
@@ -71,8 +68,6 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ScatterGatherPool), global::Akka.Remote.Serialization.Proto.Msg.ScatterGatherPool.Parser, new[]{ "Generic", "Within" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.TailChoppingPool), global::Akka.Remote.Serialization.Proto.Msg.TailChoppingPool.Parser, new[]{ "Generic", "Within", "Interval" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteRouterConfig), global::Akka.Remote.Serialization.Proto.Msg.RemoteRouterConfig.Parser, new[]{ "Local", "Nodes" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Address), global::Akka.Remote.Serialization.Proto.Msg.Address.Parser, new[]{ "System", "Hostname", "Port", "Protocol" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Payload), global::Akka.Remote.Serialization.Proto.Msg.Payload.Parser, new[]{ "EnclosedMessage", "SerializerId", "MessageManifest" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Timespan), global::Akka.Remote.Serialization.Proto.Msg.Timespan.Parser, new[]{ "Ticks" }, null, null, null)
           }));
     }
@@ -80,7 +75,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
   #region Messages
-  internal sealed partial class ActorRef : pb::IMessage<ActorRef> {
+  public sealed partial class ActorRef : pb::IMessage<ActorRef> {
     private static readonly pb::MessageParser<ActorRef> _parser = new pb::MessageParser<ActorRef>(() => new ActorRef());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ActorRef> Parser { get { return _parser; } }
@@ -197,7 +192,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Identify : pb::IMessage<Identify> {
+  public sealed partial class Identify : pb::IMessage<Identify> {
     private static readonly pb::MessageParser<Identify> _parser = new pb::MessageParser<Identify>(() => new Identify());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Identify> Parser { get { return _parser; } }
@@ -320,7 +315,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class ActorIdentity : pb::IMessage<ActorIdentity> {
+  public sealed partial class ActorIdentity : pb::IMessage<ActorIdentity> {
     private static readonly pb::MessageParser<ActorIdentity> _parser = new pb::MessageParser<ActorIdentity>(() => new ActorIdentity());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ActorIdentity> Parser { get { return _parser; } }
@@ -471,7 +466,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class RemoteWatcherHeartbeatResponse : pb::IMessage<RemoteWatcherHeartbeatResponse> {
+  public sealed partial class RemoteWatcherHeartbeatResponse : pb::IMessage<RemoteWatcherHeartbeatResponse> {
     private static readonly pb::MessageParser<RemoteWatcherHeartbeatResponse> _parser = new pb::MessageParser<RemoteWatcherHeartbeatResponse>(() => new RemoteWatcherHeartbeatResponse());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<RemoteWatcherHeartbeatResponse> Parser { get { return _parser; } }
@@ -588,7 +583,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class RemoteScope : pb::IMessage<RemoteScope> {
+  public sealed partial class RemoteScope : pb::IMessage<RemoteScope> {
     private static readonly pb::MessageParser<RemoteScope> _parser = new pb::MessageParser<RemoteScope>(() => new RemoteScope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<RemoteScope> Parser { get { return _parser; } }
@@ -711,7 +706,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class FromConfig : pb::IMessage<FromConfig> {
+  public sealed partial class FromConfig : pb::IMessage<FromConfig> {
     private static readonly pb::MessageParser<FromConfig> _parser = new pb::MessageParser<FromConfig>(() => new FromConfig());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<FromConfig> Parser { get { return _parser; } }
@@ -862,7 +857,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class DefaultResizer : pb::IMessage<DefaultResizer> {
+  public sealed partial class DefaultResizer : pb::IMessage<DefaultResizer> {
     private static readonly pb::MessageParser<DefaultResizer> _parser = new pb::MessageParser<DefaultResizer>(() => new DefaultResizer());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DefaultResizer> Parser { get { return _parser; } }
@@ -1147,7 +1142,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class GenericRoutingPool : pb::IMessage<GenericRoutingPool> {
+  public sealed partial class GenericRoutingPool : pb::IMessage<GenericRoutingPool> {
     private static readonly pb::MessageParser<GenericRoutingPool> _parser = new pb::MessageParser<GenericRoutingPool>(() => new GenericRoutingPool());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GenericRoutingPool> Parser { get { return _parser; } }
@@ -1354,7 +1349,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class ScatterGatherPool : pb::IMessage<ScatterGatherPool> {
+  public sealed partial class ScatterGatherPool : pb::IMessage<ScatterGatherPool> {
     private static readonly pb::MessageParser<ScatterGatherPool> _parser = new pb::MessageParser<ScatterGatherPool>(() => new ScatterGatherPool());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ScatterGatherPool> Parser { get { return _parser; } }
@@ -1511,7 +1506,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class TailChoppingPool : pb::IMessage<TailChoppingPool> {
+  public sealed partial class TailChoppingPool : pb::IMessage<TailChoppingPool> {
     private static readonly pb::MessageParser<TailChoppingPool> _parser = new pb::MessageParser<TailChoppingPool>(() => new TailChoppingPool());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<TailChoppingPool> Parser { get { return _parser; } }
@@ -1702,7 +1697,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class RemoteRouterConfig : pb::IMessage<RemoteRouterConfig> {
+  public sealed partial class RemoteRouterConfig : pb::IMessage<RemoteRouterConfig> {
     private static readonly pb::MessageParser<RemoteRouterConfig> _parser = new pb::MessageParser<RemoteRouterConfig>(() => new RemoteRouterConfig());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<RemoteRouterConfig> Parser { get { return _parser; } }
@@ -1845,394 +1840,14 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  /// <summary>
-  /// Defines a remote address.
-  /// </summary>
-  internal sealed partial class Address : pb::IMessage<Address> {
-    private static readonly pb::MessageParser<Address> _parser = new pb::MessageParser<Address>(() => new Address());
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Address> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.MiscMessageSerializerReflection.Descriptor.MessageTypes[11]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Address() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Address(Address other) : this() {
-      system_ = other.system_;
-      hostname_ = other.hostname_;
-      port_ = other.port_;
-      protocol_ = other.protocol_;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Address Clone() {
-      return new Address(this);
-    }
-
-    /// <summary>Field number for the "system" field.</summary>
-    public const int SystemFieldNumber = 1;
-    private string system_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string System {
-      get { return system_; }
-      set {
-        system_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "hostname" field.</summary>
-    public const int HostnameFieldNumber = 2;
-    private string hostname_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string Hostname {
-      get { return hostname_; }
-      set {
-        hostname_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "port" field.</summary>
-    public const int PortFieldNumber = 3;
-    private uint port_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint Port {
-      get { return port_; }
-      set {
-        port_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "protocol" field.</summary>
-    public const int ProtocolFieldNumber = 4;
-    private string protocol_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string Protocol {
-      get { return protocol_; }
-      set {
-        protocol_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as Address);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(Address other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (System != other.System) return false;
-      if (Hostname != other.Hostname) return false;
-      if (Port != other.Port) return false;
-      if (Protocol != other.Protocol) return false;
-      return true;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (System.Length != 0) hash ^= System.GetHashCode();
-      if (Hostname.Length != 0) hash ^= Hostname.GetHashCode();
-      if (Port != 0) hash ^= Port.GetHashCode();
-      if (Protocol.Length != 0) hash ^= Protocol.GetHashCode();
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void WriteTo(pb::CodedOutputStream output) {
-      if (System.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(System);
-      }
-      if (Hostname.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Hostname);
-      }
-      if (Port != 0) {
-        output.WriteRawTag(24);
-        output.WriteUInt32(Port);
-      }
-      if (Protocol.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(Protocol);
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int CalculateSize() {
-      int size = 0;
-      if (System.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(System);
-      }
-      if (Hostname.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Hostname);
-      }
-      if (Port != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(Port);
-      }
-      if (Protocol.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Protocol);
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(Address other) {
-      if (other == null) {
-        return;
-      }
-      if (other.System.Length != 0) {
-        System = other.System;
-      }
-      if (other.Hostname.Length != 0) {
-        Hostname = other.Hostname;
-      }
-      if (other.Port != 0) {
-        Port = other.Port;
-      }
-      if (other.Protocol.Length != 0) {
-        Protocol = other.Protocol;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(pb::CodedInputStream input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
-          default:
-            input.SkipLastField();
-            break;
-          case 10: {
-            System = input.ReadString();
-            break;
-          }
-          case 18: {
-            Hostname = input.ReadString();
-            break;
-          }
-          case 24: {
-            Port = input.ReadUInt32();
-            break;
-          }
-          case 34: {
-            Protocol = input.ReadString();
-            break;
-          }
-        }
-      }
-    }
-
-  }
-
-  /// <summary>
-  /// Defines a payload.
-  /// </summary>
-  internal sealed partial class Payload : pb::IMessage<Payload> {
-    private static readonly pb::MessageParser<Payload> _parser = new pb::MessageParser<Payload>(() => new Payload());
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<Payload> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.MiscMessageSerializerReflection.Descriptor.MessageTypes[12]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Payload() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Payload(Payload other) : this() {
-      enclosedMessage_ = other.enclosedMessage_;
-      serializerId_ = other.serializerId_;
-      messageManifest_ = other.messageManifest_;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public Payload Clone() {
-      return new Payload(this);
-    }
-
-    /// <summary>Field number for the "enclosedMessage" field.</summary>
-    public const int EnclosedMessageFieldNumber = 1;
-    private pb::ByteString enclosedMessage_ = pb::ByteString.Empty;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pb::ByteString EnclosedMessage {
-      get { return enclosedMessage_; }
-      set {
-        enclosedMessage_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "serializerId" field.</summary>
-    public const int SerializerIdFieldNumber = 2;
-    private int serializerId_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int SerializerId {
-      get { return serializerId_; }
-      set {
-        serializerId_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "messageManifest" field.</summary>
-    public const int MessageManifestFieldNumber = 3;
-    private pb::ByteString messageManifest_ = pb::ByteString.Empty;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pb::ByteString MessageManifest {
-      get { return messageManifest_; }
-      set {
-        messageManifest_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as Payload);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(Payload other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (EnclosedMessage != other.EnclosedMessage) return false;
-      if (SerializerId != other.SerializerId) return false;
-      if (MessageManifest != other.MessageManifest) return false;
-      return true;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (EnclosedMessage.Length != 0) hash ^= EnclosedMessage.GetHashCode();
-      if (SerializerId != 0) hash ^= SerializerId.GetHashCode();
-      if (MessageManifest.Length != 0) hash ^= MessageManifest.GetHashCode();
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void WriteTo(pb::CodedOutputStream output) {
-      if (EnclosedMessage.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteBytes(EnclosedMessage);
-      }
-      if (SerializerId != 0) {
-        output.WriteRawTag(16);
-        output.WriteInt32(SerializerId);
-      }
-      if (MessageManifest.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteBytes(MessageManifest);
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int CalculateSize() {
-      int size = 0;
-      if (EnclosedMessage.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeBytesSize(EnclosedMessage);
-      }
-      if (SerializerId != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(SerializerId);
-      }
-      if (MessageManifest.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeBytesSize(MessageManifest);
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(Payload other) {
-      if (other == null) {
-        return;
-      }
-      if (other.EnclosedMessage.Length != 0) {
-        EnclosedMessage = other.EnclosedMessage;
-      }
-      if (other.SerializerId != 0) {
-        SerializerId = other.SerializerId;
-      }
-      if (other.MessageManifest.Length != 0) {
-        MessageManifest = other.MessageManifest;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(pb::CodedInputStream input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
-          default:
-            input.SkipLastField();
-            break;
-          case 10: {
-            EnclosedMessage = input.ReadBytes();
-            break;
-          }
-          case 16: {
-            SerializerId = input.ReadInt32();
-            break;
-          }
-          case 26: {
-            MessageManifest = input.ReadBytes();
-            break;
-          }
-        }
-      }
-    }
-
-  }
-
-  internal sealed partial class Timespan : pb::IMessage<Timespan> {
+  public sealed partial class Timespan : pb::IMessage<Timespan> {
     private static readonly pb::MessageParser<Timespan> _parser = new pb::MessageParser<Timespan>(() => new Timespan());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Timespan> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.MiscMessageSerializerReflection.Descriptor.MessageTypes[13]; }
+      get { return global::Akka.Remote.Serialization.Proto.Msg.MiscMessageSerializerReflection.Descriptor.MessageTypes[11]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
