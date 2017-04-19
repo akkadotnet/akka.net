@@ -217,7 +217,7 @@ namespace Akka.Serialization
         /// </summary>
         public override int Identifier
         {
-            get { return -3; }
+            get { return 50; }
         }
 
         /// <summary>

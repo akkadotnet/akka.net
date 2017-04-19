@@ -152,7 +152,7 @@ namespace Akka.Cluster.Routing
         /// <summary>
         /// TBD
         /// </summary>
-        public int MaxInstancesPerNode { get; private set; }
+        public int MaxInstancesPerNode { get; }
 
         /// <summary>
         /// Creates a new <see cref="ClusterRouterPoolSettings"/> from the specified configuration.
@@ -166,6 +166,34 @@ namespace Akka.Cluster.Routing
                 config.GetInt("cluster.max-nr-of-instances-per-node"),
                 config.GetBoolean("cluster.allow-local-routees"),
                 UseRoleOption(config.GetString("cluster.use-role")));
+        }
+
+        private bool Equals(ClusterRouterPoolSettings other)
+        {
+            return MaxInstancesPerNode == other.MaxInstancesPerNode
+                && TotalInstances == other.TotalInstances 
+                && AllowLocalRoutees == other.AllowLocalRoutees 
+                && string.Equals(UseRole, other.UseRole);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((ClusterRouterPoolSettings)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = MaxInstancesPerNode;
+                hashCode = (hashCode * 397) ^ TotalInstances.GetHashCode();
+                hashCode = (hashCode * 397) ^ AllowLocalRoutees.GetHashCode();
+                hashCode = (hashCode * 397) ^ (UseRole?.GetHashCode() ?? 0);
+                return hashCode;
+            }
         }
     }
 
