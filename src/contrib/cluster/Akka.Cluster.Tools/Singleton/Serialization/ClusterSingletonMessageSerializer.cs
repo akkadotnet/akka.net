@@ -29,8 +29,7 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
         /// Values from 0 to 16 is reserved for Akka internal usage
         /// </summary>
-        public override int Identifier { get { return _identifier; } }
-        private readonly int _identifier;
+        public override int Identifier { get; } = 14;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterSingletonMessageSerializer"/> class.
@@ -38,7 +37,7 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterSingletonMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            _identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
+            Identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], IClusterSingletonMessage>>
             {
                 {HandOverToMeManifest, _ => HandOverToMe.Instance},

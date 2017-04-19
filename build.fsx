@@ -567,6 +567,30 @@ Target "PublishNuget" <| fun _ ->
     publishNugetPackages()
 
 
+//--------------------------------------------------------------------------------
+// NBench targets 
+//--------------------------------------------------------------------------------
+Target "Protobuf" <| fun _ ->
+    let protocPath = findToolInSubPath "protoc.exe" "src/packages/Google.Protobuf.Tools/tools/windows_x64"
+    let protoFiles = !! "src/**/Serialization/Proto/*.proto"
+    printfn "Using proto.exe: %s" protocPath
+
+    let runProtobuf assembly =
+        let args = new StringBuilder()
+                |> append (sprintf "-I=\"%s\"" (Path.GetDirectoryName (FullName assembly)))
+                |> append (sprintf "--csharp_out=\"%s\"" (Path.GetDirectoryName (FullName assembly)))
+                |> append assembly
+                |> toText
+
+        let result = ExecProcess(fun info -> 
+            info.FileName <- protocPath
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName protocPath))
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
+        if result <> 0 then failwithf "protoc failed. %s %s" protocPath args
+    
+    protoFiles |> Seq.iter (runProtobuf)
+
+
 
 //--------------------------------------------------------------------------------
 // Help 
