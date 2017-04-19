@@ -13,7 +13,7 @@ using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Event;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.DistributedData.Internal
 {

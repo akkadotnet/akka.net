@@ -25,6 +25,7 @@ src\.nuget\NuGet.exe install NUnit.Console -ConfigFile src\.nuget\Nuget.Config -
 src\.nuget\NuGet.exe install xunit.runner.console -ConfigFile src\.nuget\Nuget.Config -OutputDirectory src\packages\FAKE -ExcludeVersion -Version 2.0.0
 src\.nuget\NuGet.exe install NBench.Runner -OutputDirectory src\packages -ExcludeVersion -Version 0.3.3
 src\.nuget\NuGet.exe install Microsoft.SourceBrowser -OutputDirectory src\packages -ExcludeVersion
+src\.nuget\NuGet.exe install Google.Protobuf.Tools -OutputDirectory src\packages -ExcludeVersion -Version 3.2.0
 
 if not exist src\packages\SourceLink.Fake\tools\SourceLink.fsx (
   src\.nuget\nuget.exe install SourceLink.Fake -ConfigFile src\.nuget\Nuget.Config -OutputDirectory src\packages -ExcludeVersion
