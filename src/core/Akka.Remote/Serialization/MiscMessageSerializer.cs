@@ -6,12 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Remote.Routing;
 using Akka.Routing;
@@ -19,15 +18,15 @@ using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
-using Google.Protobuf.WellKnownTypes;
 
 namespace Akka.Remote.Serialization
 {
-    public class MiscMessageSerializer : SerializerWithStringManifest
+    public sealed class MiscMessageSerializer : SerializerWithStringManifest
     {
-        private const string IdentifyManifest = "A";
-        private const string ActorIdentityManifest = "AI";
-        private const string PoisonPillManifest = "P";
+        private const string IdentifyManifest = "ID";
+        private const string ActorIdentityManifest = "AID";
+        private const string ActorRefManifest = "AR";
+        private const string PoisonPillManifest = "PP";
         private const string KillManifest = "K";
         private const string RemoteWatcherHearthbeatManifest = "RWHB";
         private const string RemoteWatcherHearthbeatRspManifest = "RWHR";
@@ -45,21 +44,28 @@ namespace Akka.Remote.Serialization
 
         private static readonly byte[] EmptyBytes = new byte[0];
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MiscMessageSerializer" /> class.
+        /// </summary>
+        /// <param name="system">The actor system to associate with this serializer. </param>
         public MiscMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-
         }
 
+        /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
             if (obj is Identify) return IdentifyToProto((Identify)obj);
             if (obj is ActorIdentity) return ActorIdentityToProto((ActorIdentity)obj);
+            if (obj is IActorRef) return ActorRefToProto((IActorRef)obj);
             if (obj is PoisonPill) return EmptyBytes;
             if (obj is Kill) return EmptyBytes;
             if (obj is RemoteWatcher.Heartbeat) return EmptyBytes;
             if (obj is RemoteWatcher.HeartbeatRsp) return HeartbeatRspToProto((RemoteWatcher.HeartbeatRsp)obj);
             if (obj is LocalScope) return EmptyBytes;
             if (obj is RemoteScope) return RemoteScopeToProto((RemoteScope)obj);
+            if (obj is Config) return ConfigToProto((Config)obj);
+            if (obj is FromConfig) return FromConfigToProto((FromConfig)obj);
             if (obj is DefaultResizer) return DefaultResizerToProto((DefaultResizer)obj);
             if (obj is RoundRobinPool) return RoundRobinPoolToProto((RoundRobinPool)obj);
             if (obj is BroadcastPool) return BroadcastPoolToProto((BroadcastPool)obj);
@@ -71,16 +77,20 @@ namespace Akka.Remote.Serialization
             throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
         }
 
+        /// <inheritdoc />
         public override string Manifest(object obj)
         {
             if (obj is Identify) return IdentifyManifest;
             if (obj is ActorIdentity) return ActorIdentityManifest;
+            if (obj is IActorRef) return ActorRefManifest;
             if (obj is PoisonPill) return PoisonPillManifest;
             if (obj is Kill) return KillManifest;
             if (obj is RemoteWatcher.Heartbeat) return RemoteWatcherHearthbeatManifest;
             if (obj is RemoteWatcher.HeartbeatRsp) return RemoteWatcherHearthbeatRspManifest;
             if (obj is LocalScope) return LocalScopeManifest;
             if (obj is RemoteScope) return RemoteScopeManifest;
+            if (obj is Config) return ConfigManifest;
+            if (obj is FromConfig) return FromConfigManifest;
             if (obj is DefaultResizer) return DefaultResizerManifest;
             if (obj is RoundRobinPool) return RoundRobinPoolManifest;
             if (obj is BroadcastPool) return BroadcastPoolManifest;
@@ -92,16 +102,20 @@ namespace Akka.Remote.Serialization
             throw new ArgumentException($"Cannot deserialize object of type [{obj.GetType().TypeQualifiedName()}]");
         }
 
+        /// <inheritdoc />
         public override object FromBinary(byte[] bytes, string manifest)
         {
             if (manifest == IdentifyManifest) return IdentifyFromProto(bytes);
             if (manifest == ActorIdentityManifest) return ActorIdentityFromProto(bytes);
+            if (manifest == ActorRefManifest) return ActorRefFromProto(bytes);
             if (manifest == PoisonPillManifest) return PoisonPill.Instance;
             if (manifest == KillManifest) return Kill.Instance;
             if (manifest == RemoteWatcherHearthbeatManifest) return RemoteWatcher.Heartbeat.Instance;
             if (manifest == RemoteWatcherHearthbeatRspManifest) return HearthbeatRspFromProto(bytes);
             if (manifest == LocalScopeManifest) return LocalScope.Instance;
             if (manifest == RemoteScopeManifest) return RemoteScopeFromProto(bytes);
+            if (manifest == ConfigManifest) return ConfigFromProto(bytes);
+            if (manifest == FromConfigManifest) return FromConfigFromProto(bytes);
             if (manifest == DefaultResizerManifest) return DefaultResizerFromProto(bytes);
             if (manifest == RoundRobinPoolManifest) return RoundRobinPoolFromProto(bytes);
             if (manifest == BroadcastPoolManifest) return BroadcastPoolFromProto(bytes);
@@ -110,7 +124,7 @@ namespace Akka.Remote.Serialization
             if (manifest == TailChoppingPoolManifest) return TailChoppingPoolFromProto(bytes);
             if (manifest == RemoteRouterConfigManifest) return RemoteRouterConfigFromProto(bytes);
  
-            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [${nameof(MiscMessageSerializer)}]");
+            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{nameof(MiscMessageSerializer)}]");
         }
 
         //
@@ -150,6 +164,22 @@ namespace Akka.Remote.Serialization
         }
 
         //
+        // IActorRef
+        //
+        private byte[] ActorRefToProto(IActorRef actorRef)
+        {
+            var protoActor = new Proto.Msg.ActorRef();
+            protoActor.Path = Akka.Serialization.Serialization.SerializedActorPath(actorRef);
+            return protoActor.ToByteArray();
+        }
+
+        private IActorRef ActorRefFromProto(byte[] bytes)
+        {
+            var protoMessage = Proto.Msg.ActorRef.Parser.ParseFrom(bytes);
+            return system.AsInstanceOf<ExtendedActorSystem>().Provider.ResolveActorRef(protoMessage.Path);
+        }
+
+        //
         // RemoteWatcher.HeartbeatRsp
         //
         private byte[] HeartbeatRspToProto(RemoteWatcher.HeartbeatRsp heartbeatRsp)
@@ -179,6 +209,59 @@ namespace Akka.Remote.Serialization
         {
             var message = Proto.Msg.RemoteScope.Parser.ParseFrom(bytes);
             return new RemoteScope(AddressFrom(message.Node));
+        }
+
+        //
+        // Config
+        //
+        private byte[] ConfigToProto(Config config)
+        {
+            return Encoding.UTF8.GetBytes(config.Root.ToString());
+        }
+
+        private Config ConfigFromProto(byte[] bytes)
+        {
+            if (bytes.Length == 0)
+                return Config.Empty;
+
+            return ConfigurationFactory.ParseString(Encoding.UTF8.GetString(bytes));
+        }
+
+        //
+        // FromConfig
+        //
+        private byte[] FromConfigToProto(FromConfig fromConfig)
+        {
+            if (Equals(fromConfig, FromConfig.Instance))
+                return EmptyBytes;
+
+            var message = new Proto.Msg.FromConfig();
+
+            if (fromConfig.Resizer != null)
+                message.Resizer = PayloadToProto(fromConfig.Resizer);
+
+            if (!string.IsNullOrEmpty(fromConfig.RouterDispatcher))
+                message.RouterDispatcher = fromConfig.RouterDispatcher;
+
+            return message.ToByteArray();
+        }
+
+        private FromConfig FromConfigFromProto(byte[] bytes)
+        {
+            if (bytes.Length == 0)
+                return FromConfig.Instance;
+
+            var fromConfig = Proto.Msg.FromConfig.Parser.ParseFrom(bytes);
+
+            Resizer resizer = fromConfig.Resizer != null
+                ? (Resizer)PayloadFrom(fromConfig.Resizer)
+                : null;
+
+            var routerDispatcher = !string.IsNullOrEmpty(fromConfig.RouterDispatcher)
+                ? fromConfig.RouterDispatcher
+                : Dispatchers.DefaultDispatcherId;
+
+            return new FromConfig(resizer, Pool.DefaultSupervisorStrategy, routerDispatcher);
         }
 
         //
@@ -213,15 +296,15 @@ namespace Akka.Remote.Serialization
         //
         // Generic Routing Pool
         //
-        private Proto.Msg.GenericRoutingPool GenericRoutingPoolBuilder(Pool roundRobinPool)
+        private Proto.Msg.GenericRoutingPool GenericRoutingPoolBuilder(Pool pool)
         {
             var message = new Proto.Msg.GenericRoutingPool();
-            message.NrOfInstances = (uint)roundRobinPool.NrOfInstances;
-            if (!string.IsNullOrEmpty(roundRobinPool.RouterDispatcher))
-                message.RouterDispatcher = roundRobinPool.RouterDispatcher;
-            if (roundRobinPool.Resizer != null)
-                message.Resizer = PayloadToProto(roundRobinPool.Resizer);
-            message.UsePoolDispatcher = roundRobinPool.UsePoolDispatcher;
+            message.NrOfInstances = (uint)pool.NrOfInstances;
+            if (!string.IsNullOrEmpty(pool.RouterDispatcher))
+                message.RouterDispatcher = pool.RouterDispatcher;
+            if (pool.Resizer != null)
+                message.Resizer = PayloadToProto(pool.Resizer);
+            message.UsePoolDispatcher = pool.UsePoolDispatcher;
             return message;
         }
 

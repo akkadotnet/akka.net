@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -17,6 +18,7 @@ using Akka.Routing;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
+using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 
@@ -29,9 +31,23 @@ namespace Akka.Remote.Tests.Serialization
         }
 
         [Fact]
-        public void Can_serialize_Identify()
+        public void Can_serialize_IdentifyWithString()
         {
             var identify = new Identify("message");
+            AssertEqual(identify);
+        }
+
+        [Fact]
+        public void Can_serialize_IdentifyWithInt32()
+        {
+            var identify = new Identify(50);
+            AssertEqual(identify);
+        }
+
+        [Fact]
+        public void Can_serialize_IdentifyWithInt64()
+        {
+            var identify = new Identify(50L);
             AssertEqual(identify);
         }
 
@@ -58,10 +74,25 @@ namespace Akka.Remote.Tests.Serialization
         }
 
         [Fact]
-        public void Can_serialize_ActorRef()
+        public void Can_serialize_ActorRefRepointable()
         {
-            var actorRef = ActorOf<BlackHoleActor>();
+            var actorRef = Sys.ActorOf(Props.Empty, "hello");
             AssertEqual(actorRef);
+        }
+
+        [Fact]
+        public void Can_serialize_ActorRefRemote()
+        {
+            var remoteSystem = ActorSystem.Create("remote", ConfigurationFactory.ParseString("akka.actor.provider = remote"));
+
+            var address = new Address("akka.tcp", "TestSys", "localhost", 23423);
+            var props = Props.Create<BlackHoleActor>().WithDeploy(new Deploy(new RemoteScope(address)));
+            var actorRef = remoteSystem.ActorOf(props, "hello");
+
+            var serializer = remoteSystem.Serialization.FindSerializerFor(actorRef).AsInstanceOf<SerializerWithStringManifest>();
+            var serializedBytes = serializer.ToBinary(actorRef);
+            var deserialized = serializer.FromBinary(serializedBytes, serializer.Manifest(actorRef));
+            deserialized.Should().Be(actorRef);
         }
 
         [Fact]
@@ -79,42 +110,20 @@ namespace Akka.Remote.Tests.Serialization
         }
 
         [Fact]
-        public void Can_serialize_RemoteWatcher_Hearthbeat()
-        {
-            var heartbeat = RemoteWatcher.Heartbeat.Instance;
-            AssertEqual(heartbeat);
-        }
-
-        [Fact]
-        public void Can_serialize_RemoteWatcher_HearthbeatRsp()
-        {
-            var heartbeatRsp = new RemoteWatcher.HeartbeatRsp(34);
-            AssertAndReturn(heartbeatRsp).AddressUid.Should().Be(heartbeatRsp.AddressUid); //TODO: add Equals to RemoteWatcher.HeartbeatRsp
-        }
-
-        [Fact]
         public void Can_serialize_LocalScope()
         {
             var localScope = LocalScope.Instance;
             AssertEqual(localScope);
         }
 
-        [Fact]
-        public void Can_serialize_RemoteScope()
-        {
-            var address = new Address("akka.tcp", "TestSys", "localhost", 23423);
-            var remoteScope = new RemoteScope(address);
-            AssertEqual(remoteScope);
-        }
-
-        [Fact]
+        [Fact(Skip = "Not implemented yet")]
         public void Can_serialize_Config()
         {
             var message = ConfigurationFactory.Default();
             AssertEqual(message);
         }
 
-        [Fact]
+        [Fact(Skip = "Not implemented yet")]
         public void Can_serialize_EmptyConfig()
         {
             var message = ConfigurationFactory.Empty;
@@ -126,10 +135,36 @@ namespace Akka.Remote.Tests.Serialization
         //
 
         [Fact]
-        public void Can_serialize_FromConfig()
+        public void Can_serialize_FromConfigSingleton()
         {
             var fromConfig = FromConfig.Instance;
             AssertEqual(fromConfig);
+        }
+
+        [Fact]
+        public void Can_serialize_FromConfigWithResizerAndDispatcher()
+        {
+            var defaultResizer = new DefaultResizer(2, 4, 1, 0.5D, 0.3D, 0.1D, 55);
+            var fromConfig = FromConfig.Instance
+                .WithResizer(defaultResizer)
+                .WithDispatcher("my-own-dispatcher");
+            AssertEqual(fromConfig);
+        }
+
+        [Fact(Skip = "Not implemented yet")]
+        public void Can_serialize_FromConfigWithSuperviseStrategy()
+        {
+            var decider = Decider.From(
+                Directive.Restart,
+                Directive.Stop.When<ArgumentException>(),
+                Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var fromConfig = FromConfig.Instance.WithSupervisorStrategy(supervisor);
+            var actual = AssertAndReturn(fromConfig);
+            actual.Should().Be(fromConfig);
+            actual.SupervisorStrategy.Should().Be(fromConfig.SupervisorStrategy); // TODO: supervisor strategy is not using in the serialization
         }
 
         [Fact]
@@ -250,6 +285,10 @@ namespace Akka.Remote.Tests.Serialization
             AssertEqual(message);
         }
 
+        //
+        // Remote Messages
+        //
+
         [Fact]
         public void Can_serialize_RemoteRouterConfig()
         {
@@ -257,6 +296,48 @@ namespace Akka.Remote.Tests.Serialization
                 local: new RandomPool(25),
                 nodes: new List<Address> { new Address("akka.tcp", "TestSys", "localhost", 23423) });
             AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_RemoteWatcher_Hearthbeat()
+        {
+            var heartbeat = RemoteWatcher.Heartbeat.Instance;
+            AssertEqual(heartbeat);
+        }
+
+        [Fact]
+        public void Can_serialize_RemoteWatcher_HearthbeatRsp()
+        {
+            var heartbeatRsp = new RemoteWatcher.HeartbeatRsp(34);
+            AssertAndReturn(heartbeatRsp).AddressUid.Should().Be(heartbeatRsp.AddressUid); //TODO: add Equals to RemoteWatcher.HeartbeatRsp
+        }
+
+        [Fact]
+        public void Can_serialize_RemoteScope()
+        {
+            var address = new Address("akka.tcp", "TestSys", "localhost", 23423);
+            var remoteScope = new RemoteScope(address);
+            AssertEqual(remoteScope);
+        }
+
+        //
+        // Serializer tests
+        //
+
+        [Fact]
+        public void Serializer_must_reject_invalid_manifest()
+        {
+            var serializer = new MiscMessageSerializer(Sys.AsInstanceOf<ExtendedActorSystem>());
+            Action comparison = () => serializer.Manifest("INVALID");
+            comparison.ShouldThrow<ArgumentException>();
+        }
+
+        [Fact]
+        public void Serializer_must_reject_deserialization_with_invalid_manifest()
+        {
+            var serializer = new MiscMessageSerializer(Sys.AsInstanceOf<ExtendedActorSystem>());
+            Action comparison = () => serializer.FromBinary(new byte[0], "INVALID");
+            comparison.ShouldThrow<SerializationException>();
         }
 
         private T AssertAndReturn<T>(T message)
