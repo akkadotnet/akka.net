@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from Payload.proto</summary>
-  public static partial class PayloadReflection {
+  internal static partial class PayloadReflection {
 
     #region Descriptor
     /// <summary>File descriptor for Payload.proto</summary>
@@ -39,7 +39,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Defines a payload.
   /// </summary>
-  public sealed partial class Payload : pb::IMessage<Payload> {
+  internal sealed partial class Payload : pb::IMessage<Payload> {
     private static readonly pb::MessageParser<Payload> _parser = new pb::MessageParser<Payload>(() => new Payload());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Payload> Parser { get { return _parser; } }

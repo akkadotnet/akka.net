@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from WireFormats.proto</summary>
-  public static partial class WireFormatsReflection {
+  internal static partial class WireFormatsReflection {
 
     #region Descriptor
     /// <summary>File descriptor for WireFormats.proto</summary>
@@ -85,7 +85,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Defines the type of the AkkaControlMessage command type
   /// </summary>
-  public enum CommandType {
+  internal enum CommandType {
     [pbr::OriginalName("NONE")] None = 0,
     [pbr::OriginalName("ASSOCIATE")] Associate = 1,
     [pbr::OriginalName("DISASSOCIATE")] Disassociate = 2,
@@ -103,7 +103,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   #endregion
 
   #region Messages
-  public sealed partial class AckAndEnvelopeContainer : pb::IMessage<AckAndEnvelopeContainer> {
+  internal sealed partial class AckAndEnvelopeContainer : pb::IMessage<AckAndEnvelopeContainer> {
     private static readonly pb::MessageParser<AckAndEnvelopeContainer> _parser = new pb::MessageParser<AckAndEnvelopeContainer>(() => new AckAndEnvelopeContainer());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<AckAndEnvelopeContainer> Parser { get { return _parser; } }
@@ -263,7 +263,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Defines a remote message.
   /// </summary>
-  public sealed partial class RemoteEnvelope : pb::IMessage<RemoteEnvelope> {
+  internal sealed partial class RemoteEnvelope : pb::IMessage<RemoteEnvelope> {
     private static readonly pb::MessageParser<RemoteEnvelope> _parser = new pb::MessageParser<RemoteEnvelope>(() => new RemoteEnvelope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<RemoteEnvelope> Parser { get { return _parser; } }
@@ -482,7 +482,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class AcknowledgementInfo : pb::IMessage<AcknowledgementInfo> {
+  internal sealed partial class AcknowledgementInfo : pb::IMessage<AcknowledgementInfo> {
     private static readonly pb::MessageParser<AcknowledgementInfo> _parser = new pb::MessageParser<AcknowledgementInfo>(() => new AcknowledgementInfo());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<AcknowledgementInfo> Parser { get { return _parser; } }
@@ -623,7 +623,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Defines a remote ActorRef that "remembers" and uses its original Actor instance on the original node.
   /// </summary>
-  public sealed partial class ActorRefData : pb::IMessage<ActorRefData> {
+  internal sealed partial class ActorRefData : pb::IMessage<ActorRefData> {
     private static readonly pb::MessageParser<ActorRefData> _parser = new pb::MessageParser<ActorRefData>(() => new ActorRefData());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ActorRefData> Parser { get { return _parser; } }
@@ -743,7 +743,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Defines Akka.Remote.DaemonMsgCreate
   /// </summary>
-  public sealed partial class DaemonMsgCreateData : pb::IMessage<DaemonMsgCreateData> {
+  internal sealed partial class DaemonMsgCreateData : pb::IMessage<DaemonMsgCreateData> {
     private static readonly pb::MessageParser<DaemonMsgCreateData> _parser = new pb::MessageParser<DaemonMsgCreateData>(() => new DaemonMsgCreateData());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DaemonMsgCreateData> Parser { get { return _parser; } }
@@ -965,7 +965,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Serialization of Akka.Actor.Props
   /// </summary>
-  public sealed partial class PropsData : pb::IMessage<PropsData> {
+  internal sealed partial class PropsData : pb::IMessage<PropsData> {
     private static readonly pb::MessageParser<PropsData> _parser = new pb::MessageParser<PropsData>(() => new PropsData());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<PropsData> Parser { get { return _parser; } }
@@ -1210,7 +1210,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Serialization of akka.actor.Deploy
   /// </summary>
-  public sealed partial class DeployData : pb::IMessage<DeployData> {
+  internal sealed partial class DeployData : pb::IMessage<DeployData> {
     private static readonly pb::MessageParser<DeployData> _parser = new pb::MessageParser<DeployData>(() => new DeployData());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DeployData> Parser { get { return _parser; } }
@@ -1610,7 +1610,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Message format of Akka Protocol. Message contains either a payload or an instruction.
   /// </summary>
-  public sealed partial class AkkaProtocolMessage : pb::IMessage<AkkaProtocolMessage> {
+  internal sealed partial class AkkaProtocolMessage : pb::IMessage<AkkaProtocolMessage> {
     private static readonly pb::MessageParser<AkkaProtocolMessage> _parser = new pb::MessageParser<AkkaProtocolMessage>(() => new AkkaProtocolMessage());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<AkkaProtocolMessage> Parser { get { return _parser; } }
@@ -1764,7 +1764,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   /// <summary>
   /// Defines some control messages for the remoting
   /// </summary>
-  public sealed partial class AkkaControlMessage : pb::IMessage<AkkaControlMessage> {
+  internal sealed partial class AkkaControlMessage : pb::IMessage<AkkaControlMessage> {
     private static readonly pb::MessageParser<AkkaControlMessage> _parser = new pb::MessageParser<AkkaControlMessage>(() => new AkkaControlMessage());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<AkkaControlMessage> Parser { get { return _parser; } }
@@ -1915,7 +1915,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class AkkaHandshakeInfo : pb::IMessage<AkkaHandshakeInfo> {
+  internal sealed partial class AkkaHandshakeInfo : pb::IMessage<AkkaHandshakeInfo> {
     private static readonly pb::MessageParser<AkkaHandshakeInfo> _parser = new pb::MessageParser<AkkaHandshakeInfo>(() => new AkkaHandshakeInfo());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<AkkaHandshakeInfo> Parser { get { return _parser; } }

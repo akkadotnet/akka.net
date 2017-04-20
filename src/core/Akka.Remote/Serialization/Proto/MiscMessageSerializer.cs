@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from MiscMessageSerializer.proto</summary>
-  public static partial class MiscMessageSerializerReflection {
+  internal static partial class MiscMessageSerializerReflection {
 
     #region Descriptor
     /// <summary>File descriptor for MiscMessageSerializer.proto</summary>
@@ -75,7 +75,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
   #region Messages
-  public sealed partial class ActorRef : pb::IMessage<ActorRef> {
+  internal sealed partial class ActorRef : pb::IMessage<ActorRef> {
     private static readonly pb::MessageParser<ActorRef> _parser = new pb::MessageParser<ActorRef>(() => new ActorRef());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ActorRef> Parser { get { return _parser; } }
@@ -192,7 +192,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Identify : pb::IMessage<Identify> {
+  internal sealed partial class Identify : pb::IMessage<Identify> {
     private static readonly pb::MessageParser<Identify> _parser = new pb::MessageParser<Identify>(() => new Identify());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Identify> Parser { get { return _parser; } }
@@ -315,7 +315,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ActorIdentity : pb::IMessage<ActorIdentity> {
+  internal sealed partial class ActorIdentity : pb::IMessage<ActorIdentity> {
     private static readonly pb::MessageParser<ActorIdentity> _parser = new pb::MessageParser<ActorIdentity>(() => new ActorIdentity());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ActorIdentity> Parser { get { return _parser; } }
@@ -466,7 +466,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class RemoteWatcherHeartbeatResponse : pb::IMessage<RemoteWatcherHeartbeatResponse> {
+  internal sealed partial class RemoteWatcherHeartbeatResponse : pb::IMessage<RemoteWatcherHeartbeatResponse> {
     private static readonly pb::MessageParser<RemoteWatcherHeartbeatResponse> _parser = new pb::MessageParser<RemoteWatcherHeartbeatResponse>(() => new RemoteWatcherHeartbeatResponse());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<RemoteWatcherHeartbeatResponse> Parser { get { return _parser; } }
@@ -583,7 +583,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class RemoteScope : pb::IMessage<RemoteScope> {
+  internal sealed partial class RemoteScope : pb::IMessage<RemoteScope> {
     private static readonly pb::MessageParser<RemoteScope> _parser = new pb::MessageParser<RemoteScope>(() => new RemoteScope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<RemoteScope> Parser { get { return _parser; } }
@@ -706,7 +706,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class FromConfig : pb::IMessage<FromConfig> {
+  internal sealed partial class FromConfig : pb::IMessage<FromConfig> {
     private static readonly pb::MessageParser<FromConfig> _parser = new pb::MessageParser<FromConfig>(() => new FromConfig());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<FromConfig> Parser { get { return _parser; } }
@@ -857,7 +857,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class DefaultResizer : pb::IMessage<DefaultResizer> {
+  internal sealed partial class DefaultResizer : pb::IMessage<DefaultResizer> {
     private static readonly pb::MessageParser<DefaultResizer> _parser = new pb::MessageParser<DefaultResizer>(() => new DefaultResizer());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DefaultResizer> Parser { get { return _parser; } }
@@ -1142,7 +1142,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class GenericRoutingPool : pb::IMessage<GenericRoutingPool> {
+  internal sealed partial class GenericRoutingPool : pb::IMessage<GenericRoutingPool> {
     private static readonly pb::MessageParser<GenericRoutingPool> _parser = new pb::MessageParser<GenericRoutingPool>(() => new GenericRoutingPool());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GenericRoutingPool> Parser { get { return _parser; } }
@@ -1349,7 +1349,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ScatterGatherPool : pb::IMessage<ScatterGatherPool> {
+  internal sealed partial class ScatterGatherPool : pb::IMessage<ScatterGatherPool> {
     private static readonly pb::MessageParser<ScatterGatherPool> _parser = new pb::MessageParser<ScatterGatherPool>(() => new ScatterGatherPool());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ScatterGatherPool> Parser { get { return _parser; } }
@@ -1506,7 +1506,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class TailChoppingPool : pb::IMessage<TailChoppingPool> {
+  internal sealed partial class TailChoppingPool : pb::IMessage<TailChoppingPool> {
     private static readonly pb::MessageParser<TailChoppingPool> _parser = new pb::MessageParser<TailChoppingPool>(() => new TailChoppingPool());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<TailChoppingPool> Parser { get { return _parser; } }
@@ -1697,7 +1697,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class RemoteRouterConfig : pb::IMessage<RemoteRouterConfig> {
+  internal sealed partial class RemoteRouterConfig : pb::IMessage<RemoteRouterConfig> {
     private static readonly pb::MessageParser<RemoteRouterConfig> _parser = new pb::MessageParser<RemoteRouterConfig>(() => new RemoteRouterConfig());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<RemoteRouterConfig> Parser { get { return _parser; } }
@@ -1840,7 +1840,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Timespan : pb::IMessage<Timespan> {
+  internal sealed partial class Timespan : pb::IMessage<Timespan> {
     private static readonly pb::MessageParser<Timespan> _parser = new pb::MessageParser<Timespan>(() => new Timespan());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Timespan> Parser { get { return _parser; } }
