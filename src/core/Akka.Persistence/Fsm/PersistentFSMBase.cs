@@ -507,11 +507,9 @@ namespace Akka.Persistence.Fsm
                 MakeTransition(upcomingState);
                 return;
             }
-            var replies = upcomingState.Replies;
-            replies.Reverse();
-            foreach (var reply in replies)
+            for (var i = upcomingState.Replies.Count - 1; i >= 0; i--)
             {
-                Sender.Tell(reply);
+                Sender.Tell(upcomingState.Replies[i]);
             }
             Terminate(upcomingState);
             Context.Stop(Self);
@@ -528,11 +526,9 @@ namespace Akka.Persistence.Fsm
             }
             else
             {
-                var replies = upcomingState.Replies;
-                replies.Reverse();
-                foreach (var r in replies)
+                for (var i = upcomingState.Replies.Count - 1; i >= 0; i--)
                 {
-                    Sender.Tell(r);
+                    Sender.Tell(upcomingState.Replies[i]);
                 }
                 if (!_currentState.StateName.Equals(upcomingState.StateName))
                 {
