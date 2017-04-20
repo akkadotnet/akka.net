@@ -17,7 +17,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using Akka.DistributedData.Durable;
 using Akka.Event;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Status = Akka.DistributedData.Internal.Status;
 
 namespace Akka.DistributedData
