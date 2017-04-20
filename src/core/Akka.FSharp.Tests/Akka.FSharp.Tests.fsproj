@@ -8,10 +8,11 @@
     <OutputType>Library</OutputType>
     <RootNamespace>Pigeon.FSharp.Tests</RootNamespace>
     <AssemblyName>Akka.FSharp.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
     <Name>Akka.FSharp.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -78,11 +79,6 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
-      <Name>Akka.TestKit.Xunit2</Name>
-      <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj">
       <Name>Akka.FSharp</Name>
       <Project>{81574240-BC31-4BE4-B447-ADF0D32F4246}</Project>
