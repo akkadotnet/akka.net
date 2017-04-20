@@ -169,13 +169,18 @@ namespace Akka.Remote.Serialization
         private byte[] ActorRefToProto(IActorRef actorRef)
         {
             var protoActor = new Proto.Msg.ActorRef();
-            protoActor.Path = Akka.Serialization.Serialization.SerializedActorPath(actorRef);
+            if (actorRef is Nobody) // TODO: this is a hack. Should work without it
+                protoActor.Path = "nobody";
+            else
+                protoActor.Path = Akka.Serialization.Serialization.SerializedActorPath(actorRef);
             return protoActor.ToByteArray();
         }
 
         private IActorRef ActorRefFromProto(byte[] bytes)
         {
             var protoMessage = Proto.Msg.ActorRef.Parser.ParseFrom(bytes);
+            if (protoMessage.Path.Equals("nobody"))
+                return Nobody.Instance;
             return system.AsInstanceOf<ExtendedActorSystem>().Provider.ResolveActorRef(protoMessage.Path);
         }
 
@@ -216,6 +221,9 @@ namespace Akka.Remote.Serialization
         //
         private byte[] ConfigToProto(Config config)
         {
+            if (config.IsEmpty)
+                return EmptyBytes;
+
             return Encoding.UTF8.GetBytes(config.Root.ToString());
         }
 
@@ -232,7 +240,7 @@ namespace Akka.Remote.Serialization
         //
         private byte[] FromConfigToProto(FromConfig fromConfig)
         {
-            if (Equals(fromConfig, FromConfig.Instance))
+            if (fromConfig == FromConfig.Instance)
                 return EmptyBytes;
 
             var message = new Proto.Msg.FromConfig();
@@ -480,6 +488,9 @@ namespace Akka.Remote.Serialization
         private Proto.Msg.Payload PayloadToProto(object message)
         {
             var payloadProto = new Proto.Msg.Payload();
+            if (message == null) // TODO: handle null messages
+                return payloadProto;
+
             var serializer = system.Serialization.FindSerializerFor(message);
 
             // get manifest

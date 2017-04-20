@@ -24,7 +24,7 @@ namespace Akka.Remote.Serialization
         }
 
         /// <inheritdoc />
-        public override bool IncludeManifest { get; } = false;
+        public override bool IncludeManifest { get; } = true;
 
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)

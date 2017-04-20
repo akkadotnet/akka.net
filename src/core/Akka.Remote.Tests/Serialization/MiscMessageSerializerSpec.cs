@@ -67,6 +67,14 @@ namespace Akka.Remote.Tests.Serialization
         }
 
         [Fact]
+        public void Can_serialize_ActorIdentityWithoutMessage()
+        {
+            var actorRef = ActorOf<BlackHoleActor>();
+            var actorIdentity = new ActorIdentity(null, actorRef);
+            AssertEqual(actorIdentity);
+        }
+
+        [Fact]
         public void Can_serialize_ActorIdentityWithoutActorRef()
         {
             var actorIdentity = new ActorIdentity("message", null);
@@ -77,6 +85,13 @@ namespace Akka.Remote.Tests.Serialization
         public void Can_serialize_ActorRefRepointable()
         {
             var actorRef = Sys.ActorOf(Props.Empty, "hello");
+            AssertEqual(actorRef);
+        }
+
+        [Fact]
+        public void Can_serialize_ActorRefNoBody()
+        {
+            var actorRef = ActorRefs.Nobody;
             AssertEqual(actorRef);
         }
 
