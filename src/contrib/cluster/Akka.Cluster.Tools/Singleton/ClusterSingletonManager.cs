@@ -708,7 +708,7 @@ namespace Akka.Cluster.Tools.Singleton
                     _oldestChangedReceived = true;
                     if (oldestChanged.Oldest.Equals(_selfUniqueAddress))
                     {
-                        Log.Info("Younger observed OldestChanged: [{0} -> myself]", youngerData.Oldest.Address);
+                        Log.Info("Younger observed OldestChanged: [{0} -> myself]", youngerData.Oldest?.Address.ToString() ?? "null");
                         if (youngerData.Oldest == null) return GoToOldest();
                         else if (_removed.ContainsKey(youngerData.Oldest)) return GoToOldest();
                         else
@@ -847,7 +847,7 @@ namespace Akka.Cluster.Tools.Singleton
                     var handOverRetry = (HandOverRetry)e.FsmEvent;
                     if (handOverRetry.Count <= _maxHandOverRetries)
                     {
-                        Log.Info("Retry [{0}], sending HandOverToMe to [{1}]", handOverRetry.Count, becomingOldest.PreviousOldest.Address);
+                        Log.Info("Retry [{0}], sending HandOverToMe to [{1}]", handOverRetry.Count, becomingOldest.PreviousOldest?.Address.ToString() ?? "null");
                         if (becomingOldest.PreviousOldest != null)
                             Peer(becomingOldest.PreviousOldest.Address).Tell(HandOverToMe.Instance);
 
