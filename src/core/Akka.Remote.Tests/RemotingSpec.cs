@@ -16,7 +16,7 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Xunit;
 using Xunit.Abstractions;
 using Nito.AsyncEx;
