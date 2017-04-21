@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.Proto {
 
   /// <summary>Holder for reflection information generated from ContainerFormats.proto</summary>
-  public static partial class ContainerFormatsReflection {
+  internal static partial class ContainerFormatsReflection {
 
     #region Descriptor
     /// <summary>File descriptor for ContainerFormats.proto</summary>
@@ -41,7 +41,7 @@ namespace Akka.Remote.Proto {
 
   }
   #region Enums
-  public enum PatternType {
+  internal enum PatternType {
     [pbr::OriginalName("PARENT")] Parent = 0,
     [pbr::OriginalName("CHILD_NAME")] ChildName = 1,
     [pbr::OriginalName("CHILD_PATTERN")] ChildPattern = 2,
@@ -50,7 +50,7 @@ namespace Akka.Remote.Proto {
   #endregion
 
   #region Messages
-  public sealed partial class SelectionEnvelope : pb::IMessage<SelectionEnvelope> {
+  internal sealed partial class SelectionEnvelope : pb::IMessage<SelectionEnvelope> {
     private static readonly pb::MessageParser<SelectionEnvelope> _parser = new pb::MessageParser<SelectionEnvelope>(() => new SelectionEnvelope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<SelectionEnvelope> Parser { get { return _parser; } }
@@ -249,7 +249,7 @@ namespace Akka.Remote.Proto {
 
   }
 
-  public sealed partial class Selection : pb::IMessage<Selection> {
+  internal sealed partial class Selection : pb::IMessage<Selection> {
     private static readonly pb::MessageParser<Selection> _parser = new pb::MessageParser<Selection>(() => new Selection());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Selection> Parser { get { return _parser; } }
