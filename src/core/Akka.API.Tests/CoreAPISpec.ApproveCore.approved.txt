@@ -4001,8 +4001,8 @@ namespace Akka.Routing
     }
     public class FromConfig : Akka.Routing.Pool
     {
-        public FromConfig() { }
-        public FromConfig(Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher) { }
+        protected FromConfig() { }
+        protected FromConfig(Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher) { }
         public static Akka.Routing.FromConfig Instance { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem sys) { }
