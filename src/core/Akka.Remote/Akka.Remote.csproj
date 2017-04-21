@@ -156,6 +156,7 @@
     <Compile Include="Serialization\Proto\MiscMessageSerializer.cs" />
     <Compile Include="Serialization\Proto\Payload.cs" />
     <Compile Include="Serialization\Proto\WireFormats.cs" />
+    <Compile Include="Serialization\WrappedPayloadSupport.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\DotNetty\AkkaLoggingHandler.cs" />
     <Compile Include="Transport\DotNetty\DotNettyTransportSettings.cs" />
@@ -175,6 +176,7 @@
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="Serialization\Proto\SystemMessageFormats.proto" />
     <None Include="Serialization\Proto\Payload.proto" />
     <None Include="Serialization\Proto\MiscMessageSerializer.proto" />
     <None Include="Serialization\Proto\Address.proto" />
