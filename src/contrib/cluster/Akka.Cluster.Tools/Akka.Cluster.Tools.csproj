@@ -58,7 +58,7 @@
     <Compile Include="Client\ClusterReceptionist.cs" />
     <Compile Include="Client\ClusterReceptionistSettings.cs" />
     <Compile Include="Client\Serialization\ClusterClientMessageSerializer.cs" />
-    <Compile Include="Client\Serialization\Proto\ClusterClientMessages.cs" />
+    <Compile Include="Client\Serialization\Proto\ClusterClientMessages.g.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PublishSubscribe\DistributedPubSub.cs" />
     <Compile Include="PublishSubscribe\DistributedPubSubMediator.cs" />
@@ -67,7 +67,7 @@
     <Compile Include="PublishSubscribe\Internal\Topics.cs" />
     <Compile Include="PublishSubscribe\PerGroupingBuffer.cs" />
     <Compile Include="PublishSubscribe\Serialization\DistributedPubSubMessageSerializer.cs" />
-    <Compile Include="PublishSubscribe\Serialization\Proto\DistributedPubSubMessages.cs" />
+    <Compile Include="PublishSubscribe\Serialization\Proto\DistributedPubSubMessages.g.cs" />
     <Compile Include="Singleton\ClusterSingletonManager.cs" />
     <Compile Include="Singleton\ClusterSingletonManagerSettings.cs" />
     <Compile Include="Singleton\ClusterSingletonProxy.cs" />
@@ -79,12 +79,10 @@
   <ItemGroup>
     <EmbeddedResource Include="Client\reference.conf" />
     <None Include="Akka.Cluster.Tools.nuspec" />
-    <None Include="Client\Serialization\Proto\ClusterClientMessages.proto" />
     <None Include="packages.config" />
     <EmbeddedResource Include="Singleton\reference.conf" />
     <EmbeddedResource Include="PublishSubscribe\reference.conf" />
     <Compile Include="PublishSubscribe\DistributedMessages.cs" />
-    <None Include="PublishSubscribe\Serialization\Proto\DistributedPubSubMessages.proto" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">

@@ -258,7 +258,6 @@
     <Compile Include="Pattern\FutureTimeoutSupport.cs" />
     <Compile Include="Pattern\OpenCircuitException.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
-    <Compile Include="Serialization\JavaSerializer.cs" />
     <Compile Include="IO\ByteBuffer.cs" />
     <Compile Include="IO\DirectByteBufferPool.cs" />
     <Compile Include="IO\Inet.cs" />

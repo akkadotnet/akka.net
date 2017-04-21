@@ -18,12 +18,12 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
-using Akka.Remote.Proto;
 using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
+using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote
 {

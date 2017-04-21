@@ -17,23 +17,15 @@ namespace Akka.Cluster.Tools.Client.Serialization
     /// <summary>
     /// TBD
     /// </summary>
-    internal class ClusterClientMessageSerializer : SerializerWithStringManifest
+    public class ClusterClientMessageSerializer : SerializerWithStringManifest
     {
-        private const int BufferSize = 1024 * 4;
-
         private const string ContactsManifest = "A";
         private const string GetContactsManifest = "B";
         private const string HeartbeatManifest = "C";
         private const string HeartbeatRspManifest = "D";
 
-        private static readonly byte[] EmptyBytes = new byte[0];
+        private static readonly byte[] EmptyBytes = {};
         private readonly IDictionary<string, Func<byte[], IClusterClientMessage>> _fromBinaryMap;
-
-        /// <summary>
-        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
-        /// </summary>
-        public override int Identifier { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterClientMessageSerializer"/> class.
@@ -41,7 +33,6 @@ namespace Akka.Cluster.Tools.Client.Serialization
         /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterClientMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            Identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], IClusterClientMessage>>
             {
                 {ContactsManifest, ContactsFromBinary},

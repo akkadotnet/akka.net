@@ -23,59 +23,89 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChFXaXJlRm9ybWF0cy5wcm90bxIjQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2caDUFkZHJlc3MucHJvdG8aDVBheWxvYWQucHJvdG8ipwEK",
-            "F0Fja0FuZEVudmVsb3BlQ29udGFpbmVyEkUKA2FjaxgBIAEoCzI4LkFra2Eu",
-            "UmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFja25vd2xlZGdlbWVu",
-            "dEluZm8SRQoIZW52ZWxvcGUYAiABKAsyMy5Ba2thLlJlbW90ZS5TZXJpYWxp",
-            "emF0aW9uLlByb3RvLk1zZy5SZW1vdGVFbnZlbG9wZSLlAQoOUmVtb3RlRW52",
-            "ZWxvcGUSRAoJcmVjaXBpZW50GAEgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFs",
-            "aXphdGlvbi5Qcm90by5Nc2cuQWN0b3JSZWZEYXRhEj0KB21lc3NhZ2UYAiAB",
-            "KAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXls",
-            "b2FkEkEKBnNlbmRlchgEIAEoCzIxLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLkFjdG9yUmVmRGF0YRILCgNzZXEYBSABKAYiOwoTQWNr",
-            "bm93bGVkZ2VtZW50SW5mbxIVCg1jdW11bGF0aXZlQWNrGAEgASgGEg0KBW5h",
-            "Y2tzGAIgAygGIhwKDEFjdG9yUmVmRGF0YRIMCgRwYXRoGAEgASgJIuoBChNE",
-            "YWVtb25Nc2dDcmVhdGVEYXRhEj0KBXByb3BzGAEgASgLMi4uQWtrYS5SZW1v",
-            "dGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUHJvcHNEYXRhEj8KBmRlcGxv",
-            "eRgCIAEoCzIvLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
-            "LkRlcGxveURhdGESDAoEcGF0aBgDIAEoCRJFCgpzdXBlcnZpc29yGAQgASgL",
-            "MjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWN0b3JS",
-            "ZWZEYXRhIqgBCglQcm9wc0RhdGESPwoGZGVwbG95GAIgASgLMi8uQWtrYS5S",
-            "ZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRGVwbG95RGF0YRINCgVj",
-            "bGF6ehgDIAEoCRIMCgRhcmdzGAQgAygMEhEKCW1hbmlmZXN0cxgFIAMoCRIV",
-            "Cg1zZXJpYWxpemVySWRzGAYgAygFEhMKC2hhc01hbmlmZXN0GAcgAygIIokC",
-            "CgpEZXBsb3lEYXRhEgwKBHBhdGgYASABKAkSDgoGY29uZmlnGAIgASgMEhQK",
-            "DHJvdXRlckNvbmZpZxgDIAEoDBINCgVzY29wZRgEIAEoDBISCgpkaXNwYXRj",
-            "aGVyGAUgASgJEhkKEXNjb3BlU2VyaWFsaXplcklkGAYgASgFEhUKDXNjb3Bl",
-            "TWFuaWZlc3QYByABKAkSGgoSY29uZmlnU2VyaWFsaXplcklkGAggASgFEhYK",
-            "DmNvbmZpZ01hbmlmZXN0GAkgASgJEiAKGHJvdXRlckNvbmZpZ1NlcmlhbGl6",
-            "ZXJJZBgKIAEoBRIcChRyb3V0ZXJDb25maWdNYW5pZmVzdBgLIAEoCSJ0ChNB",
-            "a2thUHJvdG9jb2xNZXNzYWdlEg8KB3BheWxvYWQYASABKAwSTAoLaW5zdHJ1",
-            "Y3Rpb24YAiABKAsyNy5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3Rv",
-            "Lk1zZy5Ba2thQ29udHJvbE1lc3NhZ2UiqgEKEkFra2FDb250cm9sTWVzc2Fn",
-            "ZRJFCgtjb21tYW5kVHlwZRgBIAEoDjIwLkFra2EuUmVtb3RlLlNlcmlhbGl6",
-            "YXRpb24uUHJvdG8uTXNnLkNvbW1hbmRUeXBlEk0KDWhhbmRzaGFrZUluZm8Y",
-            "AiABKAsyNi5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5B",
-            "a2thSGFuZHNoYWtlSW5mbyJuChFBa2thSGFuZHNoYWtlSW5mbxI8CgZvcmln",
-            "aW4YASABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1z",
-            "Zy5BZGRyZXNzEgsKA3VpZBgCIAEoBhIOCgZjb29raWUYAyABKAkqhQEKC0Nv",
-            "bW1hbmRUeXBlEggKBE5PTkUQABINCglBU1NPQ0lBVEUQARIQCgxESVNBU1NP",
-            "Q0lBVEUQAhINCglIRUFSVEJFQVQQAxIeChpESVNBU1NPQ0lBVEVfU0hVVFRJ",
-            "TkdfRE9XThAEEhwKGERJU0FTU09DSUFURV9RVUFSQU5USU5FRBAFQgJIAWIG",
-            "cHJvdG8z"));
+            "bi5Qcm90by5Nc2caFkNvbnRhaW5lckZvcm1hdHMucHJvdG8ipwEKF0Fja0Fu",
+            "ZEVudmVsb3BlQ29udGFpbmVyEkUKA2FjaxgBIAEoCzI4LkFra2EuUmVtb3Rl",
+            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFja25vd2xlZGdlbWVudEluZm8S",
+            "RQoIZW52ZWxvcGUYAiABKAsyMy5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5SZW1vdGVFbnZlbG9wZSLlAQoOUmVtb3RlRW52ZWxvcGUS",
+            "RAoJcmVjaXBpZW50GAEgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlv",
+            "bi5Qcm90by5Nc2cuQWN0b3JSZWZEYXRhEj0KB21lc3NhZ2UYAiABKAsyLC5B",
+            "a2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEkEK",
+            "BnNlbmRlchgEIAEoCzIxLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLkFjdG9yUmVmRGF0YRILCgNzZXEYBSABKAYiOwoTQWNrbm93bGVk",
+            "Z2VtZW50SW5mbxIVCg1jdW11bGF0aXZlQWNrGAEgASgGEg0KBW5hY2tzGAIg",
+            "AygGIuoBChNEYWVtb25Nc2dDcmVhdGVEYXRhEj0KBXByb3BzGAEgASgLMi4u",
+            "QWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUHJvcHNEYXRh",
+            "Ej8KBmRlcGxveRgCIAEoCzIvLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLkRlcGxveURhdGESDAoEcGF0aBgDIAEoCRJFCgpzdXBlcnZp",
+            "c29yGAQgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5N",
+            "c2cuQWN0b3JSZWZEYXRhIqgBCglQcm9wc0RhdGESPwoGZGVwbG95GAIgASgL",
+            "Mi8uQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRGVwbG95",
+            "RGF0YRINCgVjbGF6ehgDIAEoCRIMCgRhcmdzGAQgAygMEhEKCW1hbmlmZXN0",
+            "cxgFIAMoCRIVCg1zZXJpYWxpemVySWRzGAYgAygFEhMKC2hhc01hbmlmZXN0",
+            "GAcgAygIIokCCgpEZXBsb3lEYXRhEgwKBHBhdGgYASABKAkSDgoGY29uZmln",
+            "GAIgASgMEhQKDHJvdXRlckNvbmZpZxgDIAEoDBINCgVzY29wZRgEIAEoDBIS",
+            "CgpkaXNwYXRjaGVyGAUgASgJEhkKEXNjb3BlU2VyaWFsaXplcklkGAYgASgF",
+            "EhUKDXNjb3BlTWFuaWZlc3QYByABKAkSGgoSY29uZmlnU2VyaWFsaXplcklk",
+            "GAggASgFEhYKDmNvbmZpZ01hbmlmZXN0GAkgASgJEiAKGHJvdXRlckNvbmZp",
+            "Z1NlcmlhbGl6ZXJJZBgKIAEoBRIcChRyb3V0ZXJDb25maWdNYW5pZmVzdBgL",
+            "IAEoCSJ0ChNBa2thUHJvdG9jb2xNZXNzYWdlEg8KB3BheWxvYWQYASABKAwS",
+            "TAoLaW5zdHJ1Y3Rpb24YAiABKAsyNy5Ba2thLlJlbW90ZS5TZXJpYWxpemF0",
+            "aW9uLlByb3RvLk1zZy5Ba2thQ29udHJvbE1lc3NhZ2UiqgEKEkFra2FDb250",
+            "cm9sTWVzc2FnZRJFCgtjb21tYW5kVHlwZRgBIAEoDjIwLkFra2EuUmVtb3Rl",
+            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkNvbW1hbmRUeXBlEk0KDWhhbmRz",
+            "aGFrZUluZm8YAiABKAsyNi5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5Ba2thSGFuZHNoYWtlSW5mbyJyChFBa2thSGFuZHNoYWtlSW5m",
+            "bxJACgZvcmlnaW4YASABKAsyMC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5BZGRyZXNzRGF0YRILCgN1aWQYAiABKAYSDgoGY29va2ll",
+            "GAMgASgJIk0KC1JlbW90ZVNjb3BlEj4KBG5vZGUYASABKAsyMC5Ba2thLlJl",
+            "bW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5BZGRyZXNzRGF0YSKxAQoO",
+            "RGVmYXVsdFJlc2l6ZXISEgoKbG93ZXJCb3VuZBgBIAEoDRISCgp1cHBlckJv",
+            "dW5kGAIgASgNEhkKEXByZXNzdXJlVGhyZXNob2xkGAMgASgNEhIKCnJhbXB1",
+            "cFJhdGUYBCABKAESGAoQYmFja29mZlRocmVzaG9sZBgFIAEoARITCgtiYWNr",
+            "b2ZmUmF0ZRgGIAEoARIZChFtZXNzYWdlc1BlclJlc2l6ZRgHIAEoDSJlCgpG",
+            "cm9tQ29uZmlnEj0KB3Jlc2l6ZXIYASABKAsyLC5Ba2thLlJlbW90ZS5TZXJp",
+            "YWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkEhgKEHJvdXRlckRpc3BhdGNo",
+            "ZXIYAiABKAkinwEKEkdlbmVyaWNSb3V0aW5nUG9vbBIVCg1uck9mSW5zdGFu",
+            "Y2VzGAEgASgNEhgKEHJvdXRlckRpc3BhdGNoZXIYAiABKAkSGQoRdXNlUG9v",
+            "bERpc3BhdGNoZXIYAyABKAgSPQoHcmVzaXplchgEIAEoCzIsLkFra2EuUmVt",
+            "b3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQinAEKEVNjYXR0",
+            "ZXJHYXRoZXJQb29sEkgKB2dlbmVyaWMYASABKAsyNy5Ba2thLlJlbW90ZS5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5HZW5lcmljUm91dGluZ1Bvb2wSPQoG",
+            "d2l0aGluGAIgASgLMi0uQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90",
+            "by5Nc2cuVGltZXNwYW4i3AEKEFRhaWxDaG9wcGluZ1Bvb2wSSAoHZ2VuZXJp",
+            "YxgBIAEoCzI3LkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
+            "LkdlbmVyaWNSb3V0aW5nUG9vbBI9CgZ3aXRoaW4YAiABKAsyLS5Ba2thLlJl",
+            "bW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5UaW1lc3BhbhI/CghpbnRl",
+            "cnZhbBgDIAEoCzItLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8u",
+            "TXNnLlRpbWVzcGFuIpIBChJSZW1vdGVSb3V0ZXJDb25maWcSOwoFbG9jYWwY",
+            "ASABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5Q",
+            "YXlsb2FkEj8KBW5vZGVzGAIgAygLMjAuQWtrYS5SZW1vdGUuU2VyaWFsaXph",
+            "dGlvbi5Qcm90by5Nc2cuQWRkcmVzc0RhdGEiGQoIVGltZXNwYW4SDQoFdGlj",
+            "a3MYASABKAQqhQEKC0NvbW1hbmRUeXBlEggKBE5PTkUQABINCglBU1NPQ0lB",
+            "VEUQARIQCgxESVNBU1NPQ0lBVEUQAhINCglIRUFSVEJFQVQQAxIeChpESVNB",
+            "U1NPQ0lBVEVfU0hVVFRJTkdfRE9XThAEEhwKGERJU0FTU09DSUFURV9RVUFS",
+            "QU5USU5FRBAFYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.AddressReflection.Descriptor, global::Akka.Remote.Serialization.Proto.Msg.PayloadReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Akka.Remote.Serialization.Proto.Msg.CommandType), }, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AckAndEnvelopeContainer), global::Akka.Remote.Serialization.Proto.Msg.AckAndEnvelopeContainer.Parser, new[]{ "Ack", "Envelope" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteEnvelope), global::Akka.Remote.Serialization.Proto.Msg.RemoteEnvelope.Parser, new[]{ "Recipient", "Message", "Sender", "Seq" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AcknowledgementInfo), global::Akka.Remote.Serialization.Proto.Msg.AcknowledgementInfo.Parser, new[]{ "CumulativeAck", "Nacks" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ActorRefData), global::Akka.Remote.Serialization.Proto.Msg.ActorRefData.Parser, new[]{ "Path" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.DaemonMsgCreateData), global::Akka.Remote.Serialization.Proto.Msg.DaemonMsgCreateData.Parser, new[]{ "Props", "Deploy", "Path", "Supervisor" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.PropsData), global::Akka.Remote.Serialization.Proto.Msg.PropsData.Parser, new[]{ "Deploy", "Clazz", "Args", "Manifests", "SerializerIds", "HasManifest" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.DeployData), global::Akka.Remote.Serialization.Proto.Msg.DeployData.Parser, new[]{ "Path", "Config", "RouterConfig", "Scope", "Dispatcher", "ScopeSerializerId", "ScopeManifest", "ConfigSerializerId", "ConfigManifest", "RouterConfigSerializerId", "RouterConfigManifest" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AkkaProtocolMessage), global::Akka.Remote.Serialization.Proto.Msg.AkkaProtocolMessage.Parser, new[]{ "Payload", "Instruction" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AkkaControlMessage), global::Akka.Remote.Serialization.Proto.Msg.AkkaControlMessage.Parser, new[]{ "CommandType", "HandshakeInfo" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AkkaHandshakeInfo), global::Akka.Remote.Serialization.Proto.Msg.AkkaHandshakeInfo.Parser, new[]{ "Origin", "Uid", "Cookie" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.AkkaHandshakeInfo), global::Akka.Remote.Serialization.Proto.Msg.AkkaHandshakeInfo.Parser, new[]{ "Origin", "Uid", "Cookie" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteScope), global::Akka.Remote.Serialization.Proto.Msg.RemoteScope.Parser, new[]{ "Node" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.DefaultResizer), global::Akka.Remote.Serialization.Proto.Msg.DefaultResizer.Parser, new[]{ "LowerBound", "UpperBound", "PressureThreshold", "RampupRate", "BackoffThreshold", "BackoffRate", "MessagesPerResize" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.FromConfig), global::Akka.Remote.Serialization.Proto.Msg.FromConfig.Parser, new[]{ "Resizer", "RouterDispatcher" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool), global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool.Parser, new[]{ "NrOfInstances", "RouterDispatcher", "UsePoolDispatcher", "Resizer" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ScatterGatherPool), global::Akka.Remote.Serialization.Proto.Msg.ScatterGatherPool.Parser, new[]{ "Generic", "Within" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.TailChoppingPool), global::Akka.Remote.Serialization.Proto.Msg.TailChoppingPool.Parser, new[]{ "Generic", "Within", "Interval" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteRouterConfig), global::Akka.Remote.Serialization.Proto.Msg.RemoteRouterConfig.Parser, new[]{ "Local", "Nodes" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Timespan), global::Akka.Remote.Serialization.Proto.Msg.Timespan.Parser, new[]{ "Ticks" }, null, null, null)
           }));
     }
     #endregion
@@ -621,126 +651,6 @@ namespace Akka.Remote.Serialization.Proto.Msg {
   }
 
   /// <summary>
-  /// Defines a remote ActorRef that "remembers" and uses its original Actor instance on the original node.
-  /// </summary>
-  internal sealed partial class ActorRefData : pb::IMessage<ActorRefData> {
-    private static readonly pb::MessageParser<ActorRefData> _parser = new pb::MessageParser<ActorRefData>(() => new ActorRefData());
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<ActorRefData> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[3]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ActorRefData() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ActorRefData(ActorRefData other) : this() {
-      path_ = other.path_;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ActorRefData Clone() {
-      return new ActorRefData(this);
-    }
-
-    /// <summary>Field number for the "path" field.</summary>
-    public const int PathFieldNumber = 1;
-    private string path_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string Path {
-      get { return path_; }
-      set {
-        path_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as ActorRefData);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(ActorRefData other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (Path != other.Path) return false;
-      return true;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (Path.Length != 0) hash ^= Path.GetHashCode();
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void WriteTo(pb::CodedOutputStream output) {
-      if (Path.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(Path);
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int CalculateSize() {
-      int size = 0;
-      if (Path.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Path);
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(ActorRefData other) {
-      if (other == null) {
-        return;
-      }
-      if (other.Path.Length != 0) {
-        Path = other.Path;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(pb::CodedInputStream input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
-          default:
-            input.SkipLastField();
-            break;
-          case 10: {
-            Path = input.ReadString();
-            break;
-          }
-        }
-      }
-    }
-
-  }
-
-  /// <summary>
   /// Defines Akka.Remote.DaemonMsgCreate
   /// </summary>
   internal sealed partial class DaemonMsgCreateData : pb::IMessage<DaemonMsgCreateData> {
@@ -750,7 +660,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -972,7 +882,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[5]; }
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1217,7 +1127,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[6]; }
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1617,7 +1527,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[7]; }
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1771,7 +1681,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[8]; }
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1922,7 +1832,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[9]; }
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[8]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1951,9 +1861,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "origin" field.</summary>
     public const int OriginFieldNumber = 1;
-    private global::Akka.Remote.Serialization.Proto.Msg.Address origin_;
+    private global::Akka.Remote.Serialization.Proto.Msg.AddressData origin_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.Address Origin {
+    public global::Akka.Remote.Serialization.Proto.Msg.AddressData Origin {
       get { return origin_; }
       set {
         origin_ = value;
@@ -2053,7 +1963,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
       if (other.origin_ != null) {
         if (origin_ == null) {
-          origin_ = new global::Akka.Remote.Serialization.Proto.Msg.Address();
+          origin_ = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
         }
         Origin.MergeFrom(other.Origin);
       }
@@ -2075,7 +1985,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             break;
           case 10: {
             if (origin_ == null) {
-              origin_ = new global::Akka.Remote.Serialization.Proto.Msg.Address();
+              origin_ = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
             }
             input.ReadMessage(origin_);
             break;
@@ -2086,6 +1996,1383 @@ namespace Akka.Remote.Serialization.Proto.Msg {
           }
           case 26: {
             Cookie = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class RemoteScope : pb::IMessage<RemoteScope> {
+    private static readonly pb::MessageParser<RemoteScope> _parser = new pb::MessageParser<RemoteScope>(() => new RemoteScope());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<RemoteScope> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[9]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public RemoteScope() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public RemoteScope(RemoteScope other) : this() {
+      Node = other.node_ != null ? other.Node.Clone() : null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public RemoteScope Clone() {
+      return new RemoteScope(this);
+    }
+
+    /// <summary>Field number for the "node" field.</summary>
+    public const int NodeFieldNumber = 1;
+    private global::Akka.Remote.Serialization.Proto.Msg.AddressData node_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.AddressData Node {
+      get { return node_; }
+      set {
+        node_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as RemoteScope);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(RemoteScope other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Node, other.Node)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (node_ != null) hash ^= Node.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (node_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Node);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (node_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Node);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(RemoteScope other) {
+      if (other == null) {
+        return;
+      }
+      if (other.node_ != null) {
+        if (node_ == null) {
+          node_ = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
+        }
+        Node.MergeFrom(other.Node);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            if (node_ == null) {
+              node_ = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
+            }
+            input.ReadMessage(node_);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class DefaultResizer : pb::IMessage<DefaultResizer> {
+    private static readonly pb::MessageParser<DefaultResizer> _parser = new pb::MessageParser<DefaultResizer>(() => new DefaultResizer());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<DefaultResizer> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[10]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public DefaultResizer() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public DefaultResizer(DefaultResizer other) : this() {
+      lowerBound_ = other.lowerBound_;
+      upperBound_ = other.upperBound_;
+      pressureThreshold_ = other.pressureThreshold_;
+      rampupRate_ = other.rampupRate_;
+      backoffThreshold_ = other.backoffThreshold_;
+      backoffRate_ = other.backoffRate_;
+      messagesPerResize_ = other.messagesPerResize_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public DefaultResizer Clone() {
+      return new DefaultResizer(this);
+    }
+
+    /// <summary>Field number for the "lowerBound" field.</summary>
+    public const int LowerBoundFieldNumber = 1;
+    private uint lowerBound_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint LowerBound {
+      get { return lowerBound_; }
+      set {
+        lowerBound_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "upperBound" field.</summary>
+    public const int UpperBoundFieldNumber = 2;
+    private uint upperBound_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint UpperBound {
+      get { return upperBound_; }
+      set {
+        upperBound_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "pressureThreshold" field.</summary>
+    public const int PressureThresholdFieldNumber = 3;
+    private uint pressureThreshold_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint PressureThreshold {
+      get { return pressureThreshold_; }
+      set {
+        pressureThreshold_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "rampupRate" field.</summary>
+    public const int RampupRateFieldNumber = 4;
+    private double rampupRate_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double RampupRate {
+      get { return rampupRate_; }
+      set {
+        rampupRate_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "backoffThreshold" field.</summary>
+    public const int BackoffThresholdFieldNumber = 5;
+    private double backoffThreshold_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double BackoffThreshold {
+      get { return backoffThreshold_; }
+      set {
+        backoffThreshold_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "backoffRate" field.</summary>
+    public const int BackoffRateFieldNumber = 6;
+    private double backoffRate_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double BackoffRate {
+      get { return backoffRate_; }
+      set {
+        backoffRate_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "messagesPerResize" field.</summary>
+    public const int MessagesPerResizeFieldNumber = 7;
+    private uint messagesPerResize_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint MessagesPerResize {
+      get { return messagesPerResize_; }
+      set {
+        messagesPerResize_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as DefaultResizer);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(DefaultResizer other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (LowerBound != other.LowerBound) return false;
+      if (UpperBound != other.UpperBound) return false;
+      if (PressureThreshold != other.PressureThreshold) return false;
+      if (RampupRate != other.RampupRate) return false;
+      if (BackoffThreshold != other.BackoffThreshold) return false;
+      if (BackoffRate != other.BackoffRate) return false;
+      if (MessagesPerResize != other.MessagesPerResize) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (LowerBound != 0) hash ^= LowerBound.GetHashCode();
+      if (UpperBound != 0) hash ^= UpperBound.GetHashCode();
+      if (PressureThreshold != 0) hash ^= PressureThreshold.GetHashCode();
+      if (RampupRate != 0D) hash ^= RampupRate.GetHashCode();
+      if (BackoffThreshold != 0D) hash ^= BackoffThreshold.GetHashCode();
+      if (BackoffRate != 0D) hash ^= BackoffRate.GetHashCode();
+      if (MessagesPerResize != 0) hash ^= MessagesPerResize.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (LowerBound != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(LowerBound);
+      }
+      if (UpperBound != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(UpperBound);
+      }
+      if (PressureThreshold != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(PressureThreshold);
+      }
+      if (RampupRate != 0D) {
+        output.WriteRawTag(33);
+        output.WriteDouble(RampupRate);
+      }
+      if (BackoffThreshold != 0D) {
+        output.WriteRawTag(41);
+        output.WriteDouble(BackoffThreshold);
+      }
+      if (BackoffRate != 0D) {
+        output.WriteRawTag(49);
+        output.WriteDouble(BackoffRate);
+      }
+      if (MessagesPerResize != 0) {
+        output.WriteRawTag(56);
+        output.WriteUInt32(MessagesPerResize);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (LowerBound != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(LowerBound);
+      }
+      if (UpperBound != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(UpperBound);
+      }
+      if (PressureThreshold != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(PressureThreshold);
+      }
+      if (RampupRate != 0D) {
+        size += 1 + 8;
+      }
+      if (BackoffThreshold != 0D) {
+        size += 1 + 8;
+      }
+      if (BackoffRate != 0D) {
+        size += 1 + 8;
+      }
+      if (MessagesPerResize != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MessagesPerResize);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(DefaultResizer other) {
+      if (other == null) {
+        return;
+      }
+      if (other.LowerBound != 0) {
+        LowerBound = other.LowerBound;
+      }
+      if (other.UpperBound != 0) {
+        UpperBound = other.UpperBound;
+      }
+      if (other.PressureThreshold != 0) {
+        PressureThreshold = other.PressureThreshold;
+      }
+      if (other.RampupRate != 0D) {
+        RampupRate = other.RampupRate;
+      }
+      if (other.BackoffThreshold != 0D) {
+        BackoffThreshold = other.BackoffThreshold;
+      }
+      if (other.BackoffRate != 0D) {
+        BackoffRate = other.BackoffRate;
+      }
+      if (other.MessagesPerResize != 0) {
+        MessagesPerResize = other.MessagesPerResize;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 8: {
+            LowerBound = input.ReadUInt32();
+            break;
+          }
+          case 16: {
+            UpperBound = input.ReadUInt32();
+            break;
+          }
+          case 24: {
+            PressureThreshold = input.ReadUInt32();
+            break;
+          }
+          case 33: {
+            RampupRate = input.ReadDouble();
+            break;
+          }
+          case 41: {
+            BackoffThreshold = input.ReadDouble();
+            break;
+          }
+          case 49: {
+            BackoffRate = input.ReadDouble();
+            break;
+          }
+          case 56: {
+            MessagesPerResize = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class FromConfig : pb::IMessage<FromConfig> {
+    private static readonly pb::MessageParser<FromConfig> _parser = new pb::MessageParser<FromConfig>(() => new FromConfig());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<FromConfig> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[11]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public FromConfig() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public FromConfig(FromConfig other) : this() {
+      Resizer = other.resizer_ != null ? other.Resizer.Clone() : null;
+      routerDispatcher_ = other.routerDispatcher_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public FromConfig Clone() {
+      return new FromConfig(this);
+    }
+
+    /// <summary>Field number for the "resizer" field.</summary>
+    public const int ResizerFieldNumber = 1;
+    private global::Akka.Remote.Serialization.Proto.Msg.Payload resizer_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.Payload Resizer {
+      get { return resizer_; }
+      set {
+        resizer_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "routerDispatcher" field.</summary>
+    public const int RouterDispatcherFieldNumber = 2;
+    private string routerDispatcher_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string RouterDispatcher {
+      get { return routerDispatcher_; }
+      set {
+        routerDispatcher_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as FromConfig);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(FromConfig other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Resizer, other.Resizer)) return false;
+      if (RouterDispatcher != other.RouterDispatcher) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (resizer_ != null) hash ^= Resizer.GetHashCode();
+      if (RouterDispatcher.Length != 0) hash ^= RouterDispatcher.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (resizer_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Resizer);
+      }
+      if (RouterDispatcher.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(RouterDispatcher);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (resizer_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Resizer);
+      }
+      if (RouterDispatcher.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RouterDispatcher);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(FromConfig other) {
+      if (other == null) {
+        return;
+      }
+      if (other.resizer_ != null) {
+        if (resizer_ == null) {
+          resizer_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+        }
+        Resizer.MergeFrom(other.Resizer);
+      }
+      if (other.RouterDispatcher.Length != 0) {
+        RouterDispatcher = other.RouterDispatcher;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            if (resizer_ == null) {
+              resizer_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+            }
+            input.ReadMessage(resizer_);
+            break;
+          }
+          case 18: {
+            RouterDispatcher = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class GenericRoutingPool : pb::IMessage<GenericRoutingPool> {
+    private static readonly pb::MessageParser<GenericRoutingPool> _parser = new pb::MessageParser<GenericRoutingPool>(() => new GenericRoutingPool());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<GenericRoutingPool> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[12]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GenericRoutingPool() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GenericRoutingPool(GenericRoutingPool other) : this() {
+      nrOfInstances_ = other.nrOfInstances_;
+      routerDispatcher_ = other.routerDispatcher_;
+      usePoolDispatcher_ = other.usePoolDispatcher_;
+      Resizer = other.resizer_ != null ? other.Resizer.Clone() : null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GenericRoutingPool Clone() {
+      return new GenericRoutingPool(this);
+    }
+
+    /// <summary>Field number for the "nrOfInstances" field.</summary>
+    public const int NrOfInstancesFieldNumber = 1;
+    private uint nrOfInstances_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public uint NrOfInstances {
+      get { return nrOfInstances_; }
+      set {
+        nrOfInstances_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "routerDispatcher" field.</summary>
+    public const int RouterDispatcherFieldNumber = 2;
+    private string routerDispatcher_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string RouterDispatcher {
+      get { return routerDispatcher_; }
+      set {
+        routerDispatcher_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "usePoolDispatcher" field.</summary>
+    public const int UsePoolDispatcherFieldNumber = 3;
+    private bool usePoolDispatcher_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool UsePoolDispatcher {
+      get { return usePoolDispatcher_; }
+      set {
+        usePoolDispatcher_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "resizer" field.</summary>
+    public const int ResizerFieldNumber = 4;
+    private global::Akka.Remote.Serialization.Proto.Msg.Payload resizer_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.Payload Resizer {
+      get { return resizer_; }
+      set {
+        resizer_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as GenericRoutingPool);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(GenericRoutingPool other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (NrOfInstances != other.NrOfInstances) return false;
+      if (RouterDispatcher != other.RouterDispatcher) return false;
+      if (UsePoolDispatcher != other.UsePoolDispatcher) return false;
+      if (!object.Equals(Resizer, other.Resizer)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (NrOfInstances != 0) hash ^= NrOfInstances.GetHashCode();
+      if (RouterDispatcher.Length != 0) hash ^= RouterDispatcher.GetHashCode();
+      if (UsePoolDispatcher != false) hash ^= UsePoolDispatcher.GetHashCode();
+      if (resizer_ != null) hash ^= Resizer.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (NrOfInstances != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(NrOfInstances);
+      }
+      if (RouterDispatcher.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(RouterDispatcher);
+      }
+      if (UsePoolDispatcher != false) {
+        output.WriteRawTag(24);
+        output.WriteBool(UsePoolDispatcher);
+      }
+      if (resizer_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Resizer);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (NrOfInstances != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(NrOfInstances);
+      }
+      if (RouterDispatcher.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RouterDispatcher);
+      }
+      if (UsePoolDispatcher != false) {
+        size += 1 + 1;
+      }
+      if (resizer_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Resizer);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(GenericRoutingPool other) {
+      if (other == null) {
+        return;
+      }
+      if (other.NrOfInstances != 0) {
+        NrOfInstances = other.NrOfInstances;
+      }
+      if (other.RouterDispatcher.Length != 0) {
+        RouterDispatcher = other.RouterDispatcher;
+      }
+      if (other.UsePoolDispatcher != false) {
+        UsePoolDispatcher = other.UsePoolDispatcher;
+      }
+      if (other.resizer_ != null) {
+        if (resizer_ == null) {
+          resizer_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+        }
+        Resizer.MergeFrom(other.Resizer);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 8: {
+            NrOfInstances = input.ReadUInt32();
+            break;
+          }
+          case 18: {
+            RouterDispatcher = input.ReadString();
+            break;
+          }
+          case 24: {
+            UsePoolDispatcher = input.ReadBool();
+            break;
+          }
+          case 34: {
+            if (resizer_ == null) {
+              resizer_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+            }
+            input.ReadMessage(resizer_);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class ScatterGatherPool : pb::IMessage<ScatterGatherPool> {
+    private static readonly pb::MessageParser<ScatterGatherPool> _parser = new pb::MessageParser<ScatterGatherPool>(() => new ScatterGatherPool());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<ScatterGatherPool> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[13]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ScatterGatherPool() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ScatterGatherPool(ScatterGatherPool other) : this() {
+      Generic = other.generic_ != null ? other.Generic.Clone() : null;
+      Within = other.within_ != null ? other.Within.Clone() : null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ScatterGatherPool Clone() {
+      return new ScatterGatherPool(this);
+    }
+
+    /// <summary>Field number for the "generic" field.</summary>
+    public const int GenericFieldNumber = 1;
+    private global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool generic_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool Generic {
+      get { return generic_; }
+      set {
+        generic_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "within" field.</summary>
+    public const int WithinFieldNumber = 2;
+    private global::Akka.Remote.Serialization.Proto.Msg.Timespan within_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.Timespan Within {
+      get { return within_; }
+      set {
+        within_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as ScatterGatherPool);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(ScatterGatherPool other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Generic, other.Generic)) return false;
+      if (!object.Equals(Within, other.Within)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (generic_ != null) hash ^= Generic.GetHashCode();
+      if (within_ != null) hash ^= Within.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (generic_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Generic);
+      }
+      if (within_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Within);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (generic_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Generic);
+      }
+      if (within_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Within);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(ScatterGatherPool other) {
+      if (other == null) {
+        return;
+      }
+      if (other.generic_ != null) {
+        if (generic_ == null) {
+          generic_ = new global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool();
+        }
+        Generic.MergeFrom(other.Generic);
+      }
+      if (other.within_ != null) {
+        if (within_ == null) {
+          within_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+        }
+        Within.MergeFrom(other.Within);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            if (generic_ == null) {
+              generic_ = new global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool();
+            }
+            input.ReadMessage(generic_);
+            break;
+          }
+          case 18: {
+            if (within_ == null) {
+              within_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+            }
+            input.ReadMessage(within_);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class TailChoppingPool : pb::IMessage<TailChoppingPool> {
+    private static readonly pb::MessageParser<TailChoppingPool> _parser = new pb::MessageParser<TailChoppingPool>(() => new TailChoppingPool());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<TailChoppingPool> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[14]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public TailChoppingPool() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public TailChoppingPool(TailChoppingPool other) : this() {
+      Generic = other.generic_ != null ? other.Generic.Clone() : null;
+      Within = other.within_ != null ? other.Within.Clone() : null;
+      Interval = other.interval_ != null ? other.Interval.Clone() : null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public TailChoppingPool Clone() {
+      return new TailChoppingPool(this);
+    }
+
+    /// <summary>Field number for the "generic" field.</summary>
+    public const int GenericFieldNumber = 1;
+    private global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool generic_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool Generic {
+      get { return generic_; }
+      set {
+        generic_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "within" field.</summary>
+    public const int WithinFieldNumber = 2;
+    private global::Akka.Remote.Serialization.Proto.Msg.Timespan within_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.Timespan Within {
+      get { return within_; }
+      set {
+        within_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "interval" field.</summary>
+    public const int IntervalFieldNumber = 3;
+    private global::Akka.Remote.Serialization.Proto.Msg.Timespan interval_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.Timespan Interval {
+      get { return interval_; }
+      set {
+        interval_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as TailChoppingPool);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(TailChoppingPool other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Generic, other.Generic)) return false;
+      if (!object.Equals(Within, other.Within)) return false;
+      if (!object.Equals(Interval, other.Interval)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (generic_ != null) hash ^= Generic.GetHashCode();
+      if (within_ != null) hash ^= Within.GetHashCode();
+      if (interval_ != null) hash ^= Interval.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (generic_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Generic);
+      }
+      if (within_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Within);
+      }
+      if (interval_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Interval);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (generic_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Generic);
+      }
+      if (within_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Within);
+      }
+      if (interval_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Interval);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(TailChoppingPool other) {
+      if (other == null) {
+        return;
+      }
+      if (other.generic_ != null) {
+        if (generic_ == null) {
+          generic_ = new global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool();
+        }
+        Generic.MergeFrom(other.Generic);
+      }
+      if (other.within_ != null) {
+        if (within_ == null) {
+          within_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+        }
+        Within.MergeFrom(other.Within);
+      }
+      if (other.interval_ != null) {
+        if (interval_ == null) {
+          interval_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+        }
+        Interval.MergeFrom(other.Interval);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            if (generic_ == null) {
+              generic_ = new global::Akka.Remote.Serialization.Proto.Msg.GenericRoutingPool();
+            }
+            input.ReadMessage(generic_);
+            break;
+          }
+          case 18: {
+            if (within_ == null) {
+              within_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+            }
+            input.ReadMessage(within_);
+            break;
+          }
+          case 26: {
+            if (interval_ == null) {
+              interval_ = new global::Akka.Remote.Serialization.Proto.Msg.Timespan();
+            }
+            input.ReadMessage(interval_);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class RemoteRouterConfig : pb::IMessage<RemoteRouterConfig> {
+    private static readonly pb::MessageParser<RemoteRouterConfig> _parser = new pb::MessageParser<RemoteRouterConfig>(() => new RemoteRouterConfig());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<RemoteRouterConfig> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[15]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public RemoteRouterConfig() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public RemoteRouterConfig(RemoteRouterConfig other) : this() {
+      Local = other.local_ != null ? other.Local.Clone() : null;
+      nodes_ = other.nodes_.Clone();
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public RemoteRouterConfig Clone() {
+      return new RemoteRouterConfig(this);
+    }
+
+    /// <summary>Field number for the "local" field.</summary>
+    public const int LocalFieldNumber = 1;
+    private global::Akka.Remote.Serialization.Proto.Msg.Payload local_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.Payload Local {
+      get { return local_; }
+      set {
+        local_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "nodes" field.</summary>
+    public const int NodesFieldNumber = 2;
+    private static readonly pb::FieldCodec<global::Akka.Remote.Serialization.Proto.Msg.AddressData> _repeated_nodes_codec
+        = pb::FieldCodec.ForMessage(18, global::Akka.Remote.Serialization.Proto.Msg.AddressData.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> nodes_ = new pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> Nodes {
+      get { return nodes_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as RemoteRouterConfig);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(RemoteRouterConfig other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Local, other.Local)) return false;
+      if(!nodes_.Equals(other.nodes_)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (local_ != null) hash ^= Local.GetHashCode();
+      hash ^= nodes_.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (local_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Local);
+      }
+      nodes_.WriteTo(output, _repeated_nodes_codec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (local_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Local);
+      }
+      size += nodes_.CalculateSize(_repeated_nodes_codec);
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(RemoteRouterConfig other) {
+      if (other == null) {
+        return;
+      }
+      if (other.local_ != null) {
+        if (local_ == null) {
+          local_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+        }
+        Local.MergeFrom(other.Local);
+      }
+      nodes_.Add(other.nodes_);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            if (local_ == null) {
+              local_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+            }
+            input.ReadMessage(local_);
+            break;
+          }
+          case 18: {
+            nodes_.AddEntriesFrom(input, _repeated_nodes_codec);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class Timespan : pb::IMessage<Timespan> {
+    private static readonly pb::MessageParser<Timespan> _parser = new pb::MessageParser<Timespan>(() => new Timespan());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<Timespan> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.WireFormatsReflection.Descriptor.MessageTypes[16]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Timespan() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Timespan(Timespan other) : this() {
+      ticks_ = other.ticks_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Timespan Clone() {
+      return new Timespan(this);
+    }
+
+    /// <summary>Field number for the "ticks" field.</summary>
+    public const int TicksFieldNumber = 1;
+    private ulong ticks_;
+    /// <summary>
+    /// TODO: temporary
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ulong Ticks {
+      get { return ticks_; }
+      set {
+        ticks_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as Timespan);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(Timespan other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Ticks != other.Ticks) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Ticks != 0UL) hash ^= Ticks.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (Ticks != 0UL) {
+        output.WriteRawTag(8);
+        output.WriteUInt64(Ticks);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (Ticks != 0UL) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt64Size(Ticks);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(Timespan other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Ticks != 0UL) {
+        Ticks = other.Ticks;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 8: {
+            Ticks = input.ReadUInt64();
             break;
           }
         }

@@ -42,7 +42,7 @@ namespace Akka.Remote.Serialization
         private const string TailChoppingPoolManifest = "ROTCP";
         private const string RemoteRouterConfigManifest = "RORRC";
 
-        private static readonly byte[] EmptyBytes = new byte[0];
+        private static readonly byte[] EmptyBytes = {};
 
         private readonly WrappedPayloadSupport _payloadSupport;
 
@@ -171,7 +171,7 @@ namespace Akka.Remote.Serialization
         //
         private byte[] ActorRefToProto(IActorRef actorRef)
         {
-            var protoActor = new Proto.Msg.ActorRef();
+            var protoActor = new Proto.Msg.ActorRefData();
             if (actorRef is Nobody) // TODO: this is a hack. Should work without it
                 protoActor.Path = "nobody";
             else
@@ -181,7 +181,7 @@ namespace Akka.Remote.Serialization
 
         private IActorRef ActorRefFromProto(byte[] bytes)
         {
-            var protoMessage = Proto.Msg.ActorRef.Parser.ParseFrom(bytes);
+            var protoMessage = Proto.Msg.ActorRefData.Parser.ParseFrom(bytes);
             if (protoMessage.Path.Equals("nobody"))
                 return Nobody.Instance;
             return system.AsInstanceOf<ExtendedActorSystem>().Provider.ResolveActorRef(protoMessage.Path);
@@ -488,9 +488,9 @@ namespace Akka.Remote.Serialization
         //
         // Address
         //
-        private static Proto.Msg.Address AddressMessageBuilder(Address address)
+        private static Proto.Msg.AddressData AddressMessageBuilder(Address address)
         {
-            var message = new Proto.Msg.Address();
+            var message = new Proto.Msg.AddressData();
             message.System = address.System;
             message.Hostname = address.Host;
             message.Port = (uint)(address.Port ?? 0);
@@ -498,7 +498,7 @@ namespace Akka.Remote.Serialization
             return message;
         }
 
-        private static Address AddressFrom(Proto.Msg.Address addressProto)
+        private static Address AddressFrom(Proto.Msg.AddressData addressProto)
         {
             return new Address(
                 addressProto.Protocol,

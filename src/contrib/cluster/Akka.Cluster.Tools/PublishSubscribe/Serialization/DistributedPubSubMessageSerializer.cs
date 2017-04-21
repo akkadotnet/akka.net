@@ -11,18 +11,16 @@ using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
+using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
-
+using AddressData = Akka.Remote.Serialization.Proto.Msg.AddressData;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 {
-    /**
-     * Protobuf serializer of DistributedPubSubMediator messages.
-     */
     /// <summary>
-    /// TBD
+    /// Protobuf serializer of DistributedPubSubMediator messages.
     /// </summary>
     public class DistributedPubSubMessageSerializer : SerializerWithStringManifest
     {
@@ -35,13 +33,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 
         private readonly IDictionary<string, Func<byte[], object>> _fromBinaryMap;
 
+        private readonly WrappedPayloadSupport _payloadSupport;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DistributedPubSubMessageSerializer"/> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer.</param>
         public DistributedPubSubMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            Identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
+            _payloadSupport = new WrappedPayloadSupport(system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], object>>
             {
                 {StatusManifest, StatusFrom},
@@ -52,12 +52,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                 {SendToOneSubscriberManifest, SendToOneSubscriberFrom}
             };
         }
-
-        /// <summary>
-        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
-        /// </summary>
-        public override int Identifier { get; }
 
         /// <summary>
         /// Serializes the given object into a byte array
@@ -201,14 +195,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             var protoMessage = new Proto.Msg.Send();
             protoMessage.Path = send.Path;
             protoMessage.LocalAffinity = send.LocalAffinity;
-            protoMessage.Payload = PayloadToProto(send.Message);
+            protoMessage.Payload = _payloadSupport.PayloadToProto(send.Message);
             return protoMessage.ToByteArray();
         }
 
         private Send SendFrom(byte[] bytes)
         {
             var sendProto = Proto.Msg.Send.Parser.ParseFrom(bytes);
-            return new Send(sendProto.Path, PayloadFrom(sendProto.Payload), sendProto.LocalAffinity);
+            return new Send(sendProto.Path, _payloadSupport.PayloadFrom(sendProto.Payload), sendProto.LocalAffinity);
         }
 
         private byte[] SendToAllToProto(SendToAll sendToAll)
@@ -216,41 +210,41 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             var protoMessage = new Proto.Msg.SendToAll();
             protoMessage.Path = sendToAll.Path;
             protoMessage.AllButSelf = sendToAll.ExcludeSelf;
-            protoMessage.Payload = PayloadToProto(sendToAll.Message);
+            protoMessage.Payload = _payloadSupport.PayloadToProto(sendToAll.Message);
             return protoMessage.ToByteArray();
         }
 
         private SendToAll SendToAllFrom(byte[] bytes)
         {
             var sendToAllProto = Proto.Msg.SendToAll.Parser.ParseFrom(bytes);
-            return new SendToAll(sendToAllProto.Path, PayloadFrom(sendToAllProto.Payload), sendToAllProto.AllButSelf);
+            return new SendToAll(sendToAllProto.Path, _payloadSupport.PayloadFrom(sendToAllProto.Payload), sendToAllProto.AllButSelf);
         }
 
         private byte[] PublishToProto(Publish publish)
         {
             var protoMessage = new Proto.Msg.Publish();
             protoMessage.Topic = publish.Topic;
-            protoMessage.Payload = PayloadToProto(publish.Message);
+            protoMessage.Payload = _payloadSupport.PayloadToProto(publish.Message);
             return protoMessage.ToByteArray();
         }
 
         private Publish PublishFrom(byte[] bytes)
         {
             var publishProto = Proto.Msg.Publish.Parser.ParseFrom(bytes);
-            return new Publish(publishProto.Topic, PayloadFrom(publishProto.Payload));
+            return new Publish(publishProto.Topic, _payloadSupport.PayloadFrom(publishProto.Payload));
         }
 
         private byte[] SendToOneSubscriberToProto(SendToOneSubscriber sendToOneSubscriber)
         {
             var protoMessage = new Proto.Msg.SendToOneSubscriber();
-            protoMessage.Payload = PayloadToProto(sendToOneSubscriber.Message);
+            protoMessage.Payload = _payloadSupport.PayloadToProto(sendToOneSubscriber.Message);
             return protoMessage.ToByteArray();
         }
 
         private SendToOneSubscriber SendToOneSubscriberFrom(byte[] bytes)
         {
             var sendToOneSubscriberProto = Proto.Msg.SendToOneSubscriber.Parser.ParseFrom(bytes);
-            return new SendToOneSubscriber(PayloadFrom(sendToOneSubscriberProto.Payload));
+            return new SendToOneSubscriber(_payloadSupport.PayloadFrom(sendToOneSubscriberProto.Payload));
         }
 
         //
@@ -258,9 +252,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         //
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Proto.Msg.Address AddressToProto(Address address)
+        private static AddressData AddressToProto(Address address)
         {
-            var message = new Proto.Msg.Address();
+            var message = new AddressData();
             message.System = address.System;
             message.Hostname = address.Host;
             message.Port = (uint)(address.Port ?? 0);
@@ -269,28 +263,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Address AddressFrom(Proto.Msg.Address addressProto)
+        private static Address AddressFrom(AddressData addressProto)
         {
             return new Address(
                 addressProto.Protocol,
                 addressProto.System,
                 addressProto.Hostname,
                 addressProto.Port == 0 ? null : (int?)addressProto.Port);
-        }
-
-        private Proto.Msg.Payload PayloadToProto(object message)
-        {
-            var payloadProto = new Proto.Msg.Payload();
-            var serializer = system.Serialization.FindSerializerFor(message);
-            payloadProto.SerializerId = serializer.Identifier;
-            payloadProto.MessageManifest = ByteString.CopyFromUtf8(GetObjectManifest(serializer, message));
-            payloadProto.EnclosedMessage = ByteString.CopyFrom(serializer.ToBinary(message));
-            return payloadProto;
-        }
-
-        private object PayloadFrom(Proto.Msg.Payload payload)
-        {
-            return system.Serialization.Deserialize(payload.EnclosedMessage.ToByteArray(), payload.SerializerId, payload.MessageManifest.ToStringUtf8());
         }
 
         private IActorRef ResolveActorRef(string path)

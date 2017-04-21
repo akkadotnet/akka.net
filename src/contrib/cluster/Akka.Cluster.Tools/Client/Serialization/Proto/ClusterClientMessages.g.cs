@@ -24,7 +24,7 @@ namespace Akka.Cluster.Tools.Client.Serialization.Proto.Msg {
           string.Concat(
             "ChtDbHVzdGVyQ2xpZW50TWVzc2FnZXMucHJvdG8SMUFra2EuQ2x1c3Rlci5U",
             "b29scy5DbGllbnQuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2ciIQoIQ29udGFj",
-            "dHMSFQoNY29udGFjdFBvaW50cxgBIAMoCUICSAFiBnByb3RvMw=="));
+            "dHMSFQoNY29udGFjdFBvaW50cxgBIAMoCWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {

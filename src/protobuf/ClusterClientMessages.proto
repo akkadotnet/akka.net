@@ -4,7 +4,6 @@
 
 syntax = "proto3";
 package Akka.Cluster.Tools.Client.Serialization.Proto.Msg;
-option optimize_for = SPEED;
 
 message Contacts {
   repeated string contactPoints = 1;

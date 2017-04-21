@@ -39,10 +39,10 @@ namespace Akka.Serialization
         protected readonly ExtendedActorSystem system;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Serializer" /> class.
+        /// Initializes a new instance of the <see cref="Serializer" /> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer. </param>
-        public Serializer(ExtendedActorSystem system)
+        protected Serializer(ExtendedActorSystem system)
         {
             this.system = system;
         }
@@ -51,10 +51,7 @@ namespace Akka.Serialization
         /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
         /// Values from 0 to 16 is reserved for Akka internal usage
         /// </summary>
-        public virtual int Identifier
-        {
-            get { return SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system); }
-        }
+        public virtual int Identifier => SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system);
 
         /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
@@ -111,7 +108,7 @@ namespace Akka.Serialization
         /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
         /// </summary>
-        public sealed override bool IncludeManifest { get { return true; } }
+        public sealed override bool IncludeManifest => true;
 
         /// <summary>
         /// Deserializes a byte array into an object of type <paramref name="type" />.
@@ -148,7 +145,7 @@ namespace Akka.Serialization
     /// <summary>
     /// INTERNAL API.
     /// </summary>
-    public static class SerializerIdentifierHelper
+    internal static class SerializerIdentifierHelper
     {
         /// <summary>
         /// TBD

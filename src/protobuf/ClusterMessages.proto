@@ -4,7 +4,8 @@
 
 syntax = "proto3";
 package Akka.Cluster.Serialization.Proto.Msg;
-option optimize_for = SPEED;
+
+import "ContainerFormats.proto";
 
 /****************************************
  * Cluster User Messages
@@ -151,20 +152,9 @@ message VectorClock {
  * Common Datatypes and Messages
  ****************************************/
 
-// An empty message
-message Empty {
-}
-
-message Address {
-  string system = 1;
-  string hostname = 2;
-  uint32 port = 3;
-  string protocol = 4;
-}
- 
 // Defines a remote address with uid.
 message UniqueAddress {
-  Address address = 1;
+  Akka.Remote.Serialization.Proto.Msg.AddressData address = 1;
   uint32 uid = 2;
 }
 

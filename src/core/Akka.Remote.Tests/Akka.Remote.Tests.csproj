@@ -167,6 +167,9 @@
     <Compile Include="AsyncContext\SynchronizationContextSwitcher.cs" />
     <Compile Include="AsyncContext\SynchronousTaskExtensions.cs.cs" />
     <Compile Include="PhiAccrualModelBasedSpecs.cs" />
+    <Compile Include="Serialization\MessageContainerSerializerSpec.cs" />
+    <Compile Include="Serialization\ProtobufSerializerSpec.cs" />
+    <Compile Include="Serialization\SystemMessageSerializationSpec.cs" />
     <Compile Include="Serialization\PrimitiveSerializersSpec.cs" />
     <Compile Include="Serialization\MiscMessageSerializerSpec.cs" />
     <Compile Include="Transport\BackwardCompatibilitySpec.cs" />

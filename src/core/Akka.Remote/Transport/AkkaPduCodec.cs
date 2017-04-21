@@ -10,7 +10,8 @@ using System.Linq;
 using Akka.Actor;
 using Google.Protobuf;
 using System.Runtime.Serialization;
-using Akka.Remote.Proto;
+using Akka.Remote.Serialization.Proto.Msg;
+using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Transport
 {

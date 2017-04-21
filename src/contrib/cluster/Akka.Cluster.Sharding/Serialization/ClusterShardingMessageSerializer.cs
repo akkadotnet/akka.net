@@ -14,6 +14,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Serialization;
 using Google.Protobuf;
+using ActorRefMessage = Akka.Remote.Serialization.Proto.Msg.ActorRefData;
 
 namespace Akka.Cluster.Sharding.Serialization
 {
@@ -57,22 +58,11 @@ namespace Akka.Cluster.Sharding.Serialization
         private readonly Dictionary<string, Func<byte[], object>> _fromBinaryMap;
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        public const int BufferSize = 1024 << 2;
-
-        private readonly int _identifier;
-        private ExtendedActorSystem _system;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ClusterShardingMessageSerializer"/> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterShardingMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            _system = system;
-            _identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
-
             _fromBinaryMap = new Dictionary<string, Func<byte[], object>>
             {
                 {EntityStateManifest, EntityStateFromBinary},
@@ -104,12 +94,6 @@ namespace Akka.Cluster.Sharding.Serialization
                 {ShardStatsManifest, ShardStatsFromBinary}
             };
         }
-
-        /// <summary>
-        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
-        /// </summary>
-        public override int Identifier { get { return _identifier; } }
 
         /// <summary>
         /// Serializes the given object into a byte array
@@ -333,16 +317,16 @@ namespace Akka.Cluster.Sharding.Serialization
         //
         // ActorRefMessage
         //
-        private Proto.Msg.ActorRefMessage ActorRefMessageToProto(IActorRef actorRef)
+        private ActorRefMessage ActorRefMessageToProto(IActorRef actorRef)
         {
-            var message = new Proto.Msg.ActorRefMessage();
-            message.Ref = Akka.Serialization.Serialization.SerializedActorPath(actorRef);
+            var message = new ActorRefMessage();
+            message.Path = Akka.Serialization.Serialization.SerializedActorPath(actorRef);
             return message;
         }
 
         private IActorRef ActorRefMessageFromBinary(byte[] binary)
         {
-            return ResolveActorRef(Proto.Msg.ActorRefMessage.Parser.ParseFrom(binary).Ref);
+            return ResolveActorRef(ActorRefMessage.Parser.ParseFrom(binary).Path);
         }
 
         //
@@ -379,7 +363,7 @@ namespace Akka.Cluster.Sharding.Serialization
 
         private IActorRef ResolveActorRef(string path)
         {
-            return _system.Provider.ResolveActorRef(path);
+            return system.Provider.ResolveActorRef(path);
         }
     }
 }
