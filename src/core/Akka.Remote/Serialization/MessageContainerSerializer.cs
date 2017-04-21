@@ -10,7 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Remote.Proto;
 using Akka.Serialization;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote.Serialization
 {
@@ -69,49 +69,52 @@ namespace Akka.Remote.Serialization
             return o;
         }
 
-        private Selection.Builder BuildPattern(string matcher, PatternType tpe)
+        private Selection BuildPattern(string matcher, PatternType tpe)
         {
-            Selection.Builder builder = Selection.CreateBuilder().SetType(tpe);
+            var selection = new Selection { Type = tpe };
             if (matcher != null)
-                builder.SetMatcher(matcher);
+                selection.Matcher = matcher;
 
-            return builder;
+            return selection;
         }
 
         private byte[] SerializeSelection(ActorSelectionMessage sel)
         {
-            SelectionEnvelope.Builder builder = SelectionEnvelope.CreateBuilder();
             var message = sel.Message;
             Serializer serializer = system.Serialization.FindSerializerFor(message);
-            builder
-                .SetEnclosedMessage(ByteString.CopyFrom(serializer.ToBinary(message)))
-                .SetSerializerId(serializer.Identifier);
 
+            var envelope = new SelectionEnvelope
+            {
+                EnclosedMessage = ByteString.CopyFrom(serializer.ToBinary(message)),
+                SerializerId = serializer.Identifier
+            };
             var serializer2 = serializer as SerializerWithStringManifest;
             if (serializer2 != null)
             {
                 var manifest = serializer2.Manifest(message);
                 if (!string.IsNullOrEmpty(manifest))
                 {
-                    builder.SetMessageManifest(ByteString.CopyFromUtf8(manifest));
+                    envelope.MessageManifest = ByteString.CopyFromUtf8(manifest);
                 }
             }
             else
             {
                 if (serializer.IncludeManifest)
-                    builder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().AssemblyQualifiedName));
+                    envelope.MessageManifest = ByteString.CopyFromUtf8(message.GetType().AssemblyQualifiedName);
             }
 
             foreach (SelectionPathElement element in sel.Elements)
             {
-                element.Match()
-                    .With<SelectChildName>(m => builder.AddPattern(BuildPattern(m.Name, PatternType.CHILD_NAME)))
+                var selection = element.Match<Selection>()
+                    .With<SelectChildName>(m => BuildPattern(m.Name, PatternType.ChildName))
                     .With<SelectChildPattern>(
-                        m => builder.AddPattern(BuildPattern(m.PatternStr, PatternType.CHILD_PATTERN)))
-                    .With<SelectParent>(m => builder.AddPattern(BuildPattern(null, PatternType.PARENT)));
+                        m => BuildPattern(m.PatternStr, PatternType.ChildPattern))
+                    .With<SelectParent>(m => BuildPattern(null, PatternType.Parent))
+                    .ResultOrDefault(_ => null);
+                envelope.Pattern.Add(selection);
             }
 
-            return builder.Build().ToByteArray();
+            return envelope.ToByteArray();
         }
 
         /// <summary>
@@ -126,20 +129,21 @@ namespace Akka.Remote.Serialization
         /// </exception>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            SelectionEnvelope selectionEnvelope = SelectionEnvelope.ParseFrom(bytes);
-            var manifest = selectionEnvelope.HasMessageManifest ? selectionEnvelope.MessageManifest.ToStringUtf8() : string.Empty;
+            SelectionEnvelope selectionEnvelope = SelectionEnvelope.Parser.ParseFrom(bytes);
+            var manifest = !selectionEnvelope.MessageManifest.IsEmpty ? selectionEnvelope.MessageManifest.ToStringUtf8() : string.Empty;
+            //TODO the line above must be the same as selectionEnvelope.MessageManifest.ToStringUtf8()
             var message = system.Serialization.Deserialize(
                 selectionEnvelope.EnclosedMessage.ToByteArray(),
                 selectionEnvelope.SerializerId,
                 manifest);
 
-            SelectionPathElement[] elements = selectionEnvelope.PatternList.Select<Selection, SelectionPathElement>(p =>
+            var elements = selectionEnvelope.Pattern.Select<Selection, SelectionPathElement>(p =>
             {
-                if (p.Type == PatternType.PARENT)
+                if (p.Type == PatternType.Parent)
                     return new SelectParent();
-                if (p.Type == PatternType.CHILD_NAME)
+                if (p.Type == PatternType.ChildName)
                     return new SelectChildName(p.Matcher);
-                if (p.Type == PatternType.CHILD_PATTERN)
+                if (p.Type == PatternType.ChildPattern)
                     return new SelectChildPattern(p.Matcher);
                 throw new NotSupportedException("Unknown SelectionEnvelope.Elements.Type");
             }).ToArray();
