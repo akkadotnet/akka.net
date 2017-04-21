@@ -424,19 +424,19 @@ namespace Akka.Routing
     public class FromConfig : Pool
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="FromConfig" /> class.
         /// </summary>
-        protected FromConfig() : this(null, DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
+        public FromConfig() : this(null, DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="FromConfig" /> class.
         /// </summary>
         /// <param name="resizer">TBD</param>
         /// <param name="supervisorStrategy">TBD</param>
         /// <param name="routerDispatcher">TBD</param>
-        protected FromConfig(Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher)
+        public FromConfig(Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher)
             : base(0, resizer, supervisorStrategy, routerDispatcher, false)
         {
         }
