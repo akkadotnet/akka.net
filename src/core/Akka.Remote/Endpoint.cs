@@ -23,7 +23,7 @@ using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote
 {
