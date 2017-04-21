@@ -423,6 +423,20 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
+    public sealed class MiscMessageSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public MiscMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object obj) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public sealed class PrimitiveSerializers : Akka.Serialization.Serializer
+    {
+        public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system) { }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
+    }
     public class ProtobufSerializer : Akka.Serialization.Serializer
     {
         public ProtobufSerializer(Akka.Actor.ExtendedActorSystem system) { }

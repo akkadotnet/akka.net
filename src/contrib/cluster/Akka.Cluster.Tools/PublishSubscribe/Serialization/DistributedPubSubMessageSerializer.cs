@@ -290,7 +290,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 
         private object PayloadFrom(Proto.Msg.Payload payload)
         {
-            return  system.Serialization.Deserialize(payload.EnclosedMessage.ToByteArray(), payload.SerializerId, payload.MessageManifest.ToString());
+            return system.Serialization.Deserialize(payload.EnclosedMessage.ToByteArray(), payload.SerializerId, payload.MessageManifest.ToStringUtf8());
         }
 
         private IActorRef ResolveActorRef(string path)
