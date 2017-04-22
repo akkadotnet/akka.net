@@ -80,7 +80,7 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(ex)));
+                _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
                 Cancel();
             }
         }
@@ -104,14 +104,14 @@ namespace Akka.Streams.Implementation.IO
                     }
                     catch (Exception ex)
                     {
-                        _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(ex)));
+                        _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
                         Cancel();
                     }
                 })
                 .With<OnError>(error =>
                 {
                     _log.Error(error.Cause, $"Tearing down FileSink({_f.FullName}) due to upstream error");
-                    _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(error.Cause)));
+                    _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, error.Cause));
                     Context.Stop(Self);
                 })
                 .With<OnComplete>(() =>
@@ -122,7 +122,7 @@ namespace Akka.Streams.Implementation.IO
                     }
                     catch (Exception ex)
                     {
-                        _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(ex)));
+                        _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
                     } 
                     Context.Stop(Self);
                 })
@@ -140,10 +140,10 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(ex)));
+                _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
             }
 
-            _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Success(NotUsed.Instance)));
+            _completionPromise.TrySetResult(IOResult.Success(_bytesWritten));
             base.PostStop();
         }
     }
