@@ -252,8 +252,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task"/> and the
-        /// value of that task will be emitted downstream. As many tasks as requested elements by
-        /// downstream may run in parallel and each processed element will be emitted dowstream
+        /// value of that task will be emitted downstream. The number of tasks
+        /// that shall run in parallel is given as the first argument to <see cref="SelectAsyncUnordered{TIn,TOut,TMat}"/>. 
+        /// Each processed element will be emitted dowstream
         /// as soon as it is ready, i.e. it is possible that the elements are not emitted downstream
         /// in the same order as received from upstream.
         /// 

@@ -24,6 +24,7 @@ namespace Akka.Streams.Tests.Dsl
     public class FramingSpec : AkkaSpec
     {
         private readonly ITestOutputHelper _helper;
+
         private ActorMaterializer Materializer { get; }
 
         public FramingSpec(ITestOutputHelper helper) : base(helper)
