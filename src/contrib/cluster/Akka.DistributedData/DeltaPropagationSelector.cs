@@ -41,7 +41,7 @@ namespace Akka.DistributedData
         }
 
         // 2 - 10 nodes
-        public int NodeSliceSize(int allNodesSize) =>
+        public virtual int NodeSliceSize(int allNodesSize) =>
 Math.Min(Math.Max((allNodesSize / GossipInternalDivisor) + 1, 2), Math.Min(allNodesSize, 10));
 
         public ImmutableDictionary<Address, DeltaPropagation> CollectPropagations()
