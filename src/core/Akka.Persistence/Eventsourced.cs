@@ -16,98 +16,10 @@ using Akka.Util.Internal;
 namespace Akka.Persistence
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// Implementation details of <see cref="UntypedPersistentActor"/> and <see cref="ReceivePersistentActor"/>.
     /// </summary>
-    public interface IPendingHandlerInvocation
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        object Event { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        Action<object> Handler { get; }
-    }
-
-    /// <summary>
-    /// Forces actor to stash incoming commands until all invocations are handled.
-    /// </summary>
-    public sealed class StashingHandlerInvocation : IPendingHandlerInvocation
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
-        public StashingHandlerInvocation(object evt, Action<object> handler)
-        {
-            Event = evt;
-            Handler = handler;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Event { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Action<object> Handler { get; private set; }
-    }
-
-    /// <summary>
-    /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
-    /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> 
-    /// or <see cref="Eventsourced.DeferAsync{TEvent}"/> method calls.
-    /// </summary>
-    public sealed class AsyncHandlerInvocation : IPendingHandlerInvocation
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
-        public AsyncHandlerInvocation(object evt, Action<object> handler)
-        {
-            Event = evt;
-            Handler = handler;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Event { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Action<object> Handler { get; private set; }
-    }
-
-    /// <summary>
-    /// message used to detect that recovery timed out
-    /// </summary>
-    public sealed class RecoveryTick
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="snapshot">TBD</param>
-        public RecoveryTick(bool snapshot)
-        {
-            Snapshot = snapshot;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public bool Snapshot { get; }
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IPersistenceStash, IPersistenceRecovery
+    public abstract class Eventsourced : ActorBase, IPersistentIdentity, IPersistenceStash, IPersistenceRecovery
     {
         private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
 
@@ -234,7 +146,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Returns true if this persistent entity has successfully finished recovery.
         /// </summary>
-        public bool IsRecoveryFinished { get { return !IsRecovering; } }
+        public bool IsRecoveryFinished => !IsRecovering;
 
         /// <summary>
         /// Highest received sequence number so far or `0L` if this actor 
@@ -645,6 +557,467 @@ namespace Akka.Persistence
                 _userStash.Prepend(envelopes);
             }
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly Func<Envelope, bool> UnstashFilterPredicate =
+            envelope => !(envelope.Message is WriteMessageSuccess || envelope.Message is ReplayedMessage);
+
+        private void StartRecovery(Recovery recovery)
+        {
+            ChangeState(RecoveryStarted(recovery.ReplayMax));
+            LoadSnapshot(SnapshotterId, recovery.FromSnapshot, recovery.ToSequenceNr);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receive">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
+        protected internal override bool AroundReceive(Receive receive, object message)
+        {
+            _currentState.StateReceive(receive, message);
+            return true;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override void AroundPreStart()
+        {
+            // Fail fast on missing plugins.
+            var j = Journal;
+            var s = SnapshotStore;
+            StartRecovery(Recovery);
+            base.AroundPreStart();
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="message">TBD</param>
+        public override void AroundPreRestart(Exception cause, object message)
+        {
+            try
+            {
+                _internalStash.UnstashAll();
+                Stash.UnstashAll(UnstashFilterPredicate);
+            }
+            finally
+            {
+                object inner;
+                if (message is WriteMessageSuccess) inner = (message as WriteMessageSuccess).Persistent;
+                else if (message is LoopMessageSuccess) inner = (message as LoopMessageSuccess).Message;
+                else if (message is ReplayedMessage) inner = (message as ReplayedMessage).Persistent;
+                else inner = null;
+
+                FlushJournalBatch();
+                base.AroundPreRestart(cause, inner);
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="message">TBD</param>
+        public override void AroundPostRestart(Exception reason, object message)
+        {
+            StartRecovery(Recovery);
+            base.AroundPostRestart(reason, message);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override void AroundPostStop()
+        {
+            try
+            {
+                _internalStash.UnstashAll();
+                Stash.UnstashAll(UnstashFilterPredicate);
+            }
+            finally
+            {
+                base.AroundPostStop();
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        protected override void Unhandled(object message)
+        {
+            if (message is RecoveryCompleted) return; // ignore
+            if (message is SaveSnapshotFailure)
+            {
+                var m = (SaveSnapshotFailure)message;
+                if (_log.IsWarningEnabled)
+                    _log.Warning("Failed to SaveSnapshot given metadata [{0}] due to: [{1}: {2}]", m.Metadata, m.Cause, m.Cause.Message);
+            }
+            if (message is DeleteSnapshotFailure)
+            {
+                var m = (DeleteSnapshotFailure)message;
+                if (_log.IsWarningEnabled)
+                    _log.Warning("Failed to DeleteSnapshot given metadata [{0}] due to: [{1}: {2}]", m.Metadata, m.Cause, m.Cause.Message);
+            }
+            if (message is DeleteSnapshotsFailure)
+            {
+                var m = (DeleteSnapshotsFailure)message;
+                if (_log.IsWarningEnabled)
+                    _log.Warning("Failed to DeleteSnapshots given criteria [{0}] due to: [{1}: {2}]", m.Criteria, m.Cause, m.Cause.Message);
+            }
+            if (message is DeleteMessagesFailure)
+            {
+                var m = (DeleteMessagesFailure)message;
+                if (_log.IsWarningEnabled)
+                    _log.Warning("Failed to DeleteMessages ToSequenceNr [{0}] for PersistenceId [{1}] due to: [{2}: {3}]", m.ToSequenceNr, PersistenceId, m.Cause, m.Cause.Message);
+            }
+            base.Unhandled(message);
+        }
+
+        /// <summary>
+        /// Processes a loaded snapshot, if any. A loaded snapshot is offered with a <see cref="SnapshotOffer"/> 
+        /// message to the actor's <see cref="ReceiveRecover"/>. Then initiates a message replay, either starting 
+        /// from the loaded snapshot or from scratch, and switches to <see cref="ReplayStarted"/> state. 
+        /// All incoming messages are stashed.
+        /// </summary>
+        /// <param name="maxReplays">Maximum number of messages to replay</param>
+        private EventsourcedState RecoveryStarted(long maxReplays)
+        {
+            // protect against snapshot stalling forever because journal overloaded and such
+            var timeout = Extension.JournalConfigFor(JournalPluginId).GetTimeSpan("recovery-event-timeout", null, false);
+            var timeoutCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(timeout, Self, new RecoveryTick(true), Self);
+
+            Receive recoveryBehavior = message =>
+            {
+                Receive receiveRecover = ReceiveRecover;
+                if (message is IPersistentRepresentation && IsRecovering)
+                    return receiveRecover((message as IPersistentRepresentation).Payload);
+                else if (message is SnapshotOffer)
+                    return receiveRecover((SnapshotOffer)message);
+                else if (message is RecoveryCompleted)
+                    return receiveRecover(RecoveryCompleted.Instance);
+                else return false;
+            };
+
+            return new EventsourcedState("recovery started - replay max: " + maxReplays, true, (receive, message) =>
+            {
+                if (message is LoadSnapshotResult)
+                {
+                    var res = (LoadSnapshotResult)message;
+                    timeoutCancelable.Cancel();
+                    if (res.Snapshot != null)
+                    {
+                        var snapshot = res.Snapshot;
+                        LastSequenceNr = snapshot.Metadata.SequenceNr;
+                        // Since we are recovering we can ignore the receive behavior from the stack
+                        base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
+                    }
+
+                    ChangeState(Recovering(recoveryBehavior, timeout));
+                    Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
+                }
+                else if (message is RecoveryTick)
+                {
+                    try
+                    {
+                        OnRecoveryFailure(
+                            new RecoveryTimedOutException(
+                                $"Recovery timed out, didn't get snapshot within {timeout.TotalSeconds}s."));
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
+                }
+                else
+                    StashInternally(message);
+            });
+        }
+
+        /// <summary>
+        /// Processes replayed messages, if any. The actor's <see cref="ReceiveRecover"/> is invoked with the replayed events.
+        /// 
+        /// If replay succeeds it got highest stored sequence number response from the journal and then switches
+        /// to <see cref="ProcessingCommands"/> state.
+        /// If replay succeeds the <see cref="OnReplaySuccess"/> callback method is called, otherwise
+        /// <see cref="OnRecoveryFailure"/>.
+        /// 
+        /// All incoming messages are stashed.
+        /// </summary>
+        private EventsourcedState Recovering(Receive recoveryBehavior, TimeSpan timeout)
+        {
+            // protect against event replay stalling forever because of journal overloaded and such
+            var timeoutCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, Self,
+                new RecoveryTick(false), Self);
+            var eventSeenInInterval = false;
+
+            return new EventsourcedState("replay started", true, (receive, message) =>
+            {
+                if (message is ReplayedMessage)
+                {
+                    var m = (ReplayedMessage)message;
+                    try
+                    {
+                        eventSeenInInterval = true;
+                        UpdateLastSequenceNr(m.Persistent);
+                        base.AroundReceive(recoveryBehavior, m.Persistent);
+                    }
+                    catch (Exception cause)
+                    {
+                        timeoutCancelable.Cancel();
+                        try
+                        {
+                            OnRecoveryFailure(cause, m.Persistent.Payload);
+                        }
+                        finally
+                        {
+                            Context.Stop(Self);
+                        }
+                    }
+                }
+                else if (message is RecoverySuccess)
+                {
+                    var m = (RecoverySuccess)message;
+                    timeoutCancelable.Cancel();
+                    OnReplaySuccess();
+                    ChangeState(ProcessingCommands());
+                    _sequenceNr = m.HighestSequenceNr;
+                    LastSequenceNr = m.HighestSequenceNr;
+                    _internalStash.UnstashAll();
+                    base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
+                }
+                else if (message is ReplayMessagesFailure)
+                {
+                    var failure = (ReplayMessagesFailure)message;
+                    timeoutCancelable.Cancel();
+                    try
+                    {
+                        OnRecoveryFailure(failure.Cause, message: null);
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
+                }
+                else if (message is RecoveryTick)
+                {
+                    var isSnapshotTick = ((RecoveryTick)message).Snapshot;
+                    if (!isSnapshotTick)
+                    {
+                        if (!eventSeenInInterval)
+                        {
+                            timeoutCancelable.Cancel();
+                            try
+                            {
+                                OnRecoveryFailure(
+                                    new RecoveryTimedOutException(
+                                        $"Recovery timed out, didn't get event within {timeout.TotalSeconds}s, highest sequence number seen {_sequenceNr}."));
+                            }
+                            finally
+                            {
+                                Context.Stop(Self);
+                            }
+                        }
+                        else
+                        {
+                            eventSeenInInterval = false;
+                        }
+                    }
+                    else
+                    {
+                        // snapshot tick, ignore
+                    }
+                }
+                else
+                    StashInternally(message);
+            });
+        }
+
+        /// <summary>
+        /// If event persistence is pending after processing a command, event persistence 
+        /// is triggered and the state changes to <see cref="PersistingEvents"/>.
+        /// </summary>
+        private EventsourcedState ProcessingCommands()
+        {
+            return new EventsourcedState("processing commands", false, (receive, message) =>
+            {
+                var handled = CommonProcessingStateBehavior(message, err =>
+                {
+                    _pendingInvocations.Pop();
+                    UnstashInternally(err);
+                });
+                if (!handled)
+                {
+                    try
+                    {
+                        base.AroundReceive(receive, message);
+                        OnProcessingCommandsAroundReceiveComplete(false);
+                    }
+                    catch (Exception)
+                    {
+                        OnProcessingCommandsAroundReceiveComplete(true);
+                        throw;
+                    }
+                }
+            });
+        }
+
+        private void OnProcessingCommandsAroundReceiveComplete(bool err)
+        {
+            if (_eventBatch.Count > 0) FlushBatch();
+
+            if (_pendingStashingPersistInvocations > 0)
+                ChangeState(PersistingEvents());
+            else
+                UnstashInternally(err);
+        }
+
+        private void FlushBatch()
+        {
+            if (_eventBatch.Count > 0)
+            {
+                foreach (var p in _eventBatch.Reverse())
+                {
+                    _journalBatch.Add(p);
+                }
+                _eventBatch = new LinkedList<IPersistentEnvelope>();
+            }
+
+            FlushJournalBatch();
+        }
+
+        /// <summary>
+        /// Remains until pending events are persisted and then changes state to <see cref="ProcessingCommands"/>.
+        /// Only events to be persisted are processed. All other messages are stashed internally.
+        /// </summary>
+        private EventsourcedState PersistingEvents()
+        {
+            return new EventsourcedState("persisting events", false, (receive, message) =>
+            {
+                var handled = CommonProcessingStateBehavior(message, err =>
+                {
+                    var invocation = _pendingInvocations.Pop();
+
+                    // enables an early return to `processingCommands`, because if this counter hits `0`,
+                    // we know the remaining pendingInvocations are all `persistAsync` created, which
+                    // means we can go back to processing commands also - and these callbacks will be called as soon as possible
+                    if (invocation is StashingHandlerInvocation)
+                        _pendingStashingPersistInvocations--;
+
+                    if (_pendingStashingPersistInvocations == 0)
+                    {
+                        ChangeState(ProcessingCommands());
+                        UnstashInternally(err);
+                    }
+                });
+
+                if (!handled)
+                    StashInternally(message);
+            });
+        }
+
+        private void PeekApplyHandler(object payload)
+        {
+            try
+            {
+                _pendingInvocations.First.Value.Handler(payload);
+            }
+            finally
+            {
+                FlushBatch();
+            }
+        }
+
+        private bool CommonProcessingStateBehavior(object message, Action<bool> onWriteMessageComplete)
+        {
+            // _instanceId mismatch can happen for persistAsync and defer in case of actor restart
+            // while message is in flight, in that case we ignore the call to the handler
+            if (message is WriteMessageSuccess)
+            {
+                var m = (WriteMessageSuccess)message;
+                if (m.ActorInstanceId == _instanceId)
+                {
+                    UpdateLastSequenceNr(m.Persistent);
+                    try
+                    {
+                        PeekApplyHandler(m.Persistent.Payload);
+                        onWriteMessageComplete(false);
+                    }
+                    catch
+                    {
+                        onWriteMessageComplete(true);
+                        throw;
+                    }
+                }
+            }
+            else if (message is WriteMessageRejected)
+            {
+                var m = (WriteMessageRejected)message;
+                if (m.ActorInstanceId == _instanceId)
+                {
+                    var p = m.Persistent;
+                    UpdateLastSequenceNr(p);
+                    onWriteMessageComplete(false);
+                    OnPersistRejected(m.Cause, p.Payload, p.SequenceNr);
+                }
+            }
+            else if (message is WriteMessageFailure)
+            {
+                var m = (WriteMessageFailure)message;
+                if (m.ActorInstanceId == _instanceId)
+                {
+                    var p = m.Persistent;
+                    onWriteMessageComplete(false);
+                    try
+                    {
+                        OnPersistFailure(m.Cause, p.Payload, p.SequenceNr);
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
+                }
+            }
+            else if (message is LoopMessageSuccess)
+            {
+                var m = (LoopMessageSuccess)message;
+                if (m.ActorInstanceId == _instanceId)
+                {
+                    try
+                    {
+                        PeekApplyHandler(m.Message);
+                        onWriteMessageComplete(false);
+                    }
+                    catch (Exception)
+                    {
+                        onWriteMessageComplete(true);
+                        throw;
+                    }
+                }
+            }
+            else if (message is WriteMessagesSuccessful)
+            {
+                _isWriteInProgress = false;
+                FlushJournalBatch();
+            }
+            else if (message is WriteMessagesFailed)
+            {
+                _isWriteInProgress = false;
+                // it will be stopped by the first WriteMessageFailure message
+            }
+            else if (message is RecoveryTick)
+            {
+                // we may have one of these in the mailbox before the scheduled timeout
+                // is cancelled when recovery has completed, just consume it so the concrete actor never sees it
+            }
+            else return false;
+            return true;
+        }
     }
 }
-

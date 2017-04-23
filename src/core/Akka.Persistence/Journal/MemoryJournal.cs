@@ -29,6 +29,7 @@ namespace Akka.Persistence.Journal
         /// <param name="persistent">TBD</param>
         /// <returns>TBD</returns>
         Messages Add(IPersistentRepresentation persistent);
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -37,6 +38,7 @@ namespace Akka.Persistence.Journal
         /// <param name="updater">TBD</param>
         /// <returns>TBD</returns>
         Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater);
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -44,6 +46,7 @@ namespace Akka.Persistence.Journal
         /// <param name="seqNr">TBD</param>
         /// <returns>TBD</returns>
         Messages Delete(string pid, long seqNr);
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -53,6 +56,7 @@ namespace Akka.Persistence.Journal
         /// <param name="max">TBD</param>
         /// <returns>TBD</returns>
         IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max);
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -256,4 +260,3 @@ namespace Akka.Persistence.Journal
         protected override ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return SharedMessages; } }
     }
 }
-

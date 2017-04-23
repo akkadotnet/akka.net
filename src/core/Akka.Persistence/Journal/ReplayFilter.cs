@@ -37,6 +37,7 @@ namespace Akka.Persistence.Journal
     }
 
     /// <summary>
+    /// INTERNAL API
     /// Detect corrupt event stream during replay. It uses the <see cref="IPersistentRepresentation.WriterGuid"/> and the
     /// <see cref="IPersistentRepresentation.SequenceNr"/> in the replayed events to find events emitted by overlapping writers.
     /// </summary>
@@ -96,23 +97,27 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef PersistentActor { get; private set; }
+        public IActorRef PersistentActor { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public ReplayFilterMode Mode { get; private set; }
+        public ReplayFilterMode Mode { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public int WindowSize { get; private set; }
+        public int WindowSize { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public int MaxOldWriters { get; private set; }
+        public int MaxOldWriters { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public bool DebugEnabled { get; private set; }
+        public bool DebugEnabled { get; }
 
         /// <summary>
         /// TBD

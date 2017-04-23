@@ -15,50 +15,14 @@ using Akka.Persistence.Serialization;
 namespace Akka.Persistence
 {
     /// <summary>
-    /// TBD
-    /// </summary>
-    public interface IPersistentIdentity
-    {
-        /// <summary>
-        /// Identifier of the persistent identity for which messages should be replayed.
-        /// </summary>
-        string PersistenceId { get; }
-
-        /// <summary>
-        /// Configuration identifier of the journal plugin servicing current persistent actor or view.
-        /// When empty, looks in [akka.persistence.journal.plugin] to find configuration entry path.
-        /// Otherwise uses string value as an absolute path to the journal configuration entry.
-        /// </summary>
-        string JournalPluginId { get; }
-
-        /// <summary>
-        /// Configuration identifier of the snapshot store plugin servicing current persistent actor or view.
-        /// When empty, looks in [akka.persistence.snapshot-store.plugin] to find configuration entry path.
-        /// Otherwise uses string value as an absolute path to the snapshot store configuration entry.
-        /// </summary>
-        string SnapshotPluginId { get; }
-    }
-
-    /// <summary>
-    /// Internal API
-    /// 
+    /// INTERNAL API.
     /// Marks messages which can then be resequenced by <see cref="AsyncWriteJournal"/>.
-    /// 
     /// In essence it is either an <see cref="NonPersistentMessage"/> or <see cref="AtomicWrite"/>
     /// </summary>
     public interface IPersistentEnvelope
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         object Payload { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
         IActorRef Sender { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
         int Size { get; }
     }
 
@@ -67,11 +31,6 @@ namespace Akka.Persistence
     /// </summary>
     internal sealed class NonPersistentMessage : IPersistentEnvelope
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <param name="sender">TBD</param>
         public NonPersistentMessage(object payload, IActorRef sender)
         {
             Payload = payload;
@@ -79,18 +38,11 @@ namespace Akka.Persistence
             Size = 1;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Payload { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IActorRef Sender { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int Size { get; private set; }
+        public object Payload { get; }
+
+        public IActorRef Sender { get; }
+
+        public int Size { get; }
     }
 
     /// <summary>
@@ -98,14 +50,13 @@ namespace Akka.Persistence
     /// </summary>
     public sealed class AtomicWrite : IPersistentEnvelope, IMessage
     {
-        // This makes the json serializer happy
         /// <summary>
-        /// TBD
+        /// INTERNAL API. This makes the json serializer happy
         /// </summary>
         internal AtomicWrite() {}
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AtomicWrite"/> class.
         /// </summary>
         /// <param name="event">TBD</param>
         public AtomicWrite(IPersistentRepresentation @event) : this(ImmutableArray.Create(@event))
@@ -113,7 +64,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AtomicWrite"/> class.
         /// </summary>
         /// <param name="payload">TBD</param>
         /// <exception cref="ArgumentException">
@@ -145,13 +96,15 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// This persistent message's payload.
         /// </summary>
         public object Payload { get; private set; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Sender { get; private set; }
+        public IActorRef Sender { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -160,15 +113,17 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public string PersistenceId { get; private set; }
+        public string PersistenceId { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public long LowestSequenceNr { get; private set; }
+        public long LowestSequenceNr { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public long HighestSequenceNr { get; private set; }
+        public long HighestSequenceNr { get; }
 
         /// <inheritdoc/>
         public bool Equals(AtomicWrite other)
@@ -213,9 +168,6 @@ namespace Akka.Persistence
 
     /// <summary>
     /// Representation of a persistent message in the journal plugin API.
-    /// 
-    /// <see cref="AsyncWriteJournal"/>
-    /// <see cref="IAsyncRecovery"/>
     /// </summary>
     public interface IPersistentRepresentation : IMessage
     {
@@ -249,19 +201,19 @@ namespace Akka.Persistence
         /// <summary>
         /// Creates a new persistent message with the specified <paramref name="payload"/>.
         /// </summary>
-        /// <param name="payload">TBD</param>
+        /// <param name="payload">This persistent message's payload.</param>
         /// <returns>TBD</returns>
         IPersistentRepresentation WithPayload(object payload);
 
         /// <summary>
         /// Creates a new persistent message with the specified <paramref name="manifest"/>.
         /// </summary>
-        /// <param name="manifest">TBD</param>
+        /// <param name="manifest">The persistent payload's manifest.</param>
         /// <returns>TBD</returns>
         IPersistentRepresentation WithManifest(string manifest);
 
         /// <summary>
-        /// Not used in new records stored with Akka.net v1.5 and above, but
+        /// Not used in new records stored with Akka.net v1.1 and above, but
         /// old records may have this as `true` if
         /// it was a non-permanent delete.
         /// </summary>
@@ -285,18 +237,18 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
     /// </summary>
     [Serializable]
     public class Persistent : IPersistentRepresentation, IEquatable<IPersistentRepresentation>
     {
         /// <summary>
-        /// TBD
+        /// Plugin API: value of an undefined persistenceId or manifest.
         /// </summary>
-        public static readonly string Undefined = string.Empty;
+        public static string Undefined { get; } = string.Empty;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Persistent"/> class.
         /// </summary>
         /// <param name="payload">TBD</param>
         /// <param name="sequenceNr">TBD</param>
@@ -316,50 +268,34 @@ namespace Akka.Persistence
             WriterGuid = writerGuid ?? Undefined;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Payload { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public string Manifest { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public string PersistenceId { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public long SequenceNr { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public bool IsDeleted { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IActorRef Sender { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public string WriterGuid { get; private set; }
+        /// <inheritdoc />
+        public object Payload { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
+        public string Manifest { get; }
+
+        /// <inheritdoc />
+        public string PersistenceId { get; }
+
+        /// <inheritdoc />
+        public long SequenceNr { get; }
+
+        /// <inheritdoc />
+        public bool IsDeleted { get; }
+
+        /// <inheritdoc />
+        public IActorRef Sender { get; }
+
+        /// <inheritdoc />
+        public string WriterGuid { get; }
+
+        /// <inheritdoc />
         public IPersistentRepresentation WithPayload(object payload)
         {
             return new Persistent(payload, sequenceNr: SequenceNr, persistenceId: PersistenceId, manifest: Manifest, isDeleted: IsDeleted, sender: Sender, writerGuid: WriterGuid);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="manifest">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
         public IPersistentRepresentation WithManifest(string manifest)
         {
             return Manifest == manifest ?
@@ -367,15 +303,7 @@ namespace Akka.Persistence
                 new Persistent(payload: Payload, sequenceNr: SequenceNr, persistenceId: PersistenceId, manifest: manifest, isDeleted: IsDeleted, sender: Sender, writerGuid: WriterGuid);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="sequenceNr">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="isDeleted">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="writerGuid">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc />
         public IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, IActorRef sender, string writerGuid)
         {
             return new Persistent(payload: Payload, sequenceNr: sequenceNr, persistenceId: persistenceId, manifest: Manifest, isDeleted: isDeleted, sender: sender, writerGuid: writerGuid);

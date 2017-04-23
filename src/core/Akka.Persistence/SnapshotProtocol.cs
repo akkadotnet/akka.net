@@ -94,17 +94,17 @@ namespace Akka.Persistence
         /// <summary>
         /// Id of the persistent actor from which the snapshot was taken.
         /// </summary>
-        public readonly string PersistenceId;
+        public string PersistenceId { get; }
 
         /// <summary>
         /// Sequence number at which a snapshot was taken.
         /// </summary>
-        public readonly long SequenceNr;
+        public long SequenceNr { get; }
 
         /// <summary>
         /// Time at which the snapshot was saved.
         /// </summary>
-        public readonly DateTime Timestamp;
+        public DateTime Timestamp { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
@@ -169,18 +169,18 @@ namespace Akka.Persistence
     public sealed class SaveSnapshotSuccess : ISnapshotResponse, IEquatable<SaveSnapshotSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SaveSnapshotSuccess"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
         public SaveSnapshotSuccess(SnapshotMetadata metadata)
         {
             Metadata = metadata;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="SaveSnapshotSuccess" />, is equal to this instance.
@@ -239,18 +239,18 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshotSuccess : ISnapshotResponse, IEquatable<DeleteSnapshotSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshotSuccess"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
         public DeleteSnapshotSuccess(SnapshotMetadata metadata)
         {
             Metadata = metadata;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="DeleteSnapshotSuccess" />, is equal to this instance.
@@ -310,18 +310,18 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshotsSuccess : ISnapshotResponse, IEquatable<DeleteSnapshotsSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshotsSuccess"/> class.
         /// </summary>
-        /// <param name="criteria">TBD</param>
+        /// <param name="criteria">Snapshot selection criteria.</param>
         public DeleteSnapshotsSuccess(SnapshotSelectionCriteria criteria)
         {
             Criteria = criteria;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot selection criteria.
         /// </summary>
-        public readonly SnapshotSelectionCriteria Criteria;
+        public SnapshotSelectionCriteria Criteria { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="DeleteSnapshotsSuccess" />, is equal to this instance.
@@ -380,10 +380,10 @@ namespace Akka.Persistence
     public sealed class SaveSnapshotFailure : ISnapshotResponse, IEquatable<SaveSnapshotFailure>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SaveSnapshotFailure"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="cause">A failure cause.</param>
         public SaveSnapshotFailure(SnapshotMetadata metadata, Exception cause)
         {
             Metadata = metadata;
@@ -393,12 +393,12 @@ namespace Akka.Persistence
         /// <summary>
         /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
         /// A failure cause.
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="SaveSnapshotFailure" />, is equal to this instance.
@@ -460,10 +460,10 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshotFailure : ISnapshotResponse, IEquatable<DeleteSnapshotFailure>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshotFailure"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="cause">A failure cause.</param>
         public DeleteSnapshotFailure(SnapshotMetadata metadata, Exception cause)
         {
             Metadata = metadata;
@@ -473,12 +473,12 @@ namespace Akka.Persistence
         /// <summary>
         /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
         /// A failure cause.
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="DeleteSnapshotFailure" />, is equal to this instance.
@@ -540,10 +540,10 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshotsFailure : ISnapshotResponse, IEquatable<DeleteSnapshotsFailure>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshotsFailure"/> class.
         /// </summary>
-        /// <param name="criteria">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="criteria">Snapshot selection criteria.</param>
+        /// <param name="cause">A failure cause.</param>
         public DeleteSnapshotsFailure(SnapshotSelectionCriteria criteria, Exception cause)
         {
             Criteria = criteria;
@@ -551,14 +551,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Snapshot metadata.
+        /// Snapshot selection criteria.
         /// </summary>
-        public readonly SnapshotSelectionCriteria Criteria;
+        public SnapshotSelectionCriteria Criteria { get; }
 
         /// <summary>
         /// A failure cause.
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="DeleteSnapshotsFailure" />, is equal to this instance.
@@ -621,10 +621,10 @@ namespace Akka.Persistence
     public sealed class SnapshotOffer : IEquatable<SnapshotOffer>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotOffer"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="snapshot">Snapshot.</param>
         public SnapshotOffer(SnapshotMetadata metadata, object snapshot)
         {
             Metadata = metadata;
@@ -632,13 +632,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
+
         /// <summary>
-        /// TBD
+        /// Snapshot.
         /// </summary>
-        public readonly object Snapshot;
+        public object Snapshot { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="SnapshotOffer" />, is equal to this instance.
@@ -700,21 +701,22 @@ namespace Akka.Persistence
     public sealed class SnapshotSelectionCriteria : IEquatable<SnapshotSelectionCriteria>
     {
         /// <summary>
-        /// TBD
+        /// The latest saved snapshot.
         /// </summary>
-        public static readonly SnapshotSelectionCriteria Latest = new SnapshotSelectionCriteria(long.MaxValue, DateTime.MaxValue);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly SnapshotSelectionCriteria None = new SnapshotSelectionCriteria(0L, DateTime.MinValue);
+        public static SnapshotSelectionCriteria Latest { get; } = new SnapshotSelectionCriteria(long.MaxValue, DateTime.MaxValue);
 
         /// <summary>
-        /// TBD
+        /// No saved snapshot matches.
         /// </summary>
-        /// <param name="maxSequenceNr">TBD</param>
-        /// <param name="maxTimeStamp">TBD</param>
-        /// <param name="minSequenceNr">TBD</param>
-        /// <param name="minTimestamp">TBD</param>
+        public static SnapshotSelectionCriteria None { get; } = new SnapshotSelectionCriteria(0L, DateTime.MinValue);
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SnapshotSelectionCriteria"/> class.
+        /// </summary>
+        /// <param name="maxSequenceNr">Upper bound for a selected snapshot's sequence number.</param>
+        /// <param name="maxTimeStamp">Upper bound for a selected snapshot's timestamp.</param>
+        /// <param name="minSequenceNr">Lower bound for a selected snapshot's sequence number</param>
+        /// <param name="minTimestamp">Lower bound for a selected snapshot's timestamp</param>
         [JsonConstructor]
         public SnapshotSelectionCriteria(long maxSequenceNr, DateTime maxTimeStamp, long minSequenceNr = 0L, DateTime? minTimestamp = null)
         {
@@ -735,40 +737,30 @@ namespace Akka.Persistence
         /// <summary>
         /// Upper bound for a selected snapshot's sequence number.
         /// </summary>
-        public readonly long MaxSequenceNr;
+        public long MaxSequenceNr { get; }
 
         /// <summary>
         /// Upper bound for a selected snapshot's timestamp.
         /// </summary>
-        public readonly DateTime MaxTimeStamp;
+        public DateTime MaxTimeStamp { get; }
 
         /// <summary>
         /// Lower bound for a selected snapshot's sequence number
         /// </summary>
-        public readonly long MinSequenceNr;
+        public long MinSequenceNr { get; }
 
         /// <summary>
         /// Lower bound for a selected snapshot's timestamp
         /// </summary>
-        public readonly DateTime? MinTimestamp;
+        public DateTime? MinTimestamp { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
         internal SnapshotSelectionCriteria Limit(long toSequenceNr)
         {
             return toSequenceNr < MaxSequenceNr
-                ? new SnapshotSelectionCriteria(toSequenceNr, MaxTimeStamp)
+                ? new SnapshotSelectionCriteria(toSequenceNr, MaxTimeStamp, MinSequenceNr, MinTimestamp)
                 : this;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <returns>TBD</returns>
         internal bool IsMatch(SnapshotMetadata metadata)
         {
             return metadata.SequenceNr <= MaxSequenceNr && metadata.Timestamp <= MaxTimeStamp &&
@@ -841,10 +833,10 @@ namespace Akka.Persistence
     public sealed class SelectedSnapshot : IEquatable<SelectedSnapshot>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SelectedSnapshot"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="snapshot">Snapshot.</param>
         public SelectedSnapshot(SnapshotMetadata metadata, object snapshot)
         {
             Metadata = metadata;
@@ -852,13 +844,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
+
         /// <summary>
-        /// TBD
+        /// Snapshot.
         /// </summary>
-        public readonly object Snapshot;
+        public object Snapshot { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="SelectedSnapshot" />, is equal to this instance.
@@ -913,9 +906,6 @@ namespace Akka.Persistence
         }
     }
 
-
-    #region Internal API for Snapshot protocol
-
     /// <summary>
     /// Instructs a snapshot store to load the snapshot.
     /// </summary>
@@ -923,11 +913,11 @@ namespace Akka.Persistence
     public sealed class LoadSnapshot: ISnapshotRequest, IEquatable<LoadSnapshot>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="LoadSnapshot"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="persistenceId">Persistent actor identifier.</param>
+        /// <param name="criteria">Criteria for selecting snapshot, from which the recovery should start.</param>
+        /// <param name="toSequenceNr">Upper, inclusive sequence number bound for recovery.</param>
         public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
             PersistenceId = persistenceId;
@@ -938,17 +928,17 @@ namespace Akka.Persistence
         /// <summary>
         /// Persistent actor identifier.
         /// </summary>
-        public readonly string PersistenceId;
+        public string PersistenceId { get; }
 
         /// <summary>
         /// Criteria for selecting snapshot, from which the recovery should start.
         /// </summary>
-        public readonly SnapshotSelectionCriteria Criteria;
+        public SnapshotSelectionCriteria Criteria { get; }
 
         /// <summary>
         /// Upper, inclusive sequence number bound for recovery.
         /// </summary>
-        public readonly long ToSequenceNr;
+        public long ToSequenceNr { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="LoadSnapshot" />, is equal to this instance.
@@ -1015,10 +1005,10 @@ namespace Akka.Persistence
     public sealed class LoadSnapshotResult : ISnapshotResponse, IEquatable<LoadSnapshotResult>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="LoadSnapshotResult"/> class.
         /// </summary>
-        /// <param name="snapshot">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="snapshot">Loaded snapshot or null if none provided.</param>
+        /// <param name="toSequenceNr">Upper sequence number bound (inclusive) for recovery.</param>
         public LoadSnapshotResult(SelectedSnapshot snapshot, long toSequenceNr)
         {
             Snapshot = snapshot;
@@ -1028,11 +1018,12 @@ namespace Akka.Persistence
         /// <summary>
         /// Loaded snapshot or null if none provided.
         /// </summary>
-        public readonly SelectedSnapshot Snapshot;
+        public SelectedSnapshot Snapshot { get; }
+
         /// <summary>
-        /// TBD
+        /// Upper sequence number bound (inclusive) for recovery.
         /// </summary>
-        public readonly long ToSequenceNr;
+        public long ToSequenceNr { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="LoadSnapshotResult" />, is equal to this instance.
@@ -1088,6 +1079,8 @@ namespace Akka.Persistence
         }
     }
 
+    // TODO: create LoadSnapshotFailed
+
     /// <summary>
     /// Instructs a snapshot store to save a snapshot.
     /// </summary>
@@ -1095,10 +1088,10 @@ namespace Akka.Persistence
     public sealed class SaveSnapshot : ISnapshotRequest, IEquatable<SaveSnapshot>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SaveSnapshot"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="snapshot">Snapshot.</param>
         /// <exception cref="ArgumentNullException">TBD</exception>
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
@@ -1110,13 +1103,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
+
         /// <summary>
-        /// TBD
+        /// Snapshot.
         /// </summary>
-        public readonly object Snapshot;
+        public object Snapshot { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="SaveSnapshot" />, is equal to this instance.
@@ -1178,9 +1172,9 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshot : ISnapshotRequest, IEquatable<DeleteSnapshot>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshot"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
         /// <exception cref="ArgumentNullException">TBD</exception>
         public DeleteSnapshot(SnapshotMetadata metadata)
         {
@@ -1191,9 +1185,9 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="DeleteSnapshot" />, is equal to this instance.
@@ -1252,10 +1246,10 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshots : ISnapshotRequest, IEquatable<DeleteSnapshots>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshots"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
+        /// <param name="persistenceId">Persistent actor id.</param>
+        /// <param name="criteria">Criteria for selecting snapshots to be deleted.</param>
         public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             PersistenceId = persistenceId;
@@ -1263,13 +1257,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Persistent actor id.
         /// </summary>
-        public readonly string PersistenceId;
+        public string PersistenceId { get; }
+
         /// <summary>
-        /// TBD
+        /// Criteria for selecting snapshots to be deleted.
         /// </summary>
-        public readonly SnapshotSelectionCriteria Criteria;
+        public SnapshotSelectionCriteria Criteria { get; }
 
         /// <summary>
         /// Determines whether the specified <see cref="DeleteSnapshots" />, is equal to this instance.
@@ -1324,7 +1319,4 @@ namespace Akka.Persistence
             return $"DeleteSnapshots<pid: {PersistenceId}, criteria: {Criteria}>";
         }
     }
-
-    #endregion
 }
-
