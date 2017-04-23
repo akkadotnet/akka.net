@@ -7,16 +7,16 @@
 
 using System;
 using Akka.Actor;
-using Akka.Remote.Proto;
 using Akka.Serialization;
 using Google.Protobuf;
+using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote
 {
     /// <summary>
     /// Class MessageSerializer.
     /// </summary>
-    public static class MessageSerializer
+    internal static class MessageSerializer
     {
         /// <summary>
         /// Deserializes the specified message.

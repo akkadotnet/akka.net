@@ -2,12 +2,10 @@
  * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
  */
 
-syntax = 'proto3';
+syntax = "proto3";
 package Akka.Remote.Serialization.Proto.Msg;
-option optimize_for = SPEED;
 
-import 'Address.proto';
-import 'Payload.proto';
+import "ContainerFormats.proto";
 
 /******************************************
  * Remoting message formats
@@ -29,11 +27,6 @@ message RemoteEnvelope {
 message AcknowledgementInfo {
 	fixed64 cumulativeAck = 1;
 	repeated fixed64 nacks = 2;
-}
-
-// Defines a remote ActorRef that "remembers" and uses its original Actor instance on the original node.
-message ActorRefData {
-	string path = 1;
 }
 
 // Defines Akka.Remote.DaemonMsgCreate
@@ -86,7 +79,7 @@ message AkkaControlMessage {
 }
 
 message AkkaHandshakeInfo {
-	Address origin = 1;
+	AddressData origin = 1;
 	fixed64 uid = 2;
 	string cookie = 3;
 }
@@ -99,4 +92,52 @@ enum CommandType {
 	HEARTBEAT = 3;
 	DISASSOCIATE_SHUTTING_DOWN = 4; // Remote system is going down and will not accepts new connections
 	DISASSOCIATE_QUARANTINED = 5;   // Remote system refused the association since the current system is quarantined
+}
+
+message RemoteScope {
+  AddressData node = 1;
+}
+
+// router configs
+
+message DefaultResizer {
+  uint32 lowerBound = 1;
+  uint32 upperBound = 2;
+  uint32 pressureThreshold = 3;
+  double rampupRate = 4;
+  double backoffThreshold = 5;
+  double backoffRate = 6;
+  uint32 messagesPerResize = 7;
+}
+
+message FromConfig {
+  Payload resizer = 1;
+  string routerDispatcher = 2;
+}
+
+message GenericRoutingPool {
+  uint32 nrOfInstances = 1;
+  string routerDispatcher = 2;
+  bool usePoolDispatcher = 3;
+  Payload resizer = 4;
+}
+
+message ScatterGatherPool {
+  GenericRoutingPool generic = 1;
+  Timespan within = 2;
+}
+
+message TailChoppingPool {
+  GenericRoutingPool generic = 1;
+  Timespan within = 2;
+  Timespan interval = 3;
+}
+
+message RemoteRouterConfig {
+  Payload local = 1;
+  repeated AddressData nodes = 2;
+}
+
+message Timespan {
+  uint64 ticks = 1; // TODO: temporary
 }

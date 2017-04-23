@@ -4,11 +4,12 @@
 
 syntax = "proto3";
 package Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg;
-option optimize_for = SPEED;
+
+import "ContainerFormats.proto";
 
 message Status {
   message Version {
-    Address address = 1;
+    Akka.Remote.Serialization.Proto.Msg.AddressData address = 1;
     int64 timestamp = 2;
   }
   repeated Version versions = 1;
@@ -21,48 +22,34 @@ message Delta {
     string ref = 2; 
   }
   message Bucket {
-    Address owner = 1;
+    Akka.Remote.Serialization.Proto.Msg.AddressData owner = 1;
     int64 version = 2;
-	map<string, ValueHolder> content = 3;
+    map<string, ValueHolder> content = 3;
   }
   repeated Bucket buckets = 1;
-}
-
-// Defines a remote address.
-message Address {
-  string system = 1;
-  string hostname = 2;
-  uint32 port = 3;
-  string protocol = 4;
 }
 
 // Send normally local, but it is also used by the ClusterClient.
 message Send {
   string path = 1;
   bool localAffinity = 2;
-  Payload payload = 3; 
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 3; 
 }
 
 // SendToAll normally local, but it is also used by the ClusterClient.
 message SendToAll {
   string path = 1;
   bool allButSelf = 2;
-  Payload payload = 3; 
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 3; 
 }
 
 // Publish normally local, but it is also used by the ClusterClient.
 message Publish {
   string topic = 1;
-  Payload payload = 3; 
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 3; 
 }
 
 // Send a message to only one subscriber of a group.
 message SendToOneSubscriber {
-  Payload payload = 1;
-}
-
-message Payload {
-  bytes enclosedMessage = 1;
-  int32 serializerId = 2;
-  bytes messageManifest = 4;
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 1;
 }

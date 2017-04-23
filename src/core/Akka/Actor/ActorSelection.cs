@@ -329,6 +329,24 @@ namespace Akka.Actor
         public string Name { get; }
 
         /// <inheritdoc/>
+        protected bool Equals(SelectChildName other)
+        {
+            return string.Equals(Name, other.Name);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SelectChildName)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Name != null ? Name.GetHashCode() : 0);
+        }
+
         public override string ToString() => Name;
     }
 
@@ -352,6 +370,24 @@ namespace Akka.Actor
         public string PatternStr { get; }
 
         /// <inheritdoc/>
+        protected bool Equals(SelectChildPattern other)
+        {
+            return string.Equals(PatternStr, other.PatternStr);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SelectChildPattern)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (PatternStr != null ? PatternStr.GetHashCode() : 0);
+        }
+
         public override string ToString() => PatternStr;
     }
 
@@ -362,6 +398,9 @@ namespace Akka.Actor
     public class SelectParent : SelectionPathElement
     {
         /// <inheritdoc/>
+        public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is SelectParent;
+        public override int GetHashCode() => nameof(SelectParent).GetHashCode();
+
         public override string ToString() => "..";
     }
 }

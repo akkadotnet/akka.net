@@ -6,8 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Serialization;
+using Akka.Util;
+using Google.Protobuf;
+using Google.Protobuf.Reflection;
 
 namespace Akka.Remote.Serialization
 {
@@ -16,6 +20,8 @@ namespace Akka.Remote.Serialization
     /// </summary>
     public class ProtobufSerializer : Serializer
     {
+        private static readonly Dictionary<string, MessageParser> TypeLookup = new Dictionary<string, MessageParser>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ProtobufSerializer"/> class.
         /// </summary>
@@ -24,57 +30,40 @@ namespace Akka.Remote.Serialization
         {
         }
 
-        /// <summary>
-        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
-        /// </summary>
-        public override int Identifier
+        public static void RegisterFileDescriptor(FileDescriptor fd)
         {
-            get { return 2; }
+            foreach (var msg in fd.MessageTypes)
+            {
+                var name = fd.Package + "." + msg.Name;
+                TypeLookup.Add(name, msg.Parser);
+            }
         }
 
-        /// <summary>
-        /// Returns whether this serializer needs a manifest in the fromBinary method
-        /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return true; }
-        }
+        /// <inheritdoc />
+        public override bool IncludeManifest => true;
 
-        /// <summary>
-        /// N/A
-        /// </summary>
-        /// <param name="obj">N/A</param>
-        /// <exception cref="NotImplementedException">
-        /// This exception is automatically thrown since <see cref="ProtobufSerializer"/> does not implement this function.
-        /// </exception>
-        /// <returns>N/A</returns>
+        /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            throw new NotImplementedException();
-            //using (var stream = new MemoryStream())
-            //{
-            //    global::ProtoBuf.Serializer.Serialize(stream, obj);
-            //    return stream.ToArray();
-            //}
+            var message = obj as IMessage;
+            if (message != null)
+            {
+                return message.ToByteArray();
+            }
+
+            throw new ArgumentException($"Can't serialize a non-protobuf message using protobuf [{obj.GetType().TypeQualifiedName()}]");
         }
 
-        /// <summary>
-        /// N/A
-        /// </summary>
-        /// <param name="bytes">N/A</param>
-        /// <param name="type">N/A</param>
-        /// <exception cref="NotImplementedException">
-        /// This exception is automatically thrown since <see cref="ProtobufSerializer"/> does not implement this function.
-        /// </exception>
-        /// <returns>N/A</returns>
+        /// <inheritdoc />
         public override object FromBinary(byte[] bytes, Type type)
         {
-            throw new NotImplementedException();
-            //using (var stream = new MemoryStream(bytes))
-            //{
-            //    return global::ProtoBuf.Serializer.NonGeneric.Deserialize(type, stream);
-            //}
+            MessageParser parser;
+            if (TypeLookup.TryGetValue(type.FullName, out parser))
+            {
+                return parser.ParseFrom(bytes);
+            }
+
+            throw new ArgumentException("Need a protobuf message class to be able to serialize bytes using protobuf");
         }
     }
 }

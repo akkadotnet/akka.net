@@ -1548,12 +1548,18 @@ namespace Akka.Actor
     {
         public SelectChildName(string name) { }
         public string Name { get; }
+        protected bool Equals(Akka.Actor.SelectChildName other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public class SelectChildPattern : Akka.Actor.SelectionPathElement
     {
         public SelectChildPattern(string patternStr) { }
         public string PatternStr { get; }
+        protected bool Equals(Akka.Actor.SelectChildPattern other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public abstract class SelectionPathElement
@@ -1563,6 +1569,8 @@ namespace Akka.Actor
     public class SelectParent : Akka.Actor.SelectionPathElement
     {
         public SelectParent() { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public class Settings
@@ -2613,6 +2621,8 @@ namespace Akka.Dispatch.SysMsg
     {
         public Create(Akka.Actor.ActorInitializationException failure = null) { }
         public Akka.Actor.ActorInitializationException Failure { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public sealed class DeathWatchNotification : Akka.Dispatch.SysMsg.SystemMessage, Akka.Event.IDeadLetterSuppression
@@ -2709,6 +2719,8 @@ namespace Akka.Dispatch.SysMsg
         public Unwatch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
         public Akka.Actor.IInternalActorRef Watchee { get; }
         public Akka.Actor.IInternalActorRef Watcher { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public class Watch : Akka.Dispatch.SysMsg.SystemMessage
@@ -2716,6 +2728,9 @@ namespace Akka.Dispatch.SysMsg
         public Watch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
         public Akka.Actor.IInternalActorRef Watchee { get; }
         public Akka.Actor.IInternalActorRef Watcher { get; }
+        protected bool Equals(Akka.Dispatch.SysMsg.Watch other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
 }
@@ -4417,15 +4432,6 @@ namespace Akka.Serialization
     public class ByteArraySerializer : Akka.Serialization.Serializer
     {
         public ByteArraySerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override int Identifier { get; }
-        public override bool IncludeManifest { get; }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
-        public override byte[] ToBinary(object obj) { }
-    }
-    public class JavaSerializer : Akka.Serialization.Serializer
-    {
-        public JavaSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
@@ -4435,24 +4441,11 @@ namespace Akka.Serialization
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.NewtonSoftJsonSerializerSettings settings) { }
-        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public object Serializer { get; }
         public Newtonsoft.Json.JsonSerializerSettings Settings { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
-        public class AkkaContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver
-        {
-            public AkkaContractResolver() { }
-            protected override Newtonsoft.Json.Serialization.JsonProperty CreateProperty(System.Reflection.MemberInfo member, Newtonsoft.Json.MemberSerialization memberSerialization) { }
-        }
-        public class SurrogateConverter : Newtonsoft.Json.JsonConverter
-        {
-            public SurrogateConverter(Akka.Serialization.NewtonSoftJsonSerializer parent) { }
-            public override bool CanConvert(System.Type objectType) { }
-            public override object ReadJson(Newtonsoft.Json.JsonReader reader, System.Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer) { }
-            public override void WriteJson(Newtonsoft.Json.JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer) { }
-        }
     }
     public sealed class NewtonSoftJsonSerializerSettings
     {
@@ -4487,18 +4480,13 @@ namespace Akka.Serialization
     public abstract class Serializer
     {
         protected readonly Akka.Actor.ExtendedActorSystem system;
-        public Serializer(Akka.Actor.ExtendedActorSystem system) { }
+        protected Serializer(Akka.Actor.ExtendedActorSystem system) { }
         public virtual int Identifier { get; }
         public abstract bool IncludeManifest { get; }
         public abstract object FromBinary(byte[] bytes, System.Type type);
         public T FromBinary<T>(byte[] bytes) { }
         public abstract byte[] ToBinary(object obj);
         public byte[] ToBinaryWithAddress(Akka.Actor.Address address, object obj) { }
-    }
-    public class static SerializerIdentifierHelper
-    {
-        public const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
-        public static int GetSerializerIdentifierFromConfig(System.Type type, Akka.Actor.ExtendedActorSystem system) { }
     }
     public abstract class SerializerWithStringManifest : Akka.Serialization.Serializer
     {

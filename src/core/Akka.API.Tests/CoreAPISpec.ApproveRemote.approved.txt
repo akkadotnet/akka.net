@@ -1,7 +1,9 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.TestKit.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
@@ -117,11 +119,6 @@ namespace Akka.Remote
         bool IsMonitoring(T resource);
         void Remove(T resource);
         void Reset();
-    }
-    public class static MessageSerializer
-    {
-        public static object Deserialize(Akka.Actor.ActorSystem system, Akka.Remote.Proto.SerializedMessage messageProtocol) { }
-        public static Akka.Remote.Proto.SerializedMessage Serialize(Akka.Actor.ActorSystem system, Akka.Actor.Address address, object message) { }
     }
     public class PhiAccrualFailureDetector : Akka.Remote.FailureDetector
     {
@@ -358,31 +355,6 @@ namespace Akka.Remote
         public override string ToString() { }
     }
 }
-namespace Akka.Remote.Proto
-{
-    public sealed class SerializedMessage : Google.Protobuf.IDeepCloneable<Akka.Remote.Proto.SerializedMessage>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Remote.Proto.SerializedMessage>, System.IEquatable<Akka.Remote.Proto.SerializedMessage>
-    {
-        public const int MessageFieldNumber = 1;
-        public const int MessageManifestFieldNumber = 3;
-        public const int SerializerIdFieldNumber = 2;
-        public SerializedMessage() { }
-        public SerializedMessage(Akka.Remote.Proto.SerializedMessage other) { }
-        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
-        public Google.Protobuf.ByteString Message { get; set; }
-        public Google.Protobuf.ByteString MessageManifest { get; set; }
-        public static Google.Protobuf.MessageParser<Akka.Remote.Proto.SerializedMessage> Parser { get; }
-        public int SerializerId { get; set; }
-        public int CalculateSize() { }
-        public Akka.Remote.Proto.SerializedMessage Clone() { }
-        public override bool Equals(object other) { }
-        public bool Equals(Akka.Remote.Proto.SerializedMessage other) { }
-        public override int GetHashCode() { }
-        public void MergeFrom(Akka.Remote.Proto.SerializedMessage other) { }
-        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
-        public override string ToString() { }
-        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
-    }
-}
 namespace Akka.Remote.Routing
 {
     public sealed class RemoteRouterConfig : Akka.Routing.Pool, System.IEquatable<Akka.Routing.RouterConfig>
@@ -410,7 +382,6 @@ namespace Akka.Remote.Serialization
     public class DaemonMsgCreateSerializer : Akka.Serialization.Serializer
     {
         public DaemonMsgCreateSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
@@ -418,7 +389,6 @@ namespace Akka.Remote.Serialization
     public class MessageContainerSerializer : Akka.Serialization.Serializer
     {
         public MessageContainerSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
@@ -440,7 +410,14 @@ namespace Akka.Remote.Serialization
     public class ProtobufSerializer : Akka.Serialization.Serializer
     {
         public ProtobufSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override int Identifier { get; }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public static void RegisterFileDescriptor(Google.Protobuf.Reflection.FileDescriptor fd) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public sealed class SystemMessageSerializer : Akka.Serialization.Serializer
+    {
+        public SystemMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }

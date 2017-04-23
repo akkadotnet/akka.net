@@ -16,6 +16,7 @@ using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
+using AddressData = Akka.Remote.Serialization.Proto.Msg.AddressData;
 
 namespace Akka.Cluster.Serialization
 {
@@ -25,25 +26,24 @@ namespace Akka.Cluster.Serialization
 
         public ClusterMessageSerializer(ExtendedActorSystem system) : base(system)
         {
+            
             _fromBinaryMap = new Dictionary<Type, Func<byte[], object>>
             {
-                [typeof(ClusterHeartbeatSender.Heartbeat)] = bytes => new ClusterHeartbeatSender.Heartbeat(AddressFrom(Proto.Msg.Address.Parser.ParseFrom(bytes))),
+                [typeof(ClusterHeartbeatSender.Heartbeat)] = bytes => new ClusterHeartbeatSender.Heartbeat(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
                 [typeof(ClusterHeartbeatSender.HeartbeatRsp)] = bytes => new ClusterHeartbeatSender.HeartbeatRsp(UniqueAddressFrom(Proto.Msg.UniqueAddress.Parser.ParseFrom(bytes))),
                 [typeof(GossipEnvelope)] = GossipEnvelopeFrom,
                 [typeof(GossipStatus)] = GossipStatusFrom,
                 [typeof(InternalClusterAction.Join)] = JoinFrom,
                 [typeof(InternalClusterAction.Welcome)] = WelcomeFrom,
-                [typeof(ClusterUserAction.Leave)] = bytes => new ClusterUserAction.Leave(AddressFrom(Proto.Msg.Address.Parser.ParseFrom(bytes))),
-                [typeof(ClusterUserAction.Down)] = bytes => new ClusterUserAction.Down(AddressFrom(Proto.Msg.Address.Parser.ParseFrom(bytes))),
+                [typeof(ClusterUserAction.Leave)] = bytes => new ClusterUserAction.Leave(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
+                [typeof(ClusterUserAction.Down)] = bytes => new ClusterUserAction.Down(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
                 [typeof(InternalClusterAction.InitJoin)] = bytes => new InternalClusterAction.InitJoin(),
-                [typeof(InternalClusterAction.InitJoinAck)] = bytes => new InternalClusterAction.InitJoinAck(AddressFrom(Proto.Msg.Address.Parser.ParseFrom(bytes))),
-                [typeof(InternalClusterAction.InitJoinNack)] = bytes => new InternalClusterAction.InitJoinNack(AddressFrom(Proto.Msg.Address.Parser.ParseFrom(bytes))),
+                [typeof(InternalClusterAction.InitJoinAck)] = bytes => new InternalClusterAction.InitJoinAck(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
+                [typeof(InternalClusterAction.InitJoinNack)] = bytes => new InternalClusterAction.InitJoinNack(AddressFrom(AddressData.Parser.ParseFrom(bytes))),
                 [typeof(InternalClusterAction.ExitingConfirmed)] = bytes => new InternalClusterAction.ExitingConfirmed(UniqueAddressFrom(Proto.Msg.UniqueAddress.Parser.ParseFrom(bytes))),
                 [typeof(ClusterRouterPool)] = ClusterRouterPoolFrom
             };
         }
-
-        public override int Identifier { get; } = 23;
 
         public override bool IncludeManifest => true;
 
@@ -99,7 +99,7 @@ namespace Akka.Cluster.Serialization
 
             if (obj is InternalClusterAction.InitJoin)
             {
-                return new Proto.Msg.Empty().ToByteArray();
+                return new Google.Protobuf.WellKnownTypes.Empty().ToByteArray();
             }
 
             var initJoinAck = obj as InternalClusterAction.InitJoinAck;
@@ -409,9 +409,9 @@ namespace Akka.Cluster.Serialization
         //
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Proto.Msg.Address AddressToProto(Address address)
+        private static AddressData AddressToProto(Address address)
         {
-            var message = new Proto.Msg.Address();
+            var message = new AddressData();
             message.System = address.System;
             message.Hostname = address.Host;
             message.Port = (uint)(address.Port ?? 0);
@@ -420,7 +420,7 @@ namespace Akka.Cluster.Serialization
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Address AddressFrom(Proto.Msg.Address addressProto)
+        private static Address AddressFrom(AddressData addressProto)
         {
             return new Address(
                 addressProto.Protocol,
