@@ -8,7 +8,7 @@
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Remote.Proto;
+using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 using Akka.Util.Internal;
 using Google.Protobuf;
 using NBench;

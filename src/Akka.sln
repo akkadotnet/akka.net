@@ -125,18 +125,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.MultiNodeTestRunner.Sh
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98CEB6FB-A277-42FA-A98E-99A8640B26FD}"
 	ProjectSection(SolutionItems) = preProject
-		core\protobuf\ClusterClientMessages.proto = core\protobuf\ClusterClientMessages.proto
-		core\protobuf\ClusterMessages.proto = core\protobuf\ClusterMessages.proto
-		core\protobuf\ClusterShardingMessages.proto = core\protobuf\ClusterShardingMessages.proto
-		core\protobuf\ContainerFormats.proto = core\protobuf\ContainerFormats.proto
-		core\protobuf\csharp_options.proto = core\protobuf\csharp_options.proto
-		core\protobuf\descriptor.proto = core\protobuf\descriptor.proto
-		core\protobuf\DistributedPubSubMessages.proto = core\protobuf\DistributedPubSubMessages.proto
-		core\protobuf\PersistenceMessages.proto = core\protobuf\PersistenceMessages.proto
-		core\protobuf\ReplicatedDataMessages.proto = core\protobuf\ReplicatedDataMessages.proto
-		core\protobuf\ReplicatorMessages.proto = core\protobuf\ReplicatorMessages.proto
-		core\protobuf\TestConductorProtocol.proto = core\protobuf\TestConductorProtocol.proto
-		core\protobuf\WireFormats.proto = core\protobuf\WireFormats.proto
+		protobuf\ClusterClientMessages.proto = protobuf\ClusterClientMessages.proto
+		protobuf\ClusterMessages.proto = protobuf\ClusterMessages.proto
+		protobuf\ClusterShardingMessages.proto = protobuf\ClusterShardingMessages.proto
+		protobuf\ContainerFormats.proto = protobuf\ContainerFormats.proto
+		protobuf\DistributedPubSubMessages.proto = protobuf\DistributedPubSubMessages.proto
+		protobuf\SystemMessageFormats.proto = protobuf\SystemMessageFormats.proto
+		protobuf\WireFormats.proto = protobuf\WireFormats.proto
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{8A15341C-5596-4F4D-949D-2CD9A0006E12}"

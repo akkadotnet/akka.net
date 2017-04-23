@@ -572,14 +572,27 @@ Target "PublishNuget" <| fun _ ->
 //--------------------------------------------------------------------------------
 Target "Protobuf" <| fun _ ->
     let protocPath = findToolInSubPath "protoc.exe" "src/packages/Google.Protobuf.Tools/tools/windows_x64"
-    let protoFiles = !! "src/**/Serialization/Proto/*.proto"
+
+    let protoFiles = [
+        ("WireFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
+        ("ContainerFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
+        ("ContainerFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
+        ("SystemMessageFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
+        ("ClusterMessages.proto", "/src/core/Akka.Cluster/Serialization/Proto/");
+        ("ClusterClientMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/Client/Serialization/Proto/");
+        ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
+        ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
+        ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/") ]
+
     printfn "Using proto.exe: %s" protocPath
 
     let runProtobuf assembly =
+        let protoName, destinationPath = assembly
         let args = new StringBuilder()
-                |> append (sprintf "-I=\"%s\"" (Path.GetDirectoryName (FullName assembly)))
-                |> append (sprintf "--csharp_out=\"%s\"" (Path.GetDirectoryName (FullName assembly)))
-                |> append assembly
+                |> append (sprintf "-I=%s;%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/") (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
+                |> append (sprintf "--csharp_out=%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
+                |> append "--csharp_opt=file_extension=.g.cs"
+                |> append (__SOURCE_DIRECTORY__ @@ "/src/protobuf" @@ protoName)
                 |> toText
 
         let result = ExecProcess(fun info -> 
@@ -589,8 +602,6 @@ Target "Protobuf" <| fun _ ->
         if result <> 0 then failwithf "protoc failed. %s %s" protocPath args
     
     protoFiles |> Seq.iter (runProtobuf)
-
-
 
 //--------------------------------------------------------------------------------
 // Help 

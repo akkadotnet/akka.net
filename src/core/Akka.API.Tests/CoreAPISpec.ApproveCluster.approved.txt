@@ -339,7 +339,6 @@ namespace Akka.Cluster.Serialization
     public class ClusterMessageSerializer : Akka.Serialization.Serializer
     {
         public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }

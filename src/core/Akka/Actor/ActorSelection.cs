@@ -353,6 +353,24 @@ namespace Akka.Actor
         /// </summary>
         public string Name { get; }
 
+        protected bool Equals(SelectChildName other)
+        {
+            return string.Equals(Name, other.Name);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SelectChildName)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Name != null ? Name.GetHashCode() : 0);
+        }
+
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
@@ -381,6 +399,24 @@ namespace Akka.Actor
         /// </summary>
         public string PatternStr { get; }
 
+        protected bool Equals(SelectChildPattern other)
+        {
+            return string.Equals(PatternStr, other.PatternStr);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SelectChildPattern)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (PatternStr != null ? PatternStr.GetHashCode() : 0);
+        }
+
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
@@ -396,6 +432,9 @@ namespace Akka.Actor
     /// </summary>
     public class SelectParent : SelectionPathElement
     {
+        public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is SelectParent;
+        public override int GetHashCode() => nameof(SelectParent).GetHashCode();
+
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>

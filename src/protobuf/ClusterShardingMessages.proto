@@ -4,7 +4,6 @@
 
 syntax = "proto3";
 package Akka.Cluster.Sharding.Serialization.Proto.Msg;
-option optimize_for = SPEED;
 
 message CoordinatorState {
   message ShardEntry {
@@ -16,10 +15,6 @@ message CoordinatorState {
   repeated string regions = 2;
   repeated string regionProxies = 3;
   repeated string unallocatedShards = 4; 
-}
-
-message ActorRefMessage {
-  string ref = 1;
 }
 
 message ShardIdMessage {

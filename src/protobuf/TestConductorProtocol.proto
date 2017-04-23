@@ -1,0 +1,62 @@
+/**
+ * Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = 'proto3';
+package Akka.Remote.TestKit.Proto.Msg;
+
+import "ContainerFormats.proto";
+
+message Wrapper {
+  Hello hello = 1;
+  EnterBarrier barrier = 2;
+  InjectFailure failure = 3;
+  string done = 4;
+  AddressRequest addr = 5;
+}
+
+message Hello {
+  string name = 1;
+  Akka.Remote.Serialization.Proto.Msg.AddressData address = 2;
+}
+
+message EnterBarrier {
+  enum BarrierOp {
+    Enter = 0;
+    Fail = 1;
+    Succeeded = 2;
+    Failed = 3;
+  }
+
+  string name = 1;
+  BarrierOp op = 2;
+  int64 timeout = 3;
+}
+
+message AddressRequest {
+  string node = 1;
+  Akka.Remote.Serialization.Proto.Msg.AddressData addr = 2;
+}
+
+message InjectFailure {
+  enum FailType {
+    Throttle = 0;
+    Disconnect = 1;
+    Abort = 2;
+    Exit = 3;
+    Shutdown = 4;
+    ShutdownAbrupt = 5;
+  }
+
+  enum Direction {
+    Send = 0;
+    Receive = 1;
+    Both = 2;
+  }
+
+  FailType failure = 1;
+  Direction direction = 2;
+  Akka.Remote.Serialization.Proto.Msg.AddressData address = 3;
+  float rateMBit = 6;
+  int32 exitValue = 7;
+}
