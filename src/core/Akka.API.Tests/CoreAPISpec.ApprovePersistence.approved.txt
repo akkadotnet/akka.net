@@ -488,6 +488,7 @@ namespace Akka.Persistence
     public sealed class RecoveryCompleted
     {
         public static Akka.Persistence.RecoveryCompleted Instance { get; }
+        public override bool Equals(object obj) { }
     }
     public sealed class RecoverySuccess : Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.RecoverySuccess>
     {
@@ -720,7 +721,6 @@ namespace Akka.Persistence
     public sealed class WriteMessagesSuccessful : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage
     {
         public static Akka.Persistence.WriteMessagesSuccessful Instance { get; }
-        public override string ToString() { }
     }
     public sealed class WriteMessageSuccess : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageSuccess>
     {
