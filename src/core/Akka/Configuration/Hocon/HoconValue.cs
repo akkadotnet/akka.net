@@ -363,7 +363,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Retrieves the time span value from this <see cref="HoconValue"/>.
         /// </summary>
-        /// <param name="allowInfinite">A flag used to set inifinite durations.</param>
+        /// <param name="allowInfinite">A flag used to set infinite durations.</param>
         /// <exception cref="FormatException">
         /// This exception is thrown if the timespan given in the <see cref="HoconValue"/> is negative.
         /// </exception>

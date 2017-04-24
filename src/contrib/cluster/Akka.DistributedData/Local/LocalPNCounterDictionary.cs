@@ -86,7 +86,7 @@ namespace Akka.DistributedData.Local
         public IEnumerable<BigInteger> Values => _crdt.Values;
 
         /// <summary>
-        /// Returns number of elements inside the unterlying PNCounterDictionary.
+        /// Returns number of elements inside the underlying PNCounterDictionary.
         /// </summary>
         public int Count => _crdt.Count;
 
@@ -96,7 +96,7 @@ namespace Akka.DistributedData.Local
         public bool IsEmpty => _crdt.IsEmpty;
 
         /// <summary>
-        /// Gets or sets provided key-valu of the underlying PNCounterDictionary within scope of the current cluster node.
+        /// Gets or sets provided key-value of the underlying PNCounterDictionary within scope of the current cluster node.
         /// </summary>
         /// <param name="key">TBD</param>
         public BigInteger this[TKey key] => _crdt[key];

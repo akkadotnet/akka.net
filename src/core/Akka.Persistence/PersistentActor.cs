@@ -27,11 +27,7 @@ namespace Akka.Persistence
         public static readonly RecoveryCompleted Instance = new RecoveryCompleted();
         private RecoveryCompleted(){}
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return obj is RecoveryCompleted;
@@ -41,7 +37,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Recovery mode configuration object to be return in <see cref="PersistentActor.get_Recovery()"/>
     /// 
-    /// By default recovers from latest snashot replays through to the last available event (last sequenceNr).
+    /// By default recovers from latest snapshot replays through to the last available event (last sequenceNr).
     /// 
     /// Recovery will start from a snapshot if the persistent actor has previously saved one or more snapshots
     /// and at least one of these snapshots matches the specified <see cref="FromSnapshot"/> criteria.

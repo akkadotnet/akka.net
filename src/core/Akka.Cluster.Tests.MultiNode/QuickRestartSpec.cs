@@ -119,7 +119,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 });
                 EnterBarrier("members-up-"+i);
 
-                // gatting occurred after a while
+                // gating occurred after a while
                 if (i > 1)
                     Thread.Sleep(ThreadLocalRandom.Current.Next(15) * 1000);
 

@@ -71,7 +71,7 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// Atomically descrements the counter by one
+        /// Atomically decrements the counter by one
         /// </summary>
         /// <returns>The new value</returns>
         public long DecrementAndGet()

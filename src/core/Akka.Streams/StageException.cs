@@ -15,9 +15,9 @@ namespace Akka.Streams
     public class NoSuchElementException : Exception
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="NoSuchElementException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public NoSuchElementException(string message) : base(message)
         {
 

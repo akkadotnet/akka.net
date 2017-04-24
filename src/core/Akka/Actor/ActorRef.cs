@@ -48,7 +48,7 @@ namespace Akka.Actor
     /// 
     /// RepointableActorRef (and potentially others) may change their locality at
     /// runtime, meaning that isLocal might not be stable. RepointableActorRef has
-    /// the feature that it starts out “not fully started” (but you can send to it),
+    /// the feature that it starts out "not fully started" (but you can send to it),
     /// which is why <see cref="IsStarted"/> features here; it is not improbable that cluster
     /// actor refs will have the same behavior. 
     /// </summary>
@@ -230,7 +230,8 @@ namespace Akka.Actor
     public abstract class ActorRefBase : IActorRef
     {
         /// <summary>
-        /// TBD
+        /// This class represents a surrogate of a <see cref="ActorRefBase"/> router.
+        /// Its main use is to help during the serialization process.
         /// </summary>
         public class Surrogate : ISurrogate
         {
@@ -249,10 +250,10 @@ namespace Akka.Actor
             public string Path { get; }
 
             /// <summary>
-            /// TBD
+            /// Creates an <see cref="ActorRefBase"/> encapsulated by this surrogate.
             /// </summary>
-            /// <param name="system">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="system">The actor system that contains this <see cref="ActorRefBase"/>.</param>
+            /// <returns>The <see cref="ActorRefBase"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return ((ActorSystemImpl)system).Provider.ResolveActorRef(Path);
@@ -286,21 +287,14 @@ namespace Akka.Actor
         /// <param name="sender">TBD</param>
         protected abstract void TellInternal(object message, IActorRef sender);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             if(Path.Uid == ActorCell.UndefinedUid) return $"[{Path}]";
             return $"[{Path}#{Path.Uid}]";
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             var other = obj as IActorRef;
@@ -308,10 +302,7 @@ namespace Akka.Actor
             return Equals(other);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -323,24 +314,10 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// Compares the current instance with another object of the same type and returns an integer that indicates whether the current instance precedes, follows, or occurs in the same position in the sort order as the other object.
-        /// </summary>
-        /// <param name="obj">An object to compare with this instance.</param>
+        /// <inheritdoc/>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="obj"/> isn't an <see cref="IActorRef"/>.
         /// </exception>
-        /// <returns>
-        /// A value that indicates the relative order of the objects being compared. The return value has these meanings:
-        /// <dl>
-        ///   <dt>Less than zero</dt>
-        ///   <dd>This instance precedes <paramref name="obj" /> in the sort order.</dd>
-        ///   <dt>Zero</dt>
-        ///   <dd>This instance occurs in the same position in the sort order as <paramref name="obj" />.</dd>
-        ///   <dt>Greater than zero</dt>
-        ///   <dd>This instance follows <paramref name="obj" /> in the sort order.</dd>
-        /// </dl>
-        /// </returns>
         public int CompareTo(object obj)
         {
             if (obj != null && !(obj is IActorRef))
@@ -348,22 +325,14 @@ namespace Akka.Actor
             return CompareTo((IActorRef) obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(IActorRef other)
         {
             return Path.Uid == other.Path.Uid 
                 && Path.Equals(other.Path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(IActorRef other)
         {
             var pathComparisonResult = Path.CompareTo(other.Path);
@@ -373,10 +342,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current <see cref="ActorRefBase"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that references this <see cref="ActorRefBase"/>.</param>
+        /// <returns>The surrogate representation of the current <see cref="ActorRefBase"/>.</returns>
         public virtual ISurrogate ToSurrogate(ActorSystem system)
         {
             return new Surrogate(Serialization.Serialization.SerializedActorPath(this));
@@ -402,7 +371,7 @@ namespace Akka.Actor
         IActorRefProvider Provider { get; }
 
         /// <summary>
-        /// Indicates if the current actor reference is terminated.
+        /// Obsolete. Use <see cref="Akka.Actor.UntypedActor.Context.Watch(IActorRef)"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>
         /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         bool IsTerminated { get; }
@@ -445,10 +414,10 @@ namespace Akka.Actor
         void Suspend();
 
         /// <summary>
-        /// Sends an <see cref="ISystemMessage"/> to the underlying actor.
+        /// Obsolete. Use <see cref="SendSystemMessage(ISystemMessage)"/> instead.
         /// </summary>
-        /// <param name="message">The system message we're sending.</param>
-        /// <param name="sender">The sender of the message. Not used.</param>
+        /// <param name="message">N/A</param>
+        /// <param name="sender">N/A</param>
         [Obsolete("Use SendSystemMessage(message) [1.1.0]")]
         void SendSystemMessage(ISystemMessage message, IActorRef sender);
 
@@ -837,6 +806,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
                 _enumerator = enumerator;
             }
 
+            /// <inheritdoc/>
             public IEnumerator<T> GetEnumerator()
             {
                 return _enumerator;

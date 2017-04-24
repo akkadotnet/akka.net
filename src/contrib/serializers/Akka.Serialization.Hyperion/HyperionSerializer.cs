@@ -143,9 +143,11 @@ namespace Akka.Serialization
         /// <summary>
         /// Creates a new instance of <see cref="HyperionSerializerSettings"/> using provided HOCON config.
         /// Config can contain several key-values, that are mapped to a class fields:
-        /// 1. `preserve-object-references` (boolean) mapped to <see cref="PreserveObjectReferences"/>
-        /// 2. `version-tolerance` (boolean) mapped to <see cref="VersionTolerance"/>
-        /// 3. `known-types-provider` (fully qualified type name) mapped to <see cref="KnownTypesProvider"/>
+        /// <ul>
+        /// <li>`preserve-object-references` (boolean) mapped to <see cref="PreserveObjectReferences"/></li>
+        /// <li>`version-tolerance` (boolean) mapped to <see cref="VersionTolerance"/></li>
+        /// <li>`known-types-provider` (fully qualified type name) mapped to <see cref="KnownTypesProvider"/></li>
+        /// </ul>
         /// </summary>
         /// <exception cref="ArgumentNullException">Raised when <paramref name="config"/> was not provided.</exception>
         /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>

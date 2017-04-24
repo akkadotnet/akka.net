@@ -45,11 +45,13 @@ namespace Akka.Persistence.Sql.Common.Queries
         /// </summary>
         /// <param name="queryId">TBD</param>
         /// <param name="hints">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="hints"/> is undefined.
+        /// </exception>
         public Query(object queryId, ISet<IHint> hints)
         {
             if(hints == null)
-                throw new ArgumentNullException("hints", "Query expects set of hints passed not to be null");
+                throw new ArgumentNullException(nameof(hints), "Query expects set of hints passed not to be null");
 
             QueryId = queryId;
             Hints = hints;
@@ -62,11 +64,7 @@ namespace Akka.Persistence.Sql.Common.Queries
         /// <param name="hints">TBD</param>
         public Query(object queryId, params IHint[] hints) : this(queryId, new HashSet<IHint>(hints)) { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Query other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -75,20 +73,13 @@ namespace Akka.Persistence.Sql.Common.Queries
             return Equals(QueryId, other.QueryId) && Hints.SetEquals(other.Hints);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as Query);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -97,13 +88,10 @@ namespace Akka.Persistence.Sql.Common.Queries
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("Query<id: {0}, hints: [{1}]>", QueryId, string.Join(",", Hints));
+            return $"Query<id: {QueryId}, hints: [{string.Join(",", Hints)}]>";
         }
     }
 
@@ -135,11 +123,7 @@ namespace Akka.Persistence.Sql.Common.Queries
             Message = message;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(QueryResponse other)
         {
             if (Equals(other, null)) return false;
@@ -148,20 +132,13 @@ namespace Akka.Persistence.Sql.Common.Queries
             return Equals(QueryId, other.QueryId) && Equals(Message, other.Message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as QueryResponse);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -170,13 +147,10 @@ namespace Akka.Persistence.Sql.Common.Queries
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("QueryResponse<id: {0}, payload: {1}>", QueryId, Message);
+            return $"QueryResponse<id: {QueryId}, payload: {Message}>";
         }
     }
 
@@ -201,11 +175,7 @@ namespace Akka.Persistence.Sql.Common.Queries
             QueryId = queryId;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(QuerySuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -213,32 +183,22 @@ namespace Akka.Persistence.Sql.Common.Queries
             return Equals(QueryId, other.QueryId);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as QuerySuccess);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (QueryId != null ? QueryId.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("QuerySuccess<id: {0}>", QueryId);
+            return $"QuerySuccess<id: {QueryId}>";
         }
     }
 
@@ -269,11 +229,7 @@ namespace Akka.Persistence.Sql.Common.Queries
             Reason = reason;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(QueryFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -281,20 +237,13 @@ namespace Akka.Persistence.Sql.Common.Queries
             return Equals(QueryId, other.QueryId) && Equals(Reason, other.Reason);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as QueryFailure);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -303,13 +252,10 @@ namespace Akka.Persistence.Sql.Common.Queries
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("QueryFailure<id: {0}, cause: {1}>", QueryId, Reason);
+            return $"QueryFailure<id: {QueryId}, cause: {Reason}>";
         }
     }
 }

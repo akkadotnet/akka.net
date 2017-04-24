@@ -195,25 +195,13 @@ namespace Akka.Remote.TestKit
                 _runningOp = runningOp;
             }
 
-            /// <summary>
-            /// Determines whether the specified <see cref="Data" />, is equal to this instance.
-            /// </summary>
-            /// <param name="other">The <see cref="Data" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="Data" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             protected bool Equals(Data other)
             {
                 return Equals(_channel, other._channel) && Equals(_runningOp, other._runningOp);
             }
 
-            /// <summary>
-            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-            /// </summary>
-            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -222,12 +210,7 @@ namespace Akka.Remote.TestKit
                 return Equals((Data) obj);
             }
 
-            /// <summary>
-            /// Returns a hash code for this instance.
-            /// </summary>
-            /// <returns>
-            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-            /// </returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -280,13 +263,7 @@ namespace Akka.Remote.TestKit
                 return Equals(_channel, other._channel);
             }
 
-            /// <summary>
-            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-            /// </summary>
-            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -295,12 +272,7 @@ namespace Akka.Remote.TestKit
                 return Equals((Connected) obj);
             }
 
-            /// <summary>
-            /// Returns a hash code for this instance.
-            /// </summary>
-            /// <returns>
-            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-            /// </returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (_channel != null ? _channel.GetHashCode() : 0);
@@ -329,8 +301,15 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class ConnectionFailure : Exception
         {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ConnectionFailure"/> class.
+            /// </summary>
+            /// <param name="message">The message that describes the error.</param>
             public ConnectionFailure(string message) : base(message)
             {
             }

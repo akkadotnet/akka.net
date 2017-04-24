@@ -239,11 +239,7 @@ namespace Akka.Remote
         /// </summary>
         public sealed class Stats
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as Stats;
@@ -251,10 +247,7 @@ namespace Akka.Remote
                 return _watching == other._watching && _watchingNodes == other._watchingNodes;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -331,23 +324,18 @@ namespace Akka.Remote
             /// </summary>
             public ImmutableHashSet<Address> WatchingAddresses => _watchingAddresses;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
                 Func<string> formatWatchingRefs = () =>
                 {
                     if (!_watchingRefs.Any()) return "";
-                    return
-                        $"{_watchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name).Aggregate((a, b) => a + ", " + b)}";
+                    return $"{string.Join(", ", _watchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name))}";
                 };
 
                 Func<string> formatWatchingAddresses = () =>
                 {
-                    if (!_watchingAddresses.Any())
-                        return "";
+                    if (!_watchingAddresses.Any()) return "";
                     return string.Join(",", WatchingAddresses);
                 };
 
@@ -375,7 +363,9 @@ namespace Akka.Remote
         /// <param name="heartbeatInterval">TBD</param>
         /// <param name="unreachableReaperInterval">TBD</param>
         /// <param name="heartbeatExpectedResponseAfter">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the actor system does not have a <see cref="RemoteActorRefProvider"/> enabled in the configuration.
+        /// </exception>
         public RemoteWatcher(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,

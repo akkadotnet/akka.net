@@ -126,7 +126,7 @@ namespace Akka.Streams.Implementation.Fusing
         ///  - assume an infinitely fast source of data
         ///  - assume maxInputBufferSize == 1
         ///  - if the event limit is greater than maxInputBufferSize * (ins + outs) than there will always be expand activity
-        ///  because no data can enter “fast enough” from the outside
+        ///  because no data can enter "fast enough" from the outside
         /// </summary>
         private readonly int _shellEventLimit;
 

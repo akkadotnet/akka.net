@@ -15,6 +15,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public abstract class MultiNodeMessage : IComparable<MultiNodeMessage>, IEquatable<MultiNodeMessage>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeMessage"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message</param>
+        /// <param name="nodeIndex">The index of the node where the message occurred</param>
+        /// <param name="nodeRole">The role of the node where the message occurred</param>
         protected MultiNodeMessage(long timeStamp, string message, int nodeIndex, string nodeRole)
         {
             NodeIndex = nodeIndex;
@@ -46,30 +53,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Comparisons
 
-        /// <summary>
-        /// Compares the current instance with another object of the same type and returns an integer that indicates whether the current instance precedes, follows, or occurs in the same position in the sort order as the other object.
-        /// </summary>
-        /// <param name="other">An object to compare with this instance.</param>
-        /// <returns>
-        /// A value that indicates the relative order of the objects being compared. The return value has these meanings:
-        /// <dl>
-        ///   <dt>Less than zero</dt>
-        ///   <dd>This instance precedes <paramref name="other" /> in the sort order.</dd>
-        ///   <dt>Zero</dt>
-        ///   <dd>This instance occurs in the same position in the sort order as <paramref name="other" />.</dd>
-        ///   <dt>Greater than zero</dt>
-        ///   <dd>This instance follows <paramref name="other" /> in the sort order.</dd>
-        /// </dl>
-        /// </returns>
+        /// <inheritdoc/>
         public virtual int CompareTo(MultiNodeMessage other)
         {
             var tc = TimeStamp.CompareTo(other.TimeStamp);
             if(tc != 0) return tc;
-            var m = String.Compare(Message, other.Message, StringComparison.Ordinal);
+            var m = string.Compare(Message, other.Message, StringComparison.Ordinal);
             if (m != 0) return m;
             var ni = NodeIndex.CompareTo(other.NodeIndex);
             if (ni != 0) return ni;
-            var nr = String.Compare(NodeRole, other.NodeRole, StringComparison.Ordinal);
+            var nr = string.Compare(NodeRole, other.NodeRole, StringComparison.Ordinal);
             if (nr != 0) return nr;
             return 0;
         }
@@ -78,6 +71,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -91,6 +85,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -100,6 +95,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             return msg != null && Equals(msg);
         }
 
+        /// <inheritdoc/>
         public virtual bool Equals(MultiNodeMessage other)
         {
             return other != null &&
@@ -118,6 +114,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public class MultiNodeResultMessage : MultiNodeMessage
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeResultMessage"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message</param>
+        /// <param name="nodeIndex">The index of the node where the message occurred</param>
+        /// <param name="nodeRole">The role of the node where the message occurred</param>
+        /// <param name="passed">The flag used to determine if the test passed. <c>true</c> if successful; otherwise <c>false</c>.</param>
         public MultiNodeResultMessage(long timeStamp, string message, int nodeIndex, string nodeRole, bool passed)
             : base(timeStamp, message, nodeIndex, nodeRole)
         {
@@ -131,6 +135,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -141,6 +146,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(MultiNodeMessage other)
         {
             var otherResultMessage = other as MultiNodeResultMessage;
@@ -157,8 +163,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public class MultiNodeTestRunnerMessage : MultiNodeMessage
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeTestRunnerMessage"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message</param>
+        /// <param name="actorPath">The path to the remote node where the message occurred</param>
+        /// <param name="logLevel">The log level of the message</param>
         public MultiNodeTestRunnerMessage(long timeStamp, string message, string actorPath, LogLevel logLevel)
-            : base(timeStamp, message, -1, String.Empty)
+            : base(timeStamp, message, -1, string.Empty)
         {
             ActorPath = actorPath;
             LogLevel = logLevel;
@@ -178,6 +191,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -189,6 +203,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(MultiNodeMessage other)
         {
             var otherLogMessage = other as MultiNodeTestRunnerMessage;
@@ -207,6 +222,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public class MultiNodeLogMessageFragment : MultiNodeMessage
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeLogMessageFragment"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message</param>
+        /// <param name="nodeIndex">The index of the node where the message occurred</param>
+        /// <param name="nodeRole">The role of the node where the message occurred</param>
         public MultiNodeLogMessageFragment(long timeStamp, string message, int nodeIndex, string nodeRole) 
             : base(timeStamp, message, nodeIndex, nodeRole)
         {
@@ -218,6 +240,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// </summary>
     public class MultiNodeLogMessage : MultiNodeMessage
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MultiNodeLogMessage"/> class.
+        /// </summary>
+        /// <param name="timeStamp">The time that the message occurred</param>
+        /// <param name="message">The contents of the log message.</param>
+        /// <param name="nodeIndex">The index of the node where the message occurred</param>
+        /// <param name="nodeRole">The role of the node where the message occurred</param>
+        /// <param name="actorPath">The path to the remote node where the message occurred</param>
+        /// <param name="logLevel">The log level of the message</param>
         public MultiNodeLogMessage(long timeStamp, string message, int nodeIndex, string nodeRole, string actorPath, LogLevel logLevel)
             : base(timeStamp, message, nodeIndex, nodeRole)
         {
@@ -239,6 +270,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Equality
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -250,6 +282,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(MultiNodeMessage other)
         {
             var otherLogMessage = other as MultiNodeLogMessage;

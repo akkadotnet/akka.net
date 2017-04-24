@@ -85,7 +85,7 @@ namespace Akka.DistributedData.Local
         public bool IsEmpty => _crdt.IsEmpty;
 
         /// <summary>
-        /// Gets or sets provided key-valu of the underlying ORDicationary within scope of the current cluster node.
+        /// Gets or sets provided key-value of the underlying <see cref="ORDictionary"/> within scope of the current cluster node.
         /// </summary>
         /// <param name="key">TBD</param>
         public TVal this[TKey key] => _crdt[key];

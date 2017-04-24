@@ -57,14 +57,14 @@ namespace Akka.Streams
         public sealed class Failure : IQueueOfferResult
         {
             /// <summary>
-            /// TBD
+            /// The cause of the failure
             /// </summary>
             public Exception Cause { get; }
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="Failure"/> class.
             /// </summary>
-            /// <param name="cause">TBD</param>
+            /// <param name="cause">The cause of the failure</param>
             public Failure(Exception cause)
             {
                 Cause = cause;

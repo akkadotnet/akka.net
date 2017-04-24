@@ -90,20 +90,22 @@ namespace Akka.Persistence.Journal
         public sealed class ReplayFailure
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="ReplayFailure"/> class.
             /// </summary>
-            /// <param name="cause">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <param name="cause">The cause of the failure</param>
+            /// <exception cref="System.ArgumentNullException">
+            /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
+            /// </exception>
             public ReplayFailure(Exception cause)
             {
                 if (cause == null)
-                    throw new ArgumentNullException("cause", "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
+                    throw new ArgumentNullException(nameof(cause), "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
 
                 Cause = cause;
             }
 
             /// <summary>
-            /// TBD
+            /// The cause of the failure
             /// </summary>
             public Exception Cause { get; private set; }
         }
@@ -127,11 +129,8 @@ namespace Akka.Persistence.Journal
             /// TBD
             /// </summary>
             public long HighestSequenceNr { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+
+            /// <inheritdoc/>
             public bool Equals(ReplaySuccess other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -199,11 +198,8 @@ namespace Akka.Persistence.Journal
             /// TBD
             /// </summary>
             public long Max { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+
+            /// <inheritdoc/>
             public bool Equals(ReplayMessages other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -241,11 +237,8 @@ namespace Akka.Persistence.Journal
             /// TBD
             /// </summary>
             public long ToSequenceNr { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+
+            /// <inheritdoc/>
             public bool Equals(DeleteMessagesTo other)
             {
                 if (ReferenceEquals(other, null)) return false;

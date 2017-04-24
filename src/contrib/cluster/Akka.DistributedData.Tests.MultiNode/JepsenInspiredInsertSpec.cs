@@ -255,7 +255,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                 RunOn(() =>
                 {
-                    // without delays all could teoretically have been written before the blackhole
+                    // without delays all could theoretically have been written before the blackhole
                     if (_delayMillis != 0)
                         failureWriteAcks.Should().NotBeEmpty();
                 }, N2, N3);

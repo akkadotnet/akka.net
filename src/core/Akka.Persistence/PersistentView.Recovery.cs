@@ -92,7 +92,7 @@ namespace Akka.Persistence
         /// with the replayed events.
         /// 
         /// If replay succeeds it got highest stored sequence number response from the journal and
-        /// then switche it switches to <see cref="Idle"/> state.
+        /// then switch it switches to <see cref="Idle"/> state.
         /// 
         /// 
         /// If replay succeeds the <see cref="OnReplaySuccess"/> callback method is called, otherwise
