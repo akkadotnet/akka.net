@@ -223,6 +223,16 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("other-2");
         }
 
+        [Fact]
+        public void PersistentView_should_send_zero_fromSequenceNr_to_journal_if_recovery_none()
+        {
+            var replayProbe = CreateTestProbe();
+            SubscribeToReplay(replayProbe);
+            _view = ActorOf(() => new RecoveryTestPersistentView(Name, _viewProbe.Ref));
+
+            replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 0L && m.ToSequenceNr == 0L);
+        }
+
         private void SubscribeToReplay(TestProbe probe)
         {
             Sys.EventStream.Subscribe(probe.Ref, typeof(ReplayMessages));

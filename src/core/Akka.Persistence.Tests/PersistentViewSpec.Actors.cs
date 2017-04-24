@@ -293,6 +293,36 @@ namespace Akka.Persistence.Tests
         }
 
         #endregion
+
+        internal class RecoveryTestPersistentView : PersistentView
+        {
+            private readonly string _name;
+            private readonly IActorRef _probe;
+
+            public RecoveryTestPersistentView(string name, IActorRef probe)
+            {
+                _name = name;
+                _probe = probe;
+            }
+
+            protected override bool Receive(object message)
+            {
+                _probe.Tell(string.Format("replicated-{0}-{1}", message, LastSequenceNr));
+                return true;
+            }
+
+            public override Recovery Recovery
+            {
+                get
+                {
+                    return Recovery.None; 
+                }
+            }
+
+            public override string ViewId { get { return _name + "-view"; } }
+            public override string PersistenceId { get { return _name; } }
+
+        }
     }
 }
 
