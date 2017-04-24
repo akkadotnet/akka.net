@@ -158,6 +158,7 @@
     <Compile Include="Actor\FSMTimingSpec.cs" />
     <Compile Include="Actor\FSMTransitionSpec.cs" />
     <Compile Include="Actor\PatternSpec.cs" />
+    <Compile Include="Actor\ReceiveActorTests_Typed.cs" />
     <Compile Include="Actor\ReceiveTimeoutSpec.cs" />
     <Compile Include="Actor\RelativeActorPathSpec.cs" />
     <Compile Include="Actor\RemotePathParsingSpec.cs" />
