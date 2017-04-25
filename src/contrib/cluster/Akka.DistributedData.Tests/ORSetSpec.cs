@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Cluster;
 using Xunit;
@@ -48,7 +49,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_ORSet_should_be_able_to_add_element()
+        public void ORSet_must_be_able_to_add_element()
         {
             var c1 = ORSet<string>.Empty;
             var c2 = c1.Add(_node1, _user1);
@@ -63,7 +64,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_ORSet_should_be_able_to_remove_element()
+        public void ORSet_must_be_able_to_remove_element()
         {
             var c1 = ORSet<string>.Empty;
             var c2 = c1.Add(_node1, _user1);
@@ -84,7 +85,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_ORSet_should_be_able_to_add_removed_element()
+        public void ORSet_must_be_able_to_add_removed_element()
         {
             var c1 = ORSet<string>.Empty;
             var c2 = c1.Remove(_node1, _user1);
@@ -98,7 +99,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_ORSet_should_be_able_to_add_and_remove_several_times()
+        public void ORSet_must_be_able_to_add_and_remove_several_times()
         {
             var c1 = ORSet<string>.Empty;
             var c2 = c1.Add(_node1, _user1);
@@ -120,7 +121,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_ORSet_should_be_able_to_have_its_element_set_correctly_merged_with_another_ORSet_with_unique_element_sets()
+        public void ORSet_must_be_able_to_have_its_element_set_correctly_merged_with_another_ORSet_with_unique_element_sets()
         {
             // set 1
             var c1 = ORSet<string>.Empty.Add(_node1, _user1).Add(_node1, _user2);
@@ -147,7 +148,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_ORSet_should_be_able_to_have_its_element_set_correctly_merged_with_another_ORSet_with_overlaping_data()
+        public void ORSet_must_be_able_to_have_its_element_set_correctly_merged_with_another_ORSet_with_overlaping_data()
         {
             // set 1
             var c1 = ORSet<string>.Empty.Add(_node1, _user1).Add(_node1, _user2).Add(_node1, _user3).Remove(_node1, _user1).Remove(_node1, _user3);
@@ -177,7 +178,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_ORSet_should_be_able_to_have_its_element_set_correctly_merged_for_concurrent_updates()
+        public void ORSet_must_be_able_to_have_its_element_set_correctly_merged_for_concurrent_updates()
         {
             // set 1
             var c1 = ORSet<string>.Empty.Add(_node1, _user1).Add(_node1, _user2).Add(_node1, _user3);
@@ -219,7 +220,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_ORSet_should_be_able_to_have_its_element_set_correctly_merged_after_remove()
+        public void ORSet_must_be_able_to_have_its_element_set_correctly_merged_after_remove()
         {
             var c1 = ORSet<string>.Empty.Add(_node1, _user1).Add(_node1, _user2);
             var c2 = c1.Remove(_node2, _user2);
@@ -245,6 +246,112 @@ namespace Akka.DistributedData.Tests
             Assert.Contains(_user1, m4.Elements);
             Assert.DoesNotContain(_user2, m4.Elements);
             Assert.Contains(_user1, m4.Elements);
+        }
+    }
+
+    [Collection("DistributedDataSpec")]
+    public class ORSetDeltasSpec
+    {
+        [Fact]
+        public void ORSetDeltas_must_work_with_addition()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSetDeltas_must_handle_another_concurrent_add_scenario()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSetDeltas_must_merge_deltas_into_delta_groups()
+        {
+            throw new NotImplementedException();
+        }
+
+
+        [Fact]
+        public void ORSetDeltas_must_work_for_removals()
+        {
+            throw new NotImplementedException();
+        }
+
+
+        [Fact]
+        public void ORSetDeltas_must_work_for_clear()
+        {
+            throw new NotImplementedException();
+        }
+        
+        [Fact]
+        public void ORSetDeltas_must_handle_a_mixed_add_and_remove_scenario()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSetDeltas_must_handle_a_mixed_add_and_remove_scenario_2()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSetDeltas_must_handle_a_mixed_add_and_remove_scenario_3()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSetDeltas_must_do_not_have_anomalies_for_ORSet_in_complex_but_realistic_scenario()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSetDeltas_must_require_casual_delivery_of_deltas()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    [Collection("DistributedDataSpec")]
+    public class ORSetMergeSpec
+    {
+        [Fact]
+        public void ORSet_must_verify_SubtractDots()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSet_must_verify_MergeCommonKeys()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSet_must_verify_MergeDisjointKeys()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSet_must_verify_disjoint_Merge()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSet_must_verify_removed_after_merge()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public void ORSet_must_verify_removed_after_merge_2()
+        {
+            throw new NotImplementedException();
         }
     }
 }

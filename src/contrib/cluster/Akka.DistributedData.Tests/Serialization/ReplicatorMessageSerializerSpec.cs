@@ -56,8 +56,8 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new DataEnvelope(data1));
             CheckSerialization(new DataEnvelope(data1, ImmutableDictionary.CreateRange(new[]
             {
-                new KeyValuePair<UniqueAddress, PruningState>(_address1, new PruningState(_address2, PruningPerformed.Instance)), 
-                new KeyValuePair<UniqueAddress, PruningState>(_address3, new PruningState(_address2, new PruningInitialized(_address1.Address))), 
+                new KeyValuePair<UniqueAddress, IPruningState>(_address1, new IPruningState(_address2, PruningPerformed.Instance)), 
+                new KeyValuePair<UniqueAddress, IPruningState>(_address3, new IPruningState(_address2, new PruningInitialized(_address1.Address))), 
             })));
             CheckSerialization(new Write("A", new DataEnvelope(data1)));
             CheckSerialization(WriteAck.Instance);

@@ -39,12 +39,12 @@ namespace Akka.DistributedData
         public static readonly ORMultiValueDictionary<TKey, TValue> Empty = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: false);
         public static readonly ORMultiValueDictionary<TKey, TValue> EmptyWithValueDeltas = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: true);
 
-        private readonly ORDictionary<TKey, ORSet<TValue>> _underlying;
+        internal readonly ORDictionary<TKey, ORSet<TValue>> Underlying;
         private readonly bool _withValueDeltas;
 
         internal ORMultiValueDictionary(ORDictionary<TKey, ORSet<TValue>> underlying, bool withValueDeltas)
         {
-            _underlying = underlying;
+            Underlying = underlying;
             _withValueDeltas = withValueDeltas;
         }
 
@@ -52,22 +52,22 @@ namespace Akka.DistributedData
 
         public IImmutableDictionary<TKey, IImmutableSet<TValue>> Entries => 
             _withValueDeltas
-            ? _underlying.Entries
-                .Where(kv => _underlying.KeySet.Contains(kv.Key))
+            ? Underlying.Entries
+                .Where(kv => Underlying.KeySet.Contains(kv.Key))
                 .Select(kv => new KeyValuePair<TKey, IImmutableSet<TValue>>(kv.Key, kv.Value.Elements))
                 .ToImmutableDictionary()
-            : _underlying.Entries
+            : Underlying.Entries
                 .Select(kv => new KeyValuePair<TKey, IImmutableSet<TValue>>(kv.Key, kv.Value.Elements))
                 .ToImmutableDictionary();
 
-        public IImmutableSet<TValue> this[TKey key] => _underlying[key].Elements;
+        public IImmutableSet<TValue> this[TKey key] => Underlying[key].Elements;
 
         public bool TryGetValue(TKey key, out IImmutableSet<TValue> value)
         {
-            if (!_withValueDeltas || _underlying.KeySet.Contains(key))
+            if (!_withValueDeltas || Underlying.KeySet.Contains(key))
             {
                 ORSet<TValue> set;
-                if (_underlying.TryGetValue(key, out set))
+                if (Underlying.TryGetValue(key, out set))
                 {
                     value = set.Elements;
                     return true;
@@ -78,16 +78,16 @@ namespace Akka.DistributedData
             return false;
         }
 
-        public bool ContainsKey(TKey key) => _underlying.KeySet.Contains(key);
+        public bool ContainsKey(TKey key) => Underlying.KeySet.Contains(key);
 
-        public bool IsEmpty => _underlying.IsEmpty;
+        public bool IsEmpty => Underlying.IsEmpty;
 
-        public int Count => _underlying.Count;
+        public int Count => Underlying.Count;
 
         /// <summary>
         /// Returns all keys stored within current ORMultiDictionary.
         /// </summary>
-        public IEnumerable<TKey> Keys => _underlying.KeySet;
+        public IEnumerable<TKey> Keys => Underlying.KeySet;
 
         /// <summary>
         /// Returns all values stored in all buckets within current ORMultiDictionary.
@@ -96,7 +96,7 @@ namespace Akka.DistributedData
         {
             get
             {
-                foreach (var value in _underlying.Values)
+                foreach (var value in Underlying.Values)
                     foreach (var v in value)
                     {
                         yield return v;
@@ -117,7 +117,7 @@ namespace Akka.DistributedData
         /// </summary>
         public ORMultiValueDictionary<TKey, TValue> SetItems(UniqueAddress node, TKey key, IImmutableSet<TValue> bucket)
         {
-            var newUnderlying = _underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, _withValueDeltas, old => 
+            var newUnderlying = Underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, _withValueDeltas, old => 
                 bucket.Aggregate(old.Clear(node), (set, element) => set.Add(node, element)));
 
             return new ORMultiValueDictionary<TKey, TValue>(newUnderlying, _withValueDeltas);
@@ -138,11 +138,11 @@ namespace Akka.DistributedData
         {
             if (_withValueDeltas)
             {
-                var u = _underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, true, existing => existing.Clear(node));
+                var u = Underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, true, existing => existing.Clear(node));
                 return new ORMultiValueDictionary<TKey, TValue>(u.Remove(node, key), _withValueDeltas);
             }
             else 
-                return new ORMultiValueDictionary<TKey, TValue>(_underlying.Remove(node, key), _withValueDeltas);
+                return new ORMultiValueDictionary<TKey, TValue>(Underlying.Remove(node, key), _withValueDeltas);
         }
 
         public ORMultiValueDictionary<TKey, TValue> Merge(ORMultiValueDictionary<TKey, TValue> other)
@@ -150,8 +150,8 @@ namespace Akka.DistributedData
             if (_withValueDeltas == other._withValueDeltas)
             {
                 return _withValueDeltas
-                    ? new ORMultiValueDictionary<TKey, TValue>(_underlying.MergeRetainingDeletedValues(other._underlying), _withValueDeltas) 
-                    : new ORMultiValueDictionary<TKey, TValue>(_underlying.Merge(other._underlying), _withValueDeltas); 
+                    ? new ORMultiValueDictionary<TKey, TValue>(Underlying.MergeRetainingDeletedValues(other.Underlying), _withValueDeltas) 
+                    : new ORMultiValueDictionary<TKey, TValue>(Underlying.Merge(other.Underlying), _withValueDeltas); 
             }
 
             throw new ArgumentException($"Trying to merge two ORMultiValueDictionaries of different map sub-types");
@@ -168,7 +168,7 @@ namespace Akka.DistributedData
         /// </summary>
         public ORMultiValueDictionary<TKey, TValue> AddItem(UniqueAddress node, TKey key, TValue element)
         {
-            var newUnderlying = _underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, _withValueDeltas, x => x.Add(node, element));
+            var newUnderlying = Underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, _withValueDeltas, x => x.Add(node, element));
             return new ORMultiValueDictionary<TKey, TValue>(newUnderlying, _withValueDeltas);
         }
 
@@ -185,7 +185,7 @@ namespace Akka.DistributedData
         /// </summary>
         public ORMultiValueDictionary<TKey, TValue> RemoveItem(UniqueAddress node, TKey key, TValue element)
         {
-            var newUnderlying = _underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, _withValueDeltas, set => set.Remove(node, element));
+            var newUnderlying = Underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, _withValueDeltas, set => set.Remove(node, element));
             ORSet<TValue> found;
             if (newUnderlying.TryGetValue(key, out found) && found.IsEmpty)
             {
@@ -220,29 +220,29 @@ namespace Akka.DistributedData
         public IReplicatedData Merge(IReplicatedData other) =>
             Merge((ORMultiValueDictionary<TKey, TValue>)other);
 
-        public bool NeedPruningFrom(UniqueAddress removedNode) => _underlying.NeedPruningFrom(removedNode);
+        public bool NeedPruningFrom(UniqueAddress removedNode) => Underlying.NeedPruningFrom(removedNode);
 
         public ORMultiValueDictionary<TKey, TValue> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => 
-            new ORMultiValueDictionary<TKey, TValue>(_underlying.Prune(removedNode, collapseInto), _withValueDeltas);
+            new ORMultiValueDictionary<TKey, TValue>(Underlying.Prune(removedNode, collapseInto), _withValueDeltas);
 
         public ORMultiValueDictionary<TKey, TValue> PruningCleanup(UniqueAddress removedNode) => 
-            new ORMultiValueDictionary<TKey, TValue>(_underlying.PruningCleanup(removedNode), _withValueDeltas);
+            new ORMultiValueDictionary<TKey, TValue>(Underlying.PruningCleanup(removedNode), _withValueDeltas);
 
         public bool Equals(ORMultiValueDictionary<TKey, TValue> other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(_underlying, other._underlying);
+            return Equals(Underlying, other.Underlying);
         }
 
         public IEnumerator<KeyValuePair<TKey, IImmutableSet<TValue>>> GetEnumerator() => 
-            _underlying.Select(x => new KeyValuePair<TKey, IImmutableSet<TValue>>(x.Key, x.Value.Elements)).GetEnumerator();
+            Underlying.Select(x => new KeyValuePair<TKey, IImmutableSet<TValue>>(x.Key, x.Value.Elements)).GetEnumerator();
 
         public override bool Equals(object obj) => 
             obj is ORMultiValueDictionary<TKey, TValue> && Equals((ORMultiValueDictionary<TKey, TValue>) obj);
 
-        public override int GetHashCode() => _underlying.GetHashCode();
+        public override int GetHashCode() => Underlying.GetHashCode();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public override string ToString()
@@ -263,14 +263,14 @@ namespace Akka.DistributedData
 
         #region delta
 
-        public ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation Delta => _underlying.Delta;
+        public ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation Delta => Underlying.Delta;
 
         public ORMultiValueDictionary<TKey, TValue> MergeDelta(ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation delta)
         {
             if (_withValueDeltas)
-                return new ORMultiValueDictionary<TKey, TValue>(_underlying.MergeDeltaRetainingDeletedValues(delta), _withValueDeltas);
+                return new ORMultiValueDictionary<TKey, TValue>(Underlying.MergeDeltaRetainingDeletedValues(delta), _withValueDeltas);
             else 
-                return new ORMultiValueDictionary<TKey, TValue>(_underlying.MergeDelta(delta), _withValueDeltas);
+                return new ORMultiValueDictionary<TKey, TValue>(Underlying.MergeDelta(delta), _withValueDeltas);
         }
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
@@ -279,7 +279,7 @@ namespace Akka.DistributedData
             MergeDelta((ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation) delta);
 
         public ORMultiValueDictionary<TKey, TValue> ResetDelta() => 
-            new ORMultiValueDictionary<TKey, TValue>(_underlying.ResetDelta(), _withValueDeltas);
+            new ORMultiValueDictionary<TKey, TValue>(Underlying.ResetDelta(), _withValueDeltas);
 
         #endregion
     }

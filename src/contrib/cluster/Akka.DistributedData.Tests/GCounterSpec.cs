@@ -8,6 +8,7 @@
 using Akka.Cluster;
 using System.Numerics;
 using Akka.Actor;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_GCounter_should_be_able_to_increment_each_node_record_by_one()
+        public void GCounter_must_be_able_to_increment_each_node_record_by_one()
         {
             var c1 = new GCounter();
             var c2 = c1.Increment(_node1);
@@ -34,12 +35,12 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Increment(_node2);
             var c6 = c5.Increment(_node2);
 
-            Assert.Equal(new BigInteger(2), c6.State[_node1]);
-            Assert.Equal(new BigInteger(3), c6.State[_node2]);
+            c6.State[_node1].Should().Be(new BigInteger(2));
+            c6.State[_node2].Should().Be(new BigInteger(3));
         }
 
         [Fact]
-        public void A_GCounter_should_be_able_to_increment_each_node_record_by_arbitrary_delta()
+        public void GCounter_must_be_able_to_increment_each_node_record_by_arbitrary_delta()
         {
             var c1 = new GCounter();
             var c2 = c1.Increment(_node1, 3);
@@ -48,12 +49,12 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Increment(_node2, 7);
             var c6 = c5.Increment(_node2);
 
-            Assert.Equal(new BigInteger(7), c6.State[_node1]);
-            Assert.Equal(new BigInteger(10), c6.State[_node2]);
+            c6.State[_node1].Should().Be(new BigInteger(7));
+            c6.State[_node2].Should().Be(new BigInteger(10));
         }
 
         [Fact]
-        public void A_GCounter_should_be_able_to_summarize_the_history_to_the_correct_aggregated_value()
+        public void GCounter_must_be_able_to_summarize_the_history_to_the_correct_aggregated_value()
         {
             var c1 = new GCounter();
             var c2 = c1.Increment(_node1, 3);
@@ -62,13 +63,13 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Increment(_node2, 7);
             var c6 = c5.Increment(_node2);
 
-            Assert.Equal(new BigInteger(7), c6.State[_node1]);
-            Assert.Equal(new BigInteger(10), c6.State[_node2]);
-            Assert.Equal(new BigInteger(17), c6.Value);
+            c6.State[_node1].Should().Be(new BigInteger(7));
+            c6.State[_node2].Should().Be(new BigInteger(10));
+            c6.Value.Should().Be(new BigInteger(17));
         }
 
         [Fact]
-        public void A_GCounter_should_be_able_to_have_its_history_correctly_merged_with_another_GCounter1()
+        public void GCounter_must_be_able_to_have_its_history_correctly_merged_with_another_GCounter1()
         {
             // counter 1
             var c11 = new GCounter();
@@ -109,7 +110,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_GCounter_should_be_able_to_have_its_history_correctly_merged_with_another_GCounter2()
+        public void GCounter_must_be_able_to_have_its_history_correctly_merged_with_another_GCounter2()
         {
             // counter 1
             var c11 = new GCounter();
@@ -150,7 +151,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_GCounter_should_support_pruning()
+        public void GCounter_must_support_pruning()
         {
             var c1 = new GCounter();
             var c2 = c1.Increment(_node1);

@@ -90,6 +90,9 @@ namespace Akka.DistributedData
             State = state;
             Value = State.Aggregate(Zero, (v, acc) => v + acc.Value);
         }
+
+        public IEnumerable<UniqueAddress> ModifiedByNodes => State.Keys;
+
         /// <summary>
         /// Increment the counter by 1.
         /// </summary>

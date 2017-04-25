@@ -77,7 +77,7 @@ namespace Akka.DistributedData
     {
         public static readonly ORSet<T> Empty = new ORSet<T>();
 
-        private readonly ImmutableDictionary<T, VersionVector> _elementsMap;
+        internal readonly ImmutableDictionary<T, VersionVector> ElementsMap;
         private readonly VersionVector _versionVector;
 
         /// <summary>
@@ -118,8 +118,8 @@ namespace Akka.DistributedData
 
         private static ImmutableDictionary<T, VersionVector> MergeCommonKeys(IEnumerable<T> commonKeys, ORSet<T> lhs, ORSet<T> rhs) => commonKeys.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, k) =>
         {
-            var l = lhs._elementsMap[k];
-            var r = rhs._elementsMap[k];
+            var l = lhs.ElementsMap[k];
+            var r = rhs.ElementsMap[k];
 
             if (l is SingleVersionVector)
             {
@@ -211,18 +211,18 @@ namespace Akka.DistributedData
 
         internal ORSet(ImmutableDictionary<T, VersionVector> elementsMap, VersionVector versionVector, IDeltaOperation delta)
         {
-            _elementsMap = elementsMap;
+            ElementsMap = elementsMap;
             _versionVector = versionVector;
             _delta = delta;
         }
 
-        public IImmutableSet<T> Elements => _elementsMap.Keys.ToImmutableHashSet();
+        public IImmutableSet<T> Elements => ElementsMap.Keys.ToImmutableHashSet();
 
-        public bool Contains(T elem) => _elementsMap.ContainsKey(elem);
+        public bool Contains(T elem) => ElementsMap.ContainsKey(elem);
 
-        public bool IsEmpty => _elementsMap.Count == 0;
+        public bool IsEmpty => ElementsMap.Count == 0;
 
-        public int Count => _elementsMap.Count;
+        public int Count => ElementsMap.Count;
 
         /// <summary>
         /// Adds an element to the set
@@ -242,7 +242,7 @@ namespace Akka.DistributedData
                 newDelta = (IDeltaOperation)Delta.Merge(newDelta);
             }
 
-            return AssignAncestor(new ORSet<T>(_elementsMap.SetItem(element, newDot), newVersionVector, newDelta));
+            return AssignAncestor(new ORSet<T>(ElementsMap.SetItem(element, newDot), newVersionVector, newDelta));
         }
 
         /// <summary>
@@ -263,7 +263,7 @@ namespace Akka.DistributedData
                 newDelta = (IDeltaOperation)Delta.Merge(newDelta);
             }
 
-            return AssignAncestor(new ORSet<T>(_elementsMap.Remove(element), _versionVector, newDelta));
+            return AssignAncestor(new ORSet<T>(ElementsMap.Remove(element), _versionVector, newDelta));
         }
 
         /// <summary>
@@ -309,17 +309,17 @@ namespace Akka.DistributedData
 
         private ORSet<T> DryMerge(ORSet<T> other, bool addDeltaOp)
         {
-            var commonKeys = _elementsMap.Count < other._elementsMap.Count
-                ? _elementsMap.Keys.Where(other._elementsMap.ContainsKey)
-                : other._elementsMap.Keys.Where(_elementsMap.ContainsKey);
+            var commonKeys = ElementsMap.Count < other.ElementsMap.Count
+                ? ElementsMap.Keys.Where(other.ElementsMap.ContainsKey)
+                : other.ElementsMap.Keys.Where(ElementsMap.ContainsKey);
 
             var entries00 = MergeCommonKeys(commonKeys, this, other);
             var entries0 = addDeltaOp
-                ? entries00.AddRange(_elementsMap.Where(entry => !other._elementsMap.ContainsKey(entry.Key)))
-                : MergeDisjointKeys(_elementsMap.Keys.Where(key => !other._elementsMap.ContainsKey(key)), _elementsMap, other._versionVector, entries00);
+                ? entries00.AddRange(ElementsMap.Where(entry => !other.ElementsMap.ContainsKey(entry.Key)))
+                : MergeDisjointKeys(ElementsMap.Keys.Where(key => !other.ElementsMap.ContainsKey(key)), ElementsMap, other._versionVector, entries00);
 
-            var otherUniqueKeys = other._elementsMap.Keys.Where(key => !_elementsMap.ContainsKey(key));
-            var entries = MergeDisjointKeys(otherUniqueKeys, other._elementsMap, _versionVector, entries0);
+            var otherUniqueKeys = other.ElementsMap.Keys.Where(key => !ElementsMap.ContainsKey(key));
+            var entries = MergeDisjointKeys(otherUniqueKeys, other.ElementsMap, _versionVector, entries0);
             var mergedVector = _versionVector.Merge(other._versionVector);
 
             ClearAncestor();
@@ -343,21 +343,21 @@ namespace Akka.DistributedData
 
         public ORSet<T> Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
-            var pruned = _elementsMap.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, kv) => kv.Value.NeedPruningFrom(removedNode)
+            var pruned = ElementsMap.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, kv) => kv.Value.NeedPruningFrom(removedNode)
                 ? acc.SetItem(kv.Key, kv.Value.Prune(removedNode, collapseInto))
                 : acc);
 
-            if (pruned.IsEmpty) return new ORSet<T>(_elementsMap, _versionVector.Prune(removedNode, collapseInto));
+            if (pruned.IsEmpty) return new ORSet<T>(ElementsMap, _versionVector.Prune(removedNode, collapseInto));
             else
             {
-                var newSet = new ORSet<T>(_elementsMap.AddRange(pruned), _versionVector.Prune(removedNode, collapseInto));
+                var newSet = new ORSet<T>(ElementsMap.AddRange(pruned), _versionVector.Prune(removedNode, collapseInto));
                 return pruned.Keys.Aggregate(newSet, (set, elem) => set.Add(collapseInto, elem));
             }
         }
 
         public ORSet<T> PruningCleanup(UniqueAddress removedNode)
         {
-            var updated = _elementsMap.Aggregate(_elementsMap, (acc, kv) => kv.Value.NeedPruningFrom(removedNode)
+            var updated = ElementsMap.Aggregate(ElementsMap, (acc, kv) => kv.Value.NeedPruningFrom(removedNode)
                 ? acc.SetItem(kv.Key, kv.Value.PruningCleanup(removedNode))
                 : acc);
 
@@ -369,10 +369,10 @@ namespace Akka.DistributedData
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return _versionVector == other._versionVector && _elementsMap.SequenceEqual(other._elementsMap);
+            return _versionVector == other._versionVector && ElementsMap.SequenceEqual(other.ElementsMap);
         }
 
-        public IEnumerator<T> GetEnumerator() => _elementsMap.Keys.GetEnumerator();
+        public IEnumerator<T> GetEnumerator() => ElementsMap.Keys.GetEnumerator();
 
         public override bool Equals(object obj) => obj is ORSet<T> && Equals((ORSet<T>)obj);
 
@@ -380,7 +380,7 @@ namespace Akka.DistributedData
         {
             unchecked
             {
-                return (_elementsMap.GetHashCode() * 397) ^ (_versionVector.GetHashCode());
+                return (ElementsMap.GetHashCode() * 397) ^ (_versionVector.GetHashCode());
             }
         }
 
@@ -427,7 +427,7 @@ namespace Akka.DistributedData
                     var u = ((AddDeltaOperation)other).Underlying;
                     // Note that we only merge deltas originating from the same node
                     return new AddDeltaOperation(new ORSet<T>(
-                        ConcatElementsMap(u._elementsMap),
+                        ConcatElementsMap(u.ElementsMap),
                         Underlying._versionVector.Merge(u._versionVector)));
                 }
                 else if (other is AtomicDeltaOperation)
@@ -445,7 +445,7 @@ namespace Akka.DistributedData
             private ImmutableDictionary<T, VersionVector> ConcatElementsMap(
                 ImmutableDictionary<T, VersionVector> thatMap)
             {
-                var u = Underlying._elementsMap.ToBuilder();
+                var u = Underlying.ElementsMap.ToBuilder();
                 foreach (var entry in thatMap)
                 {
                     u[entry.Key] = entry.Value;
@@ -566,7 +566,7 @@ namespace Akka.DistributedData
         private ORSet<T> MergeRemoveDelta(RemoveDeltaOperation delta)
         {
             var other = delta.Underlying;
-            var kv = other._elementsMap.First();
+            var kv = other.ElementsMap.First();
             var elem = kv.Key;
 
             var deleteDotNodes = new List<UniqueAddress>();
@@ -581,18 +581,18 @@ namespace Akka.DistributedData
                 }
             }
 
-            var newElementsMap = _elementsMap;
+            var newElementsMap = ElementsMap;
             if (allLessThanOrEq)
             {
                 VersionVector dot;
-                if (_elementsMap.TryGetValue(elem, out dot))
+                if (ElementsMap.TryGetValue(elem, out dot))
                 {
                     using (var e = dot.VersionEnumerator)
                     {
                         var allContains = true;
                         while (e.MoveNext()) allContains &= deleteDotNodes.Contains(e.Current.Key);
                         if (allContains)
-                            newElementsMap = _elementsMap.Remove(elem);
+                            newElementsMap = ElementsMap.Remove(elem);
                     }
                 }
             }
@@ -603,7 +603,7 @@ namespace Akka.DistributedData
 
         public ORSet<T> ResetDelta()
         {
-            return Delta == null ? this : AssignAncestor(new ORSet<T>(_elementsMap, _versionVector));
+            return Delta == null ? this : AssignAncestor(new ORSet<T>(ElementsMap, _versionVector));
         }
 
         #endregion

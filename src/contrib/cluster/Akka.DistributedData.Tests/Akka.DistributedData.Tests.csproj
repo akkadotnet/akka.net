@@ -78,6 +78,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataEnvelopeSpec.cs" />
     <Compile Include="DeltaPropagationSelectorSpec.cs" />
     <Compile Include="Serialization\ReplicatedDataSerializerSpec.cs" />
     <Compile Include="FlagSpec.cs" />

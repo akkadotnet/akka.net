@@ -554,6 +554,8 @@ namespace Akka.DistributedData
 
         public ORDictionary<TKey, TValue> MergeDelta(IDeltaOperation delta)
         {
+            if (delta == null) throw new ArgumentNullException();
+
             var withDeltas = DryMergeDeltas(delta);
             return this.Merge(withDeltas);
         }
