@@ -71,10 +71,10 @@ namespace Akka.Streams.Dsl
         public sealed class ProducerFailed : Exception
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="ProducerFailed"/> class.
             /// </summary>
-            /// <param name="message">TBD</param>
-            /// <param name="cause">TBD</param>
+            /// <param name="message">The error message that explains the reason for the exception.</param>
+            /// <param name="cause">The exception that is the cause of the current exception.</param>
             public ProducerFailed(string message, Exception cause) : base(message, cause)
             {
                 
@@ -473,10 +473,10 @@ namespace Akka.Streams.Dsl
 
     /// <summary>
     /// A BroadcastHub is a special streaming hub that is able to broadcast streamed elements to a dynamic set of consumers.
-    /// It consissts of two parts, a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/>. The <see cref="Sink{TIn,TMat}"/> broadcasts elements from a producer to the
+    /// It consists of two parts, a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/>. The <see cref="Sink{TIn,TMat}"/> broadcasts elements from a producer to the
     /// actually live consumers it has. Once the producer has been materialized, the <see cref="Sink{TIn,TMat}"/> it feeds into returns a
     /// materialized value which is the corresponding <see cref="Source{TOut,TMat}"/>. This <see cref="Source{TOut,TMat}"/> can be materialized arbitrary many times,
-    /// where weach of the new materializations will receive their elements from the original <see cref="Sink{TIn,TMat}"/>.
+    /// where each of the new materializations will receive their elements from the original <see cref="Sink{TIn,TMat}"/>.
     /// </summary>
     public class BroadcastHub
     {
@@ -484,7 +484,7 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and broadcasts them to a dynamic set
         /// of consumers. After the <see cref="Sink{TIn,TMat}"/> returned by this method is materialized, it returns a <see cref="Source{TOut,TMat}"/> as materialized
         /// value. This <see cref="Source{TOut,TMat}"/> can be materialized arbitrary many times and each materialization will receive the
-        /// broadcast elements form the ofiginal <see cref="Sink{TIn,TMat}"/>.
+        /// broadcast elements form the original <see cref="Sink{TIn,TMat}"/>.
         ///
         /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
         /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
@@ -795,7 +795,7 @@ namespace Akka.Streams.Dsl
                 if (advance != null)
                 {
                     var newOffset = advance.PreviousOffset + _stage.DemandThreshold;
-                    // Move the consumer from its last known offest to its new one. Check if we are unblocked.
+                    // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                     var c = FindAndRemoveConsumer(advance.Id, advance.PreviousOffset);
                     AddConsumer(c, newOffset);
                     CheckUnblock(advance.PreviousOffset);
@@ -804,7 +804,7 @@ namespace Akka.Streams.Dsl
 
                 // only NeedWakeup left
                 var wakeup = (NeedWakeup) hubEvent;
-                // Move the consumer from its last known offest to its new one. Check if we are unblocked.
+                // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                 var consumer = FindAndRemoveConsumer(wakeup.Id, wakeup.PreviousOffset);
                 AddConsumer(consumer, wakeup.CurrentOffset);
 

@@ -158,7 +158,9 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown when the <see cref="FlowShape{TIn,TOut}.Outlet"/> is closed.
+        /// </exception>
         /// <returns>TBD</returns>
         public ITerminationDirective AbsorbTermination()
         {
@@ -437,7 +439,7 @@ namespace Akka.Streams.Stage
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
-        /// the last action by this stage was a “push”.
+        /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
         /// <param name="context">TBD</param>
@@ -591,7 +593,7 @@ namespace Akka.Streams.Stage
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
-        /// the last action by this stage was a “push”.
+        /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
         /// <param name="context">TBD</param>
@@ -611,7 +613,7 @@ namespace Akka.Streams.Stage
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
-        /// the last action by this stage was a “push”.
+        /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
         /// <param name="context">TBD</param>

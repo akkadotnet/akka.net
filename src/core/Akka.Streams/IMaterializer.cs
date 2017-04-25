@@ -82,57 +82,67 @@ namespace Akka.Streams
         private NoMaterializer() { }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="name">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot be named.
+        /// </exception>
+        /// <returns>N/A</returns>
         public IMaterializer WithNamePrefix(string name)
         {
             throw new NotSupportedException("NoMaterializer cannot be named");
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">N/A</typeparam>
+        /// <param name="runnable">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot be materialized.
+        /// </exception>
+        /// <returns>N/A</returns>
         public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
         {
             throw new NotSupportedException("NoMaterializer cannot materialize");
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="delay">N/A</param>
+        /// <param name="action">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot schedule an event.
+        /// </exception>
+        /// <returns>N/A</returns>
         public ICancelable ScheduleOnce(TimeSpan delay, Action action)
         {
             throw new NotSupportedException("NoMaterializer cannot schedule a single event");
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="initialDelay">N/A</param>
+        /// <param name="interval">N/A</param>
+        /// <param name="action">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> cannot schedule a repeatable event.
+        /// </exception>
+        /// <returns>N/A</returns>
         public ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
         {
             throw new NotSupportedException("NoMaterializer cannot schedule a repeated event");
         }
 
         /// <summary>
-        /// TBD
+        /// N/A
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoMaterializer"/> does not provide an execution context.
+        /// </exception>
         public MessageDispatcher ExecutionContext
         {
             get { throw new NotSupportedException("NoMaterializer doesn't provide an ExecutionContext"); }

@@ -375,7 +375,7 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// Dispatcher ID to use for running the “head” actor, which handles supervision, death watch and router management messages.
+        /// Dispatcher ID to use for running the "head" actor, which handles supervision, death watch and router management messages.
         /// </summary>
         public override string RouterDispatcher
         {
@@ -518,7 +518,7 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// Dispatcher ID to use for running the “head” actor, which handles supervision, death watch and router management messages.
+        /// Dispatcher ID to use for running the "head" actor, which handles supervision, death watch and router management messages.
         /// </summary>
         public override string RouterDispatcher
         {

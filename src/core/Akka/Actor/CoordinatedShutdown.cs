@@ -82,7 +82,7 @@ namespace Akka.Actor
                 && Recover == other.Recover;
         }
 
-        /// <inheritdoc cref="object.Equals(object)"/>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -90,7 +90,7 @@ namespace Akka.Actor
             return obj is Phase && Equals((Phase)obj);
         }
 
-        /// <inheritdoc cref="object.GetHashCode"/>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -102,7 +102,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc cref="object.ToString"/>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"DependsOn=[{string.Join(",", DependsOn)}], Timeout={Timeout}, Recover={Recover}";
@@ -167,13 +167,10 @@ namespace Akka.Actor
         /// </summary>
         internal ILoggingAdapter Log { get; }
 
-        /// <summary>
-        /// INTERNAL API
-        /// </summary>
         private readonly HashSet<string> _knownPhases;
 
         /// <summary>
-        /// ITNERNAL API
+        /// INTERNAL API
         /// </summary>
         internal readonly List<string> OrderedPhases;
 

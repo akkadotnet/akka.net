@@ -40,7 +40,7 @@ namespace Akka.Util
         /// Creates a new priority queue.
         /// </summary>
         /// <param name="initialCapacity">The initial capacity of the queue.</param>
-        /// <param name="priorityCalculator">The calculator function for assinging message priorities.</param>
+        /// <param name="priorityCalculator">The calculator function for assigning message priorities.</param>
         public ListPriorityQueue(int initialCapacity, Func<object, int> priorityCalculator)
         {
             _data = new List<Envelope>(initialCapacity);
@@ -50,7 +50,7 @@ namespace Akka.Util
         /// <summary>
         /// DEPRECATED. Sets a new priority calculator.
         /// </summary>
-        /// <param name="priorityCalculator">The calculator function for assinging message priorities.</param>
+        /// <param name="priorityCalculator">The calculator function for assigning message priorities.</param>
         /// <remarks>
         /// WARNING: SHOULD NOT BE USED. Use the constructor to set priority instead.
         /// </remarks>

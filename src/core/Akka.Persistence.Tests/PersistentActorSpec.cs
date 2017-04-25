@@ -297,7 +297,7 @@ namespace Akka.Persistence.Tests
             ExpectMsg("a-e1-1");    // persist, must be before next command
 
             var expected = new HashSet<string> { "b", "a-ea2-2" };
-            var found = ExpectMsgAnyOf(expected.Cast<object>().ToArray());  // ea2 is PersistAsyn, b can be processed before it
+            var found = ExpectMsgAnyOf(expected.Cast<object>().ToArray());  // ea2 is PersistAsync, b can be processed before it
             expected.Remove(found.ToString());
             ExpectMsgAnyOf(expected.Cast<object>().ToArray());
 

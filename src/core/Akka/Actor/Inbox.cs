@@ -171,10 +171,7 @@ namespace Akka.Actor
 
         private readonly LinkedList<T> _inner = new LinkedList<T>();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator()
         {
             return _inner.GetEnumerator();
@@ -313,7 +310,7 @@ namespace Akka.Actor
         private static readonly DeadlineComparer _instance = new DeadlineComparer();
 
         /// <summary>
-        /// TBD
+        /// The singleton instance of this comparer
         /// </summary>
         public static DeadlineComparer Instance { get { return _instance; } }
 
@@ -321,12 +318,7 @@ namespace Akka.Actor
         {
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="x">TBD</param>
-        /// <param name="y">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int Compare(IQuery x, IQuery y)
         {
             return x.Deadline.CompareTo(y.Deadline);
@@ -550,19 +542,18 @@ namespace Akka.Actor
             return Receiver.Ask(new Get(_system.Scheduler.MonotonicClock + timeout), Timeout.InfiniteTimeSpan);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="disposing">TBD</param>
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
+        /// user's code. Managed and unmanaged resources will be disposed.<br />
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
+        /// unmanaged resources can be disposed.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
@@ -587,4 +578,3 @@ namespace Akka.Actor
         }
     }
 }
-

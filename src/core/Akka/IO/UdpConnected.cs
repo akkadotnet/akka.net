@@ -18,7 +18,7 @@ namespace Akka.IO
     ///
     /// This extension implements the connectionless UDP protocol with
     /// calling `connect` on the underlying sockets, i.e. with restricting
-    /// from whom data can be received. For “unconnected” UDP mode see <see cref="Udp"/>.
+    /// from whom data can be received. For "unconnected" UDP mode see <see cref="Udp"/>.
     ///
     /// For a full description of the design and philosophy behind this IO
     /// implementation please refer to <see href="http://doc.akka.io/">the Akka online documentation</see>.
@@ -74,7 +74,7 @@ namespace Akka.IO
         {
             /// <summary>
             /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
-            /// explicitly provided. Its “token” is `null`.
+            /// explicitly provided. Its "token" is <see langword="null"/>.
             /// </summary>
             public static readonly NoAck Instance = new NoAck(null);
 

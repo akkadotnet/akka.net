@@ -45,7 +45,7 @@ namespace Akka.Cluster.Tools.Singleton
             return new ClusterSingletonManagerSettings(
                 singletonName: config.GetString("singleton-name"),
                 role: RoleOption(config.GetString("role")),
-                removalMargin: TimeSpan.Zero, // defaults to ClusterSettins.DownRemovalMargin
+                removalMargin: TimeSpan.Zero, // defaults to ClusterSettings.DownRemovalMargin
                 handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval"));
         }
 
@@ -135,7 +135,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// Create a singleton manager with specified singleton remova margin.
+        /// Create a singleton manager with specified singleton removal margin.
         /// </summary>
         /// <param name="removalMargin">TBD</param>
         /// <returns>TBD</returns>
@@ -145,7 +145,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// Create a singleton manager with specified singleton remova margin hand-over retry interval.
+        /// Create a singleton manager with specified singleton removal margin hand-over retry interval.
         /// </summary>
         /// <param name="handOverRetryInterval">TBD</param>
         /// <returns>TBD</returns>

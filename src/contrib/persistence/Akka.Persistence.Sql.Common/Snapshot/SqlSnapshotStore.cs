@@ -40,20 +40,20 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         private readonly SnapshotStoreSettings _settings;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SqlSnapshotStore"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The configuration used to configure the snapshot store.</param>
         protected SqlSnapshotStore(Config config)
         {
             _settings = new SnapshotStoreSettings(config);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
 
-        private ILoggingAdapter _log;
         /// <summary>
         /// TBD
         /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log ?? Context.GetLogger());
+        private ILoggingAdapter _log;
 
         /// <summary>
         /// TBD

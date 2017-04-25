@@ -39,7 +39,7 @@ namespace Akka.Persistence.Journal
         /// Initializes a new instance of the <see cref="AsyncWriteJournal"/> class.
         /// </summary>
         /// <exception cref="ArgumentException">
-        /// This exception is thrown when the Persistence extension related to this journal has not been used in the current <see cref="ActorSystem"/> contexxt.
+        /// This exception is thrown when the Persistence extension related to this journal has not been used in the current <see cref="ActorSystem"/> context.
         /// </exception>
         /// <exception cref="Akka.Configuration.ConfigurationException">
         /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the configuration.
@@ -156,7 +156,7 @@ namespace Akka.Persistence.Journal
         /// null for the happy path, i.e. when no messages are rejected.
         /// 
         /// Calls to this method are serialized by the enclosing journal actor. If you spawn
-        /// work in asyncronous tasks it is alright that they complete the futures in any order,
+        /// work in asynchronous tasks it is alright that they complete the futures in any order,
         /// but the actual writes for a specific persistenceId should be serialized to avoid
         /// issues such as events of a later write are visible to consumers (query side, or replay)
         /// before the events of an earlier write are visible.

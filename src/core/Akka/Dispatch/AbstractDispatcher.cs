@@ -415,7 +415,7 @@ namespace Akka.Dispatch
 
         private long AddInhabitants(long add)
         {
-            // Intelocked.Add returns the NEW value, not the previous one - which is why this line is different from the JVM
+            // Interlocked.Add returns the NEW value, not the previous one - which is why this line is different from the JVM
             var ret = Interlocked.Add(ref _inhabitantsDoNotCallMeDirectly, add);
             if (ret < 0)
             {

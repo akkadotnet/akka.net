@@ -121,7 +121,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Returns a fixed size buffer backed by an array. The buffer implementation DOES NOT check agains overflow or
+        /// Returns a fixed size buffer backed by an array. The buffer implementation DOES NOT check against overflow or
         /// underflow, it is the responsibility of the user to track or check the capacity of the buffer before enqueueing
         /// dequeueing or dropping.
         /// 
@@ -129,7 +129,9 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="size">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="size"/> is less than 1.
+        /// </exception>
         /// <returns>TBD</returns>
         public static FixedSizeBuffer<T> Create<T>(int size)
         {

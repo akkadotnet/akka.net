@@ -260,7 +260,7 @@ namespace Akka.Streams.Dsl
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task"/> and the
         /// value of that task will be emitted downstream. As many tasks as requested elements by
-        /// downstream may run in parallel and each processed element will be emitted dowstream
+        /// downstream may run in parallel and each processed element will be emitted downstream
         /// as soon as it is ready, i.e. it is possible that the elements are not emitted downstream
         /// in the same order as received from upstream.
         /// 
@@ -644,7 +644,7 @@ namespace Akka.Streams.Dsl
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
         /// 
-        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// If the stream is empty (i.e. completes before signaling any elements),
         /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
         /// which is semantically in-line with that standard library collections do in such situations.
         /// <para>
@@ -1338,7 +1338,7 @@ namespace Akka.Streams.Dsl
         /// <param name="per">TBD</param>
         /// <param name="maximumBurst">TBD</param>
         /// <param name="mode">TBD</param>
-        /// <exception cref="ArgumentException">Thow when <paramref name="elements"/> is less than or equal zero, 
+        /// <exception cref="ArgumentException">Thrown when <paramref name="elements"/> is less than or equal zero, 
         /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
         /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
         /// <returns>TBD</returns>

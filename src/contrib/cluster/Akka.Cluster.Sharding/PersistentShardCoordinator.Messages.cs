@@ -53,11 +53,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as Register;
@@ -68,10 +64,7 @@ namespace Akka.Cluster.Sharding
                 return ShardRegion.Equals(other.ShardRegion);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -105,11 +98,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as RegisterProxy;
@@ -120,10 +109,7 @@ namespace Akka.Cluster.Sharding
                 return ShardRegionProxy.Equals(other.ShardRegionProxy);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -156,11 +142,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as RegisterAck;
@@ -171,10 +153,7 @@ namespace Akka.Cluster.Sharding
                 return Coordinator.Equals(other.Coordinator);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -209,11 +188,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as GetShardHome;
@@ -224,10 +199,7 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -267,11 +239,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardHome;
@@ -283,10 +251,7 @@ namespace Akka.Cluster.Sharding
                     && Ref.Equals(other.Ref);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -322,11 +287,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as HostShard;
@@ -337,10 +298,7 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -374,11 +332,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardStarted;
@@ -389,10 +343,7 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -431,11 +382,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as BeginHandOff;
@@ -446,10 +393,7 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -483,11 +427,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as BeginHandOffAck;
@@ -498,10 +438,7 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -514,7 +451,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// When all <see cref="ShardRegion"/> actors have acknoledged the <see cref="BeginHandOff"/> the
+        /// When all <see cref="ShardRegion"/> actors have acknowledged the <see cref="BeginHandOff"/> the
         /// <see cref="PersistentShardCoordinator"/> sends this message to the <see cref="ShardRegion"/> responsible for the
         /// shard. The <see cref="ShardRegion"/> is supposed to stop all entries in that shard and when
         /// all entries have terminated reply with <see cref="ShardStopped"/> to the <see cref="PersistentShardCoordinator"/>.
@@ -538,11 +475,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as HandOff;
@@ -553,10 +486,7 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -590,11 +520,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardStopped;
@@ -605,10 +531,7 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -696,11 +619,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as GracefulShutdownRequest;
@@ -711,10 +630,7 @@ namespace Akka.Cluster.Sharding
                 return ShardRegion.Equals(other.ShardRegion);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -753,11 +669,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardRegionRegistered;
@@ -768,10 +680,7 @@ namespace Akka.Cluster.Sharding
                 return Region.Equals(other.Region);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -805,11 +714,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardRegionProxyRegistered;
@@ -820,10 +725,7 @@ namespace Akka.Cluster.Sharding
                 return RegionProxy.Equals(other.RegionProxy);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -857,11 +759,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardRegionTerminated;
@@ -872,10 +770,7 @@ namespace Akka.Cluster.Sharding
                 return Region.Equals(other.Region);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -909,11 +804,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardRegionProxyTerminated;
@@ -924,10 +815,7 @@ namespace Akka.Cluster.Sharding
                 return RegionProxy.Equals(other.RegionProxy);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -967,11 +855,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardHomeAllocated;
@@ -983,10 +867,7 @@ namespace Akka.Cluster.Sharding
                     && Region.Equals(other.Region);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -1022,11 +903,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardHomeDeallocated;
@@ -1037,10 +914,7 @@ namespace Akka.Cluster.Sharding
                 return Shard.Equals(other.Shard);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked

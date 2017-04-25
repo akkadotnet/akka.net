@@ -13,7 +13,7 @@ using Akka.Pattern;
 namespace Akka.Cluster.Sharding
 {
     /// <summary>
-    /// INTERNAL API: <see cref="ShardRegion"/> and <see cref="PersistentShardCoordinator"/> actors are createad as children of this actor.
+    /// INTERNAL API: <see cref="ShardRegion"/> and <see cref="PersistentShardCoordinator"/> actors are created as children of this actor.
     /// </summary>
     internal sealed class ClusterShardingGuardian : ReceiveActor
     {

@@ -410,6 +410,9 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
+        /// <exception cref="Exception">
+        /// This exception is thrown when there are no members in the cluster.
+        /// </exception>
         public Member YoungestMember
         {
             get
@@ -434,14 +437,11 @@ namespace Akka.Cluster
                 return new Gossip(Members, Overview, newVersion);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return String.Format("Gossip(members = [{0}], overview = {1}, version = {2}",
-                _members.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b), _overview, _version);
+            var members = string.Join(", ", _members.Select(m => m.ToString()));
+            return $"Gossip(members = [{members}], overview = {_overview}, version = {_version}";
         }
     }
 
@@ -494,7 +494,8 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public Reachability Reachability { get { return _reachability; } }
-
+        
+        /// <inheritdoc/>
         public override string ToString() => $"GossipOverview(seen=[{string.Join(", ", Seen)}], reachability={Reachability})";
     }
 
@@ -578,21 +579,13 @@ namespace Akka.Cluster
             _version = version;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected bool Equals(GossipStatus other)
         {
             return _from.Equals(other._from) && _version.IsSameAs(other._version);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -601,10 +594,7 @@ namespace Akka.Cluster
             return Equals((GossipStatus)obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -613,8 +603,7 @@ namespace Akka.Cluster
             }
         }
 
+        /// <inheritdoc/>
         public override string ToString() => $"GossipStatus(from={From}, version={Version})";
     }
 }
-
-

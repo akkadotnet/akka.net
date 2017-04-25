@@ -227,7 +227,7 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// Remove a remote host from the list, so that the remaining nodes may still
         /// pass subsequent barriers. This must be done before the client connection
-        /// breaks down in order to affect an “orderly” removal (i.e. without failing
+        /// breaks down in order to affect an "orderly" removal (i.e. without failing
         /// present and future barriers).
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be removed</param>

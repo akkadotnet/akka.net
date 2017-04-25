@@ -77,8 +77,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <param name="singletonIdentificationInterval">Interval at which the proxy will try to resolve the singleton instance.</param>
         /// <param name="bufferSize">
         /// If the location of the singleton is unknown the proxy will buffer this number of messages and deliver them
-        /// when the singleton is identified.When the buffer is full old messages will be droppedwhen new messages 
-        /// are sent viea the proxy.Use 0 to disable buffering, i.e.messages will be dropped immediately if the location 
+        /// when the singleton is identified.When the buffer is full old messages will be dropped when new messages 
+        /// are sent via the proxy. Use 0 to disable buffering, i.e.messages will be dropped immediately if the location 
         /// of the singleton is unknown.
         /// </param>
         /// <exception cref="ArgumentException">
@@ -139,7 +139,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// This method is immutable and returns a new instance of the setting.
         /// </note>
         /// </summary>
-        /// <param name="singletonIdentificationInterval">The indentification level of the singleton proxy.</param>
+        /// <param name="singletonIdentificationInterval">The identification level of the singleton proxy.</param>
         /// <returns>A new setting with the provided <paramref name="singletonIdentificationInterval" />.</returns>
         public ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval)
         {

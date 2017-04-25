@@ -533,7 +533,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                // ReadMajority should retrive the previous update from second, before applying the modification
+                // ReadMajority should retrieve the previous update from second, before applying the modification
                 var probe1 = CreateTestProbe();
                 var probe2 = CreateTestProbe();
                 _replicator.Tell(Dsl.Get(KeyE, _readMajority), probe2.Ref);

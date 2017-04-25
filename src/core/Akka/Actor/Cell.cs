@@ -17,11 +17,11 @@ namespace Akka.Actor
     /// </summary>
     public interface ICell
     {
-        /// <summary>Gets the “self” reference which this Cell is attached to.</summary>
+        /// <summary>Gets the "self" reference which this Cell is attached to.</summary>
         IActorRef Self { get; }
 
         /// <summary>The system within which this Cell lives.</summary>
-        ActorSystem System { get; }        
+        ActorSystem System { get; }
         
         /// <summary>The system internals within which this Cell lives.</summary>
         ActorSystemImpl SystemImpl{ get; }

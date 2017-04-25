@@ -65,7 +65,7 @@ namespace Akka.Actor
             * Safe publication of this class’s fields is guaranteed by Mailbox.SetActor()
             * which is called indirectly from ActorCell.init() (if you’re wondering why
             * this is at all important, remember that under the CLR readonly fields are only
-            * frozen at the _end_ of the constructor, but we are publishing “this” before
+            * frozen at the _end_ of the constructor, but we are publishing "this" before
             * that is reached).
             * This means that the result of NewActorCell needs to be written to the field
             * _cell before we call init and start, since we can start using "this"

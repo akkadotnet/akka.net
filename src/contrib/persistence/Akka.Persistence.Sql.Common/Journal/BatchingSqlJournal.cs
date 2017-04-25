@@ -175,7 +175,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Maximum number of batch operations allowed to be executed at the same time.
         /// Each batch operation must acquire a <see cref="DbConnection"/>, so this setting
-        /// can be effectivelly used to limit the usage of ADO.NET connection pool by current journal.
+        /// can be effectively used to limit the usage of ADO.NET connection pool by current journal.
         /// </summary>
         public int MaxConcurrentOperations { get; }
 
@@ -323,7 +323,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// This implementation uses horizontal batching to recycle usage of the <see cref="DbConnection"/> 
     /// and to optimize writes made to a database. Batching journal is not going to acquire a new DB
     /// connection on every request. Instead it will batch incoming requests and execute them only when
-    /// a previous operation batch has been completed. This means that requests comming from many 
+    /// a previous operation batch has been completed. This means that requests coming from many 
     /// actors at the same time will be executed in one batch.
     /// 
     /// Maximum number of batches executed at the same time is defined by 
@@ -435,7 +435,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         
         /// <summary>
         /// SQL query executed as result of <see cref="GetCurrentPersistenceIds"/> request to journal.
-        /// It's a part of persitence query protocol.
+        /// It's a part of persistence query protocol.
         /// </summary>
         protected virtual string AllPersistenceIdsSql { get; }
 
@@ -1181,7 +1181,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="command">Database command object used to store data.</param>
         /// <param name="persistent">Persistent event representation.</param>
-        /// <param name="tags">Optional tags extracted from peristent event payload.</param>
+        /// <param name="tags">Optional tags extracted from persistent event payload.</param>
         protected virtual void WriteEvent(TCommand command, IPersistentRepresentation persistent, string tags = "")
         {
             var payloadType = persistent.Payload.GetType();
@@ -1201,7 +1201,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// Returns a persitent representation of an event read from a current row in the database.
+        /// Returns a persistent representation of an event read from a current row in the database.
         /// </summary>
         /// <param name="reader">TBD</param>
         /// <returns>TBD</returns>
