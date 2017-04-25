@@ -20,7 +20,7 @@ namespace Akka.Actor.Internal
     /// or Terminating.
     /// Removing the last child which was supposed to be terminating will return a different
     /// type of container, depending on whether or not children are left and whether or not
-    /// the reason was “Terminating”.
+    /// the reason was "Terminating".
     /// </summary>
     public class TerminatingChildrenContainer : ChildrenContainerBase
     {

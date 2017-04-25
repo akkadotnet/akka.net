@@ -323,7 +323,9 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="subscription">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="subscription"/> is undefined.
+        /// </exception>
         public static void RequireNonNullSubscription(ISubscription subscription)
         {
             if (ReferenceEquals(subscription, null))
@@ -333,11 +335,13 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="e">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
-        public static void RequireNonNullException(Exception e)
+        /// <param name="exception">TBD</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="exception"/> is undefined.
+        /// </exception>
+        public static void RequireNonNullException(Exception exception)
         {
-            if (ReferenceEquals(e, null))
+            if (ReferenceEquals(exception, null))
                 throw ExceptionMustNotBeNullException;
         }
 
@@ -345,7 +349,9 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="element">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="element"/> is undefined.
+        /// </exception>
         public static void RequireNonNullElement(object element)
         {
             if (ReferenceEquals(element, null))
@@ -356,7 +362,9 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="subscription">TBD</param>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <exception cref="SignalThrewException">
+        /// This exception is thrown when an exception occurs while canceling the specified <paramref name="subscription"/>.
+        /// </exception>
         public static void TryCancel(ISubscription subscription)
         {
             try
@@ -374,7 +382,9 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="subscription">TBD</param>
         /// <param name="demand">TBD</param>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <exception cref="SignalThrewException">
+        /// This exception is thrown when an exception occurs while requesting no events be sent to the specified <paramref name="subscription"/>.
+        /// </exception>
         public static void TryRequest(ISubscription subscription, long demand)
         {
             try

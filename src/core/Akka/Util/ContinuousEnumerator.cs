@@ -15,35 +15,27 @@ namespace Akka.Util
     /// 
     /// This allows for continuous read-only iteration over a set.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of objects to enumerate</typeparam>
     internal sealed class ContinuousEnumerator<T> : IEnumerator<T>
     {
-        /// <summary>
-        /// The raw iterator from some <see cref="IEnumerable{T}"/> object
-        /// </summary>
         private readonly IEnumerator<T> _internalEnumerator;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ContinuousEnumerator{T}"/> class.
         /// </summary>
-        /// <param name="internalEnumerator">TBD</param>
+        /// <param name="internalEnumerator">The raw iterator from some <see cref="IEnumerable{T}"/> object</param>
         public ContinuousEnumerator(IEnumerator<T> internalEnumerator)
         {
             _internalEnumerator = internalEnumerator;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Dispose()
         {
             _internalEnumerator.Dispose();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool MoveNext()
         {
             if (!_internalEnumerator.MoveNext())
@@ -54,17 +46,13 @@ namespace Akka.Util
             return true;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Reset()
         {
             _internalEnumerator.Reset();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public T Current { get { return _internalEnumerator.Current; } }
 
         object IEnumerator.Current

@@ -74,7 +74,9 @@ namespace Akka.Persistence
         /// TBD
         /// </summary>
         /// <param name="system">TBD</param>
-        /// <exception cref="NullReferenceException">TBD</exception>
+        /// <exception cref="NullReferenceException">TBD
+        /// This exception is thrown when the default journal plugin, <c>journal.plugin</c> is not configured.
+        /// </exception>
         public PersistenceExtension(ExtendedActorSystem system)
         {
             _system = system;
@@ -157,6 +159,9 @@ namespace Akka.Persistence
         /// class, otherwise the most specific adapter matching a given class will be returned.
         /// </summary>
         /// <param name="journalPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
         /// <returns>TBD</returns>
         public EventAdapters AdaptersFor(string journalPluginId)
         {
@@ -184,6 +189,9 @@ namespace Akka.Persistence
         /// When configured, uses <paramref name="journalPluginId"/> as absolute path to the journal configuration entry.
         /// </summary>
         /// <param name="journalPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
         /// <returns>TBD</returns>
         internal Config JournalConfigFor(string journalPluginId)
         {
@@ -195,14 +203,16 @@ namespace Akka.Persistence
         /// Looks up the plugin config by plugin's ActorRef.
         /// </summary>
         /// <param name="journalPluginActor">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="journalPluginActor"/> is unknown.
+        /// </exception>
         /// <returns>TBD</returns>
         internal Config ConfigFor(IActorRef journalPluginActor)
         {
             var extension = _pluginExtensionIds.Values
                 .FirstOrDefault(e => e.Value.Ref.Equals(journalPluginActor));
             if (extension == null)
-                throw new ArgumentException(string.Format("Unknown plugin actor {0}", journalPluginActor));
+                throw new ArgumentException($"Unknown plugin actor {journalPluginActor}");
 
             return extension.Value.Config;
         }
@@ -214,6 +224,9 @@ namespace Akka.Persistence
         /// Configuration entry must contain few required fields, such as `class`. See `persistence.conf`.
         /// </summary>
         /// <param name="journalPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
         /// <returns>TBD</returns>
         public IActorRef JournalFor(string journalPluginId)
         {
@@ -229,6 +242,9 @@ namespace Akka.Persistence
         /// Configuration entry must contain few required fields, such as `class`. See `persistence.conf`.
         /// </summary>
         /// <param name="snapshotPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
         /// <returns>TBD</returns>
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
@@ -253,7 +269,7 @@ namespace Akka.Persistence
             var pluginActorName = configPath;
             var pluginTypeName = pluginConfig.GetString("class");
             if (string.IsNullOrEmpty(pluginTypeName))
-                throw new ArgumentException(string.Format("Plugin class name must be defined in config property [{0}.class]", configPath));
+                throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
             var pluginType = Type.GetType(pluginTypeName, true);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher");
             object[] pluginActorArgs = pluginType.GetConstructor(new[] {typeof (Config)}) != null ? new object[] {pluginConfig} : null;
@@ -272,7 +288,7 @@ namespace Akka.Persistence
         {
             if (string.IsNullOrEmpty(configPath) || !system.Settings.Config.HasPath(configPath))
             {
-                throw new ArgumentException("Persistence config is missing plugin config path for: " + configPath);
+                throw new ArgumentException($"Persistence config is missing plugin config path for: {configPath}");
             }
 
             var config = system.Settings.Config.GetConfig(configPath).WithFallback(system.Settings.Config.GetConfig(fallbackPath));
@@ -517,7 +533,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Called when the persistent actor is started for the first time.
         /// The returned <see cref="Akka.Persistence.Recovery"/> object defines how the actor
-        /// will recover its persistent state behore handling the first incoming message.
+        /// will recover its persistent state before handling the first incoming message.
         /// 
         /// To skip recovery completely return <see cref="Akka.Persistence.Recovery.None"/>.
         /// </summary>

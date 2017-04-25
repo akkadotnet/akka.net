@@ -232,7 +232,7 @@ namespace Akka.Remote.Tests.MultiNode
 
     public class RemoteReDeploymentFastMultiNetSpec : RemoteReDeploymentSpec
     {
-        // new association will come in while old is still “healthy”
+        // new association will come in while old is still "healthy"
         protected override bool ExpectQuarantine
         {
             get { return false; }

@@ -819,7 +819,7 @@ namespace Akka.Actor
         }
         public sealed class StateTimeout
         {
-            [System.ObsoleteAttribute("This constructor is obsoleted. Use Shutdown.Instance [1.2.0]")]
+            [System.ObsoleteAttribute("This constructor is obsoleted. Use StateTimeout.Instance [1.2.0]")]
             public StateTimeout() { }
             public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }

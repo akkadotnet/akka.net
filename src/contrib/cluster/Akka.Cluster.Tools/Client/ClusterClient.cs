@@ -168,7 +168,9 @@ namespace Akka.Cluster.Tools.Client
         /// Factory method for <see cref="ClusterClient"/> <see cref="Actor.Props"/>.
         /// </summary>
         /// <param name="settings">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="settings"/> is undefined.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Props Props(ClusterClientSettings settings)
         {

@@ -106,7 +106,9 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="node">TBD</param>
         /// <param name="delta">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="delta"/> is less than zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public GCounter Increment(UniqueAddress node, BigInteger delta)
         {
@@ -175,31 +177,20 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public GCounter PruningCleanup(UniqueAddress removedNode) => new GCounter(State.Remove(removedNode));
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return State.GetHashCode();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(object obj)
         {
             if (obj is GCounter) return CompareTo((GCounter) obj);
             return -1;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(GCounter other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -208,28 +199,17 @@ namespace Akka.DistributedData
             return Equals(Value, other.Value);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is GCounter && Equals((GCounter)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(GCounter other)
         {
             if (ReferenceEquals(other, null)) return 1;
             return Value.CompareTo(other.Value);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"GCounter({Value})";
 
         /// <summary>

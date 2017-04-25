@@ -44,26 +44,23 @@ namespace Akka.Actor
         public class Failure : Status
         {
             /// <summary>
-            /// TBD
+            /// The cause of the failure
             /// </summary>
             public readonly Exception Cause;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="Failure"/> class.
             /// </summary>
-            /// <param name="cause">TBD</param>
+            /// <param name="cause">The cause of the failure</param>
             public Failure(Exception cause)
             {
                 Cause = cause;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
-                return "Failure: " + Cause.ToString();
+                return $"Failure: {Cause}";
             }
         }
     }

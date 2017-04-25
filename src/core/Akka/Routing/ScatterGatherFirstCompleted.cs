@@ -296,7 +296,7 @@ namespace Akka.Routing
 
         #region Surrogate
         /// <summary>
-        /// Creeates a surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.
+        /// Creates a surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.
         /// </summary>
         /// <param name="system">The actor system that owns this router.</param>
         /// <returns>The surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.</returns>

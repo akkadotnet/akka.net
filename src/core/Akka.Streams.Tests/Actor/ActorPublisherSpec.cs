@@ -392,7 +392,7 @@ my-dispatcher1 {
                 sub.ExpectSubscriptionAndError();
 
                 ExpectMsg("cleaned-up");
-                // termination is tiggered by user code
+                // termination is triggered by user code
                 Watch(a);
                 ExpectTerminated(a);
             }, materializer);
