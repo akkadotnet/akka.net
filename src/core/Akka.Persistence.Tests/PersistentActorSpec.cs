@@ -592,5 +592,13 @@ namespace Akka.Persistence.Tests
             pref.Tell(GetState.Instance);
             ExpectMsg<object[]>(m => m.Length == 0);
         }
+
+        [Fact]
+        public void PersistentActor_should_brecover_the_message_which_caused_the_restart()
+        {
+            var persistentActor = ActorOf(Props.Create(() => new RecoverMessageCausedRestart(Name)));
+            persistentActor.Tell("boom");
+            ExpectMsg("failed with TestException while processing boom");
+        }
     }
 }
