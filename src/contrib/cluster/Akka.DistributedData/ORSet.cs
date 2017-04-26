@@ -34,6 +34,42 @@ namespace Akka.DistributedData
 
         public static ORSet<T> Create<T>(IEnumerable<KeyValuePair<UniqueAddress, T>> elements) =>
             elements.Aggregate(ORSet<T>.Empty, (set, kv) => set.Add(kv.Key, kv.Value));
+
+        /// <summary>
+        /// INTERNAL API
+        /// Subtract the <paramref name="vvector"/> from the <paramref name="dot"/>.
+        /// What this means is that any (node, version) pair in
+        /// <paramref name="dot"/> that is &lt;= an entry in <paramref name="vvector"/> is removed from <paramref name="dot"/>.
+        /// Example [{a, 3}, {b, 2}, {d, 14}, {g, 22}] -
+        ///         [{a, 4}, {b, 1}, {c, 1}, {d, 14}, {e, 5}, {f, 2}] =
+        ///         [{b, 2}, {g, 22}]
+        /// </summary>
+        internal static VersionVector SubtractDots(VersionVector dot, VersionVector vvector)
+        {
+            if (dot.IsEmpty) return VersionVector.Empty;
+
+            if (dot is SingleVersionVector)
+            {
+                // if dot is dominated by version vector, drop it
+                var single = (SingleVersionVector)dot;
+                return vvector.VersionAt(single.Node) >= single.Version ? VersionVector.Empty : dot;
+            }
+
+            if (dot is MultiVersionVector)
+            {
+                var multi = (MultiVersionVector)dot;
+                var acc = ImmutableDictionary<UniqueAddress, long>.Empty.ToBuilder();
+                foreach (var pair in multi.Versions)
+                {
+                    var v2 = vvector.VersionAt(pair.Key);
+                    if (v2 < pair.Value) acc.Add(pair);
+                }
+
+                return VersionVector.Create(acc.ToImmutable());
+            }
+
+            throw new NotSupportedException("Cannot subtract dots from provided version vector");
+        }
     }
 
     /// <summary>
@@ -80,43 +116,8 @@ namespace Akka.DistributedData
         internal readonly ImmutableDictionary<T, VersionVector> ElementsMap;
         private readonly VersionVector _versionVector;
 
-        /// <summary>
-        /// INTERNAL API
-        /// Subtract the <paramref name="vvector"/> from the <paramref name="dot"/>.
-        /// What this means is that any (node, version) pair in
-        /// <paramref name="dot"/> that is &lt;= an entry in <paramref name="vvector"/> is removed from <paramref name="dot"/>.
-        /// Example [{a, 3}, {b, 2}, {d, 14}, {g, 22}] -
-        ///         [{a, 4}, {b, 1}, {c, 1}, {d, 14}, {e, 5}, {f, 2}] =
-        ///         [{b, 2}, {g, 22}]
-        /// </summary>
-        private static VersionVector SubtractDots(VersionVector dot, VersionVector vvector)
-        {
-            if (dot.IsEmpty) return VersionVector.Empty;
 
-            if (dot is SingleVersionVector)
-            {
-                // if dot is dominated by version vector, drop it
-                var single = (SingleVersionVector)dot;
-                return vvector.VersionAt(single.Node) >= single.Version ? VersionVector.Empty : dot;
-            }
-
-            if (dot is MultiVersionVector)
-            {
-                var multi = (MultiVersionVector)dot;
-                var acc = ImmutableDictionary<UniqueAddress, long>.Empty.ToBuilder();
-                foreach (var pair in multi.Versions)
-                {
-                    var v2 = vvector.VersionAt(pair.Key);
-                    if (v2 < pair.Value) acc.Add(pair);
-                }
-
-                return VersionVector.Create(acc.ToImmutable());
-            }
-
-            throw new NotSupportedException("Cannot subtract dots from provided version vector");
-        }
-
-        private static ImmutableDictionary<T, VersionVector> MergeCommonKeys(IEnumerable<T> commonKeys, ORSet<T> lhs, ORSet<T> rhs) => commonKeys.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, k) =>
+        internal static ImmutableDictionary<T, VersionVector> MergeCommonKeys(IEnumerable<T> commonKeys, ORSet<T> lhs, ORSet<T> rhs) => commonKeys.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, k) =>
         {
             var l = lhs.ElementsMap[k];
             var r = rhs.ElementsMap[k];
@@ -133,8 +134,8 @@ namespace Akka.DistributedData
                     }
                     else
                     {
-                        var lhsKeep = SubtractDots(lhsDots, rhs._versionVector);
-                        var rhsKeep = SubtractDots(rhsDots, lhs._versionVector);
+                        var lhsKeep = ORSet.SubtractDots(lhsDots, rhs._versionVector);
+                        var rhsKeep = ORSet.SubtractDots(rhsDots, lhs._versionVector);
                         var merged = lhsKeep.Merge(rhsKeep);
                         return merged.IsEmpty ? acc : acc.SetItem(k, merged);
                     }
@@ -148,8 +149,8 @@ namespace Akka.DistributedData
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUnique = commonDotKeys.Length != 0 ? VersionVector.Empty : lhsDots;
                     var rhsUniqueDots = rhsDots.Versions.RemoveRange(commonDotKeys);
-                    var lhsKeep = SubtractDots(lhsUnique, rhs._versionVector);
-                    var rhsKeep = SubtractDots(new MultiVersionVector(rhsUniqueDots), lhs._versionVector);
+                    var lhsKeep = ORSet.SubtractDots(lhsUnique, rhs._versionVector);
+                    var rhsKeep = ORSet.SubtractDots(new MultiVersionVector(rhsUniqueDots), lhs._versionVector);
                     var merged = lhsKeep.Merge(rhsKeep).Merge(new MultiVersionVector(commonDots));
 
                     return merged.IsEmpty ? acc : acc.SetItem(k, merged);
@@ -167,8 +168,8 @@ namespace Akka.DistributedData
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
                     var rhsUnique = commonDotKeys.IsEmpty ? rhsDots : VersionVector.Empty;
-                    var lhsKeep = SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
-                    var rhsKeep = SubtractDots(rhsUnique, lhs._versionVector);
+                    var lhsKeep = ORSet.SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
+                    var rhsKeep = ORSet.SubtractDots(rhsUnique, lhs._versionVector);
                     var merged = lhsKeep.Merge(rhsKeep).Merge(VersionVector.Create(commonDots));
                     return merged.IsEmpty ? acc : acc.SetItem(k, merged);
                 }
@@ -184,8 +185,8 @@ namespace Akka.DistributedData
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
                     var rhsUniqueDots = rhsDots.Versions.RemoveRange(commonDotKeys);
-                    var lhsKeep = SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
-                    var rhsKeep = SubtractDots(VersionVector.Create(rhsUniqueDots), lhs._versionVector);
+                    var lhsKeep = ORSet.SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
+                    var rhsKeep = ORSet.SubtractDots(VersionVector.Create(rhsUniqueDots), lhs._versionVector);
                     var merged = lhsKeep.Merge(rhsKeep).Merge(VersionVector.Create(commonDots));
                     return merged.IsEmpty ? acc : acc.SetItem(k, merged);
                 }
@@ -326,7 +327,7 @@ namespace Akka.DistributedData
             return new ORSet<T>(entries, mergedVector);
         }
 
-        internal ImmutableDictionary<T, VersionVector> MergeDisjointKeys(IEnumerable<T> keys,
+        internal static ImmutableDictionary<T, VersionVector> MergeDisjointKeys(IEnumerable<T> keys,
             ImmutableDictionary<T, VersionVector> elementsMap, VersionVector vector,
             ImmutableDictionary<T, VersionVector> accumulator)
         {
@@ -335,7 +336,7 @@ namespace Akka.DistributedData
                 var dots = elementsMap[k];
                 return vector.IsSame(dots) || vector.IsAfter(dots)
                     ? acc
-                    : acc.SetItem(k, SubtractDots(dots, vector));
+                    : acc.SetItem(k, ORSet.SubtractDots(dots, vector));
             });
         }
 
