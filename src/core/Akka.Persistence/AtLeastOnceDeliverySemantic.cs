@@ -15,7 +15,6 @@ using Akka.Persistence.Serialization;
 
 namespace Akka.Persistence
 {
-
     #region Messages
 
     /// <summary>
@@ -28,16 +27,7 @@ namespace Akka.Persistence
     public sealed class AtLeastOnceDeliverySnapshot : IMessage, IEquatable<AtLeastOnceDeliverySnapshot>
     {
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly long CurrentDeliveryId;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
-
-        /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AtLeastOnceDeliverySnapshot"/> class.
         /// </summary>
         /// <param name="currentDeliveryId">TBD</param>
         /// <param name="unconfirmedDeliveries">TBD</param>
@@ -54,6 +44,16 @@ namespace Akka.Persistence
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long CurrentDeliveryId { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public UnconfirmedDelivery[] UnconfirmedDeliveries { get; }
+
         /// <inheritdoc/>
         public bool Equals(AtLeastOnceDeliverySnapshot other)
         {
@@ -65,10 +65,7 @@ namespace Akka.Persistence
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as AtLeastOnceDeliverySnapshot);
-        }
+        public override bool Equals(object obj) => Equals(obj as AtLeastOnceDeliverySnapshot);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -76,16 +73,13 @@ namespace Akka.Persistence
             unchecked
             {
                 int hashCode = CurrentDeliveryId.GetHashCode();
-                hashCode = (hashCode*397) ^ (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
                 return hashCode;
             }
         }
 
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            return $"AtLeastOnceDeliverySnapshot<currentDeliveryId: {CurrentDeliveryId}, unconfirmedDeliveries: {UnconfirmedDeliveries.Length}>";
-        }
+        public override string ToString() => $"AtLeastOnceDeliverySnapshot<currentDeliveryId: {CurrentDeliveryId}, unconfirmedDeliveries: {UnconfirmedDeliveries.Length}>";
     }
 
     /// <summary>
@@ -96,12 +90,7 @@ namespace Akka.Persistence
     public sealed class UnconfirmedWarning : IEquatable<UnconfirmedWarning>
     {
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
-
-        /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="UnconfirmedWarning"/> class.
         /// </summary>
         /// <param name="unconfirmedDeliveries">TBD</param>
         /// <exception cref="ArgumentNullException">
@@ -116,6 +105,11 @@ namespace Akka.Persistence
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public UnconfirmedDelivery[] UnconfirmedDeliveries { get; }
+
         /// <inheritdoc/>
         public bool Equals(UnconfirmedWarning other)
         {
@@ -126,47 +120,25 @@ namespace Akka.Persistence
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as UnconfirmedWarning);
-        }
+        public override bool Equals(object obj) => Equals(obj as UnconfirmedWarning);
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
-        }
+        public override int GetHashCode() => UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0;
 
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            return $"UnconfirmedWarning<unconfirmedDeliveries: {UnconfirmedDeliveries.Length}>";
-        }
+        public override string ToString() => $"UnconfirmedWarning<unconfirmedDeliveries: {UnconfirmedDeliveries.Length}>";
     }
 
     /// <summary>
     /// Contains details about unconfirmed messages.
     /// It's included inside <see cref="UnconfirmedWarning" /> and <see cref="AtLeastOnceDeliverySnapshot" />.
-    /// <see cref="AtLeastOnceDeliverySemantic.AfterNumberOfUnconfirmedAttempts" />
+    /// <see cref="AtLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts" />
     /// </summary>
     [Serializable]
     public sealed class UnconfirmedDelivery : IEquatable<UnconfirmedDelivery>
     {
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly long DeliveryId;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly ActorPath Destination;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly object Message;
-
-        /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="UnconfirmedDelivery"/> class.
         /// </summary>
         /// <param name="deliveryId">TBD</param>
         /// <param name="destination">TBD</param>
@@ -177,6 +149,21 @@ namespace Akka.Persistence
             Destination = destination;
             Message = message;
         }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long DeliveryId { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public ActorPath Destination { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public object Message { get; }
 
         /// <inheritdoc/>
         public bool Equals(UnconfirmedDelivery other)
@@ -190,10 +177,7 @@ namespace Akka.Persistence
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as UnconfirmedDelivery);
-        }
+        public override bool Equals(object obj) => Equals(obj as UnconfirmedDelivery);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -201,17 +185,14 @@ namespace Akka.Persistence
             unchecked
             {
                 int hashCode = DeliveryId.GetHashCode();
-                hashCode = (hashCode*397) ^ (Destination != null ? Destination.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Message != null ? Message.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Destination != null ? Destination.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
                 return hashCode;
             }
         }
 
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            return $"UnconfirmedDelivery<deliveryId: {DeliveryId}, dest: {Destination}, message: {Message}>";
-        }
+        public override string ToString() => $"UnconfirmedDelivery<deliveryId: {DeliveryId}, dest: {Destination}, message: {Message}>";
     }
 
     /// <summary>
@@ -260,37 +241,9 @@ namespace Akka.Persistence
     /// </summary>
     public class AtLeastOnceDeliverySemantic
     {
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         [Serializable]
         public sealed class Delivery : IEquatable<Delivery>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly int Attempt;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly ActorPath Destination;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly object Message;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly DateTime Timestamp;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="destination">TBD</param>
-            /// <param name="message">TBD</param>
-            /// <param name="timestamp">TBD</param>
-            /// <param name="attempt">TBD</param>
             public Delivery(ActorPath destination, object message, DateTime timestamp, int attempt)
             {
                 Destination = destination;
@@ -299,16 +252,14 @@ namespace Akka.Persistence
                 Attempt = attempt;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
-            public Delivery IncrementedCopy()
-            {
-                return new Delivery(Destination, Message, Timestamp, Attempt + 1);
-            }
+            public int Attempt { get; }
 
-            /// <inheritdoc/>
+            public ActorPath Destination { get; }
+
+            public object Message { get; }
+
+            public DateTime Timestamp { get; }
+
             public bool Equals(Delivery other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -320,46 +271,37 @@ namespace Akka.Persistence
                        && Equals(Message, other.Message);
             }
 
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
+            public Delivery IncrementedCopy()
             {
-                return Equals(obj as Delivery);
+                return new Delivery(Destination, Message, Timestamp, Attempt + 1);
             }
 
-            /// <inheritdoc/>
+            public override bool Equals(object obj) => Equals(obj as Delivery);
+
             public override int GetHashCode()
             {
                 unchecked
                 {
                     int hashCode = (Destination != null ? Destination.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ (Message != null ? Message.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ Timestamp.GetHashCode();
-                    hashCode = (hashCode*397) ^ Attempt;
+                    hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ Timestamp.GetHashCode();
+                    hashCode = (hashCode * 397) ^ Attempt;
                     return hashCode;
                 }
             }
 
-            /// <inheritdoc/>
-            public override string ToString()
-            {
-                return $"Delivery<dest: {Destination}, attempt: {Attempt}, timestamp: {Timestamp}, message: {Message}";
-            }
+            public override string ToString() => $"Delivery<dest: {Destination}, attempt: {Attempt}, timestamp: {Timestamp}, message: {Message}";
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         [Serializable]
-        public sealed class RedeliveryTick: INotInfluenceReceiveTimeout
+        public sealed class RedeliveryTick : INotInfluenceReceiveTimeout
         {
             /// <summary>
             /// The singleton instance of the redelivery tick
             /// </summary>
-            public static readonly RedeliveryTick Instance = new RedeliveryTick();
+            public static RedeliveryTick Instance { get; } = new RedeliveryTick();
 
-            private RedeliveryTick()
-            {
-            }
+            private RedeliveryTick() { }
 
             /// <inheritdoc/>
             public override bool Equals(object obj)
