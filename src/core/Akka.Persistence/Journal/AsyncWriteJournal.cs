@@ -220,7 +220,6 @@ namespace Akka.Persistence.Journal
         {
             if (message is WriteMessages) HandleWriteMessages((WriteMessages)message);
             else if (message is ReplayMessages) HandleReplayMessages((ReplayMessages)message);
-            else if (message is ReadHighestSequenceNr) HandleReadHighestSequenceNr((ReadHighestSequenceNr)message);
             else if (message is DeleteMessagesTo) HandleDeleteMessagesTo((DeleteMessagesTo)message);
             else return false;
             return true;
@@ -247,22 +246,6 @@ namespace Akka.Persistence.Journal
                     if (!resultTask.IsFaulted && !resultTask.IsCanceled && CanPublish)
                         eventStream.Publish(message);
                 }, _continuationOptions);
-        }
-
-        private void HandleReadHighestSequenceNr(ReadHighestSequenceNr message)
-        {
-            // Send read highest sequence number to persistentActor directly. No need
-            // to resequence the result relative to written and looped messages.
-            ReadHighestSequenceNrAsync(message.PersistenceId, message.FromSequenceNr)
-                .ContinueWith(t => t.IsFaulted || t.IsCanceled
-                    ? (object)
-                        new ReadHighestSequenceNrFailure(
-                            t.IsFaulted
-                                ? TryUnwrapException(t.Exception)
-                                : new OperationCanceledException(
-                                    "ReadHighestSequenceNrAsync canceled, possibly due to timing out."))
-                    : new ReadHighestSequenceNrSuccess(t.Result))
-                .PipeTo(message.PersistentActor);
         }
 
         private void HandleReplayMessages(ReplayMessages message)
