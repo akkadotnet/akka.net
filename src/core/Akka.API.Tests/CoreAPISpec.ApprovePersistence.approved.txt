@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Tests")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
 namespace Akka.Persistence
@@ -64,11 +65,11 @@ namespace Akka.Persistence
         public void SetDeliverySnapshot(Akka.Persistence.AtLeastOnceDeliverySnapshot snapshot) { }
         public sealed class Delivery : System.IEquatable<Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery>
         {
-            public readonly int Attempt;
-            public readonly Akka.Actor.ActorPath Destination;
-            public readonly object Message;
-            public readonly System.DateTime Timestamp;
             public Delivery(Akka.Actor.ActorPath destination, object message, System.DateTime timestamp, int attempt) { }
+            public int Attempt { get; }
+            public Akka.Actor.ActorPath Destination { get; }
+            public object Message { get; }
+            public System.DateTime Timestamp { get; }
             public bool Equals(Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery other) { }
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
@@ -77,15 +78,15 @@ namespace Akka.Persistence
         }
         public sealed class RedeliveryTick : Akka.Actor.INotInfluenceReceiveTimeout
         {
-            public static readonly Akka.Persistence.AtLeastOnceDeliverySemantic.RedeliveryTick Instance;
+            public static Akka.Persistence.AtLeastOnceDeliverySemantic.RedeliveryTick Instance { get; }
             public override bool Equals(object obj) { }
         }
     }
     public sealed class AtLeastOnceDeliverySnapshot : Akka.Persistence.Serialization.IMessage, System.IEquatable<Akka.Persistence.AtLeastOnceDeliverySnapshot>
     {
-        public readonly long CurrentDeliveryId;
-        public readonly Akka.Persistence.UnconfirmedDelivery[] UnconfirmedDeliveries;
         public AtLeastOnceDeliverySnapshot(long currentDeliveryId, Akka.Persistence.UnconfirmedDelivery[] unconfirmedDeliveries) { }
+        public long CurrentDeliveryId { get; }
+        public Akka.Persistence.UnconfirmedDelivery[] UnconfirmedDeliveries { get; }
         public bool Equals(Akka.Persistence.AtLeastOnceDeliverySnapshot other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -106,88 +107,88 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteMessagesFailure : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.DeleteMessagesFailure>
+    public sealed class DeleteMessagesFailure : System.IEquatable<Akka.Persistence.DeleteMessagesFailure>
     {
-        public readonly System.Exception Cause;
-        public readonly long ToSequenceNr;
         public DeleteMessagesFailure(System.Exception cause, long toSequenceNr) { }
+        public System.Exception Cause { get; }
+        public long ToSequenceNr { get; }
         public bool Equals(Akka.Persistence.DeleteMessagesFailure other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteMessagesSuccess : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.DeleteMessagesSuccess>
+    public sealed class DeleteMessagesSuccess : System.IEquatable<Akka.Persistence.DeleteMessagesSuccess>
     {
-        public readonly long ToSequenceNr;
         public DeleteMessagesSuccess(long toSequenceNr) { }
+        public long ToSequenceNr { get; }
         public bool Equals(Akka.Persistence.DeleteMessagesSuccess other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteMessagesTo : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.DeleteMessagesTo>
+    public sealed class DeleteMessagesTo : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.DeleteMessagesTo>
     {
-        public readonly string PersistenceId;
-        public readonly Akka.Actor.IActorRef PersistentActor;
-        public readonly long ToSequenceNr;
         public DeleteMessagesTo(string persistenceId, long toSequenceNr, Akka.Actor.IActorRef persistentActor) { }
+        public string PersistenceId { get; }
+        public Akka.Actor.IActorRef PersistentActor { get; }
+        public long ToSequenceNr { get; }
         public bool Equals(Akka.Persistence.DeleteMessagesTo other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteSnapshot : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.DeleteSnapshot>
+    public sealed class DeleteSnapshot : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.DeleteSnapshot>
     {
-        public readonly Akka.Persistence.SnapshotMetadata Metadata;
         public DeleteSnapshot(Akka.Persistence.SnapshotMetadata metadata) { }
+        public Akka.Persistence.SnapshotMetadata Metadata { get; }
         public bool Equals(Akka.Persistence.DeleteSnapshot other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteSnapshotFailure : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.DeleteSnapshotFailure>
+    public sealed class DeleteSnapshotFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.DeleteSnapshotFailure>
     {
-        public readonly System.Exception Cause;
-        public readonly Akka.Persistence.SnapshotMetadata Metadata;
         public DeleteSnapshotFailure(Akka.Persistence.SnapshotMetadata metadata, System.Exception cause) { }
+        public System.Exception Cause { get; }
+        public Akka.Persistence.SnapshotMetadata Metadata { get; }
         public bool Equals(Akka.Persistence.DeleteSnapshotFailure other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteSnapshots : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.DeleteSnapshots>
+    public sealed class DeleteSnapshots : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.DeleteSnapshots>
     {
-        public readonly Akka.Persistence.SnapshotSelectionCriteria Criteria;
-        public readonly string PersistenceId;
         public DeleteSnapshots(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        public Akka.Persistence.SnapshotSelectionCriteria Criteria { get; }
+        public string PersistenceId { get; }
         public bool Equals(Akka.Persistence.DeleteSnapshots other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteSnapshotsFailure : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.DeleteSnapshotsFailure>
+    public sealed class DeleteSnapshotsFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.DeleteSnapshotsFailure>
     {
-        public readonly System.Exception Cause;
-        public readonly Akka.Persistence.SnapshotSelectionCriteria Criteria;
         public DeleteSnapshotsFailure(Akka.Persistence.SnapshotSelectionCriteria criteria, System.Exception cause) { }
+        public System.Exception Cause { get; }
+        public Akka.Persistence.SnapshotSelectionCriteria Criteria { get; }
         public bool Equals(Akka.Persistence.DeleteSnapshotsFailure other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteSnapshotsSuccess : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.DeleteSnapshotsSuccess>
+    public sealed class DeleteSnapshotsSuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.DeleteSnapshotsSuccess>
     {
-        public readonly Akka.Persistence.SnapshotSelectionCriteria Criteria;
         public DeleteSnapshotsSuccess(Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        public Akka.Persistence.SnapshotSelectionCriteria Criteria { get; }
         public bool Equals(Akka.Persistence.DeleteSnapshotsSuccess other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteSnapshotSuccess : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.DeleteSnapshotSuccess>
+    public sealed class DeleteSnapshotSuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.DeleteSnapshotSuccess>
     {
-        public readonly Akka.Persistence.SnapshotMetadata Metadata;
         public DeleteSnapshotSuccess(Akka.Persistence.SnapshotMetadata metadata) { }
+        public Akka.Persistence.SnapshotMetadata Metadata { get; }
         public bool Equals(Akka.Persistence.DeleteSnapshotSuccess other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -244,20 +245,20 @@ namespace Akka.Persistence
         public void SaveSnapshot(object snapshot) { }
         protected override void Unhandled(object message) { }
     }
-    public interface IJournalMessage : Akka.Persistence.IPersistenceMessage { }
+    public interface IJournalMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage { }
     public interface IJournalPlugin
     {
         Akka.Configuration.Config DefaultConfig { get; }
         string JournalPath { get; }
     }
-    public interface IJournalRequest : Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
-    public interface IJournalResponse : Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
+    public interface IJournalRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
+    public interface IJournalResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
     public interface IPendingHandlerInvocation
     {
         object Event { get; }
         System.Action<object> Handler { get; }
     }
-    public interface IPersistenceMessage { }
+    public interface IPersistenceMessage : Akka.Actor.INoSerializationVerificationNeeded { }
     public interface IPersistenceRecovery
     {
         Akka.Persistence.Recovery Recovery { get; }
@@ -291,9 +292,9 @@ namespace Akka.Persistence
         Akka.Persistence.IPersistentRepresentation WithManifest(string manifest);
         Akka.Persistence.IPersistentRepresentation WithPayload(object payload);
     }
-    public interface ISnapshotMessage : Akka.Persistence.IPersistenceMessage { }
-    public interface ISnapshotRequest : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage { }
-    public interface ISnapshotResponse : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage { }
+    public interface ISnapshotMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage { }
+    public interface ISnapshotRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage { }
+    public interface ISnapshotResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage { }
     public interface ISnapshotter
     {
         long SnapshotSequenceNr { get; }
@@ -308,32 +309,32 @@ namespace Akka.Persistence
     {
         Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config);
     }
-    public sealed class LoadSnapshot : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.LoadSnapshot>
+    public sealed class LoadSnapshot : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.LoadSnapshot>
     {
-        public readonly Akka.Persistence.SnapshotSelectionCriteria Criteria;
-        public readonly string PersistenceId;
-        public readonly long ToSequenceNr;
         public LoadSnapshot(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, long toSequenceNr) { }
+        public Akka.Persistence.SnapshotSelectionCriteria Criteria { get; }
+        public string PersistenceId { get; }
+        public long ToSequenceNr { get; }
         public bool Equals(Akka.Persistence.LoadSnapshot other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class LoadSnapshotResult : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.LoadSnapshotResult>
+    public sealed class LoadSnapshotResult : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.LoadSnapshotResult>
     {
-        public readonly Akka.Persistence.SelectedSnapshot Snapshot;
-        public readonly long ToSequenceNr;
         public LoadSnapshotResult(Akka.Persistence.SelectedSnapshot snapshot, long toSequenceNr) { }
+        public Akka.Persistence.SelectedSnapshot Snapshot { get; }
+        public long ToSequenceNr { get; }
         public bool Equals(Akka.Persistence.LoadSnapshotResult other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class LoopMessageSuccess : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.LoopMessageSuccess>
+    public sealed class LoopMessageSuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.LoopMessageSuccess>
     {
-        public readonly int ActorInstanceId;
-        public readonly object Message;
         public LoopMessageSuccess(object message, int actorInstanceId) { }
+        public int ActorInstanceId { get; }
+        public object Message { get; }
         public bool Equals(Akka.Persistence.LoopMessageSuccess other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -398,7 +399,6 @@ namespace Akka.Persistence
     }
     public class Persistent : Akka.Persistence.IPersistentRepresentation, Akka.Persistence.Serialization.IMessage, System.IEquatable<Akka.Persistence.IPersistentRepresentation>
     {
-        public static readonly string Undefined;
         public Persistent(object payload, long sequenceNr = 0, string persistenceId = null, string manifest = null, bool isDeleted = False, Akka.Actor.IActorRef sender = null, string writerGuid = null) { }
         public bool IsDeleted { get; }
         public string Manifest { get; }
@@ -406,6 +406,7 @@ namespace Akka.Persistence
         public string PersistenceId { get; }
         public Akka.Actor.IActorRef Sender { get; }
         public long SequenceNr { get; }
+        public static string Undefined { get; }
         public string WriterGuid { get; }
         public bool Equals(Akka.Persistence.IPersistentRepresentation other) { }
         public override bool Equals(object obj) { }
@@ -454,36 +455,6 @@ namespace Akka.Persistence
         public void SaveSnapshot(object snapshot) { }
         protected override void Unhandled(object message) { }
     }
-    public sealed class ReadHighestSequenceNr : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReadHighestSequenceNr>
-    {
-        public readonly long FromSequenceNr;
-        public readonly string PersistenceId;
-        public readonly Akka.Actor.IActorRef PersistentActor;
-        public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, Akka.Actor.IActorRef persistentActor) { }
-        public bool Equals(Akka.Persistence.ReadHighestSequenceNr other) { }
-        public override bool Equals(object obj) { }
-        public override int GetHashCode() { }
-        public override string ToString() { }
-    }
-    public sealed class ReadHighestSequenceNrFailure : System.IEquatable<Akka.Persistence.ReadHighestSequenceNrFailure>
-    {
-        public readonly System.Exception Cause;
-        public ReadHighestSequenceNrFailure(System.Exception cause) { }
-        public bool Equals(Akka.Persistence.ReadHighestSequenceNrFailure other) { }
-        public override bool Equals(object obj) { }
-        public override int GetHashCode() { }
-        public override string ToString() { }
-    }
-    public sealed class ReadHighestSequenceNrSuccess : System.IComparable<Akka.Persistence.ReadHighestSequenceNrSuccess>, System.IEquatable<Akka.Persistence.ReadHighestSequenceNrSuccess>
-    {
-        public readonly long HighestSequenceNr;
-        public ReadHighestSequenceNrSuccess(long highestSequenceNr) { }
-        public int CompareTo(Akka.Persistence.ReadHighestSequenceNrSuccess other) { }
-        public bool Equals(Akka.Persistence.ReadHighestSequenceNrSuccess other) { }
-        public override bool Equals(object obj) { }
-        public override int GetHashCode() { }
-        public override string ToString() { }
-    }
     public abstract class ReceivePersistentActor : Akka.Persistence.UntypedPersistentActor, Akka.Actor.Internal.IInitializableActor
     {
         protected ReceivePersistentActor() { }
@@ -524,10 +495,10 @@ namespace Akka.Persistence
         public static readonly Akka.Persistence.RecoveryCompleted Instance;
         public override bool Equals(object obj) { }
     }
-    public class RecoverySuccess : Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.RecoverySuccess>
+    public sealed class RecoverySuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.RecoverySuccess>
     {
-        public readonly long HighestSequenceNr;
         public RecoverySuccess(long highestSequenceNr) { }
+        public long HighestSequenceNr { get; }
         public bool Equals(Akka.Persistence.RecoverySuccess other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -544,31 +515,32 @@ namespace Akka.Persistence
         public RecoveryTimedOutException(string message, System.Exception cause = null) { }
         public RecoveryTimedOutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
-    public sealed class ReplayedMessage : Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayedMessage>
+    public sealed class ReplayedMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayedMessage>
     {
-        public readonly Akka.Persistence.IPersistentRepresentation Persistent;
         public ReplayedMessage(Akka.Persistence.IPersistentRepresentation persistent) { }
+        public Akka.Persistence.IPersistentRepresentation Persistent { get; }
         public bool Equals(Akka.Persistence.ReplayedMessage other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class ReplayMessages : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessages>
+    public sealed class ReplayMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessages>
     {
-        public readonly long FromSequenceNr;
-        public readonly long Max;
-        public readonly string PersistenceId;
-        public readonly Akka.Actor.IActorRef PersistentActor;
-        public readonly long ToSequenceNr;
         public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId, Akka.Actor.IActorRef persistentActor) { }
+        public long FromSequenceNr { get; }
+        public long Max { get; }
+        public string PersistenceId { get; }
+        public Akka.Actor.IActorRef PersistentActor { get; }
+        public long ToSequenceNr { get; }
         public bool Equals(Akka.Persistence.ReplayMessages other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
+        public override string ToString() { }
     }
-    public sealed class ReplayMessagesFailure : Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessagesFailure>
+    public sealed class ReplayMessagesFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessagesFailure>
     {
-        public readonly System.Exception Cause;
         public ReplayMessagesFailure(System.Exception cause) { }
+        public System.Exception Cause { get; }
         public bool Equals(Akka.Persistence.ReplayMessagesFailure other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -579,30 +551,30 @@ namespace Akka.Persistence
         public ReplyToStrategy(object response) { }
         public object Response { get; }
     }
-    public sealed class SaveSnapshot : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.SaveSnapshot>
+    public sealed class SaveSnapshot : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.SaveSnapshot>
     {
-        public readonly Akka.Persistence.SnapshotMetadata Metadata;
-        public readonly object Snapshot;
         public SaveSnapshot(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+        public Akka.Persistence.SnapshotMetadata Metadata { get; }
+        public object Snapshot { get; }
         public bool Equals(Akka.Persistence.SaveSnapshot other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class SaveSnapshotFailure : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.SaveSnapshotFailure>
+    public sealed class SaveSnapshotFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.SaveSnapshotFailure>
     {
-        public readonly System.Exception Cause;
-        public readonly Akka.Persistence.SnapshotMetadata Metadata;
         public SaveSnapshotFailure(Akka.Persistence.SnapshotMetadata metadata, System.Exception cause) { }
+        public System.Exception Cause { get; }
+        public Akka.Persistence.SnapshotMetadata Metadata { get; }
         public bool Equals(Akka.Persistence.SaveSnapshotFailure other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class SaveSnapshotSuccess : Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.SaveSnapshotSuccess>
+    public sealed class SaveSnapshotSuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.SaveSnapshotSuccess>
     {
-        public readonly Akka.Persistence.SnapshotMetadata Metadata;
         public SaveSnapshotSuccess(Akka.Persistence.SnapshotMetadata metadata) { }
+        public Akka.Persistence.SnapshotMetadata Metadata { get; }
         public bool Equals(Akka.Persistence.SaveSnapshotSuccess other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -615,9 +587,9 @@ namespace Akka.Persistence
     }
     public sealed class SelectedSnapshot : System.IEquatable<Akka.Persistence.SelectedSnapshot>
     {
-        public readonly Akka.Persistence.SnapshotMetadata Metadata;
-        public readonly object Snapshot;
         public SelectedSnapshot(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+        public Akka.Persistence.SnapshotMetadata Metadata { get; }
+        public object Snapshot { get; }
         public bool Equals(Akka.Persistence.SelectedSnapshot other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -625,14 +597,14 @@ namespace Akka.Persistence
     }
     public sealed class SnapshotMetadata : System.IEquatable<Akka.Persistence.SnapshotMetadata>
     {
-        public static readonly System.Collections.Generic.IComparer<Akka.Persistence.SnapshotMetadata> Comparer;
-        public readonly string PersistenceId;
-        public readonly long SequenceNr;
-        public readonly System.DateTime Timestamp;
         public static System.DateTime TimestampNotSpecified;
         public SnapshotMetadata(string persistenceId, long sequenceNr) { }
         [Newtonsoft.Json.JsonConstructorAttribute()]
         public SnapshotMetadata(string persistenceId, long sequenceNr, System.DateTime timestamp) { }
+        public static System.Collections.Generic.IComparer<Akka.Persistence.SnapshotMetadata> Comparer { get; }
+        public string PersistenceId { get; }
+        public long SequenceNr { get; }
+        public System.DateTime Timestamp { get; }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.Persistence.SnapshotMetadata other) { }
         public override int GetHashCode() { }
@@ -640,9 +612,9 @@ namespace Akka.Persistence
     }
     public sealed class SnapshotOffer : System.IEquatable<Akka.Persistence.SnapshotOffer>
     {
-        public readonly Akka.Persistence.SnapshotMetadata Metadata;
-        public readonly object Snapshot;
         public SnapshotOffer(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+        public Akka.Persistence.SnapshotMetadata Metadata { get; }
+        public object Snapshot { get; }
         public bool Equals(Akka.Persistence.SnapshotOffer other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -650,15 +622,15 @@ namespace Akka.Persistence
     }
     public sealed class SnapshotSelectionCriteria : System.IEquatable<Akka.Persistence.SnapshotSelectionCriteria>
     {
-        public static readonly Akka.Persistence.SnapshotSelectionCriteria Latest;
-        public readonly long MaxSequenceNr;
-        public readonly System.DateTime MaxTimeStamp;
-        public readonly long MinSequenceNr;
-        public readonly System.Nullable<System.DateTime> MinTimestamp;
-        public static readonly Akka.Persistence.SnapshotSelectionCriteria None;
         [Newtonsoft.Json.JsonConstructorAttribute()]
         public SnapshotSelectionCriteria(long maxSequenceNr, System.DateTime maxTimeStamp, long minSequenceNr = 0, System.Nullable<System.DateTime> minTimestamp = null) { }
         public SnapshotSelectionCriteria(long maxSequenceNr) { }
+        public static Akka.Persistence.SnapshotSelectionCriteria Latest { get; }
+        public long MaxSequenceNr { get; }
+        public System.DateTime MaxTimeStamp { get; }
+        public long MinSequenceNr { get; }
+        public System.Nullable<System.DateTime> MinTimestamp { get; }
+        public static Akka.Persistence.SnapshotSelectionCriteria None { get; }
         public bool Equals(Akka.Persistence.SnapshotSelectionCriteria other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -681,10 +653,10 @@ namespace Akka.Persistence
     }
     public sealed class UnconfirmedDelivery : System.IEquatable<Akka.Persistence.UnconfirmedDelivery>
     {
-        public readonly long DeliveryId;
-        public readonly Akka.Actor.ActorPath Destination;
-        public readonly object Message;
         public UnconfirmedDelivery(long deliveryId, Akka.Actor.ActorPath destination, object message) { }
+        public long DeliveryId { get; }
+        public Akka.Actor.ActorPath Destination { get; }
+        public object Message { get; }
         public bool Equals(Akka.Persistence.UnconfirmedDelivery other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -692,8 +664,8 @@ namespace Akka.Persistence
     }
     public sealed class UnconfirmedWarning : System.IEquatable<Akka.Persistence.UnconfirmedWarning>
     {
-        public readonly Akka.Persistence.UnconfirmedDelivery[] UnconfirmedDeliveries;
         public UnconfirmedWarning(Akka.Persistence.UnconfirmedDelivery[] unconfirmedDeliveries) { }
+        public Akka.Persistence.UnconfirmedDelivery[] UnconfirmedDeliveries { get; }
         public bool Equals(Akka.Persistence.UnconfirmedWarning other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -720,60 +692,57 @@ namespace Akka.Persistence
         public bool IsAwait { get; }
         public long ReplayMax { get; }
     }
-    public sealed class WriteMessageFailure : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageFailure>
+    public sealed class WriteMessageFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageFailure>
     {
-        public readonly int ActorInstanceId;
-        public readonly System.Exception Cause;
-        public readonly Akka.Persistence.IPersistentRepresentation Persistent;
         public WriteMessageFailure(Akka.Persistence.IPersistentRepresentation persistent, System.Exception cause, int actorInstanceId) { }
+        public int ActorInstanceId { get; }
+        public System.Exception Cause { get; }
+        public Akka.Persistence.IPersistentRepresentation Persistent { get; }
         public bool Equals(Akka.Persistence.WriteMessageFailure other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class WriteMessageRejected : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageRejected>
+    public sealed class WriteMessageRejected : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageRejected>
     {
-        public readonly int ActorInstanceId;
-        public readonly System.Exception Cause;
-        public readonly Akka.Persistence.IPersistentRepresentation Persistent;
         public WriteMessageRejected(Akka.Persistence.IPersistentRepresentation persistent, System.Exception cause, int actorInstanceId) { }
+        public int ActorInstanceId { get; }
+        public System.Exception Cause { get; }
+        public Akka.Persistence.IPersistentRepresentation Persistent { get; }
         public bool Equals(Akka.Persistence.WriteMessageRejected other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class WriteMessages : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessages>
+    public sealed class WriteMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessages>
     {
-        public readonly int ActorInstanceId;
-        public readonly System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentEnvelope> Messages;
-        public readonly Akka.Actor.IActorRef PersistentActor;
         public WriteMessages(System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentEnvelope> messages, Akka.Actor.IActorRef persistentActor, int actorInstanceId) { }
+        public int ActorInstanceId { get; }
+        public System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentEnvelope> Messages { get; }
+        public Akka.Actor.IActorRef PersistentActor { get; }
         public bool Equals(Akka.Persistence.WriteMessages other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class WriteMessagesFailed : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessagesFailed>
+    public sealed class WriteMessagesFailed : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessagesFailed>
     {
-        public readonly System.Exception Cause;
         public WriteMessagesFailed(System.Exception cause) { }
+        public System.Exception Cause { get; }
         public bool Equals(Akka.Persistence.WriteMessagesFailed other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public class WriteMessagesSuccessful : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessagesSuccessful>
+    public sealed class WriteMessagesSuccessful : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage
     {
-        public static readonly Akka.Persistence.WriteMessagesSuccessful Instance;
-        public bool Equals(Akka.Persistence.WriteMessagesSuccessful other) { }
-        public override bool Equals(object obj) { }
-        public override string ToString() { }
+        public static Akka.Persistence.WriteMessagesSuccessful Instance { get; }
     }
-    public sealed class WriteMessageSuccess : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageSuccess>
+    public sealed class WriteMessageSuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageSuccess>
     {
-        public readonly int ActorInstanceId;
-        public readonly Akka.Persistence.IPersistentRepresentation Persistent;
         public WriteMessageSuccess(Akka.Persistence.IPersistentRepresentation persistent, int actorInstanceId) { }
+        public int ActorInstanceId { get; }
+        public Akka.Persistence.IPersistentRepresentation Persistent { get; }
         public bool Equals(Akka.Persistence.WriteMessageSuccess other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
