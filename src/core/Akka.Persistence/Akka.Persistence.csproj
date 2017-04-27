@@ -67,7 +67,7 @@
     <Compile Include="Eventsourced.Recovery.cs" />
     <Compile Include="Fsm\PersistentFSM.cs" />
     <Compile Include="Fsm\PersistentFSMBase.cs" />
-    <Compile Include="InternalExtensions.cs" />
+    <Compile Include="Internal\CollectionsExtensions.cs" />
     <Compile Include="Journal\EventAdapters.cs" />
     <Compile Include="Journal\EventSequences.cs" />
     <Compile Include="Journal\PersistencePluginProxy.cs" />
