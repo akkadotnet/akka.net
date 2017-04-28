@@ -631,7 +631,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             if (message is WriteMessages) BatchRequest((IJournalRequest)message);
             else if (message is ReplayMessages) BatchRequest((IJournalRequest)message);
             else if (message is BatchComplete) CompleteBatch((BatchComplete)message);
-            else if (message is ReadHighestSequenceNr) BatchRequest((IJournalRequest)message);
             else if (message is DeleteMessagesTo) BatchRequest((IJournalRequest)message);
             else if (message is ReplayTaggedMessages) BatchRequest((IJournalRequest)message);
             else if (message is SubscribePersistenceId) AddPersistenceIdSubscriber((SubscribePersistenceId)message);
@@ -804,19 +803,11 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 var r = (ReplayMessages)request;
                 r.PersistentActor.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
-
-            }
-            else if (request is ReadHighestSequenceNr)
-            {
-                var r = (ReadHighestSequenceNr)request;
-                r.PersistentActor.Tell(new ReadHighestSequenceNrFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
-
             }
             else if (request is DeleteMessagesTo)
             {
                 var r = (DeleteMessagesTo)request;
                 r.PersistentActor.Tell(new DeleteMessagesFailure(JournalBufferOverflowException.Instance, r.ToSequenceNr), ActorRefs.NoSender);
-
             }
             else if (request is ReplayTaggedMessages)
             {
@@ -861,8 +852,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 await HandleWriteMessages((WriteMessages)req, command);
                             else if (req is ReplayMessages)
                                 await HandleReplayMessages((ReplayMessages)req, command, context);
-                            else if (req is ReadHighestSequenceNr)
-                                await HandleReadHighestSequenceNr((ReadHighestSequenceNr)req, command);
                             else if (req is DeleteMessagesTo)
                                 await HandleDeleteMessagesTo((DeleteMessagesTo)req, command);
                             else if (req is ReplayTaggedMessages)
@@ -931,27 +920,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 var response = new DeleteMessagesFailure(cause, toSequenceNr);
                 req.PersistentActor.Tell(response, ActorRefs.NoSender);
-            }
-        }
-
-        private async Task HandleReadHighestSequenceNr(ReadHighestSequenceNr req, TCommand command)
-        {
-            var replyTo = req.PersistentActor;
-            var persistenceId = req.PersistenceId;
-
-            NotifyNewPersistenceIdAdded(persistenceId);
-
-            try
-            {
-                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command);
-
-                var response = new ReadHighestSequenceNrSuccess(highestSequenceNr);
-                replyTo.Tell(response, ActorRefs.NoSender);
-            }
-            catch (Exception cause)
-            {
-                var response = new ReadHighestSequenceNrFailure(cause);
-                replyTo.Tell(response, ActorRefs.NoSender);
             }
         }
 
