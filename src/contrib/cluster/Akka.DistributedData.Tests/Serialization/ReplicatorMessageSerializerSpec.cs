@@ -54,10 +54,10 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new Unsubscribe(_keyA, ref1));
             CheckSerialization(new Changed(_keyA, data1));
             CheckSerialization(new DataEnvelope(data1));
-            CheckSerialization(new DataEnvelope(data1, ImmutableDictionary.CreateRange(new[]
+            CheckSerialization(new DataEnvelope(data1, ImmutableDictionary.CreateRange(new Dictionary<UniqueAddress, IPruningState>
             {
-                new KeyValuePair<UniqueAddress, IPruningState>(_address1, new IPruningState(_address2, PruningPerformed.Instance)), 
-                new KeyValuePair<UniqueAddress, IPruningState>(_address3, new IPruningState(_address2, new PruningInitialized(_address1.Address))), 
+                { _address1, new PruningPerformed(DateTime.UtcNow) },
+                { _address3, new PruningInitialized(_address2, _address1.Address) }, 
             })));
             CheckSerialization(new Write("A", new DataEnvelope(data1)));
             CheckSerialization(WriteAck.Instance);

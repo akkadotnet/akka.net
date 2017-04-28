@@ -22,16 +22,252 @@ using Status = Akka.DistributedData.Internal.Status;
 
 namespace Akka.DistributedData
 {
+    using Digest = ByteString;
+
+    /// <summary>
+    /// <para>
+    /// A replicated in-memory data store supporting low latency and high availability
+    /// requirements.
+    /// 
+    /// The <see cref="Replicator"/> actor takes care of direct replication and gossip based
+    /// dissemination of Conflict Free Replicated Data Types (CRDTs) to replicas in the
+    /// the cluster.
+    /// The data types must be convergent CRDTs and implement <see cref="IReplicatedData{T}"/>, i.e.
+    /// they provide a monotonic merge function and the state changes always converge.
+    /// 
+    /// You can use your own custom <see cref="IReplicatedData{T}"/> or <see cref="IDeltaReplicatedData{T,TDelta}"/> types,
+    /// and several types are provided by this package, such as:
+    /// </para>
+    /// <list type="bullet">
+    ///     <item>
+    ///         <term>Counters</term>
+    ///         <description><see cref="GCounter"/>, <see cref="PNCounter"/></description> 
+    ///     </item>
+    ///     <item>
+    ///         <term>Registers</term>
+    ///         <description><see cref="LWWRegister{T}"/>, <see cref="Flag"/></description>
+    ///     </item>
+    ///     <item>
+    ///         <term>Sets</term>
+    ///         <description><see cref="GSet{T}"/>, <see cref="ORSet{T}"/></description>
+    ///     </item>
+    ///     <item>
+    ///         <term>Maps</term> 
+    ///         <description><see cref="ORDictionary{TKey,TValue}"/>, <see cref="ORMultiValueDictionary{TKey,TValue}"/>, <see cref="LWWDictionary{TKey,TValue}"/>, <see cref="PNCounterDictionary{TKey}"/></description>
+    ///     </item>
+    /// </list>
+    /// <para>
+    /// For good introduction to the CRDT subject watch the
+    /// <a href="http://www.ustream.tv/recorded/61448875">The Final Causal Frontier</a>
+    /// and <a href="http://vimeo.com/43903960">Eventually Consistent Data Structures</a>
+    /// talk by Sean Cribbs and and the
+    /// <a href="http://research.microsoft.com/apps/video/dl.aspx?id=153540">talk by Mark Shapiro</a>
+    /// and read the excellent paper <a href="http://hal.upmc.fr/docs/00/55/55/88/PDF/techreport.pdf">
+    /// A comprehensive study of Convergent and Commutative Replicated Data Types</a>
+    /// by Mark Shapiro et. al.
+    /// </para>
+    /// <para>
+    /// The <see cref="Replicator"/> actor must be started on each node in the cluster, or group of
+    /// nodes tagged with a specific role. It communicates with other <see cref="Replicator"/> instances
+    /// with the same path (without address) that are running on other nodes . For convenience it
+    /// can be used with the <see cref="DistributedData"/> extension but it can also be started as an ordinary
+    /// actor using the <see cref="Props"/>. If it is started as an ordinary actor it is important
+    /// that it is given the same name, started on same path, on all nodes.
+    /// </para>
+    /// <para>
+    /// <a href="paper http://arxiv.org/abs/1603.01529">Delta State Replicated Data Types</a>
+    /// is supported. delta-CRDT is a way to reduce the need for sending the full state
+    /// for updates. For example adding element 'c' and 'd' to set {'a', 'b'} would
+    /// result in sending the delta {'c', 'd'} and merge that with the state on the
+    /// receiving side, resulting in set {'a', 'b', 'c', 'd'}.
+    /// </para>
+    /// <para>
+    /// The protocol for replicating the deltas supports causal consistency if the data type
+    /// is marked with <see cref="IRequireCausualDeliveryOfDeltas"/>. Otherwise it is only eventually
+    /// consistent. Without causal consistency it means that if elements 'c' and 'd' are
+    /// added in two separate <see cref="Update"/> operations these deltas may occasionally be propagated
+    /// to nodes in different order than the causal order of the updates. For this example it
+    /// can result in that set {'a', 'b', 'd'} can be seen before element 'c' is seen. Eventually
+    /// it will be {'a', 'b', 'c', 'd'}.
+    /// </para>
+    /// <para>
+    /// == Update ==
+    /// 
+    /// To modify and replicate a <see cref="IReplicatedData{T}"/> value you send a <see cref="Update"/> message
+    /// to the local <see cref="Replicator"/>.
+    /// The current data value for the `key` of the <see cref="Update"/> is passed as parameter to the `modify`
+    /// function of the <see cref="Update"/>. The function is supposed to return the new value of the data, which
+    /// will then be replicated according to the given consistency level.
+    /// 
+    /// The `modify` function is called by the `Replicator` actor and must therefore be a pure
+    /// function that only uses the data parameter and stable fields from enclosing scope. It must
+    /// for example not access `sender()` reference of an enclosing actor.
+    /// 
+    /// <see cref="Update"/> is intended to only be sent from an actor running in same local `ActorSystem` as
+    /// the <see cref="Replicator"/>, because the `modify` function is typically not serializable.
+    /// 
+    /// You supply a write consistency level which has the following meaning:
+    /// <list type="bullet">
+    ///     <item>
+    ///         <term><see cref="WriteLocal"/></term>
+    ///         <description>
+    ///             The value will immediately only be written to the local replica, and later disseminated with gossip.
+    ///         </description>
+    ///     </item>
+    ///     <item>
+    ///         <term><see cref="WriteTo"/></term>
+    ///         <description>
+    ///             The value will immediately be written to at least <see cref="WriteTo.N"/> replicas, including the local replica.
+    ///         </description>
+    ///     </item>
+    ///     <item>
+    ///         <term><see cref="WriteMajority"/></term>
+    ///         <description>
+    ///             The value will immediately be written to a majority of replicas, i.e. at least `N/2 + 1` replicas, 
+    ///             where N is the number of nodes in the cluster (or cluster role group).
+    ///         </description>     
+    ///     </item>
+    ///     <item>
+    ///         <term><see cref="WriteAll"/></term> 
+    ///         <description>
+    ///             The value will immediately be written to all nodes in the cluster (or all nodes in the cluster role group).
+    ///         </description>
+    ///     </item>
+    /// </list>
+    /// 
+    /// As reply of the <see cref="Update"/> a <see cref="UpdateSuccess"/> is sent to the sender of the
+    /// <see cref="Update"/> if the value was successfully replicated according to the supplied consistency
+    /// level within the supplied timeout. Otherwise a <see cref="IUpdateFailure"/> subclass is
+    /// sent back. Note that a <see cref="UpdateTimeout"/> reply does not mean that the update completely failed
+    /// or was rolled back. It may still have been replicated to some nodes, and will eventually
+    /// be replicated to all nodes with the gossip protocol.
+    /// 
+    /// You will always see your own writes. For example if you send two <see cref="Update"/> messages
+    /// changing the value of the same `key`, the `modify` function of the second message will
+    /// see the change that was performed by the first <see cref="Update"/> message.
+    /// 
+    /// In the <see cref="Update"/> message you can pass an optional request context, which the <see cref="Replicator"/>
+    /// does not care about, but is included in the reply messages. This is a convenient
+    /// way to pass contextual information (e.g. original sender) without having to use <see cref="Ask"/>
+    /// or local correlation data structures.
+    /// </para>
+    /// <para>
+    /// == Get ==
+    /// 
+    /// To retrieve the current value of a data you send <see cref="Get"/> message to the
+    /// <see cref="Replicator"/>. You supply a consistency level which has the following meaning:
+    /// <list type="bullet">
+    ///     <item>
+    ///         <term><see cref="ReadLocal"/></term> 
+    ///         <description>The value will only be read from the local replica.</description>
+    ///     </item>
+    ///     <item>
+    ///         <term><see cref="ReadFrom"/></term> 
+    ///         <description>The value will be read and merged from <see cref="ReadFrom.N"/> replicas, including the local replica.</description>
+    ///     </item>
+    ///     <item>
+    ///         <term><see cref="ReadMajority"/></term>
+    ///         <description>
+    ///             The value will be read and merged from a majority of replicas, i.e. at least `N/2 + 1` replicas, where N is the number of nodes in the cluster (or cluster role group).
+    ///         </description>
+    ///     </item>
+    ///     <item>
+    ///         <term><see cref="ReadAll"/></term>
+    ///         <description>The value will be read and merged from all nodes in the cluster (or all nodes in the cluster role group).</description>
+    ///     </item>
+    /// </list>
+    /// 
+    /// As reply of the <see cref="Get"/> a <see cref="GetSuccess"/> is sent to the sender of the
+    /// <see cref="Get"/> if the value was successfully retrieved according to the supplied consistency
+    /// level within the supplied timeout. Otherwise a <see cref="GetFailure"/> is sent.
+    /// If the key does not exist the reply will be <see cref="NotFound"/>.
+    /// 
+    /// You will always read your own writes. For example if you send a <see cref="Update"/> message
+    /// followed by a <see cref="Get"/> of the same `key` the <see cref="Get"/> will retrieve the change that was
+    /// performed by the preceding <see cref="Update"/> message. However, the order of the reply messages are
+    /// not defined, i.e. in the previous example you may receive the <see cref="GetSuccess"/> before
+    /// the <see cref="UpdateSuccess"/>.
+    /// 
+    /// In the <see cref="Get"/> message you can pass an optional request context in the same way as for the
+    /// <see cref="Update"/> message, described above. For example the original sender can be passed and replied
+    /// to after receiving and transforming <see cref="GetSuccess"/>.
+    /// </para>
+    /// <para>
+    /// == Subscribe ==
+    /// 
+    /// You may also register interest in change notifications by sending <see cref="Subscribe"/>
+    /// message to the <see cref="Replicator"/>. It will send <see cref="Changed"/> messages to the registered
+    /// subscriber when the data for the subscribed key is updated. Subscribers will be notified
+    /// periodically with the configured `notify-subscribers-interval`, and it is also possible to
+    /// send an explicit <see cref="FlushChanges"/> message to the <see cref="Replicator"/> to notify the subscribers
+    /// immediately.
+    /// 
+    /// The subscriber is automatically removed if the subscriber is terminated. A subscriber can
+    /// also be deregistered with the <see cref="Unsubscribe"/> message.
+    /// </para>
+    /// <para>
+    /// == Delete ==
+    /// 
+    /// A data entry can be deleted by sending a <see cref="Delete"/> message to the local
+    /// local <see cref="Replicator"/>. As reply of the <see cref="Delete"/> a <see cref="DeleteSuccess"/> is sent to
+    /// the sender of the <see cref="Delete"/> if the value was successfully deleted according to the supplied
+    /// consistency level within the supplied timeout. Otherwise a <see cref="ReplicationDeleteFailure"/>
+    /// is sent. Note that <see cref="ReplicationDeleteFailure"/> does not mean that the delete completely failed or
+    /// was rolled back. It may still have been replicated to some nodes, and may eventually be replicated
+    /// to all nodes.
+    /// 
+    /// A deleted key cannot be reused again, but it is still recommended to delete unused
+    /// data entries because that reduces the replication overhead when new nodes join the cluster.
+    /// Subsequent <see cref="Delete"/>, <see cref="Update"/> and <see cref="Get"/> requests will be replied with <see cref="DataDeleted"/>.
+    /// Subscribers will receive <see cref="Deleted"/>.
+    /// 
+    /// In the <see cref="Delete"/> message you can pass an optional request context in the same way as for the
+    /// <see cref="Update"/> message, described above. For example the original sender can be passed and replied
+    /// to after receiving and transforming <see cref="DeleteSuccess"/>.
+    /// </para>
+    /// <para>
+    /// == CRDT Garbage ==
+    /// 
+    /// One thing that can be problematic with CRDTs is that some data types accumulate history (garbage).
+    /// For example a <see cref="GCounter"/> keeps track of one counter per node. If a <see cref="GCounter"/> has been updated
+    /// from one node it will associate the identifier of that node forever. That can become a problem
+    /// for long running systems with many cluster nodes being added and removed. To solve this problem
+    /// the <see cref="Replicator"/> performs pruning of data associated with nodes that have been removed from the
+    /// cluster. Data types that need pruning have to implement <see cref="IRemovedNodePruning{T}"/>. The pruning consists
+    /// of several steps:
+    /// <list type="">
+    ///     <item>When a node is removed from the cluster it is first important that all updates that were
+    /// done by that node are disseminated to all other nodes. The pruning will not start before the
+    /// <see cref="MaxPruningDissemination"/> duration has elapsed. The time measurement is stopped when any
+    /// replica is unreachable, but it's still recommended to configure this with certain margin.
+    /// It should be in the magnitude of minutes.</item>
+    /// <item>The nodes are ordered by their address and the node ordered first is called leader.
+    /// The leader initiates the pruning by adding a <see cref="PruningInitialized"/> marker in the data envelope.
+    /// This is gossiped to all other nodes and they mark it as seen when they receive it.</item>
+    /// <item>When the leader sees that all other nodes have seen the <see cref="PruningInitialized"/> marker
+    /// the leader performs the pruning and changes the marker to <see cref="PruningPerformed"/> so that nobody
+    /// else will redo the pruning. The data envelope with this pruning state is a CRDT itself.
+    /// The pruning is typically performed by "moving" the part of the data associated with
+    /// the removed node to the leader node. For example, a <see cref="GCounter"/> is a `Map` with the node as key
+    /// and the counts done by that node as value. When pruning the value of the removed node is
+    /// moved to the entry owned by the leader node. See [[RemovedNodePruning#prune]].</item>
+    /// <item>Thereafter the data is always cleared from parts associated with the removed node so that
+    /// it does not come back when merging. See [[RemovedNodePruning#pruningCleanup]]</item>
+    /// <item>After another `maxPruningDissemination` duration after pruning the last entry from the
+    /// removed node the <see cref="PruningPerformed"/> markers in the data envelope are collapsed into a
+    /// single tombstone entry, for efficiency. Clients may continue to use old data and therefore
+    /// all data are always cleared from parts associated with tombstoned nodes. </item>
+    /// </list>
+    /// </para>
+    /// </summary>
     public sealed class Replicator : ReceiveActor
     {
-        public static Props Props(ReplicatorSettings settings)
-        {
-            return Actor.Props.Create(() => new Replicator(settings)).WithDeploy(Deploy.Local).WithDispatcher(settings.Dispatcher);
-        }
+        public static Props Props(ReplicatorSettings settings) => 
+            Actor.Props.Create(() => new Replicator(settings)).WithDeploy(Deploy.Local).WithDispatcher(settings.Dispatcher);
 
-        private static readonly ByteString DeletedDigest = ByteString.Empty;
-        private static readonly ByteString LazyDigest = ByteString.CopyFrom(new byte[] { 0 }, 0, 1);
-        private static readonly ByteString NotFoundDigest = ByteString.CopyFrom(new byte[] { 255 }, 0, 1);
+        private static readonly Digest DeletedDigest = ByteString.Empty;
+        private static readonly Digest LazyDigest = ByteString.Unsafe.FromBytes(new byte[] { 0 });
+        private static readonly Digest NotFoundDigest = ByteString.Unsafe.FromBytes(new byte[] { 255 });
 
         private static readonly DataEnvelope DeletedEnvelope = new DataEnvelope(DeletedData.Instance);
 
@@ -884,23 +1120,33 @@ namespace Akka.DistributedData
 
         private void PerformRemovedNodePruning()
         {
+            // perform pruning when all seen Init
+            var allNodes = _nodes; //TODO: _nodes.Union(_weaklyUpNodes)
+            var prunningPerformed = new PruningPerformed(DateTime.UtcNow + _settings.PruningMarkerTimeToLive);
+            var durablePrunningPerformed = new PruningPerformed(DateTime.UtcNow + _settings.DurablePruningMarkerTimeToLive);
+
             foreach (var entry in _dataEntries)
             {
                 var key = entry.Key;
                 var envelope = entry.Value.Item1;
-                if (entry.Value.Item1.Data is IRemovedNodePruning)
+                var data = envelope.Data as IRemovedNodePruning;
+                if (data != null)
                 {
-                    foreach (var pruning in entry.Value.Item1.Pruning)
+                    foreach (var entry2 in envelope.Pruning)
                     {
-                        var removed = pruning.Key;
-                        var owner = pruning.Value.Owner;
-                        var phase = pruning.Value.Phase as PruningInitialized;
-                        if (phase != null && owner == _selfUniqueAddress && (_nodes.Count == 0 || _nodes.All(x => phase.Seen.Contains(x))))
+                        var init = entry2.Value as PruningInitialized;
+                        if (init != null && init.Owner == _selfUniqueAddress && (allNodes.IsEmpty || allNodes.IsSubsetOf(init.Seen)))
                         {
-                            var newEnvelope = envelope.Prune(removed);
-                            _pruningPerformed = _pruningPerformed.SetItem(removed, _allReachableClockTime);
-                            _log.Debug("Perform pruning of {0} from {1} to {2}", key, removed, _selfUniqueAddress);
+                            var removed = entry2.Key;
+                            var isDurable = IsDurable(key);
+                            var newEnvelope = envelope.Prune(removed, isDurable ? durablePrunningPerformed : prunningPerformed);
+                            _log.Debug("Perform pruning of [{0}] from [{1}] to [{2}]", key, removed, _selfUniqueAddress);
                             SetData(key, newEnvelope);
+
+                            if (!ReferenceEquals(newEnvelope.Data, data) && isDurable)
+                            {
+                                _durableStore.Tell(new Store(key, new DurableDataEnvelope(newEnvelope)));
+                            }
                         }
                     }
                 }

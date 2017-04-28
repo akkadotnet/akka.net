@@ -115,7 +115,7 @@ namespace Akka.DistributedData
             object reply;
             if (isSuccess && isDelete) reply = new DeleteSuccess(_key, _req);
             else if (isSuccess) reply = new UpdateSuccess(_key, _req);
-            else if (isTimeoutOrNotEnoughNodes && isDelete) reply = new ReplicationDeletedFailure(_key);
+            else if (isTimeoutOrNotEnoughNodes && isDelete) reply = new ReplicationDeleteFailure(_key);
             else if (isTimeoutOrNotEnoughNodes) reply = new UpdateTimeout(_key, _req);
             else reply = new StoreFailure(_key, _req);
 

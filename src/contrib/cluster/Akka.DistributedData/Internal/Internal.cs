@@ -420,7 +420,7 @@ namespace Akka.DistributedData.Internal
         public VersionVector DeltaVersions { get; }
 
         /// <summary>
-        /// TBD
+        /// The <see cref="DataEnvelope"/> wraps a data entry and carries state of the pruning process for the entry.
         /// </summary>
         /// <param name="data">TBD</param>
         /// <param name="pruning">TBD</param>
@@ -895,6 +895,32 @@ namespace Akka.DistributedData.Internal
 
     public sealed class DeltaPropagation : IReplicatorMessage, IEquatable<DeltaPropagation>
     {
+        private sealed class NoDelta : IDeltaReplicatedData<IReplicatedData, IReplicatedDelta>, IRequireCausualDeliveryOfDeltas
+        {
+            public static readonly NoDelta Instance = new NoDelta();
+            private NoDelta() { }
+
+            IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+            public IReplicatedDelta Delta => null;
+            public IDeltaReplicatedData Zero => this;
+
+            IReplicatedData IReplicatedData<IReplicatedData>.Merge(IReplicatedData other) => Merge(other);
+            public IReplicatedData Merge(IReplicatedData other) => this;
+            IReplicatedData IDeltaReplicatedData<IReplicatedData, IReplicatedDelta>.MergeDelta(IReplicatedDelta delta) => MergeDelta(delta);
+            public IReplicatedData ResetDelta() => this;
+            public IReplicatedData MergeDelta(IReplicatedDelta delta) => this;
+        }
+        /// <summary>
+        /// When a DeltaReplicatedData returns `null` from <see cref="Delta"/> it must still be
+        /// treated as a delta that increase the version counter in <see cref="DeltaPropagationSelector"/>`.
+        /// Otherwise a later delta might be applied before the full state gossip is received
+        /// and thereby violating <see cref="IRequireCausualDeliveryOfDeltas"/>.
+        /// 
+        /// This is used as a placeholder for such `null` delta. It's filtered out
+        /// in <see cref="CreateDeltaPropagation"/>, i.e. never sent to the other replicas.
+        /// </summary>
+        public static readonly IReplicatedDelta NoDeltaPlaceholder = NoDelta.Instance;
+
         public readonly UniqueAddress FromNode;
         public readonly bool ShouldReply;
         public readonly ImmutableDictionary<string, Delta> Deltas;
