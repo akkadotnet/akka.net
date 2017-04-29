@@ -19,7 +19,7 @@ namespace Akka
     public sealed class NotUsed : IEquatable<NotUsed>, IComparable<NotUsed>
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="NotUsed"/>.
         /// </summary>
         public static readonly NotUsed Instance = new NotUsed();
 
