@@ -47,7 +47,7 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Represents a strategy that decides how to deal with a buffer of time based stage that is full but is about to receive a new element.
     /// </summary>
     public enum DelayOverflowStrategy
     {
