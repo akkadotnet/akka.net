@@ -372,4 +372,3 @@ namespace Akka.Persistence.Snapshot
         }
     }
 }
-

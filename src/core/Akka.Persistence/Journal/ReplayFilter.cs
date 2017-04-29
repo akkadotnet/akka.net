@@ -96,23 +96,27 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef PersistentActor { get; private set; }
+        public IActorRef PersistentActor { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public ReplayFilterMode Mode { get; private set; }
+        public ReplayFilterMode Mode { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public int WindowSize { get; private set; }
+        public int WindowSize { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public int MaxOldWriters { get; private set; }
+        public int MaxOldWriters { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public bool DebugEnabled { get; private set; }
+        public bool DebugEnabled { get; }
 
         /// <summary>
         /// TBD

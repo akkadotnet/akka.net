@@ -76,7 +76,6 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected new static IUntypedActorContext Context { get { return (IUntypedActorContext) ActorBase.Context; } }
+        protected new static IUntypedActorContext Context => (IUntypedActorContext) ActorBase.Context;
     }
 }
-

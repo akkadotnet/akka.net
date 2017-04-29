@@ -80,6 +80,7 @@ namespace Akka.Persistence
         {
             public static Akka.Persistence.AtLeastOnceDeliverySemantic.RedeliveryTick Instance { get; }
             public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
         }
     }
     public sealed class AtLeastOnceDeliverySnapshot : Akka.Persistence.Serialization.IMessage, System.IEquatable<Akka.Persistence.AtLeastOnceDeliverySnapshot>
@@ -201,13 +202,13 @@ namespace Akka.Persistence
     }
     public class DiscardToDeadLetterStrategy : Akka.Persistence.IStashOverflowStrategy
     {
-        public static readonly Akka.Persistence.DiscardToDeadLetterStrategy Instance;
+        public static Akka.Persistence.DiscardToDeadLetterStrategy Instance { get; }
     }
     public abstract class Eventsourced : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>, Akka.Persistence.IPersistenceRecovery, Akka.Persistence.IPersistenceStash, Akka.Persistence.IPersistentIdentity
     {
-        protected readonly Akka.Persistence.PersistenceExtension Extension;
         public static readonly System.Func<Akka.Actor.Envelope, bool> UnstashFilterPredicate;
         protected Eventsourced() { }
+        protected Akka.Persistence.PersistenceExtension Extension { get; }
         public virtual Akka.Persistence.IStashOverflowStrategy InternalStashOverflowStrategy { get; }
         public bool IsRecovering { get; }
         public bool IsRecoveryFinished { get; }
@@ -349,8 +350,8 @@ namespace Akka.Persistence
     }
     public class Persistence : Akka.Actor.ExtensionIdProvider<Akka.Persistence.PersistenceExtension>
     {
-        public static readonly Akka.Persistence.Persistence Instance;
         public Persistence() { }
+        public static Akka.Persistence.Persistence Instance { get; }
         public override Akka.Persistence.PersistenceExtension CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
         public static Akka.Configuration.Config DefaultConfig() { }
     }
@@ -364,13 +365,13 @@ namespace Akka.Persistence
         public string PersistenceId(Akka.Actor.IActorRef actor) { }
         public Akka.Actor.IActorRef SnapshotStoreFor(string snapshotPluginId) { }
     }
-    public class PersistenceSettings : Akka.Actor.Settings
+    public sealed class PersistenceSettings : Akka.Actor.Settings
     {
         public PersistenceSettings(Akka.Actor.ActorSystem system, Akka.Configuration.Config config) { }
         public Akka.Persistence.PersistenceSettings.AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
         public Akka.Persistence.PersistenceSettings.InternalSettings Internal { get; }
         public Akka.Persistence.PersistenceSettings.ViewSettings View { get; }
-        public class AtLeastOnceDeliverySettings
+        public sealed class AtLeastOnceDeliverySettings
         {
             public AtLeastOnceDeliverySettings(System.TimeSpan redeliverInterval, int redeliveryBurstLimit, int warnAfterNumberOfUnconfirmedAttempts, int maxUnconfirmedMessages) { }
             public AtLeastOnceDeliverySettings(Akka.Configuration.Config config) { }
@@ -383,13 +384,13 @@ namespace Akka.Persistence
             public Akka.Persistence.PersistenceSettings.AtLeastOnceDeliverySettings WithRedeliveryBurstLimit(int redeliveryBurstLimit) { }
             public Akka.Persistence.PersistenceSettings.AtLeastOnceDeliverySettings WithUnconfirmedAttemptsToWarn(int unconfirmedAttemptsToWarn) { }
         }
-        public class InternalSettings
+        public sealed class InternalSettings
         {
             public InternalSettings(Akka.Configuration.Config config) { }
             public bool PublishConfirmations { get; }
             public bool PublishPluginCommands { get; }
         }
-        public class ViewSettings
+        public sealed class ViewSettings
         {
             public ViewSettings(Akka.Configuration.Config config) { }
             public bool AutoUpdate { get; }
@@ -480,13 +481,13 @@ namespace Akka.Persistence
     }
     public sealed class Recovery
     {
-        public static readonly Akka.Persistence.Recovery Default;
-        public static readonly Akka.Persistence.Recovery None;
         public Recovery() { }
         public Recovery(Akka.Persistence.SnapshotSelectionCriteria fromSnapshot) { }
         public Recovery(Akka.Persistence.SnapshotSelectionCriteria fromSnapshot, long toSequenceNr) { }
         public Recovery(Akka.Persistence.SnapshotSelectionCriteria fromSnapshot = null, long toSequenceNr = 9223372036854775807, long replayMax = 9223372036854775807) { }
+        public static Akka.Persistence.Recovery Default { get; }
         public Akka.Persistence.SnapshotSelectionCriteria FromSnapshot { get; }
+        public static Akka.Persistence.Recovery None { get; }
         public long ReplayMax { get; }
         public long ToSequenceNr { get; }
     }
@@ -494,6 +495,7 @@ namespace Akka.Persistence
     {
         public static readonly Akka.Persistence.RecoveryCompleted Instance;
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
     }
     public sealed class RecoverySuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.RecoverySuccess>
     {
@@ -649,7 +651,7 @@ namespace Akka.Persistence
     }
     public class ThrowOverflowExceptionStrategy : Akka.Persistence.IStashOverflowStrategy
     {
-        public static readonly Akka.Persistence.ThrowOverflowExceptionStrategy Instance;
+        public static Akka.Persistence.ThrowOverflowExceptionStrategy Instance { get; }
     }
     public sealed class UnconfirmedDelivery : System.IEquatable<Akka.Persistence.UnconfirmedDelivery>
     {
@@ -981,9 +983,9 @@ namespace Akka.Persistence.Journal
         System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
         System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback);
     }
-    public class IdentityEventAdapter : Akka.Persistence.Journal.IEventAdapter, Akka.Persistence.Journal.IReadEventAdapter, Akka.Persistence.Journal.IWriteEventAdapter
+    public sealed class IdentityEventAdapter : Akka.Persistence.Journal.IEventAdapter, Akka.Persistence.Journal.IReadEventAdapter, Akka.Persistence.Journal.IWriteEventAdapter
     {
-        public static readonly Akka.Persistence.Journal.IdentityEventAdapter Instance;
+        public static Akka.Persistence.Journal.IdentityEventAdapter Instance { get; }
         public Akka.Persistence.Journal.IEventSequence FromJournal(object evt, string manifest) { }
         public string Manifest(object evt) { }
         public object ToJournal(object evt) { }
@@ -1081,10 +1083,10 @@ namespace Akka.Persistence.Journal
     }
     public struct Tagged
     {
-        public readonly object Payload;
-        public readonly System.Collections.Immutable.IImmutableSet<string> Tags;
         public Tagged(object payload, System.Collections.Generic.IEnumerable<string> tags) { }
         public Tagged(object payload, System.Collections.Immutable.IImmutableSet<string> tags) { }
+        public object Payload { get; }
+        public System.Collections.Immutable.IImmutableSet<string> Tags { get; }
     }
     public abstract class WriteJournalBase : Akka.Actor.ActorBase
     {
@@ -1164,401 +1166,5 @@ namespace Akka.Persistence.Snapshot
         protected virtual bool Receive(object message) { }
         protected virtual bool ReceivePluginInternal(object message) { }
         protected abstract System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot);
-    }
-}
-public sealed class AtLeastOnceDeliverySnapshot : Google.ProtocolBuffers.GeneratedMessage<AtLeastOnceDeliverySnapshot, AtLeastOnceDeliverySnapshot.Builder>
-{
-    public const int CurrentDeliveryIdFieldNumber = 1;
-    public const int UnconfirmedDeliveriesFieldNumber = 2;
-    public long CurrentDeliveryId { get; }
-    public static AtLeastOnceDeliverySnapshot DefaultInstance { get; }
-    public override AtLeastOnceDeliverySnapshot DefaultInstanceForType { get; }
-    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
-    public bool HasCurrentDeliveryId { get; }
-    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AtLeastOnceDeliverySnapshot, AtLeastOnceDeliverySnapshot.Builder> InternalFieldAccessors { get; }
-    public override bool IsInitialized { get; }
-    public override int SerializedSize { get; }
-    protected override AtLeastOnceDeliverySnapshot ThisMessage { get; }
-    public int UnconfirmedDeliveriesCount { get; }
-    public System.Collections.Generic.IList<AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery> UnconfirmedDeliveriesList { get; }
-    public static AtLeastOnceDeliverySnapshot.Builder CreateBuilder() { }
-    public static AtLeastOnceDeliverySnapshot.Builder CreateBuilder(AtLeastOnceDeliverySnapshot prototype) { }
-    public override AtLeastOnceDeliverySnapshot.Builder CreateBuilderForType() { }
-    public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery GetUnconfirmedDeliveries(int index) { }
-    public static AtLeastOnceDeliverySnapshot ParseDelimitedFrom(System.IO.Stream input) { }
-    public static AtLeastOnceDeliverySnapshot ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static AtLeastOnceDeliverySnapshot ParseFrom(Google.ProtocolBuffers.ByteString data) { }
-    public static AtLeastOnceDeliverySnapshot ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static AtLeastOnceDeliverySnapshot ParseFrom(byte[] data) { }
-    public static AtLeastOnceDeliverySnapshot ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static AtLeastOnceDeliverySnapshot ParseFrom(System.IO.Stream input) { }
-    public static AtLeastOnceDeliverySnapshot ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static AtLeastOnceDeliverySnapshot ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-    public static AtLeastOnceDeliverySnapshot ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public override AtLeastOnceDeliverySnapshot.Builder ToBuilder() { }
-    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
-    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AtLeastOnceDeliverySnapshot, AtLeastOnceDeliverySnapshot.Builder>
-    {
-        public Builder() { }
-        public long CurrentDeliveryId { get; set; }
-        public override AtLeastOnceDeliverySnapshot DefaultInstanceForType { get; }
-        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
-        public bool HasCurrentDeliveryId { get; }
-        public override bool IsInitialized { get; }
-        protected override AtLeastOnceDeliverySnapshot MessageBeingBuilt { get; }
-        protected override AtLeastOnceDeliverySnapshot.Builder ThisBuilder { get; }
-        public int UnconfirmedDeliveriesCount { get; }
-        public Google.ProtocolBuffers.Collections.IPopsicleList<AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery> UnconfirmedDeliveriesList { get; }
-        public AtLeastOnceDeliverySnapshot.Builder AddRangeUnconfirmedDeliveries(System.Collections.Generic.IEnumerable<AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery> values) { }
-        public AtLeastOnceDeliverySnapshot.Builder AddUnconfirmedDeliveries(AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery value) { }
-        public AtLeastOnceDeliverySnapshot.Builder AddUnconfirmedDeliveries(AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder builderForValue) { }
-        public override AtLeastOnceDeliverySnapshot BuildPartial() { }
-        public override AtLeastOnceDeliverySnapshot.Builder Clear() { }
-        public AtLeastOnceDeliverySnapshot.Builder ClearCurrentDeliveryId() { }
-        public AtLeastOnceDeliverySnapshot.Builder ClearUnconfirmedDeliveries() { }
-        public override AtLeastOnceDeliverySnapshot.Builder Clone() { }
-        public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery GetUnconfirmedDeliveries(int index) { }
-        public override AtLeastOnceDeliverySnapshot.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
-        public override AtLeastOnceDeliverySnapshot.Builder MergeFrom(AtLeastOnceDeliverySnapshot other) { }
-        public override AtLeastOnceDeliverySnapshot.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-        public override AtLeastOnceDeliverySnapshot.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-        public AtLeastOnceDeliverySnapshot.Builder SetCurrentDeliveryId(long value) { }
-        public AtLeastOnceDeliverySnapshot.Builder SetUnconfirmedDeliveries(int index, AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery value) { }
-        public AtLeastOnceDeliverySnapshot.Builder SetUnconfirmedDeliveries(int index, AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder builderForValue) { }
-    }
-    public class static Types
-    {
-        public sealed class UnconfirmedDelivery : Google.ProtocolBuffers.GeneratedMessage<AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery, AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder>
-        {
-            public const int DeliveryIdFieldNumber = 1;
-            public const int DestinationFieldNumber = 2;
-            public const int PayloadFieldNumber = 3;
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery DefaultInstance { get; }
-            public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery DefaultInstanceForType { get; }
-            public long DeliveryId { get; }
-            public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
-            public string Destination { get; }
-            public bool HasDeliveryId { get; }
-            public bool HasDestination { get; }
-            public bool HasPayload { get; }
-            protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery, AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder> InternalFieldAccessors { get; }
-            public override bool IsInitialized { get; }
-            public PersistentPayload Payload { get; }
-            public override int SerializedSize { get; }
-            protected override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ThisMessage { get; }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder CreateBuilder() { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder CreateBuilder(AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery prototype) { }
-            public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder CreateBuilderForType() { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseDelimitedFrom(System.IO.Stream input) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseFrom(Google.ProtocolBuffers.ByteString data) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseFrom(byte[] data) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseFrom(System.IO.Stream input) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-            public static AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-            public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder ToBuilder() { }
-            public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
-            public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery, AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder>
-            {
-                public Builder() { }
-                public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery DefaultInstanceForType { get; }
-                public long DeliveryId { get; set; }
-                public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
-                public string Destination { get; set; }
-                public bool HasDeliveryId { get; }
-                public bool HasDestination { get; }
-                public bool HasPayload { get; }
-                public override bool IsInitialized { get; }
-                protected override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery MessageBeingBuilt { get; }
-                public PersistentPayload Payload { get; set; }
-                protected override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder ThisBuilder { get; }
-                public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery BuildPartial() { }
-                public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder Clear() { }
-                public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder ClearDeliveryId() { }
-                public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder ClearDestination() { }
-                public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder ClearPayload() { }
-                public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder Clone() { }
-                public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
-                public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder MergeFrom(AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery other) { }
-                public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-                public override AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-                public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder MergePayload(PersistentPayload value) { }
-                public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder SetDeliveryId(long value) { }
-                public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder SetDestination(string value) { }
-                public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder SetPayload(PersistentPayload value) { }
-                public AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.Builder SetPayload(PersistentPayload.Builder builderForValue) { }
-            }
-        }
-    }
-}
-public sealed class AtomicWrite : Google.ProtocolBuffers.GeneratedMessage<AtomicWrite, AtomicWrite.Builder>
-{
-    public const int PayloadFieldNumber = 1;
-    public static AtomicWrite DefaultInstance { get; }
-    public override AtomicWrite DefaultInstanceForType { get; }
-    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
-    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AtomicWrite, AtomicWrite.Builder> InternalFieldAccessors { get; }
-    public override bool IsInitialized { get; }
-    public int PayloadCount { get; }
-    public System.Collections.Generic.IList<PersistentMessage> PayloadList { get; }
-    public override int SerializedSize { get; }
-    protected override AtomicWrite ThisMessage { get; }
-    public static AtomicWrite.Builder CreateBuilder() { }
-    public static AtomicWrite.Builder CreateBuilder(AtomicWrite prototype) { }
-    public override AtomicWrite.Builder CreateBuilderForType() { }
-    public PersistentMessage GetPayload(int index) { }
-    public static AtomicWrite ParseDelimitedFrom(System.IO.Stream input) { }
-    public static AtomicWrite ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static AtomicWrite ParseFrom(Google.ProtocolBuffers.ByteString data) { }
-    public static AtomicWrite ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static AtomicWrite ParseFrom(byte[] data) { }
-    public static AtomicWrite ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static AtomicWrite ParseFrom(System.IO.Stream input) { }
-    public static AtomicWrite ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static AtomicWrite ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-    public static AtomicWrite ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public override AtomicWrite.Builder ToBuilder() { }
-    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
-    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AtomicWrite, AtomicWrite.Builder>
-    {
-        public Builder() { }
-        public override AtomicWrite DefaultInstanceForType { get; }
-        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
-        public override bool IsInitialized { get; }
-        protected override AtomicWrite MessageBeingBuilt { get; }
-        public int PayloadCount { get; }
-        public Google.ProtocolBuffers.Collections.IPopsicleList<PersistentMessage> PayloadList { get; }
-        protected override AtomicWrite.Builder ThisBuilder { get; }
-        public AtomicWrite.Builder AddPayload(PersistentMessage value) { }
-        public AtomicWrite.Builder AddPayload(PersistentMessage.Builder builderForValue) { }
-        public AtomicWrite.Builder AddRangePayload(System.Collections.Generic.IEnumerable<PersistentMessage> values) { }
-        public override AtomicWrite BuildPartial() { }
-        public override AtomicWrite.Builder Clear() { }
-        public AtomicWrite.Builder ClearPayload() { }
-        public override AtomicWrite.Builder Clone() { }
-        public PersistentMessage GetPayload(int index) { }
-        public override AtomicWrite.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
-        public override AtomicWrite.Builder MergeFrom(AtomicWrite other) { }
-        public override AtomicWrite.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-        public override AtomicWrite.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-        public AtomicWrite.Builder SetPayload(int index, PersistentMessage value) { }
-        public AtomicWrite.Builder SetPayload(int index, PersistentMessage.Builder builderForValue) { }
-    }
-}
-public class static PersistenceMessages
-{
-    public static Google.ProtocolBuffers.Descriptors.FileDescriptor Descriptor { get; }
-    public static void RegisterAllExtensions(Google.ProtocolBuffers.ExtensionRegistry registry) { }
-}
-public sealed class PersistentMessage : Google.ProtocolBuffers.GeneratedMessage<PersistentMessage, PersistentMessage.Builder>
-{
-    public const int DeletedFieldNumber = 4;
-    public const int ManifestFieldNumber = 12;
-    public const int PayloadFieldNumber = 1;
-    public const int PersistenceIdFieldNumber = 3;
-    public const int SenderFieldNumber = 11;
-    public const int SequenceNrFieldNumber = 2;
-    public const int WriterUuidFieldNumber = 13;
-    public static PersistentMessage DefaultInstance { get; }
-    public override PersistentMessage DefaultInstanceForType { get; }
-    public bool Deleted { get; }
-    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
-    public bool HasDeleted { get; }
-    public bool HasManifest { get; }
-    public bool HasPayload { get; }
-    public bool HasPersistenceId { get; }
-    public bool HasSender { get; }
-    public bool HasSequenceNr { get; }
-    public bool HasWriterUuid { get; }
-    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<PersistentMessage, PersistentMessage.Builder> InternalFieldAccessors { get; }
-    public override bool IsInitialized { get; }
-    public string Manifest { get; }
-    public PersistentPayload Payload { get; }
-    public string PersistenceId { get; }
-    public string Sender { get; }
-    public long SequenceNr { get; }
-    public override int SerializedSize { get; }
-    protected override PersistentMessage ThisMessage { get; }
-    public string WriterUuid { get; }
-    public static PersistentMessage.Builder CreateBuilder() { }
-    public static PersistentMessage.Builder CreateBuilder(PersistentMessage prototype) { }
-    public override PersistentMessage.Builder CreateBuilderForType() { }
-    public static PersistentMessage ParseDelimitedFrom(System.IO.Stream input) { }
-    public static PersistentMessage ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentMessage ParseFrom(Google.ProtocolBuffers.ByteString data) { }
-    public static PersistentMessage ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentMessage ParseFrom(byte[] data) { }
-    public static PersistentMessage ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentMessage ParseFrom(System.IO.Stream input) { }
-    public static PersistentMessage ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentMessage ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-    public static PersistentMessage ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public override PersistentMessage.Builder ToBuilder() { }
-    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
-    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<PersistentMessage, PersistentMessage.Builder>
-    {
-        public Builder() { }
-        public override PersistentMessage DefaultInstanceForType { get; }
-        public bool Deleted { get; set; }
-        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
-        public bool HasDeleted { get; }
-        public bool HasManifest { get; }
-        public bool HasPayload { get; }
-        public bool HasPersistenceId { get; }
-        public bool HasSender { get; }
-        public bool HasSequenceNr { get; }
-        public bool HasWriterUuid { get; }
-        public override bool IsInitialized { get; }
-        public string Manifest { get; set; }
-        protected override PersistentMessage MessageBeingBuilt { get; }
-        public PersistentPayload Payload { get; set; }
-        public string PersistenceId { get; set; }
-        public string Sender { get; set; }
-        public long SequenceNr { get; set; }
-        protected override PersistentMessage.Builder ThisBuilder { get; }
-        public string WriterUuid { get; set; }
-        public override PersistentMessage BuildPartial() { }
-        public override PersistentMessage.Builder Clear() { }
-        public PersistentMessage.Builder ClearDeleted() { }
-        public PersistentMessage.Builder ClearManifest() { }
-        public PersistentMessage.Builder ClearPayload() { }
-        public PersistentMessage.Builder ClearPersistenceId() { }
-        public PersistentMessage.Builder ClearSender() { }
-        public PersistentMessage.Builder ClearSequenceNr() { }
-        public PersistentMessage.Builder ClearWriterUuid() { }
-        public override PersistentMessage.Builder Clone() { }
-        public override PersistentMessage.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
-        public override PersistentMessage.Builder MergeFrom(PersistentMessage other) { }
-        public override PersistentMessage.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-        public override PersistentMessage.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-        public PersistentMessage.Builder MergePayload(PersistentPayload value) { }
-        public PersistentMessage.Builder SetDeleted(bool value) { }
-        public PersistentMessage.Builder SetManifest(string value) { }
-        public PersistentMessage.Builder SetPayload(PersistentPayload value) { }
-        public PersistentMessage.Builder SetPayload(PersistentPayload.Builder builderForValue) { }
-        public PersistentMessage.Builder SetPersistenceId(string value) { }
-        public PersistentMessage.Builder SetSender(string value) { }
-        public PersistentMessage.Builder SetSequenceNr(long value) { }
-        public PersistentMessage.Builder SetWriterUuid(string value) { }
-    }
-}
-public sealed class PersistentPayload : Google.ProtocolBuffers.GeneratedMessage<PersistentPayload, PersistentPayload.Builder>
-{
-    public const int PayloadFieldNumber = 2;
-    public const int PayloadManifestFieldNumber = 3;
-    public const int SerializerIdFieldNumber = 1;
-    public static PersistentPayload DefaultInstance { get; }
-    public override PersistentPayload DefaultInstanceForType { get; }
-    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
-    public bool HasPayload { get; }
-    public bool HasPayloadManifest { get; }
-    public bool HasSerializerId { get; }
-    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<PersistentPayload, PersistentPayload.Builder> InternalFieldAccessors { get; }
-    public override bool IsInitialized { get; }
-    public Google.ProtocolBuffers.ByteString Payload { get; }
-    public Google.ProtocolBuffers.ByteString PayloadManifest { get; }
-    public override int SerializedSize { get; }
-    public int SerializerId { get; }
-    protected override PersistentPayload ThisMessage { get; }
-    public static PersistentPayload.Builder CreateBuilder() { }
-    public static PersistentPayload.Builder CreateBuilder(PersistentPayload prototype) { }
-    public override PersistentPayload.Builder CreateBuilderForType() { }
-    public static PersistentPayload ParseDelimitedFrom(System.IO.Stream input) { }
-    public static PersistentPayload ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentPayload ParseFrom(Google.ProtocolBuffers.ByteString data) { }
-    public static PersistentPayload ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentPayload ParseFrom(byte[] data) { }
-    public static PersistentPayload ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentPayload ParseFrom(System.IO.Stream input) { }
-    public static PersistentPayload ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentPayload ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-    public static PersistentPayload ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public override PersistentPayload.Builder ToBuilder() { }
-    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
-    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<PersistentPayload, PersistentPayload.Builder>
-    {
-        public Builder() { }
-        public override PersistentPayload DefaultInstanceForType { get; }
-        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
-        public bool HasPayload { get; }
-        public bool HasPayloadManifest { get; }
-        public bool HasSerializerId { get; }
-        public override bool IsInitialized { get; }
-        protected override PersistentPayload MessageBeingBuilt { get; }
-        public Google.ProtocolBuffers.ByteString Payload { get; set; }
-        public Google.ProtocolBuffers.ByteString PayloadManifest { get; set; }
-        public int SerializerId { get; set; }
-        protected override PersistentPayload.Builder ThisBuilder { get; }
-        public override PersistentPayload BuildPartial() { }
-        public override PersistentPayload.Builder Clear() { }
-        public PersistentPayload.Builder ClearPayload() { }
-        public PersistentPayload.Builder ClearPayloadManifest() { }
-        public PersistentPayload.Builder ClearSerializerId() { }
-        public override PersistentPayload.Builder Clone() { }
-        public override PersistentPayload.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
-        public override PersistentPayload.Builder MergeFrom(PersistentPayload other) { }
-        public override PersistentPayload.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-        public override PersistentPayload.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-        public PersistentPayload.Builder SetPayload(Google.ProtocolBuffers.ByteString value) { }
-        public PersistentPayload.Builder SetPayloadManifest(Google.ProtocolBuffers.ByteString value) { }
-        public PersistentPayload.Builder SetSerializerId(int value) { }
-    }
-}
-public sealed class PersistentStateChangeEvent : Google.ProtocolBuffers.GeneratedMessage<PersistentStateChangeEvent, PersistentStateChangeEvent.Builder>
-{
-    public const int StateIdentifierFieldNumber = 1;
-    public const int TimeoutFieldNumber = 2;
-    public static PersistentStateChangeEvent DefaultInstance { get; }
-    public override PersistentStateChangeEvent DefaultInstanceForType { get; }
-    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
-    public bool HasStateIdentifier { get; }
-    public bool HasTimeout { get; }
-    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<PersistentStateChangeEvent, PersistentStateChangeEvent.Builder> InternalFieldAccessors { get; }
-    public override bool IsInitialized { get; }
-    public override int SerializedSize { get; }
-    public string StateIdentifier { get; }
-    protected override PersistentStateChangeEvent ThisMessage { get; }
-    public string Timeout { get; }
-    public static PersistentStateChangeEvent.Builder CreateBuilder() { }
-    public static PersistentStateChangeEvent.Builder CreateBuilder(PersistentStateChangeEvent prototype) { }
-    public override PersistentStateChangeEvent.Builder CreateBuilderForType() { }
-    public static PersistentStateChangeEvent ParseDelimitedFrom(System.IO.Stream input) { }
-    public static PersistentStateChangeEvent ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentStateChangeEvent ParseFrom(Google.ProtocolBuffers.ByteString data) { }
-    public static PersistentStateChangeEvent ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentStateChangeEvent ParseFrom(byte[] data) { }
-    public static PersistentStateChangeEvent ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentStateChangeEvent ParseFrom(System.IO.Stream input) { }
-    public static PersistentStateChangeEvent ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static PersistentStateChangeEvent ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-    public static PersistentStateChangeEvent ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public override PersistentStateChangeEvent.Builder ToBuilder() { }
-    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
-    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<PersistentStateChangeEvent, PersistentStateChangeEvent.Builder>
-    {
-        public Builder() { }
-        public override PersistentStateChangeEvent DefaultInstanceForType { get; }
-        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
-        public bool HasStateIdentifier { get; }
-        public bool HasTimeout { get; }
-        public override bool IsInitialized { get; }
-        protected override PersistentStateChangeEvent MessageBeingBuilt { get; }
-        public string StateIdentifier { get; set; }
-        protected override PersistentStateChangeEvent.Builder ThisBuilder { get; }
-        public string Timeout { get; set; }
-        public override PersistentStateChangeEvent BuildPartial() { }
-        public override PersistentStateChangeEvent.Builder Clear() { }
-        public PersistentStateChangeEvent.Builder ClearStateIdentifier() { }
-        public PersistentStateChangeEvent.Builder ClearTimeout() { }
-        public override PersistentStateChangeEvent.Builder Clone() { }
-        public override PersistentStateChangeEvent.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
-        public override PersistentStateChangeEvent.Builder MergeFrom(PersistentStateChangeEvent other) { }
-        public override PersistentStateChangeEvent.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-        public override PersistentStateChangeEvent.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-        public PersistentStateChangeEvent.Builder SetStateIdentifier(string value) { }
-        public PersistentStateChangeEvent.Builder SetTimeout(string value) { }
     }
 }
