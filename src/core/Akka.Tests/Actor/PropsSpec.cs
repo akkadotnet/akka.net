@@ -52,7 +52,6 @@ namespace Akka.Tests.Actor
         {
             Type missingType = null;
             object[] args = new object[0];
-            var argsEnumerable = Enumerable.Empty<object>();
             var defaultStrategy = SupervisorStrategy.DefaultStrategy;
             var defaultDeploy = Deploy.Local;
 
@@ -60,9 +59,8 @@ namespace Akka.Tests.Actor
 
             Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, args));
             Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType));
-            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, defaultStrategy, argsEnumerable));
-            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, defaultStrategy, args));
-            Assert.Throws<ArgumentNullException>("type", () => p = new Props(defaultDeploy, missingType, argsEnumerable));
+            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, args, null, defaultStrategy, null));
+            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, args, defaultDeploy, null, null));
             Assert.Throws<ArgumentNullException>("type", () => p = Props.Create(missingType, args));
         }
         

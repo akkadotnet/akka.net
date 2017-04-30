@@ -76,10 +76,10 @@ namespace Akka.Actor.Internal
             ConfigureScheduler();
             ConfigureProvider();
             ConfigureTerminationCallbacks();
+            UseDependencyResolver(new DefaultDependencyResolver());
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
-            UseDependencyResolver(new DefaultDependencyResolver());
         }
 
         /// <inheritdoc cref="ActorSystem"/>

@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using Akka.Util;
+using Akka.Util.Reflection;
 
 namespace Akka.Actor
 {
@@ -99,7 +100,7 @@ namespace Akka.Actor
 
         public Func<object> ResolveProducer(Type registered)
         {
-            var producer = _producers.GetOrAdd(registered, () => CreateProducer(registered, DependencyScope.Transient));
+            var producer = _producers.GetOrAdd(registered, CreateProducer);
             return producer;
         }
 
@@ -108,8 +109,8 @@ namespace Akka.Actor
             if (!registeredType.IsAssignableFrom(createdType))
                 throw new ArgumentException($"Cannot register type [{createdType}] as it cannot be assigned to [{registeredType}]", nameof(createdType));
 
-            var func = CreateProducer(createdType, scope);
-            Register(registeredType, func);
+            var func = CreateProducer(createdType);
+            Register(registeredType, func, scope);
         }
 
         public void Register(Type registeredType, Func<object> producer, DependencyScope scope = DependencyScope.Transient)
@@ -117,7 +118,7 @@ namespace Akka.Actor
             _producers.TryAdd(registeredType, ApplyScope(registeredType, producer, scope));
         }
 
-        private Func<object> CreateProducer(Type createdType, DependencyScope scope)
+        private Func<object> CreateProducer(Type createdType)
         {
             var ctors = createdType.GetConstructors();
             var ctor = ctors[0];
@@ -126,15 +127,15 @@ namespace Akka.Actor
             if (exprs.Length > 0)
             {
                 var self = Expression.Constant(this);
-                var resolveMethod = this.GetType().GetMethod(nameof(Resolve), new[] { typeof(Type) });
+                var resolveMethod = ReflectionHelpers.DependencyResolverResolve;
                 for (int i = 0; i < parameters.Length; i++)
                 {
                     var parameter = parameters[i];
-                    exprs[i] = Expression.Call(self, resolveMethod, Expression.Constant(parameter.ParameterType));
+                    exprs[i] = Expression.Convert(Expression.Call(self, resolveMethod, Expression.Constant(parameter.ParameterType)), parameter.ParameterType);
                 }
             }
 
-            var expr = Expression.Lambda<Func<object>>(Expression.New(ctor, arguments: exprs));
+            var expr = Expression.Lambda<Func<object>>(Expression.Convert(Expression.New(ctor, arguments: exprs), typeof(object)));
             var producer = expr.Compile();
             return producer;
         }

@@ -201,7 +201,6 @@ namespace Akka.Streams
     public class static Construct
     {
         public static object Instantiate(this System.Type genericType, System.Type genericParam, params object[] constructorArgs) { }
-        public static object Instantiate(this System.Type genericType, System.Type[] genericParams, params object[] constructorArgs) { }
     }
     public enum DelayOverflowStrategy
     {

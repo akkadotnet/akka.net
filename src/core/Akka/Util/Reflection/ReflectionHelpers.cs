@@ -39,7 +39,7 @@ namespace Akka.Util.Reflection
 
         public static MethodInfo DependencyResolverResolve = typeof(IDependencyResolver).GetMethod(nameof(IDependencyResolver.Resolve));
 
-        public static Func<object> ResolveWithArgs(this IDependencyResolver resolver, Type type, params object[] args)
+        public static Func<object> ResolveWithArgs(this IDependencyResolver resolver, Type type, object[] args)
         {
             if (args.Length == 0)
             {

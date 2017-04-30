@@ -157,7 +157,8 @@ namespace Akka.Remote.Serialization
             }
 
             var args = GetArgs(proto);
-            var props = new Props(GetDeploy(proto.Props.Deploy), clazz, args);
+            var deploy = GetDeploy(proto.Props.Deploy);
+            var props = new Props(clazz, args, deploy, null, null);
             return new DaemonMsgCreate(
                 props,
                 GetDeploy(proto.Deploy),
@@ -194,7 +195,7 @@ namespace Akka.Remote.Serialization
             return new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher);
         }
 
-        private IEnumerable<object> GetArgs(DaemonMsgCreateData proto)
+        private object[] GetArgs(DaemonMsgCreateData proto)
         {
             var args = new object[proto.Props.ArgsCount];
             for (int i = 0; i < args.Length; i++)

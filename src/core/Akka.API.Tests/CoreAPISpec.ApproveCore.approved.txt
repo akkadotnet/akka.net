@@ -538,7 +538,9 @@ namespace Akka.Actor
         public string Path { get; }
         public Akka.Routing.RouterConfig RouterConfig { get; }
         public Akka.Actor.Scope Scope { get; }
+        public override bool Equals(object obj) { }
         public bool Equals(Akka.Actor.Deploy other) { }
+        public override int GetHashCode() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.Deploy WithDispatcher(string dispatcher) { }
         public Akka.Actor.Deploy WithFallback(Akka.Actor.Deploy other) { }
@@ -1310,29 +1312,25 @@ namespace Akka.Actor
     }
     public class Props : Akka.Util.ISurrogated, System.IEquatable<Akka.Actor.Props>
     {
+        public static readonly Akka.Actor.Props Empty;
         public static readonly Akka.Actor.Props None;
+        [Newtonsoft.Json.JsonIgnoreAttribute()]
+        protected System.Func<object> Producer;
         protected Props() { }
-        protected Props(Akka.Actor.Props copy) { }
+        public Props(System.Type type, object[] args, Akka.Actor.Deploy deploy = null, Akka.Actor.SupervisorStrategy strategy = null, System.Func<object> producer = null) { }
         public Props(System.Type type, object[] args) { }
         public Props(System.Type type) { }
-        public Props(System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, System.Collections.Generic.IEnumerable<object> args) { }
-        public Props(System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, params object[] args) { }
-        public Props(Akka.Actor.Deploy deploy, System.Type type, System.Collections.Generic.IEnumerable<object> args) { }
-        public Props(Akka.Actor.Deploy deploy, System.Type type, params object[] args) { }
         public object[] Arguments { get; }
-        public Akka.Actor.Deploy Deploy { get; set; }
+        public Akka.Actor.Deploy Deploy { get; }
         [Newtonsoft.Json.JsonIgnoreAttribute()]
         public string Dispatcher { get; }
-        public static Akka.Actor.Props Empty { get; }
         [Newtonsoft.Json.JsonIgnoreAttribute()]
         public string Mailbox { get; }
         [Newtonsoft.Json.JsonIgnoreAttribute()]
         public Akka.Routing.RouterConfig RouterConfig { get; }
-        public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; set; }
-        [Newtonsoft.Json.JsonIgnoreAttribute()]
+        public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public System.Type Type { get; }
         public string TypeName { get; }
-        protected virtual Akka.Actor.Props Copy() { }
         public static Akka.Actor.Props Create<TActor>(System.Linq.Expressions.Expression<System.Func<TActor>> factory, Akka.Actor.SupervisorStrategy supervisorStrategy = null)
             where TActor : Akka.Actor.ActorBase { }
         public static Akka.Actor.Props Create<TActor>(params object[] args)
@@ -1504,6 +1502,8 @@ namespace Akka.Actor
         protected Scope() { }
         public abstract Akka.Actor.Scope Copy();
         public virtual bool Equals(Akka.Actor.Scope other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public abstract Akka.Actor.Scope WithFallback(Akka.Actor.Scope other);
     }
     public class SelectChildName : Akka.Actor.SelectionPathElement
