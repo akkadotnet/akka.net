@@ -74,7 +74,6 @@
     </Compile>
     <Compile Include="ActorState.cs" />
     <Compile Include="Actor\ActorCell.DeathWatch.cs" />
-    <Compile Include="Actor\ActorProducerPipeline.cs" />
     <Compile Include="Actor\ChildrenContainer\Internal\ChildrenContainer.cs" />
     <Compile Include="Actor\ChildrenContainer\Internal\ChildrenContainerBase.cs" />
     <Compile Include="Actor\ChildrenContainer\Internal\ChildStats.cs" />
@@ -88,6 +87,7 @@
     <Compile Include="Actor\Cancellation\CancelableExtensions.cs" />
     <Compile Include="Actor\Cancellation\Cancelable.cs" />
     <Compile Include="Actor\CoordinatedShutdown.cs" />
+    <Compile Include="Actor\DependencyResolver.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Cancellation\ICancelable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
@@ -296,6 +296,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>PartialHandlerArgumentsCapture.tt</DependentUpon>
     </Compile>
+    <Compile Include="Util\Reflection\ReflectionHelpers.cs" />
     <Compile Include="Util\RuntimeDetector.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
     <Compile Include="Util\Result.cs" />
@@ -345,7 +346,6 @@
     <Compile Include="Util\MurmurHash.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
     <Compile Include="PatternMatch.cs" />
-    <Compile Include="Util\Resolver.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
     <Compile Include="Util\TokenBucket.cs" />
     <Compile Include="Util\Vector.cs" />

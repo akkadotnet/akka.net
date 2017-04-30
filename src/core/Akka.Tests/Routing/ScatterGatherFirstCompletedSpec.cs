@@ -50,6 +50,8 @@ namespace Akka.Tests.Routing
             private readonly int _id;
             private readonly TestLatch _shutdownLatch;
 
+            public StopActor(int id) : this(id, null) { }
+
             public StopActor(int id, TestLatch shutdownLatch)
             {
                 _id = id;
@@ -135,8 +137,8 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Scatter_gather_group_must_only_return_one_response()
         {
-            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1, null)));
-            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14, null)));
+            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
+            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14)));
 
             var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };
             var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());

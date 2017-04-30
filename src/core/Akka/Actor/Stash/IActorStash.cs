@@ -24,49 +24,5 @@ namespace Akka.Actor
         /// </value>
         IStash Stash { get; set; }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    public class ActorStashPlugin : ActorProducerPluginBase
-    {
-        /// <summary>
-        /// Stash plugin is applied to all actors implementing <see cref="IActorStash"/> interface.
-        /// </summary>
-        /// <param name="actorType">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool CanBeAppliedTo(Type actorType)
-        {
-            return typeof (IActorStash).IsAssignableFrom(actorType);
-        }
-
-        /// <summary>
-        /// Creates a new stash for specified <paramref name="actor"/> if it has not been initialized already.
-        /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
-        public override void AfterIncarnated(ActorBase actor, IActorContext context)
-        {
-            var stashed = actor as IActorStash;
-            if (stashed != null && stashed.Stash == null)
-            {
-                stashed.Stash = context.CreateStash(actor.GetType());
-            }
-        }
-
-        /// <summary>
-        /// Ensures, that all stashed messages inside <paramref name="actor"/> stash have been unstashed.
-        /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
-        public override void BeforeIncarnated(ActorBase actor, IActorContext context)
-        {
-            var actorStash = actor as IActorStash;
-            if (actorStash != null)
-            {
-                actorStash.Stash.UnstashAll();
-            }
-        }
-    }
 }
 

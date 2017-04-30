@@ -60,37 +60,52 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Props_Must_WorkWithActorWithoutAnyParams()
+        public void Props_must_work_with_actor_without_any_params()
         {
             var props = Props.Create<NoParamsActor>();
             Sys.ActorOf(props);
         }
 
         [Fact]
-        public void Props_Must_WorkWithFactory()
+        public void Props_must_work_with_factory()
         {
             var props = Props.Create(() => new OneParamActor(new A()));
             Sys.ActorOf(props);
         }
 
         [Fact]
-        public void Props_Must_WorkWithTypeOf()
+        public void Props_Must_work_with_TypeOf()
         {
             var props = Props.Create(typeof(OneParamActor), new A());
             Sys.ActorOf(props);
         }
 
         [Fact]
-        public void Props_Must_WorkWithTypeOfAndTwoParams()
+        public void Props_must_work_with_TypeOf_and_two_params()
         {
             var props = Props.Create(typeof(TwoParamsActor), new A(), new B());
             Sys.ActorOf(props);
         }
 
         [Fact]
-        public void Props_Must_WorkWithGenericType()
+        public void Props_must_work_with_generic_type()
         {
             var props = Props.Create<OneParamActor>(new A());
+            Sys.ActorOf(props);
+        }
+
+        [Fact]
+        public void Props_must_work_with_DynamicObject()
+        {
+            var props = Props.Dynamic<OneParamActor>(new {blackhole = new A()});
+            Sys.ActorOf(props);
+        }
+
+        [Fact]
+        public void Props_must_fill_remaining_values_from_resolver_when_work_with_DynamicObject()
+        {
+            var props = Props.Dynamic<TwoParamsActor>(new { blackhole = new A() });
+            Sys.DependencyResolver.Register(typeof(B), typeof(B));
             Sys.ActorOf(props);
         }
     }

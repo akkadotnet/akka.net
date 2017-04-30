@@ -199,38 +199,6 @@ namespace Akka.Actor
             public override int GetHashCode() { }
         }
     }
-    public class ActorProducerPipeline : System.Collections.Generic.IEnumerable<Akka.Actor.IActorProducerPlugin>, System.Collections.IEnumerable
-    {
-        public ActorProducerPipeline(System.Lazy<Akka.Event.ILoggingAdapter> log, System.Collections.Generic.IEnumerable<Akka.Actor.IActorProducerPlugin> plugins) { }
-        public int Count { get; }
-        public void AfterActorIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public void BeforeActorIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public System.Collections.Generic.IEnumerator<Akka.Actor.IActorProducerPlugin> GetEnumerator() { }
-    }
-    public class ActorProducerPipelineResolver
-    {
-        public ActorProducerPipelineResolver(System.Func<Akka.Event.ILoggingAdapter> logBuilder) { }
-        public int TotalPluginCount { get; }
-        public bool Insert(int index, Akka.Actor.IActorProducerPlugin plugin) { }
-        public bool IsRegistered(Akka.Actor.IActorProducerPlugin plugin) { }
-        public bool Register(Akka.Actor.IActorProducerPlugin plugin) { }
-        public bool Unregister(Akka.Actor.IActorProducerPlugin plugin) { }
-    }
-    public abstract class ActorProducerPluginBase : Akka.Actor.IActorProducerPlugin
-    {
-        protected ActorProducerPluginBase() { }
-        public virtual void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public virtual void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public virtual bool CanBeAppliedTo(System.Type actorType) { }
-    }
-    public abstract class ActorProducerPluginBase<TActor> : Akka.Actor.IActorProducerPlugin
-        where TActor : Akka.Actor.ActorBase
-    {
-        protected ActorProducerPluginBase() { }
-        public virtual void AfterIncarnated(TActor actor, Akka.Actor.IActorContext context) { }
-        public virtual void BeforeIncarnated(TActor actor, Akka.Actor.IActorContext context) { }
-        public virtual bool CanBeAppliedTo(System.Type actorType) { }
-    }
     public abstract class ActorRefBase : Akka.Actor.IActorRef, Akka.Actor.ICanTell, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
     {
         protected ActorRefBase() { }
@@ -308,17 +276,11 @@ namespace Akka.Actor
         public bool WildCardFanOut { get; }
         public override string ToString() { }
     }
-    public class ActorStashPlugin : Akka.Actor.ActorProducerPluginBase
-    {
-        public ActorStashPlugin() { }
-        public override void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public override void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context) { }
-        public override bool CanBeAppliedTo(System.Type actorType) { }
-    }
     public abstract class ActorSystem : Akka.Actor.IActorRefFactory, System.IDisposable
     {
         protected ActorSystem() { }
         public abstract Akka.Actor.IActorRef DeadLetters { get; }
+		public abstract Akka.Actor.IDependencyResolver DependencyResolver { get; }
         public abstract Akka.Dispatch.Dispatchers Dispatchers { get; }
         public abstract Akka.Event.EventStream EventStream { get; }
         public abstract Akka.Event.ILoggingAdapter Log { get; }
@@ -349,6 +311,7 @@ namespace Akka.Actor
         public abstract bool TryGetExtension(System.Type extensionType, out object extension);
         public abstract bool TryGetExtension<T>(out T extension)
             where T :  class, Akka.Actor.IExtension;
+		public abstract void UseDependencyResolver(Akka.Actor.IDependencyResolver dependencyResolver);
     }
     public class static ActorSystemWithExtensions
     {
@@ -550,6 +513,11 @@ namespace Akka.Actor
         public DefaultSupervisorStrategy() { }
         public override Akka.Actor.SupervisorStrategy Create() { }
     }
+    public enum DependencyScope
+    {
+        Transient = 0,
+        Singleton = 1,
+    }
     public class Deploy : Akka.Util.ISurrogated, System.IEquatable<Akka.Actor.Deploy>
     {
         public static readonly Akka.Actor.Deploy Local;
@@ -682,7 +650,6 @@ namespace Akka.Actor
     public abstract class ExtendedActorSystem : Akka.Actor.ActorSystem
     {
         protected ExtendedActorSystem() { }
-        public abstract Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public abstract Akka.Actor.IInternalActorRef Guardian { get; }
         public abstract Akka.Actor.IInternalActorRef LookupRoot { get; }
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
@@ -916,12 +883,6 @@ namespace Akka.Actor
         void Stop(Akka.Actor.IActorRef child);
         void UnbecomeStacked();
     }
-    public interface IActorProducerPlugin
-    {
-        void AfterIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context);
-        void BeforeIncarnated(Akka.Actor.ActorBase actor, Akka.Actor.IActorContext context);
-        bool CanBeAppliedTo(System.Type actorType);
-    }
     public interface IActorRef : Akka.Actor.ICanTell, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
     {
         Akka.Actor.ActorPath Path { get; }
@@ -1020,6 +981,13 @@ namespace Akka.Actor
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public interface IDependencyResolver : System.IDisposable
+    {
+        void Register(System.Type registeredType, System.Type createdType, Akka.Actor.DependencyScope scope = 0);
+        void Register(System.Type registeredType, System.Func<object> producer, Akka.Actor.DependencyScope scope = 0);
+        object Resolve(System.Type registeredType);
+        System.Func<object> ResolveProducer(System.Type registeredType);
+    }
     public interface IExtension { }
     public interface IExtensionId
     {
@@ -1049,12 +1017,6 @@ namespace Akka.Actor
         object ReceiveWhere(System.Predicate<object> predicate);
         object ReceiveWhere(System.Predicate<object> predicate, System.TimeSpan timeout);
         void Send(Akka.Actor.IActorRef target, object message);
-    }
-    public interface IIndirectActorProducer
-    {
-        System.Type ActorType { get; }
-        Akka.Actor.ActorBase Produce();
-        void Release(Akka.Actor.ActorBase actor);
     }
     public interface IInternalActor
     {
@@ -1378,12 +1340,12 @@ namespace Akka.Actor
         public static Akka.Actor.Props Create<TActor>(Akka.Actor.SupervisorStrategy supervisorStrategy)
             where TActor : Akka.Actor.ActorBase, new () { }
         public static Akka.Actor.Props Create(System.Type type, params object[] args) { }
-        public static Akka.Actor.Props CreateBy<TProducer>(params object[] args)
-            where TProducer :  class, Akka.Actor.IIndirectActorProducer { }
+        public static Akka.Actor.Props Dynamic<TActor>(object anonymousObject)
+            where TActor : Akka.Actor.ActorBase { }
         public bool Equals(Akka.Actor.Props other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-        public virtual Akka.Actor.ActorBase NewActor() { }
+        public virtual Akka.Actor.ActorBase NewActor(Akka.Actor.IDependencyResolver resolver) { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.Props WithDeploy(Akka.Actor.Deploy deploy) { }
         public Akka.Actor.Props WithDispatcher(string dispatcher) { }
@@ -1673,11 +1635,6 @@ namespace Akka.Actor
         public bool ExistenceConfirmed { get; }
         public override string ToString() { }
     }
-    public class TerminatedProps : Akka.Actor.Props
-    {
-        public TerminatedProps() { }
-        public override Akka.Actor.ActorBase NewActor() { }
-    }
     public abstract class TypedActor : Akka.Actor.ActorBase
     {
         protected TypedActor() { }
@@ -1798,8 +1755,8 @@ namespace Akka.Actor.Internal
     {
         public ActorSystemImpl(string name) { }
         public ActorSystemImpl(string name, Akka.Configuration.Config config) { }
-        public override Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public override Akka.Actor.IActorRef DeadLetters { get; }
+        public override Akka.Actor.IDependencyResolver DependencyResolver { get; }
         public override Akka.Dispatch.Dispatchers Dispatchers { get; }
         public override Akka.Event.EventStream EventStream { get; }
         public override Akka.Actor.IInternalActorRef Guardian { get; }
@@ -1834,6 +1791,7 @@ namespace Akka.Actor.Internal
         public override bool TryGetExtension(System.Type extensionType, out object extension) { }
         public override bool TryGetExtension<T>(out T extension)
             where T :  class, Akka.Actor.IExtension { }
+        public virtual void UseDependencyResolver(Akka.Actor.IDependencyResolver dependencyResolver) { }
     }
     public class BoundedStashImpl : Akka.Actor.Internal.AbstractStash
     {
@@ -4646,10 +4604,6 @@ namespace Akka.Util
         public System.Collections.Generic.IEnumerable<TValue> Remove(TKey key) { }
         public void RemoveValue(TValue value) { }
     }
-    public interface IResolver
-    {
-        T Resolve<T>(object[] args);
-    }
     public interface ISurrogate
     {
         Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system);
@@ -4699,23 +4653,6 @@ namespace Akka.Util
         public static uint StartHash(uint seed) { }
         public static int StringHash(string s) { }
         public static int SymmetricHash<T>(System.Collections.Generic.IEnumerable<T> xs, uint seed) { }
-    }
-    public abstract class Resolve : Akka.Actor.IIndirectActorProducer
-    {
-        protected Resolve() { }
-        public abstract System.Type ActorType { get; }
-        protected static Akka.Util.IResolver Resolver { get; }
-        public abstract Akka.Actor.ActorBase Produce();
-        public void Release(Akka.Actor.ActorBase actor) { }
-        public static void SetResolver(Akka.Util.IResolver resolver) { }
-    }
-    public class Resolve<TActor> : Akka.Util.Resolve
-        where TActor : Akka.Actor.ActorBase
-    {
-        public Resolve(params object[] args) { }
-        public override System.Type ActorType { get; }
-        public object[] Arguments { get; }
-        public override Akka.Actor.ActorBase Produce() { }
     }
     public class static Result
     {

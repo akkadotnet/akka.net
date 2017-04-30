@@ -36,13 +36,7 @@ namespace Akka.Actor
         /// Gets the top-level supervisor of all system-internal services like logging.
         /// </summary>
         public abstract IInternalActorRef SystemGuardian { get; }
-
-        /// <summary>
-        /// Gets the actor producer pipeline resolver for current actor system. It may be used by
-        /// Akka plugins to inject custom behavior directly into actor creation chain.
-        /// </summary>
-        public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
-
+        
         /// <summary>
         /// Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have

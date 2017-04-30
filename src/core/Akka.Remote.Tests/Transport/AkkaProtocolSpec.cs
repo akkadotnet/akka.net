@@ -45,7 +45,8 @@ namespace Akka.Remote.Tests.Transport
         private TimeSpan DefaultTimeout { get { return Dilated(TestKitSettings.DefaultTimeout); } }
 
         public AkkaProtocolSpec()
-            : base(@"akka.test.default-timeout = 1.5 s")
+            : base(@"akka.test.default-timeout = 1.5 s
+                     akka.loglevel = DEBUG")
         {
             testEnvelope = codec.ConstructMessage(localAkkaAddress, TestActor, testMsg);
             testMsgPdu = codec.ConstructPayload(testEnvelope);

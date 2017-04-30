@@ -128,7 +128,6 @@
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
     <Compile Include="Actor\ActorLookupSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
-    <Compile Include="Actor\ActorProducerPipelineTests.cs" />
     <Compile Include="Actor\ActorRefSpec.cs" />
     <Compile Include="Actor\AddressSpec.cs" />
     <Compile Include="Actor\AskTimeoutSpec.cs" />
@@ -136,6 +135,7 @@
     <Compile Include="Actor\Cancellation\AlreadyCancelledCancelableTests.cs" />
     <Compile Include="Actor\Cancellation\CancelableTests.cs" />
     <Compile Include="Actor\CoordinatedShutdownSpec.cs" />
+    <Compile Include="Actor\DependencyResolverSpec.cs" />
     <Compile Include="Actor\Dispatch\ActorModelSpec.cs" />
     <Compile Include="Actor\Dispatch\CurrentSynchronizationContextDispatcherSpecs.cs" />
     <Compile Include="Actor\FSMActorSpec.cs" />

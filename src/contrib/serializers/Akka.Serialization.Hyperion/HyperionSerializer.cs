@@ -62,7 +62,7 @@ namespace Akka.Serialization
                 from => from.ToSurrogate(system),
                 to => to.FromSurrogate(system));
 
-            var provider = CreateKnownTypesProvider(system, settings.KnownTypesProvider);
+            var provider = (IKnownTypesProvider) system.DependencyResolver.Resolve(settings.KnownTypesProvider);
 
             _serializer =
                 new Hyperion.Serializer(new SerializerOptions(
@@ -109,21 +109,6 @@ namespace Akka.Serialization
                 var res = _serializer.Deserialize<object>(ms);
                 return res;
             }
-        }
-
-        private IKnownTypesProvider CreateKnownTypesProvider(ExtendedActorSystem system, Type type)
-        {
-            var ctors = type.GetConstructors();
-            var ctor = ctors.FirstOrDefault(c =>
-            {
-                var parameters = c.GetParameters();
-                return parameters.Length == 1 && (parameters[0].ParameterType == typeof(ActorSystem)
-                    || parameters[0].ParameterType == typeof(ExtendedActorSystem));
-            });
-
-            return ctor == null
-                ? (IKnownTypesProvider) Activator.CreateInstance(type)
-                : (IKnownTypesProvider) ctor.Invoke(new object[] {system});
         }
     }
 

@@ -39,7 +39,7 @@ namespace Akka.Actor.Internal
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
-        private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+        private IDependencyResolver _dependencyResolver;
         private TerminationCallbacks _terminationCallbacks;
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace Akka.Actor.Internal
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
-            ConfigureActorProducerPipeline();
+            UseDependencyResolver(new DefaultDependencyResolver());
         }
 
         /// <inheritdoc cref="ActorSystem"/>
@@ -113,7 +113,7 @@ namespace Akka.Actor.Internal
         public override ILoggingAdapter Log { get { return _log; } }
 
         /// <inheritdoc cref="ActorSystem"/>
-        public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
+        public override IDependencyResolver DependencyResolver { get { return _dependencyResolver; } }
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
@@ -450,10 +450,20 @@ namespace Akka.Actor.Internal
             _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
         }
 
-        private void ConfigureActorProducerPipeline()
+        /// <inheritdoc cref="ActorSystem"/>
+        public sealed override void UseDependencyResolver(IDependencyResolver dependencyResolver)
         {
-            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
+            if (dependencyResolver == null) throw new ArgumentNullException(nameof(dependencyResolver));
+            if (!ReferenceEquals(_dependencyResolver, dependencyResolver))
+            {
+                _dependencyResolver?.Dispose();
+
+                // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+                _dependencyResolver = dependencyResolver;
+                _dependencyResolver.Register(typeof(ActorSystem), () => this);
+                _dependencyResolver.Register(typeof(ExtendedActorSystem), () => this);
+                _dependencyResolver.Register(typeof(ILoggingAdapter), () => Log);
+            }
         }
 
         private void ConfigureTerminationCallbacks()

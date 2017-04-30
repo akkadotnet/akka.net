@@ -173,16 +173,7 @@ namespace Akka.Serialization
 
         private static JsonConverter CreateConverter(Type converterType, ExtendedActorSystem actorSystem)
         {
-            var ctor = converterType.GetConstructors()
-                .FirstOrDefault(c =>
-                {
-                    var parameters = c.GetParameters();
-                    return parameters.Length == 1 && parameters[0].ParameterType == typeof(ExtendedActorSystem);
-                });
-
-            return ctor == null 
-                ? (JsonConverter)Activator.CreateInstance(converterType)
-                : (JsonConverter)Activator.CreateInstance(converterType, actorSystem);
+            return (JsonConverter) actorSystem.DependencyResolver.Resolve(converterType);
         }
 
         /// <summary>
