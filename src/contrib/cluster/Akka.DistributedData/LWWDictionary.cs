@@ -233,6 +233,8 @@ namespace Akka.DistributedData
         public IReplicatedData Merge(IReplicatedData other) => 
             Merge((LWWDictionary<TKey, TValue>) other);
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => _underlying.ModifiedByNodes;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -311,6 +313,8 @@ namespace Akka.DistributedData
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => 
             MergeDelta((ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation) delta);
+
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         public LWWDictionary<TKey, TValue> MergeDelta(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation delta) => 
             new LWWDictionary<TKey, TValue>(_underlying.MergeDelta(delta));

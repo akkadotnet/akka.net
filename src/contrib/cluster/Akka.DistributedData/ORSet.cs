@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Security;
 using System.Text;
 using Akka.Cluster;
 using Akka.Util.Internal;
@@ -340,6 +341,7 @@ namespace Akka.DistributedData
             });
         }
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => _versionVector.ModifiedByNodes;
         public bool NeedPruningFrom(UniqueAddress removedNode) => _versionVector.NeedPruningFrom(removedNode);
 
         public ORSet<T> Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
@@ -388,6 +390,7 @@ namespace Akka.DistributedData
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((IDeltaOperation) delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

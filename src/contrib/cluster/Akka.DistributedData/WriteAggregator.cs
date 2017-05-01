@@ -145,7 +145,7 @@ namespace Akka.DistributedData
         public override string ToString() => "WriteLocal";
     }
 
-    public sealed class WriteTo : IWriteConsistency
+    public sealed class WriteTo : IWriteConsistency, IEquatable<WriteTo>
     {
         public int N { get; }
 
@@ -159,16 +159,27 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        public override bool Equals(object obj)
-        {
-            var other = obj as WriteTo;
-            return other != null && (N == other.N && Timeout == other.Timeout);
-        }
+        public override bool Equals(object obj) => Equals(obj as WriteTo);
 
         public override string ToString() => $"WriteTo({N}, timeout={Timeout})";
+
+        public bool Equals(WriteTo other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return N == other.N && Timeout.Equals(other.Timeout);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (N * 397) ^ Timeout.GetHashCode();
+            }
+        }
     }
 
-    public sealed class WriteMajority : IWriteConsistency
+    public sealed class WriteMajority : IWriteConsistency, IEquatable<WriteMajority>
     {
         public TimeSpan Timeout { get; }
         public int MinCapacity { get; }
@@ -179,16 +190,27 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        public override bool Equals(object obj)
-        {
-            var other = obj as WriteMajority;
-            return other != null && Timeout == other.Timeout && MinCapacity == other.MinCapacity;
-        }
+        public override bool Equals(object obj) => Equals(obj as WriteMajority);
 
         public override string ToString() => $"WriteMajority(timeout={Timeout})";
+
+        public bool Equals(WriteMajority other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Timeout.Equals(other.Timeout) && MinCapacity == other.MinCapacity;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Timeout.GetHashCode() * 397) ^ MinCapacity;
+            }
+        }
     }
 
-    public sealed class WriteAll : IWriteConsistency
+    public sealed class WriteAll : IWriteConsistency, IEquatable<WriteAll>
     {
         public TimeSpan Timeout { get; }
 
@@ -197,12 +219,20 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        public override bool Equals(object obj)
-        {
-            var other = obj as WriteAll;
-            return other != null && Timeout == other.Timeout;
-        }
+        public override bool Equals(object obj) => Equals(obj as WriteAll);
 
         public override string ToString() => $"WriteAll(timeout={Timeout})";
+
+        public bool Equals(WriteAll other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Timeout.Equals(other.Timeout);
+        }
+
+        public override int GetHashCode()
+        {
+            return Timeout.GetHashCode();
+        }
     }
 }

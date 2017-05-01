@@ -220,6 +220,7 @@ namespace Akka.DistributedData
         public IReplicatedData Merge(IReplicatedData other) =>
             Merge((ORMultiValueDictionary<TKey, TValue>)other);
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => Underlying.ModifiedByNodes;
         public bool NeedPruningFrom(UniqueAddress removedNode) => Underlying.NeedPruningFrom(removedNode);
 
         public ORMultiValueDictionary<TKey, TValue> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => 
@@ -277,6 +278,8 @@ namespace Akka.DistributedData
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) =>
             MergeDelta((ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation) delta);
+
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         public ORMultiValueDictionary<TKey, TValue> ResetDelta() => 
             new ORMultiValueDictionary<TKey, TValue>(Underlying.ResetDelta(), _withValueDeltas);

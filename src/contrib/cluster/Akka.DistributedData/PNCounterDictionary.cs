@@ -144,6 +144,8 @@ namespace Akka.DistributedData
         public IReplicatedData Merge(IReplicatedData other) => 
             Merge((PNCounterDictionary<TKey>) other);
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => _underlying.ModifiedByNodes;
+
         public bool NeedPruningFrom(UniqueAddress removedNode) => 
             _underlying.NeedPruningFrom(removedNode);
 
@@ -192,6 +194,8 @@ namespace Akka.DistributedData
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) =>
             MergeDelta((ORDictionary<TKey, PNCounter>.IDeltaOperation) delta);
+
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         public PNCounterDictionary<TKey> ResetDelta() => 
             new PNCounterDictionary<TKey>(_underlying.ResetDelta());

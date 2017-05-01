@@ -76,6 +76,7 @@ namespace Akka.DistributedData
 
         public IReplicatedData Merge(IReplicatedData other) => Merge((VersionVector) other);
 
+        public abstract ImmutableHashSet<UniqueAddress> ModifiedByNodes { get; }
         public abstract bool NeedPruningFrom(UniqueAddress removedNode);
         public abstract VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto);
 
@@ -286,6 +287,8 @@ namespace Akka.DistributedData
             else throw new NotSupportedException("SingleVersionVector doesn't support merge with provided version vector");
         }
 
+        public override ImmutableHashSet<UniqueAddress> ModifiedByNodes => ImmutableHashSet.Create(Node);
+
         public override bool NeedPruningFrom(UniqueAddress removedNode) => Node == removedNode;
 
         public override VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => 
@@ -353,6 +356,8 @@ namespace Akka.DistributedData
             }
             else throw new NotSupportedException("MultiVersionVector doesn't support merge with provided version vector");
         }
+
+        public override ImmutableHashSet<UniqueAddress> ModifiedByNodes => Versions.Keys.ToImmutableHashSet();
 
         public override bool NeedPruningFrom(UniqueAddress removedNode) => Versions.ContainsKey(removedNode);
 

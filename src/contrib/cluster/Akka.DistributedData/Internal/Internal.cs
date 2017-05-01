@@ -39,6 +39,20 @@ namespace Akka.DistributedData.Internal
     /// TBD
     /// </summary>
     [Serializable]
+    internal sealed class DeltaPropagationTick
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static DeltaPropagationTick Instance { get; } = new DeltaPropagationTick();
+
+        private DeltaPropagationTick() { }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    [Serializable]
     internal class RemovedNodePruningTick
     {
         /// <summary>
@@ -431,6 +445,15 @@ namespace Akka.DistributedData.Internal
             Pruning = pruning ?? ImmutableDictionary<UniqueAddress, IPruningState>.Empty;
             DeltaVersions = deltaVersions ?? VersionVector.Empty;
         }
+
+        internal DataEnvelope WithData(IReplicatedData data) => 
+            new DataEnvelope(data, this.Pruning, this.DeltaVersions);
+
+        internal DataEnvelope WithPruning(ImmutableDictionary<UniqueAddress, IPruningState> pruning) =>
+            new DataEnvelope(this.Data, pruning, this.DeltaVersions);
+
+        internal DataEnvelope WithDeltaVersions(VersionVector deltaVersions) =>
+            new DataEnvelope(this.Data, this.Pruning, deltaVersions);
 
         internal DataEnvelope WithoutDeltaVersions() =>
             DeltaVersions.IsEmpty

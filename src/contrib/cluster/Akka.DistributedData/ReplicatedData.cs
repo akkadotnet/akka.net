@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Immutable;
 using Akka.Cluster;
 
 namespace Akka.DistributedData
@@ -40,6 +41,22 @@ namespace Akka.DistributedData
         T Merge(T other);
     }
 
+    public interface IRemovedNodePruning : IReplicatedData
+    {
+        /// <summary>
+        /// The nodes that have changed the state for this data
+        /// and would need pruning when such node is no longer part
+        /// of the cluster.
+        /// </summary>
+        ImmutableHashSet<UniqueAddress> ModifiedByNodes { get; }
+
+        /// <summary>
+        /// Does it have any state changes from a specific node,
+        /// which has been removed from the cluster.
+        /// </summary>
+        bool NeedPruningFrom(UniqueAddress removedNode);
+    }
+
     /// <summary>
     /// <see cref="IReplicatedData"/> that has support for pruning of data
     /// belonging to a specific node may implement this interface.
@@ -47,13 +64,8 @@ namespace Akka.DistributedData
     /// used by the <see cref="Replicator"/> to collapse data from the removed node
     /// into some other node in the cluster.
     /// </summary>
-    public interface IRemovedNodePruning<T> : IReplicatedData<T> where T : IReplicatedData
+    public interface IRemovedNodePruning<T> : IRemovedNodePruning, IReplicatedData<T> where T : IReplicatedData
     {
-        /// <summary>
-        /// Does it have any state changes from a specific node,
-        /// which has been removed from the cluster.
-        /// </summary>
-        bool NeedPruningFrom(UniqueAddress removedNode);
 
         /// <summary>
         /// When the <paramref name="removedNode"/> node has been removed from the cluster the state
@@ -67,11 +79,6 @@ namespace Akka.DistributedData
         /// and already been pruned.
         /// </summary>
         T PruningCleanup(UniqueAddress removedNode);
-    }
-
-    public interface IRemovedNodePruning : IRemovedNodePruning<IReplicatedData>
-    {
-
     }
 
     /// <summary>
@@ -88,6 +95,7 @@ namespace Akka.DistributedData
     {
         IReplicatedDelta Delta { get; }
         IReplicatedData MergeDelta(IReplicatedDelta delta);
+        IReplicatedData ResetDelta();
     }
 
     /// <summary>

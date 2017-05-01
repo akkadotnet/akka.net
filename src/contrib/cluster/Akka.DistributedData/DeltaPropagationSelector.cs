@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.DistributedData.Internal;
-using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
@@ -17,7 +16,7 @@ namespace Akka.DistributedData
 
         public long PropagationCount { get; private set; }
 
-        protected abstract int GossipInternalDivisor { get; }
+        public abstract int GossipInternalDivisor { get; }
         protected abstract ImmutableArray<Address> AllNodes { get; }
         protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, Tuple<IReplicatedData, long, long>> deltas);
 

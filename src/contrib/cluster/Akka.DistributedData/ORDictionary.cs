@@ -275,6 +275,14 @@ namespace Akka.DistributedData
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => Merge((IDeltaOperation) delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
+
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes =>
+            KeySet.ModifiedByNodes.Union(ValueMap.Aggregate(ImmutableHashSet<UniqueAddress>.Empty, (acc, pair) =>
+            {
+                var pruning = pair.Value as IRemovedNodePruning;
+                return pruning != null ? acc.Union(pruning.ModifiedByNodes) : acc;
+            }));
 
         public bool NeedPruningFrom(UniqueAddress removedNode)
         {
@@ -290,9 +298,9 @@ namespace Akka.DistributedData
             var prunedKeys = KeySet.Prune(removedNode, collapseInto);
             var prunedValues = ValueMap.Aggregate(ValueMap, (acc, kv) =>
             {
-                var data = kv.Value as IRemovedNodePruning;
+                var data = kv.Value as IRemovedNodePruning<TValue>;
                 return data != null && data.NeedPruningFrom(removedNode)
-                    ? acc.SetItem(kv.Key, (TValue)data.Prune(removedNode, collapseInto))
+                    ? acc.SetItem(kv.Key, data.Prune(removedNode, collapseInto))
                     : acc;
             });
 
@@ -304,9 +312,9 @@ namespace Akka.DistributedData
             var pruningCleanupKeys = KeySet.PruningCleanup(removedNode);
             var pruningCleanupValues = ValueMap.Aggregate(ValueMap, (acc, kv) =>
             {
-                var data = kv.Value as IRemovedNodePruning;
+                var data = kv.Value as IRemovedNodePruning<TValue>;
                 return data != null && data.NeedPruningFrom(removedNode)
-                    ? acc.SetItem(kv.Key, (TValue)data.PruningCleanup(removedNode))
+                    ? acc.SetItem(kv.Key, data.PruningCleanup(removedNode))
                     : acc;
             });
 

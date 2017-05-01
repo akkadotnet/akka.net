@@ -186,6 +186,7 @@ namespace Akka.DistributedData
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((GSet<T>) delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

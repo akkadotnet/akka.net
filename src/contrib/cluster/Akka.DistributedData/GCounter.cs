@@ -91,7 +91,7 @@ namespace Akka.DistributedData
             Value = State.Aggregate(Zero, (v, acc) => v + acc.Value);
         }
 
-        public IEnumerable<UniqueAddress> ModifiedByNodes => State.Keys;
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => State.Keys.ToImmutableHashSet();
 
         /// <summary>
         /// Increment the counter by 1.
@@ -169,6 +169,7 @@ namespace Akka.DistributedData
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((GCounter) delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         public GCounter ResetDelta() => Delta == null ? this : AssignAncestor(new GCounter(State));
 

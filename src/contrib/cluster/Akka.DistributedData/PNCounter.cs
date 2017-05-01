@@ -8,6 +8,7 @@
 using Akka.Cluster;
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Numerics;
 using Akka.Actor;
 using Akka.Util;
@@ -115,6 +116,8 @@ namespace Akka.DistributedData
         public PNCounter Merge(PNCounter other) => 
             new PNCounter(Increments.Merge(other.Increments), Decrements.Merge(other.Decrements));
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => Increments.ModifiedByNodes.Union(Decrements.ModifiedByNodes);
+
         public bool NeedPruningFrom(Cluster.UniqueAddress removedNode) => 
             Increments.NeedPruningFrom(removedNode) || Decrements.NeedPruningFrom(removedNode);
 
@@ -142,6 +145,7 @@ namespace Akka.DistributedData
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => Merge((PNCounter) delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         #region delta
 

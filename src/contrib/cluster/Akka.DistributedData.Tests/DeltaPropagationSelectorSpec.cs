@@ -30,7 +30,7 @@ namespace Akka.DistributedData.Tests
                 AllNodes = allNodes;
             }
 
-            protected override int GossipInternalDivisor { get; } = 5;
+            public override int GossipInternalDivisor { get; } = 5;
             protected override ImmutableArray<Address> AllNodes { get; }
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, Tuple<IReplicatedData, long, long>> deltas) => 
                 new DeltaPropagation(selfUniqueAddress, false, deltas
