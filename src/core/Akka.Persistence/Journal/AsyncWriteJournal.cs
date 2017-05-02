@@ -16,14 +16,11 @@ using Akka.Pattern;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// TBD
+    /// Abstract journal, optimized for asynchronous, non-blocking writes.
     /// </summary>
     public abstract class AsyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
         private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected readonly bool CanPublish;
         private readonly CircuitBreaker _breaker;
         private readonly ReplayFilterMode _replayFilterMode;
@@ -87,24 +84,10 @@ namespace Akka.Persistence.Journal
             _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="recoveryCallback">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
 
         /// <summary>
@@ -201,11 +184,7 @@ namespace Akka.Persistence.Journal
             return false;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected sealed override bool Receive(object message)
         {
             return ReceiveWriteJournal(message) || ReceivePluginInternal(message);
@@ -425,18 +404,8 @@ namespace Akka.Persistence.Journal
                 }, _continuationOptions);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         internal sealed class Desequenced
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="message">TBD</param>
-            /// <param name="sequenceNr">TBD</param>
-            /// <param name="target">TBD</param>
-            /// <param name="sender">TBD</param>
             public Desequenced(object message, long sequenceNr, IActorRef target, IActorRef sender)
             {
                 Message = message;
@@ -445,37 +414,20 @@ namespace Akka.Persistence.Journal
                 Sender = sender;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly object Message;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly long SequenceNr;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IActorRef Target;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IActorRef Sender;
+            public object Message { get; }
+
+            public long SequenceNr { get; }
+
+            public IActorRef Target { get; }
+
+            public IActorRef Sender { get; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         internal class Resequencer : ActorBase
         {
             private readonly IDictionary<long, Desequenced> _delayed = new Dictionary<long, Desequenced>();
             private long _delivered = 0L;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="message">TBD</param>
-            /// <returns>TBD</returns>
             protected override bool Receive(object message)
             {
                 Desequenced d;
@@ -515,4 +467,3 @@ namespace Akka.Persistence.Journal
         }
     }
 }
-

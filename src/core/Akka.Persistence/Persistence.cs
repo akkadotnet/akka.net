@@ -17,36 +17,20 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
     internal struct PluginHolder
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IActorRef Ref;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly EventAdapters Adapters;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Config Config;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="ref">TBD</param>
-        /// <param name="adapters">TBD</param>
-        /// <param name="config">TBD</param>
         public PluginHolder(IActorRef @ref, EventAdapters adapters, Config config)
         {
             Ref = @ref;
             Adapters = adapters;
             Config = config;
         }
+
+        public IActorRef Ref { get; }
+
+        public EventAdapters Adapters { get; }
+
+        public Config Config { get; }
     }
 
     /// <summary>
@@ -133,15 +117,12 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public IStashOverflowStrategy DefaultInternalStashOverflowStrategy
-        {
-            get { return _defaultInternalStashOverflowStrategy.Value; }
-        }
+        public IStashOverflowStrategy DefaultInternalStashOverflowStrategy => _defaultInternalStashOverflowStrategy.Value;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public PersistenceSettings Settings { get; private set; }
+        public PersistenceSettings Settings { get; }
 
         /// <summary>
         /// TBD
@@ -307,7 +288,7 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Persistence Instance = new Persistence();
+        public static Persistence Instance { get; } = new Persistence();
 
         /// <summary>
         /// TBD
@@ -332,16 +313,17 @@ namespace Akka.Persistence
     /// <summary>
     /// Persistence configuration.
     /// </summary>
-    public class PersistenceSettings : Settings
+    public sealed class PersistenceSettings : Settings
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public ViewSettings View { get; private set; }
+        public ViewSettings View { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public class ViewSettings
+        public sealed class ViewSettings
         {
             /// <summary>
             /// TBD
@@ -358,25 +340,28 @@ namespace Akka.Persistence
             /// <summary>
             /// TBD
             /// </summary>
-            public bool AutoUpdate { get; private set; }
+            public bool AutoUpdate { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public TimeSpan AutoUpdateInterval { get; private set; }
+            public TimeSpan AutoUpdateInterval { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long AutoUpdateReplayMax { get; private set; }
+            public long AutoUpdateReplayMax { get; }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         public AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
+
         /// <summary>
         /// TBD
         /// </summary>
-        public class AtLeastOnceDeliverySettings
+        public sealed class AtLeastOnceDeliverySettings
         {
             /// <summary>
             /// TBD
@@ -409,7 +394,7 @@ namespace Akka.Persistence
             /// <summary>
             ///     Interval between redelivery attempts.
             /// </summary>
-            public TimeSpan RedeliverInterval { get; private set; }
+            public TimeSpan RedeliverInterval { get; }
 
             /// <summary>
             ///     Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory. When this
@@ -417,20 +402,21 @@ namespace Akka.Persistence
             ///     <see cref="MaxUnconfirmedMessagesExceededException" />
             ///     instead of accepting messages.
             /// </summary>
-            public int MaxUnconfirmedMessages { get; private set; }
+            public int MaxUnconfirmedMessages { get; }
 
             /// <summary>
             ///     After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
             ///     <see cref="ActorBase.Self" />.
             ///     The count is reset after restart.
             /// </summary>
-            public int WarnAfterNumberOfUnconfirmedAttempts { get; private set; }
+            public int WarnAfterNumberOfUnconfirmedAttempts { get; }
+
             /// <summary>
             ///     Maximum number of unconfirmed messages that will be sent at each redelivery burst. This is to help to
             ///     prevent overflowing amount of messages to be sent at once, for eg. when destination cannot be reached for a long
             ///     time.
             /// </summary>
-            public int RedeliveryBurstLimit { get; private set; }
+            public int RedeliveryBurstLimit { get; }
 
 
             /// <summary>
@@ -482,33 +468,19 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public InternalSettings Internal { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public class InternalSettings
+        public InternalSettings Internal { get; }
+
+        public sealed class InternalSettings
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="config">TBD</param>
             public InternalSettings(Config config)
             {
                 PublishPluginCommands = config.HasPath("publish-plugin-commands") && config.GetBoolean("publish-plugin-commands");
                 PublishConfirmations = config.HasPath("publish-confirmations") && config.GetBoolean("publish-confirmations");
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public bool PublishPluginCommands { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public bool PublishConfirmations { get; private set; }
+            public bool PublishPluginCommands { get; }
+
+            public bool PublishConfirmations { get; }
         }
 
         /// <summary>
@@ -561,10 +533,10 @@ namespace Akka.Persistence
         /// TBD
         /// </summary>
         string JournalPath { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
         Config DefaultConfig { get; }
     }
 }
-

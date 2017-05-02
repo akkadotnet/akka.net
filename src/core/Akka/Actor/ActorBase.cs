@@ -91,7 +91,7 @@ namespace Akka.Actor
     public abstract partial class ActorBase : IInternalActor
     {
         private IActorRef _clearedSelf;
-        private bool HasBeenCleared { get { return _clearedSelf != null; } }
+        private bool HasBeenCleared => _clearedSelf != null;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorBase" /> class.
@@ -110,16 +110,13 @@ namespace Akka.Actor
         ///     Gets the sending ActorRef of the current message
         /// </summary>
         /// <value>The sender ActorRef</value>
-        protected IActorRef Sender
-        {
-            get { return Context.Sender; }
-        }
+        protected IActorRef Sender => Context.Sender;
 
         /// <summary>
         ///     Gets the self ActorRef
         /// </summary>
         /// <value>Self ActorRef</value>
-        protected IActorRef Self { get { return HasBeenCleared ? _clearedSelf : Context.Self; } }
+        protected IActorRef Self => HasBeenCleared ? _clearedSelf : Context.Self;
 
         /// <summary>
         ///     Gets the context.
@@ -128,13 +125,7 @@ namespace Akka.Actor
         /// <exception cref="NotSupportedException">
         /// This exception is thrown if there is no active ActorContext. The most likely cause is due to use of async operations from within this actor.
         /// </exception>
-        IActorContext IInternalActor.ActorContext
-        {
-            get
-            {
-                return Context;
-            }
-        }
+        IActorContext IInternalActor.ActorContext => Context;
 
         /// <summary>
         ///     Gets the context.
@@ -274,4 +265,3 @@ namespace Akka.Actor
         }
     }
 }
-

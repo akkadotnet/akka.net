@@ -80,7 +80,6 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public static class AsyncWriteTarget
     {
-
         #region Internal Messages
 
         /// <summary>
@@ -107,7 +106,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// The cause of the failure
             /// </summary>
-            public Exception Cause { get; private set; }
+            public Exception Cause { get; }
         }
 
         /// <summary>
@@ -128,7 +127,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public long HighestSequenceNr { get; private set; }
+            public long HighestSequenceNr { get; }
 
             /// <inheritdoc/>
             public bool Equals(ReplaySuccess other)
@@ -158,7 +157,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public AtomicWrite[] Messages { get; private set; }
+            public AtomicWrite[] Messages { get; }
         }
 
         /// <summary>
@@ -185,19 +184,22 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public string PersistenceId { get; private set; }
+            public string PersistenceId { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long FromSequenceNr { get; private set; }
+            public long FromSequenceNr { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long ToSequenceNr { get; private set; }
+            public long ToSequenceNr { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long Max { get; private set; }
+            public long Max { get; }
 
             /// <inheritdoc/>
             public bool Equals(ReplayMessages other)
@@ -232,11 +234,12 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public string PersistenceId { get; private set; }
+            public string PersistenceId { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long ToSequenceNr { get; private set; }
+            public long ToSequenceNr { get; }
 
             /// <inheritdoc/>
             public bool Equals(DeleteMessagesTo other)
@@ -485,4 +488,3 @@ namespace Akka.Persistence.Journal
         }
     }
 }
-

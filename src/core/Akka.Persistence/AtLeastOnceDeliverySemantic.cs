@@ -303,11 +303,8 @@ namespace Akka.Persistence
 
             private RedeliveryTick() { }
 
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return obj is RedeliveryTick;
-            }
+            public override bool Equals(object obj) => obj is RedeliveryTick;
+            public override int GetHashCode() => nameof(RedeliveryTick).GetHashCode();
         }
 
         #region actor methods
@@ -318,9 +315,8 @@ namespace Akka.Persistence
         private readonly PersistenceSettings.AtLeastOnceDeliverySettings _settings;
         private ImmutableSortedDictionary<long, Delivery> _unconfirmed = ImmutableSortedDictionary<long, Delivery>.Empty;
 
-
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AtLeastOnceDeliverySemantic"/> class.
         /// </summary>
         /// <param name="context">TBD</param>
         /// <param name="settings">TBD</param>
@@ -338,10 +334,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual TimeSpan RedeliverInterval
-        {
-            get { return _settings.RedeliverInterval; }
-        }
+        public virtual TimeSpan RedeliverInterval => _settings.RedeliverInterval;
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst
@@ -353,10 +346,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual int RedeliveryBurstLimit
-        {
-            get { return _settings.RedeliveryBurstLimit; }
-        }
+        public virtual int RedeliveryBurstLimit => _settings.RedeliveryBurstLimit;
 
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
@@ -366,10 +356,7 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual int WarnAfterNumberOfUnconfirmedAttempts
-        {
-            get { return _settings.WarnAfterNumberOfUnconfirmedAttempts; }
-        }
+        public virtual int WarnAfterNumberOfUnconfirmedAttempts => _settings.WarnAfterNumberOfUnconfirmedAttempts;
 
         /// <summary>
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory.
@@ -380,18 +367,12 @@ namespace Akka.Persistence
         /// configuration key. This method can be overridden by implementation classes to return
         /// non-default values.
         /// </summary>
-        public virtual int MaxUnconfirmedMessages
-        {
-            get { return _settings.MaxUnconfirmedMessages; }
-        }
+        public virtual int MaxUnconfirmedMessages => _settings.MaxUnconfirmedMessages;
 
         /// <summary>
         ///     Number of messages, that have not been confirmed yet.
         /// </summary>
-        public int UnconfirmedCount
-        {
-            get { return _unconfirmed.Count; }
-        }
+        public int UnconfirmedCount => _unconfirmed.Count;
 
         private void StartRedeliverTask()
         {
