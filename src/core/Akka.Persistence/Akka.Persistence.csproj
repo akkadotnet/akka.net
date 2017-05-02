@@ -77,6 +77,7 @@
     <Compile Include="PersistentView.Recovery.cs" />
     <Compile Include="PersistentView.Lifecycle.cs" />
     <Compile Include="Protocol.cs" />
+    <Compile Include="RecoveryPermitter.cs" />
     <Compile Include="Serialization\Proto\PersistenceMessages.cs" />
     <Compile Include="Snapshotter.cs" />
     <Compile Include="JournalProtocol.cs" />

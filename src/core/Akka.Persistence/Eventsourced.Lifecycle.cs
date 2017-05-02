@@ -27,7 +27,12 @@ namespace Akka.Persistence
             LoadSnapshot(SnapshotterId, recovery.FromSnapshot, recovery.ToSequenceNr);
         }
 
-        /// <inheritdoc/>
+        private void RequestRecoveryPermit()
+        {
+            Extension.RecoveryPermitter().Tell(new RequestRecoveryPermit(), Self);
+            ChangeState(WaitingRecoveryPermit(Recovery));
+        }
+
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             _currentState.StateReceive(receive, message);
@@ -39,11 +44,11 @@ namespace Akka.Persistence
         {
             if (PersistenceId == null)
                 throw new ArgumentNullException($"PersistenceId is [null] for PersistentActor [{Self.Path}]");
-                
+
             // Fail fast on missing plugins.
             var j = Journal;
             var s = SnapshotStore;
-            StartRecovery(Recovery);
+            RequestRecoveryPermit();
             base.AroundPreStart();
         }
 
@@ -71,7 +76,7 @@ namespace Akka.Persistence
         /// <inheritdoc/>
         public override void AroundPostRestart(Exception reason, object message)
         {
-            StartRecovery(Recovery);
+            RequestRecoveryPermit();
             base.AroundPostRestart(reason, message);
         }
 
@@ -95,25 +100,25 @@ namespace Akka.Persistence
             if (message is RecoveryCompleted) return; // ignore
             if (message is SaveSnapshotFailure)
             {
-                var m = (SaveSnapshotFailure) message;
+                var m = (SaveSnapshotFailure)message;
                 if (Log.IsWarningEnabled)
                     Log.Warning("Failed to SaveSnapshot given metadata [{0}] due to: [{1}: {2}]", m.Metadata, m.Cause, m.Cause.Message);
             }
             if (message is DeleteSnapshotFailure)
             {
-                var m = (DeleteSnapshotFailure) message;
+                var m = (DeleteSnapshotFailure)message;
                 if (Log.IsWarningEnabled)
                     Log.Warning("Failed to DeleteSnapshot given metadata [{0}] due to: [{1}: {2}]", m.Metadata, m.Cause, m.Cause.Message);
             }
             if (message is DeleteSnapshotsFailure)
             {
-                var m = (DeleteSnapshotsFailure) message;
+                var m = (DeleteSnapshotsFailure)message;
                 if (Log.IsWarningEnabled)
                     Log.Warning("Failed to DeleteSnapshots given criteria [{0}] due to: [{1}: {2}]", m.Criteria, m.Cause, m.Cause.Message);
             }
             if (message is DeleteMessagesFailure)
             {
-                var m = (DeleteMessagesFailure) message;
+                var m = (DeleteMessagesFailure)message;
                 if (Log.IsWarningEnabled)
                     Log.Warning("Failed to DeleteMessages ToSequenceNr [{0}] for PersistenceId [{1}] due to: [{2}: {3}]", m.ToSequenceNr, PersistenceId, m.Cause, m.Cause.Message);
             }
