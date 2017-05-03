@@ -1,4 +1,4 @@
-﻿PersistentActorusing Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Persistence;
 
 namespace DocsExamples.Persistence.PersistentActor
@@ -26,7 +26,7 @@ namespace DocsExamples.Persistence.PersistentActor
             }
         }
 
-        public static void Main()
+        public static void MainApp()
         {
             var system = ActorSystem.Create("PersistAsync");
             var persistentActor = system.ActorOf<MyPersistentActor>();

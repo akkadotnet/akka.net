@@ -8,71 +8,38 @@ Snapshots can dramatically reduce recovery times of persistent actors and views.
 
 Persistent actors can save snapshots of internal state by calling the `SaveSnapshot` method. If saving of a snapshot succeeds, the persistent actor receives a `SaveSnapshotSuccess` message, otherwise a `SaveSnapshotFailure` message.
 
-```csharp
-public class DocumentPersistentSnapshotActor : ReceivePersistentActor
-{
-    private List<string> _messages = new List<string>();
-    private int _pagesSinceLastSnapshot = 0;
-
-    public DocumentPersistentSnapshotActor()
-    {
-        //...
-        
-        Command<string>(message =>
-        {
-            Persist(message, page =>
-            {
-                _messages.Add(page);
-                if (++_pagesSinceLastSnapshot % 5 == 0)
-                {
-                    SaveSnapshot(_messages);
-                }
-            });
-        });
-
-        Command<SaveSnapshotSuccess>(success => {
-            // handle snapshot save success...
-            DeleteMessages(success.Metadata.SequenceNr);
-        });
-
-        Command<SaveSnapshotFailure>(failure => {
-            // handle snapshot save failure...
-        });
-    }
-
-    public override string PersistenceId { get; } = "HardCoded";
-}
-```
+[!code-csharp[Main](../../examples/Persistence/PersistentActor/Snapshots.cs?range=7-45)]
 
 During recovery, the persistent actor is offered a previously saved snapshot via a `SnapshotOffer` message from which it can initialize internal state.
 
 ```csharp
-Recover<string>(page =>
+if (message is SnapshotOffer offeredSnapshot)
 {
-    _messages.Add(page);
-});
-
-Recover<SnapshotOffer>(offer => {
-    var msgs = offer.Snapshot as List<string>;
-    if (msgs != null)
-        _messages = _messages.Concat(msgs).ToList();
-});
+    state = offeredSnapshot.Snapshot;
+}
+else if (message is RecoveryCompleted)
+{
+    // ..
+}
+else
+{
+    // event
+}
 ```
 The replayed messages that follow the `SnapshotOffer` message, if any, are younger than the offered snapshot. They finally recover the persistent actor to its current (i.e. latest) state.
 
 In general, a persistent actor is only offered a snapshot if that persistent actor has previously saved one or more snapshots and at least one of these snapshots matches the `SnapshotSelectionCriteria` that can be specified for recovery.
 
 ```csharp
-public override Recovery Recovery
-{
-    get
-    {
-        return new Recovery(new SnapshotSelectionCriteria(150, DateTime.UtcNow));
-    }
-}
+public override Recovery Recovery => new Recovery(fromSnapshot: new SnapshotSelectionCriteria(maxSequenceNr: 457L, maxTimeStamp: DateTime.UtcNow));
 ```
 
 If not specified, they default to `SnapshotSelectionCriteria.Latest` which selects the latest (= youngest) snapshot. To disable snapshot-based recovery, applications should use `SnapshotSelectionCriteria.None`. A recovery where no saved snapshot matches the specified `SnapshotSelectionCriteria` will replay all journaled messages.
+
+> [!NOTE]
+> In order to use snapshots, a default snapshot-store (`akka.persistence.snapshot-store.plugin`) must be configured, or the `UntypedPersistentActor` can pick a snapshot store explicitly by overriding `SnapshotPluginId`.
+> Since it is acceptable for some applications to not use any snapshotting, it is legal to not configure a snapshot store. However, Akka will log a warning message when this situation is detected and then continue to operate until an actor tries to store a snapshot, at which point the operation will fail (by replying with an `SaveSnapshotFailure` for example).
+> Note that `Cluster Sharding` is using snapshots, so if you use Cluster Sharding you need to define a snapshot store plugin.
 
 ## Snapshot deletion
 

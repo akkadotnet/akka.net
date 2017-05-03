@@ -35,7 +35,7 @@ namespace DocsExamples.Persistence.PersistentActor
             }
         }
 
-        public static void Main()
+        public static void MainApp()
         {
             var system = ActorSystem.Create("NestedPersistsAsync");
             var persistentActor = system.ActorOf<MyPersistentActor>();

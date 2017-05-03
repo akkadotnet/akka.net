@@ -34,7 +34,7 @@ namespace DocsExamples.Persistence.PersistentActor
             }
         }
 
-        public static void Main()
+        public static void MainApp()
         {
             var system = ActorSystem.Create("AvoidPoisonPill");
             var persistentActor = system.ActorOf<SafePersistentActor>();
