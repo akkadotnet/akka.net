@@ -89,7 +89,7 @@ namespace Akka.Persistence.Tests
         public PersistentActorRecoveryTimeoutSpec()
             : base(SteppingMemoryJournal.Config(JournalId).WithFallback(
                 ConfigurationFactory.ParseString(
-                    @"akka.persistence.journal.stepping-inmem.recovery-event-timeout = 100ms
+                    @"akka.persistence.journal.stepping-inmem.recovery-event-timeout = 1s
                     akka.actor.serialize-messages = off"))
                   .WithFallback(Configuration("PersistentActoryRecoveryTimeoutSpec")))
         {
