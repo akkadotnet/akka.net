@@ -211,7 +211,7 @@ You should be careful to not send more messages to a persistent actor than it ca
 akka.actor.default-mailbox.stash-capacity = 10000
 ```
 
-Note that the stash capacity is per actor. If you have many persistent actors, e.g. when using cluster sharding, you may need to define a small stash capacity to ensure that the total number of stashed messages in the system don't consume too much memory. Additionally, The persistent actor defines three strategies to handle failure when the internal stash capacity is exceeded. The default overflow strategy is the `ThrowOverflowExceptionStrategy`, which discards the current received message and throws a `StashOverflowException`, causing actor restart if default supervision strategy is used. you can override the `InternalStashOverflowStrategy` property to return `DiscardToDeadLetterStrategy` or `ReplyToStrategy` for any "individual" persistent actor, or define the "default" for all persistent actors by providing FQCN, which must be a subclass of `StashOverflowStrategyConfigurator`, in the persistence configuration:
+Note that the stash capacity is per actor. If you have many persistent actors, e.g. when using cluster sharding, you may need to define a small stash capacity to ensure that the total number of stashed messages in the system doesn't consume too much memory. Additionally, the persistent actor defines three strategies to handle failure when the internal stash capacity is exceeded. The default overflow strategy is the `ThrowOverflowExceptionStrategy`, which discards the current received message and throws a `StashOverflowException`, causing actor restart if the default supervision strategy is used. You can override the `InternalStashOverflowStrategy` property to return `DiscardToDeadLetterStrategy` or `ReplyToStrategy` for any "individual" persistent actor, or define the "default" for all persistent actors by providing FQCN, which must be a subclass of `StashOverflowStrategyConfigurator`, in the persistence configuration:
 
 ```hocon
 akka.persistence.internal-stash-overflow-strategy = "akka.persistence.ThrowExceptionConfigurator"
@@ -219,7 +219,7 @@ akka.persistence.internal-stash-overflow-strategy = "akka.persistence.ThrowExcep
 
 The `DiscardToDeadLetterStrategy` strategy also has a pre-packaged companion configurator `DiscardConfigurator`.
 
-You can also query default strategy via the Akka persistence extension singleton:
+You can also query the default strategy via the Akka persistence extension singleton:
 ```csharp
 Context.System.DefaultInternalStashOverflowStrategy
 ```
