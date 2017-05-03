@@ -28,6 +28,17 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
+        public void PersistentActor_should_fail_fast_if_persistenceId_is_null()
+        {
+            EventFilter.Exception<ActorInitializationException>().And.Error(contains: "PersistenceId is [null] for PersistentActor").ExpectOne(() =>
+            {
+                var pref = ActorOf(Props.Create(() => new BehaviorOneActor(null)));
+                Watch(pref);
+                ExpectTerminated(pref);
+            });
+        }
+
+        [Fact]
         public void PersistentActor_should_recover_from_persisted_events()
         {
             var pref = ActorOf(Props.Create(() => new BehaviorOneActor(Name)));
