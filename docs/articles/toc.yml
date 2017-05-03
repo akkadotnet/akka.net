@@ -58,8 +58,8 @@
   items: 
   - name: Architecture
     href: persistence/architecture.md
-  - name: Persistence Actors
-    href: persistence/persistent-actors.md
+  - name: Event sourcing
+    href: persistence/event-sourcing.md
   - name: Persistence Views
     href: persistence/persistent-views.md
   - name: Snapshots
