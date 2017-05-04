@@ -6,12 +6,12 @@ title: Event sourcing
 
 The basic idea behind Event Sourcing is quite simple. A persistent actor receives a (non-persistent) command which is first validated if it can be applied to the current state. Here validation can mean anything from simple inspection of a command message's fields up to a conversation with several external services, for example. If validation succeeds, events are generated from the command, representing the effect of the command. These events are then persisted and, after successful persistence, used to change the actor's state. When the persistent actor needs to be recovered, only the persisted events are replayed of which we know that they can be successfully applied. In other words, events cannot fail when being replayed to a persistent actor, in contrast to commands. Event sourced actors may of course also process commands that do not change application state such as query commands for example.
 
-Akka persistence supports event sourcing with the `ReceivePersistentActor` abstract class. An actor that extends this class uses the persist method to persist and handle events. The behavior of an `ReceivePersistentActor` is defined by implementing `Recover` and `Receive` methods. This is demonstrated in the following example.
+Akka persistence supports event sourcing with the `UntypedPersistentActor` abstract class. An actor that extends this class uses the persist method to persist and handle events. The behavior of an `UntypedPersistentActor` is defined by implementing `OnRecover` and `OnCommand` methods. This is demonstrated in the following example.
 
 [!code-csharp[Main](../../examples/Persistence/PersistentActor/PersistentActor.cs?range=9-101)]
-The example defines two data types, `Cmd` and `Evt` to represent commands and events, respectively. The state of the `ExamplePersistentActor` is a list of persisted event data contained in `ExampleState`.
+The example defines two data types, `Cmd` and `Evt` to represent commands and events, respectively. The state of the `PersistentActor` is a list of persisted event data contained in `ExampleState`.
 
-The persistent actor's `OnReceiveRecover` method defines how state is updated during recovery by handling `Evt` and `SnapshotOffer` messages. The persistent actor's `OnReceiveCommand` method is a command handler. In this example, a command is handled by generating two events which are then persisted and handled. Events are persisted by calling `Persist` with an event (or a sequence of events) as first argument and an event handler as second argument.
+The persistent actor's `OnRecover` method defines how state is updated during recovery by handling `Evt` and `SnapshotOffer` messages. The persistent actor's `OnCommand` method is a command handler. In this example, a command is handled by generating two events which are then persisted and handled. Events are persisted by calling `Persist` with an event (or a sequence of events) as first argument and an event handler as second argument.
 
 The `Persist` method persists events asynchronously and the event handler is executed for successfully persisted events. Successfully persisted events are internally sent back to the persistent actor as individual messages that trigger event handler executions. An event handler may close over persistent actor state and mutate it. The sender of a persisted event is the sender of the corresponding command. This allows event handlers to reply to the sender of a command (not shown).
 
@@ -22,7 +22,7 @@ When persisting events with `Persist` it is guaranteed that the persistent actor
 If persistence of an event fails, `OnPersistFailure` will be invoked (logging the error by default), and the actor will unconditionally be stopped. If persistence of an event is rejected before it is stored, e.g. due to serialization error, `OnPersistRejected` will be invoked (logging a warning by default), and the actor continues with the next message.
 
 > [!NOTE]
-> It's also possible to switch between different command handlers during normal processing and recovery with `Context.Become` and `Context.Unbecome`. To get the actor into the same state after recovery you need to take special care to perform the same state transitions with become and unbecome in the `OnReceiveRecover` method as you would have done in the command handler. Note that when using become from `OnReceiveRecover` it will still only use the `OnReceiveRecover` behavior when replaying the events. When replay is completed it will use the new behavior.
+> It's also possible to switch between different command handlers during normal processing and recovery with `Context.Become` and `Context.Unbecome`. To get the actor into the same state after recovery you need to take special care to perform the same state transitions with become and unbecome in the `OnRecover` method as you would have done in the command handler. Note that when using become from `OnRecover` it will still only use the `OnRecover` behavior when replaying the events. When replay is completed it will use the new behavior.
 
 ## Identifiers
 A persistent actor must have an identifier that doesn't change across different actor incarnations. The identifier must be defined with the `PersistenceId` method.
@@ -55,7 +55,7 @@ Another example, which can be fun for experiments but probably not in a real app
 public override Recovery Recovery => new Recovery(new SnapshotSelectionCriteria(457));
 ```
 
-Recovery can be disabled by returning `Recovery.None` in the recovery property of a `ReceivePersistentActor`:
+Recovery can be disabled by returning `Recovery.None` in the recovery property of a `UntypedPersistentActor`:
 
 ```csharp
 public override Recovery Recovery => Recovery.None;
@@ -234,7 +234,7 @@ It is possible to delete all messages (journaled by a single persistent actor) u
 Deleting messages in event sourcing based applications is typically either not used at all, or used in conjunction with snapshotting, i.e. after a snapshot has been successfully stored, a `DeleteMessages` (`ToSequenceNr`) up until the sequence number of the data held by that snapshot can be issued to safely delete the previous events while still having access to the accumulated state during replays - by loading the snapshot.
 
 > [!WARNING]
-> If you are using `Persistence Query`, query results may be missing deleted messages in a journal, depending on how deletions are implemented in the journal plugin. Unless you use a plugin which still shows deleted messages in persistence query results, you have to design your application so that it is not affected by missing messages.
+> If you are using [Persistence Query](xref:persistence-query), query results may be missing deleted messages in a journal, depending on how deletions are implemented in the journal plugin. Unless you use a plugin which still shows deleted messages in persistence query results, you have to design your application so that it is not affected by missing messages.
 
 The result of the `DeleteMessages` request is signaled to the persistent actor with a `DeleteMessagesSuccess` message if the delete was successful or a `DeleteMessagesFailure` message if it failed.
 

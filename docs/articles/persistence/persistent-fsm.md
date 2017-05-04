@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: persistent-fsm
 title: Persistence FSM
 ---
 # Persistence FSM

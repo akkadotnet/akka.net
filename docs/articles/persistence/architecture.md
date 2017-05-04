@@ -22,11 +22,11 @@ Receive Actors
 
 ## Persistent Actors
 
-Unlike the default `UntypedActor` class, `PersistentActor` and its derivatives requires the setup of a few more additional members:
+Unlike the default `UntypedActor` class, `UntypedPersistentActor` and its derivatives requires the setup of a few more additional members:
 
 - `PersistenceId` is a persistent actor's identifier that doesn't change across different actor incarnations. It's used to retrieve an event stream required by the persistent actor to recover its internal state.
-- `ReceiveRecover` is a method invoked during an actor's recovery cycle. Incoming objects may be user-defined events as well as system messages, for example `SnapshotOffer` which is used to deliver latest actor state saved in the snapshot store.
-- `ReceiveCommand` is an equivalent of the basic `Receive` method of default Akka.NET actors.
+- `OnRecover` is a method invoked during an actor's recovery cycle. Incoming objects may be user-defined events as well as system messages, for example `SnapshotOffer` which is used to deliver latest actor state saved in the snapshot store.
+- `OnCommand` is an equivalent of the basic `Receive` method of default Akka.NET actors.
 
 Persistent actors also offer a set of specialized members:
 

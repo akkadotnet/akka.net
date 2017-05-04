@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: snapshots
 title: Snapshots
 ---
 # Snapshots
