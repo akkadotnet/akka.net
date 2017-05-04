@@ -32,8 +32,7 @@ namespace Akka.Persistence.TestKit.Snapshot
                 }
             }";
 
-        protected static readonly Config Config =
-            ConfigurationFactory.ParseString(_specConfigTemplate);
+        protected static readonly Config Config = ConfigurationFactory.ParseString(_specConfigTemplate);
 
         private readonly TestProbe _senderProbe;
         protected List<SnapshotMetadata> Metadata;
@@ -49,7 +48,14 @@ namespace Akka.Persistence.TestKit.Snapshot
         {
         }
 
-        protected IActorRef SnapshotStore { get { return Extension.SnapshotStoreFor(null); } }
+        protected IActorRef SnapshotStore => Extension.SnapshotStoreFor(null);
+
+        /// <summary>
+        /// The limit defines a number of bytes persistence plugin can support to store the snapshot.
+        /// If plugin does not support persistence of the snapshots of 10000 bytes or may support more than default size,
+        /// the value can be overriden by the SnapshotStoreSpec implementation with a note in a plugin documentation.
+        /// </summary>
+        protected virtual int SnapshotByteSizeLimit { get; } = 10000;
 
         /// <summary>
         /// Initializes a snapshot store with set of predefined snapshots.
@@ -69,7 +75,7 @@ namespace Akka.Persistence.TestKit.Snapshot
             for (int i = 1; i <= 5; i++)
             {
                 var metadata = new SnapshotMetadata(Pid, i + 10);
-                SnapshotStore.Tell(new SaveSnapshot(metadata, "s-" + i), _senderProbe.Ref);
+                SnapshotStore.Tell(new SaveSnapshot(metadata, $"s-{i}"), _senderProbe.Ref);
                 yield return _senderProbe.ExpectMsg<SaveSnapshotSuccess>().Metadata;
             }
         }
@@ -223,6 +229,16 @@ namespace Akka.Persistence.TestKit.Snapshot
             Assert.Equal("s-5-modified", result.Snapshot.Snapshot.ToString());
             Assert.Equal(md.SequenceNr, result.Snapshot.Metadata.SequenceNr);
             // metadata timestamp may have been changed
+        }
+
+        [Fact]
+        public void SnapshotStore_should_save_bigger_size_snapshot()
+        {
+            var metadata = new SnapshotMetadata(Pid, 100);
+            var bigSnapshot = new byte[SnapshotByteSizeLimit];
+            new Random().NextBytes(bigSnapshot);
+            SnapshotStore.Tell(new SaveSnapshot(metadata, bigSnapshot), _senderProbe.Ref);
+            _senderProbe.ExpectMsg<SaveSnapshotSuccess>();
         }
     }
 }

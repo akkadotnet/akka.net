@@ -1,9 +1,11 @@
 - name: Introduction
   items:
-  - name: What is Akka?
+  - name: What is Akka.NET?
     href: intro/what-is-akka.md
-  - name: Why Akka?
-    href: intro/why-akka.md
+  - name: What are actors?
+    href: intro/what-are-actors.md
+  - name: Akka.NET Libraries and Modules
+    href: intro/modules.md
   - name: Getting Started
     href: intro/getting-started.md
   - name: The Obligatory Hello World
@@ -58,8 +60,8 @@
   items: 
   - name: Architecture
     href: persistence/architecture.md
-  - name: Persistence Actors
-    href: persistence/persistent-actors.md
+  - name: Event sourcing
+    href: persistence/event-sourcing.md
   - name: Persistence Views
     href: persistence/persistent-views.md
   - name: Snapshots

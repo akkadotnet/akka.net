@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: storage-plugins
 title: Storage plugins
 ---
 # Storage plugins

@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: event-adapters
 title: Event Adapters
 ---
 # Event adapters

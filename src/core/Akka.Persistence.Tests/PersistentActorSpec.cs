@@ -28,6 +28,17 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
+        public void PersistentActor_should_fail_fast_if_persistenceId_is_null()
+        {
+            EventFilter.Exception<ActorInitializationException>().And.Error(contains: "PersistenceId is [null] for PersistentActor").ExpectOne(() =>
+            {
+                var pref = ActorOf(Props.Create(() => new BehaviorOneActor(null)));
+                Watch(pref);
+                ExpectTerminated(pref);
+            });
+        }
+
+        [Fact]
         public void PersistentActor_should_recover_from_persisted_events()
         {
             var pref = ActorOf(Props.Create(() => new BehaviorOneActor(Name)));
@@ -591,6 +602,14 @@ namespace Akka.Persistence.Tests
             ExpectMsg<DeleteMessagesSuccess>();
             pref.Tell(GetState.Instance);
             ExpectMsg<object[]>(m => m.Length == 0);
+        }
+
+        [Fact]
+        public void PersistentActor_should_brecover_the_message_which_caused_the_restart()
+        {
+            var persistentActor = ActorOf(Props.Create(() => new RecoverMessageCausedRestart(Name)));
+            persistentActor.Tell("boom");
+            ExpectMsg("failed with TestException while processing boom");
         }
     }
 }

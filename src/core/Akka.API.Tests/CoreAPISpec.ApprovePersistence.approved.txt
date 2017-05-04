@@ -321,6 +321,14 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public sealed class LoadSnapshotFailed : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse
+    {
+        public LoadSnapshotFailed(System.Exception cause) { }
+        public System.Exception Cause { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public sealed class LoadSnapshotResult : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse, System.IEquatable<Akka.Persistence.LoadSnapshotResult>
     {
         public LoadSnapshotResult(Akka.Persistence.SelectedSnapshot snapshot, long toSequenceNr) { }
@@ -1134,6 +1142,7 @@ namespace Akka.Persistence.Snapshot
         public LocalSnapshotStore() { }
         protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata) { }
         protected override async System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected System.IO.FileInfo GetSnapshotFileForWrite(Akka.Persistence.SnapshotMetadata metadata, string extension = "") { }
         protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
         protected override void PreStart() { }
         protected override bool ReceivePluginInternal(object message) { }

@@ -301,7 +301,7 @@ namespace Akka.Persistence.Journal
                 var type = Type.GetType(kv.Key);
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
-                    : new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h]));
+                    : new NoopWriteEventAdapter(new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h])));
                 return new KeyValuePair<Type, IEventAdapter>(type, adapter);
             }).ToList());
 

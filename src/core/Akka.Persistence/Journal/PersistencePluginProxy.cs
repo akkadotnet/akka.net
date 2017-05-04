@@ -328,7 +328,7 @@ namespace Akka.Persistence.Journal
                     if (message is LoadSnapshot)
                     {
                         var l = (LoadSnapshot) message;
-                        Sender.Tell(new LoadSnapshotResult(null, l.ToSequenceNr));
+                        Sender.Tell(new LoadSnapshotFailed(TimeoutException()));
                     }
                     else if (message is SaveSnapshot)
                     {

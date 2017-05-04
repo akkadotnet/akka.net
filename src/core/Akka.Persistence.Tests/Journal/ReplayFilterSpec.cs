@@ -66,7 +66,7 @@ namespace Akka.Persistence.Tests.Journal
         [Fact]
         public void ReplayFilter_in_RepairByDiscardOld_mode_should_pass_on_all_replayed_messages_when_previously_no_writer_id_was_given_but_now_is_and_then_stop()
         {
-            var filter = Sys.ActorOf(ReplayFilter.Props(TestActor, ReplayFilterMode.RepairByDiscardOld, 2, 10, false));
+            var filter = Sys.ActorOf(ReplayFilter.Props(TestActor, ReplayFilterMode.RepairByDiscardOld, 2, 10, true));
             filter.Tell(_n1);
             filter.Tell(_n2);
             filter.Tell(_m3);

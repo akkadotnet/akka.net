@@ -844,6 +844,31 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        internal class RecoverMessageCausedRestart : ExamplePersistentActor
+        {
+            private IActorRef _master;
+            public RecoverMessageCausedRestart(string name) : base(name)
+            {
+
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message.Equals("boom"))
+                {
+                    _master = Sender;
+                    throw new TestException("boom");
+                }
+                return false;
+            }
+
+            protected override void PreRestart(Exception reason, object message)
+            {
+                _master?.Tell($"failed with {reason.GetType().Name} while processing {message}");
+                Context.Stop(Self);
+            }
+        }
+
         internal class MultipleAndNestedPersists : ExamplePersistentActor
         {
             private readonly IActorRef _probe;

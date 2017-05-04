@@ -37,6 +37,9 @@ namespace Akka.Persistence
         /// <inheritdoc/>
         public override void AroundPreStart()
         {
+            if (PersistenceId == null)
+                throw new ArgumentNullException($"PersistenceId is [null] for PersistentActor [{Self.Path}]");
+                
             // Fail fast on missing plugins.
             var j = Journal;
             var s = SnapshotStore;
@@ -58,7 +61,7 @@ namespace Akka.Persistence
                 if (message is WriteMessageSuccess) inner = (message as WriteMessageSuccess).Persistent;
                 else if (message is LoopMessageSuccess) inner = (message as LoopMessageSuccess).Message;
                 else if (message is ReplayedMessage) inner = (message as ReplayedMessage).Persistent;
-                else inner = null;
+                else inner = message;
 
                 FlushJournalBatch();
                 base.AroundPreRestart(cause, inner);

@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: custom-serialization
 title: Custom serialization
 ---
 # Custom serialization

@@ -1,43 +1,54 @@
 ---
-layout: docs.hbs
+uid: what-is-akka
 title: What is Akka
 ---
-# What is Akka?
+# What is Akka.NET?
 
-## Scalable, distributed real-time transaction processing
+Welcome to Akka.NET, a set of open-source libraries for designing scalable, resilient systems that
+span processor cores and networks. Akka allows you to focus on meeting business needs instead
+of writing low-level code to provide reliable behavior, fault tolerance, and high performance.
 
-We believe that writing correct, concurrent, fault-tolerant and scalable applications is too hard.
+Common practices and programming models do not address important challenges inherent in designing systems
+for modern computer architectures. To be successful, distributed systems must cope in an environment where components
+crash without responding, messages get lost without a trace on the wire, and network latency fluctuates.
+These problems occur regularly in carefully managed intra-datacenter environments - even more so in virtualized
+architectures.
 
-Most of the time, that's because we are using the wrong tools and the wrong level of abstraction. Akka is here to change that.
+To deal with these realities, Akka.NET provides:
 
-By using the Actor Model, we raise the abstraction level and provide a better platform to build scalable, resilient and responsive applications—see the [Reactive Manifesto](http://www.reactivemanifesto.org/) for more details.
+ * Multi-threaded behavior without the use of low-level concurrency constructs like
+   atomics or locks. You do not even need to think about memory visibility issues.
+ * Transparent remote communication between systems and their components. You do
+   not need to write or maintain difficult networking code.
+ * A clustered, high-availability architecture that is elastic, scales in or out, on demand.
 
-For fault-tolerance we adopt the "let it crash" model, which the telecom industry has used with great success to build applications that self-heal and systems that never stop. Actors also provide the abstraction for transparent distribution and the basis for truly scalable and fault-tolerant applications.
+All of these features are available through a uniform programming model: Akka.NET exploits the actor model
+to provide a level of abstraction that makes it easier to write correct concurrent, parallel and distributed systems.
+The actor model spans the set of Akka.NET libraries, providing you with a consistent way of understanding and using them.
+Thus, Akka.NET offers a depth of integration that you cannot achieve by picking libraries to solve individual problems and
+trying to piece them together.
 
-Akka.NET is Open Source and available under the [Apache 2 License](http://www.apache.org/licenses/LICENSE-2.0) -- [explained in plain english here](https://www.tldrlegal.com/l/apache2).
+By learning Akka.NET and its actor model, you will gain access to a vast and deep set of tools that solve difficult
+distributed/parallel systems problems in a uniform programming model where everything fits together tightly and
+efficiently.
 
-Download from https://github.com/akkadotnet/akka.net.
+## What is the Actor Model?
 
-## A unique hybrid
-### Actors
-Actors give you:
+The characteristics of today's computing environments are vastly different from the ones in use when the programming
+models of yesterday were conceived. Actors were invented decades ago by [Carl Hewitt](https://en.wikipedia.org/wiki/Carl_Hewitt#Actor_model).
+But relatively recently, their applicability to the challenges of modern computing systems has been recognized and
+proved to be effective.
 
-* Simple and high-level abstractions for concurrency and parallelism.
-* Asynchronous, non-blocking and highly performant event-driven programming model.
-* Very lightweight event-driven processes (several million actors per GB of heap memory).
-See the chapter for C# or F#.
+The actor model provides an abstraction that allows you to think about your code in terms of communication, not unlike
+people in a large organization. The basic characteristic of actors is that they model the world as stateful entities
+communicating with each other by explicit message passing.
 
-### Fault Tolerance
-* Supervisor hierarchies with "let it crash" semantics.
-* Supervisor hierarchies can span over multiple virtual machines to provide truly fault-tolerant systems.
-* Excellent for writing highly fault-tolerant systems that self-heal and never stop.
-See [Fault Tolerance](xref:fault-tolerance).
+As computational entities, actors have these characteristics:
 
-### Location Transparency
-Everything in Akka is designed to work in a distributed environment: all interactions of actors use pure message passing and everything is asynchronous.
+* They communicate with asynchronous messaging instead of method calls
+* They manage their own state
+* When responding to a message, they can:
+    * Create other (child) actors
+    * Send messages to other actors
+    * Stop (child) actors or themselves
 
-### Persistence
-State changes experienced by an actor can optionally be persisted and replayed when the actor is started or restarted. This allows actors to recover their state, even after JVM crashes or when being migrated to another node.
-
-## Commercial Support
-Akka.NET is supported by [Petabridge, a company making distributed, realtime computing easy for .NET developers](http://petabridge.com).
