@@ -5,8 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,35 +28,36 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void PruningState_should_merge_phase_correctly()
+        public void PruningState_must_merge_state_correctly()
         {
-            var p1 = new PruningState(_node1, PruningInitialized.Empty);
-            var p2 = new PruningState(_node1, PruningPerformed.Instance);
+            var p1 = new PruningInitialized(_node1, ImmutableHashSet<Address>.Empty);
+            var p2 = new PruningPerformed(DateTime.UtcNow.AddHours(1));
+            p1.Merge(p2).Should().Be(p2);
+            p2.Merge(p1).Should().Be(p2);
 
-            Assert.Equal(PruningPerformed.Instance, p1.Merge(p2).Phase);
-            Assert.Equal(PruningPerformed.Instance, p2.Merge(p1).Phase);
+            var p3 = new PruningPerformed(p2.ObsoleteTime.AddMilliseconds(-1));
+            p2.Merge(p3).Should().Be(p2); // keep greatest obsoleteTime
+            p3.Merge(p2).Should().Be(p2);
         }
 
         [Fact]
-        public void PruningState_should_merge_owner_correctly()
+        public void PruningState_must_merge_owner_correctly()
         {
-            var p1 = new PruningState(_node1, PruningInitialized.Empty);
-            var p2 = new PruningState(_node2, PruningInitialized.Empty);
-
-            var expected = new PruningState(_node1, PruningInitialized.Empty);
-            Assert.Equal(expected, p1.Merge(p2));
-            Assert.Equal(expected, p2.Merge(p1));
+            var p1 = new PruningInitialized(_node1, ImmutableHashSet<Address>.Empty);
+            var p2 = new PruningInitialized(_node2, ImmutableHashSet<Address>.Empty);
+            var expected = new PruningInitialized(_node1, ImmutableHashSet<Address>.Empty);
+            p1.Merge(p2).Should().Be(expected);
+            p2.Merge(p1).Should().Be(expected);
         }
 
         [Fact]
-        public void PruningState_should_merge_seen_correctly()
+        public void PruningState_must_merge_seen_correctly()
         {
-            var p1 = new PruningState(_node1, new PruningInitialized(_node2.Address));
-            var p2 = new PruningState(_node1, new PruningInitialized(_node4.Address));
-
-            var expected = new PruningState(_node1, new PruningInitialized(_node2.Address, _node4.Address));
-            Assert.Equal(expected, p1.Merge(p2));
-            Assert.Equal(expected, p2.Merge(p1));
+            var p1 = new PruningInitialized(_node1, ImmutableHashSet.Create(_node2.Address));
+            var p2 = new PruningInitialized(_node1, ImmutableHashSet.Create(_node4.Address));
+            var expected = new PruningInitialized(_node1, ImmutableHashSet.Create(_node2.Address, _node4.Address));
+            p1.Merge(p2).Should().Be(expected);
+            p2.Merge(p1).Should().Be(expected);
         }
     }
 }

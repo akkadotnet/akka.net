@@ -796,11 +796,20 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// A response for a possible <see cref="Delete"/> request message. It can be one of 3 possible cases:
-    /// <ul>
-    /// <li><see cref="DeleteSuccess"/> when data was deleted successfully.</li>
-    /// <li><see cref="ReplicationDeletedFailure"/> when delete operation ended with failure.</li>
-    /// <li><see cref="DataDeleted"/> when an operation attempted to delete already deleted data.</li>
-    /// </ul>
+    /// <list type="bullet">
+    ///     <item>
+    ///         <term><see cref="DeleteSuccess"/></term>
+    ///         <description>Returned when data was deleted successfully.</description>
+    ///     </item>
+    ///     <item>
+    ///         <term><see cref="ReplicationDeleteFailure"/></term>
+    ///         <description>Returned when delete operation ended with failure.</description>
+    ///     </item>
+    ///     <item>
+    ///         <term><see cref="DataDeleted"/></term>
+    ///         <description>Returned when an operation attempted to delete already deleted data.</description>
+    ///     </item>
+    /// </list>
     /// </summary>
     public interface IDeleteResponse : INoSerializationVerificationNeeded
     {
@@ -854,28 +863,28 @@ namespace Akka.DistributedData
     }
 
     [Serializable]
-    public sealed class ReplicationDeletedFailure : IDeleteResponse, IEquatable<ReplicationDeletedFailure>
+    public sealed class ReplicationDeleteFailure : IDeleteResponse, IEquatable<ReplicationDeleteFailure>
     {
         public IKey Key { get; }
 
-        public ReplicationDeletedFailure(IKey key)
+        public ReplicationDeleteFailure(IKey key)
         {
             Key = key;
         }
         public bool IsSuccessful => false;
         public bool AlreadyDeleted => false;
-
+        
         /// <inheritdoc/>
-        public bool Equals(ReplicationDeletedFailure other)
+        public bool Equals(ReplicationDeleteFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
             return Equals(Key, other.Key);
         }
-
+        
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is ReplicationDeletedFailure && Equals((ReplicationDeletedFailure)obj);
+        public override bool Equals(object obj) => obj is ReplicationDeleteFailure && Equals((ReplicationDeleteFailure)obj);
 
         /// <inheritdoc/>
         public override int GetHashCode() => Key.GetHashCode();

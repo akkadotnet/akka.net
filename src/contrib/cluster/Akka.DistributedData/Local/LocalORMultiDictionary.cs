@@ -15,7 +15,7 @@ using Akka.Util;
 namespace Akka.DistributedData.Local
 {
     /// <summary>
-    /// A wrapper around <see cref="ORMultiDictionary{TKey,TValue}"/> that works in context of the current cluster.
+    /// A wrapper around <see cref="ORMultiValueDictionary{TKey,TValue}"/> that works in context of the current cluster.
     /// </summary>
     /// <typeparam name="TKey">TBD</typeparam>
     /// <typeparam name="TVal">TBD</typeparam>
@@ -26,13 +26,13 @@ namespace Akka.DistributedData.Local
         /// </summary>
         internal sealed class Surrogate : ISurrogate
         {
-            private readonly ORMultiDictionary<TKey, TVal> _dictionary;
+            private readonly ORMultiValueDictionary<TKey, TVal> _dictionary;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="dictionary">TBD</param>
-            public Surrogate(ORMultiDictionary<TKey, TVal> dictionary)
+            public Surrogate(ORMultiValueDictionary<TKey, TVal> dictionary)
             {
                 _dictionary = dictionary;
             }
@@ -47,14 +47,14 @@ namespace Akka.DistributedData.Local
         }
 
         private readonly UniqueAddress _currentNode;
-        private readonly ORMultiDictionary<TKey, TVal> _crdt;
+        private readonly ORMultiValueDictionary<TKey, TVal> _crdt;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="currentNode">TBD</param>
         /// <param name="crdt">TBD</param>
-        internal LocalORMultiDictionary(UniqueAddress currentNode, ORMultiDictionary<TKey, TVal> crdt) : this()
+        internal LocalORMultiDictionary(UniqueAddress currentNode, ORMultiValueDictionary<TKey, TVal> crdt) : this()
         {
             _currentNode = currentNode;
             _crdt = crdt;
@@ -65,7 +65,7 @@ namespace Akka.DistributedData.Local
         /// </summary>
         /// <param name="cluster">TBD</param>
         /// <param name="crdt">TBD</param>
-        public LocalORMultiDictionary(Cluster.Cluster cluster, ORMultiDictionary<TKey, TVal> crdt) : this(cluster.SelfUniqueAddress, crdt)
+        public LocalORMultiDictionary(Cluster.Cluster cluster, ORMultiValueDictionary<TKey, TVal> crdt) : this(cluster.SelfUniqueAddress, crdt)
         {
         }
 
@@ -179,12 +179,12 @@ namespace Akka.DistributedData.Local
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <summary>
-        /// Merges data from provided <see cref="ORMultiDictionary{TKey,TValue}"/> into current CRDT,
+        /// Merges data from provided <see cref="ORMultiValueDictionary{TKey,TValue}"/> into current CRDT,
         /// creating new immutable instance in a result.
         /// </summary>
         /// <param name="dictionary">TBD</param>
         /// <returns>TBD</returns>
-        public LocalORMultiDictionary<TKey, TVal> Merge(ORMultiDictionary<TKey, TVal> dictionary) =>
+        public LocalORMultiDictionary<TKey, TVal> Merge(ORMultiValueDictionary<TKey, TVal> dictionary) =>
             new LocalORMultiDictionary<TKey, TVal>(_currentNode, _crdt.Merge(dictionary));
 
         /// <summary>
@@ -192,6 +192,6 @@ namespace Akka.DistributedData.Local
         /// </summary>
         /// <param name="set">TBD</param>
         /// <returns>TBD</returns>
-        public static implicit operator ORMultiDictionary<TKey, TVal>(LocalORMultiDictionary<TKey, TVal> set) => set._crdt;
+        public static implicit operator ORMultiValueDictionary<TKey, TVal>(LocalORMultiDictionary<TKey, TVal> set) => set._crdt;
     }
 }

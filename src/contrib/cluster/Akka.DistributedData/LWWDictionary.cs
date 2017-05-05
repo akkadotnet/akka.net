@@ -11,32 +11,29 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using Akka.Actor;
 using Akka.Cluster;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
     /// <summary>
-    /// TBD
+    /// Typed key used to store <see cref="LWWDictionary{TKey,TValue}"/> replica 
+    /// inside current <see cref="Replicator"/> key-value store.
     /// </summary>
-    /// <typeparam name="TKey">TBD</typeparam>
-    /// <typeparam name="TValue">TBD</typeparam>
+    /// <typeparam name="TKey">Type of a key used by corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</typeparam>
+    /// <typeparam name="TValue">Type of a value used by corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</typeparam>
     [Serializable]
     public sealed class LWWDictionaryKey<TKey, TValue> : Key<LWWDictionary<TKey, TValue>>
     {
         /// <summary>
-        /// TBD
+        /// Creates a new instance of a <see cref="LWWDictionaryKey{TKey,TValue}"/> with provided key identifier.
         /// </summary>
-        /// <param name="id">TBD</param>
-        public LWWDictionaryKey(string id) : base(id)
-        {
-        }
+        /// <param name="id">Identifier used to find corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</param>
+        public LWWDictionaryKey(string id) : base(id) { }
     }
 
     /// <summary>
-    /// TBD
+    /// A static class with various constructor methods for <see cref="LWWDictionary{TKey,TValue}"/>.
     /// </summary>
     public static class LWWDictionary
     {
@@ -93,7 +90,8 @@ namespace Akka.DistributedData
     /// <typeparam name="TKey">TBD</typeparam>
     /// <typeparam name="TValue">TBD</typeparam>
     [Serializable]
-    public sealed class LWWDictionary<TKey, TValue> : IReplicatedData<LWWDictionary<TKey, TValue>>,
+    public sealed class LWWDictionary<TKey, TValue> : 
+        IDeltaReplicatedData<LWWDictionary<TKey, TValue>, ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation>,
         IRemovedNodePruning<LWWDictionary<TKey, TValue>>, 
         IReplicatedDataSerialization, 
         IEquatable<LWWDictionary<TKey, TValue>>,
@@ -235,6 +233,8 @@ namespace Akka.DistributedData
         public IReplicatedData Merge(IReplicatedData other) => 
             Merge((LWWDictionary<TKey, TValue>) other);
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => _underlying.ModifiedByNodes;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -306,5 +306,20 @@ namespace Akka.DistributedData
             sb.Append(')');
             return sb.ToString();
         }
+
+        public ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation Delta => _underlying.Delta;
+
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => 
+            MergeDelta((ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation) delta);
+
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
+
+        public LWWDictionary<TKey, TValue> MergeDelta(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation delta) => 
+            new LWWDictionary<TKey, TValue>(_underlying.MergeDelta(delta));
+
+        public LWWDictionary<TKey, TValue> ResetDelta() => 
+            new LWWDictionary<TKey, TValue>(_underlying.ResetDelta());
     }
 }

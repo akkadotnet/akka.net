@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Numerics;
@@ -27,7 +28,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounterDictionary_should_be_able_to_increment_and_decrement_entries()
+        public void PNCounterDictionary_must_be_able_to_increment_and_decrement_entries()
         {
             var m = PNCounterDictionary<string>.Empty
                 .Increment(_node1, "a", 2)
@@ -42,7 +43,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounterDictionary_should_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_other_entries()
+        public void PNCounterDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_other_entries()
         {
             var m1 = PNCounterDictionary<string>.Empty
                 .Increment(_node1, "a", 1)
@@ -64,7 +65,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounterDictionary_should_be_able_to_remove_entry()
+        public void PNCounterDictionary_must_be_able_to_remove_entry()
         {
             var m1 = PNCounterDictionary<string>.Empty
                 .Increment(_node1, "a", 1)
@@ -91,6 +92,12 @@ namespace Akka.DistributedData.Tests
                 new KeyValuePair<string, BigInteger>("b", new BigInteger(13)),
                 new KeyValuePair<string, BigInteger>("c", new BigInteger(7))
             }), m3.Merge(m4).Entries);
+        }
+
+        [Fact]
+        public void PNCounterDictionary_must_be_able_to_work_with_deltas()
+        {
+            throw new NotImplementedException();
         }
     }
 }

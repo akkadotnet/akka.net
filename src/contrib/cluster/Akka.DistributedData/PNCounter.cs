@@ -8,6 +8,7 @@
 using Akka.Cluster;
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Numerics;
 using Akka.Actor;
 using Akka.Util;
@@ -29,7 +30,12 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed class PNCounter : IReplicatedData<PNCounter>, IRemovedNodePruning<PNCounter>, IReplicatedDataSerialization, IEquatable<PNCounter>
+    public sealed class PNCounter : 
+        IDeltaReplicatedData<PNCounter, PNCounter>, 
+        IRemovedNodePruning<PNCounter>, 
+        IReplicatedDataSerialization, 
+        IEquatable<PNCounter>,
+        IReplicatedDelta
     {
         public static readonly PNCounter Empty = new PNCounter();
 
@@ -110,6 +116,8 @@ namespace Akka.DistributedData
         public PNCounter Merge(PNCounter other) => 
             new PNCounter(Increments.Merge(other.Increments), Decrements.Merge(other.Decrements));
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => Increments.ModifiedByNodes.Union(Decrements.ModifiedByNodes);
+
         public bool NeedPruningFrom(Cluster.UniqueAddress removedNode) => 
             Increments.NeedPruningFrom(removedNode) || Decrements.NeedPruningFrom(removedNode);
 
@@ -134,6 +142,28 @@ namespace Akka.DistributedData
         public override int GetHashCode() => Increments.GetHashCode() ^ Decrements.GetHashCode();
 
         public IReplicatedData Merge(IReplicatedData other) => Merge((PNCounter) other);
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => Merge((PNCounter) delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
+
+        #region delta
+
+        public PNCounter Delta => new PNCounter(Increments.Delta ?? GCounter.Empty, Decrements.Delta ?? GCounter.Empty);
+
+        public PNCounter MergeDelta(PNCounter delta) => Merge(delta);
+
+        public PNCounter ResetDelta()
+        {
+            if (Increments.Delta == null && Decrements.Delta == null)
+                return this;
+
+            return new PNCounter(Increments.ResetDelta(), Decrements.ResetDelta());
+        }
+
+        #endregion
+
+        IDeltaReplicatedData IReplicatedDelta.Zero => PNCounter.Empty;
     }
 
     public sealed class PNCounterKey : Key<PNCounter>

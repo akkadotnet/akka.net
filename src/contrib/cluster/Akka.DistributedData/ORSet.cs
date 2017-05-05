@@ -10,11 +10,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Numerics;
+using System.Security;
 using System.Text;
-using Akka.Actor;
 using Akka.Cluster;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.DistributedData
@@ -24,7 +22,7 @@ namespace Akka.DistributedData
     {
         public ORSetKey(string id) : base(id) { }
     }
-    
+
     internal interface IORSet { }
 
     public static class ORSet
@@ -32,11 +30,47 @@ namespace Akka.DistributedData
         public static ORSet<T> Create<T>(UniqueAddress node, T element) =>
             ORSet<T>.Empty.Add(node, element);
 
-        public static ORSet<T> Create<T>(params KeyValuePair<UniqueAddress, T>[] elements) => 
+        public static ORSet<T> Create<T>(params KeyValuePair<UniqueAddress, T>[] elements) =>
             elements.Aggregate(ORSet<T>.Empty, (set, kv) => set.Add(kv.Key, kv.Value));
 
         public static ORSet<T> Create<T>(IEnumerable<KeyValuePair<UniqueAddress, T>> elements) =>
             elements.Aggregate(ORSet<T>.Empty, (set, kv) => set.Add(kv.Key, kv.Value));
+
+        /// <summary>
+        /// INTERNAL API
+        /// Subtract the <paramref name="vvector"/> from the <paramref name="dot"/>.
+        /// What this means is that any (node, version) pair in
+        /// <paramref name="dot"/> that is &lt;= an entry in <paramref name="vvector"/> is removed from <paramref name="dot"/>.
+        /// Example [{a, 3}, {b, 2}, {d, 14}, {g, 22}] -
+        ///         [{a, 4}, {b, 1}, {c, 1}, {d, 14}, {e, 5}, {f, 2}] =
+        ///         [{b, 2}, {g, 22}]
+        /// </summary>
+        internal static VersionVector SubtractDots(VersionVector dot, VersionVector vvector)
+        {
+            if (dot.IsEmpty) return VersionVector.Empty;
+
+            if (dot is SingleVersionVector)
+            {
+                // if dot is dominated by version vector, drop it
+                var single = (SingleVersionVector)dot;
+                return vvector.VersionAt(single.Node) >= single.Version ? VersionVector.Empty : dot;
+            }
+
+            if (dot is MultiVersionVector)
+            {
+                var multi = (MultiVersionVector)dot;
+                var acc = ImmutableDictionary<UniqueAddress, long>.Empty.ToBuilder();
+                foreach (var pair in multi.Versions)
+                {
+                    var v2 = vvector.VersionAt(pair.Key);
+                    if (v2 < pair.Value) acc.Add(pair);
+                }
+
+                return VersionVector.Create(acc.ToImmutable());
+            }
+
+            throw new NotSupportedException("Cannot subtract dots from provided version vector");
+        }
     }
 
     /// <summary>
@@ -69,53 +103,25 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public class ORSet<T> : FastMerge<ORSet<T>>, IORSet, IReplicatedDataSerialization, IRemovedNodePruning<ORSet<T>>, IEquatable<ORSet<T>>, IEnumerable<T>
+    public class ORSet<T> :
+        FastMerge<ORSet<T>>,
+        IORSet,
+        IReplicatedDataSerialization,
+        IRemovedNodePruning<ORSet<T>>,
+        IEquatable<ORSet<T>>,
+        IEnumerable<T>,
+        IDeltaReplicatedData<ORSet<T>, ORSet<T>.IDeltaOperation>
     {
         public static readonly ORSet<T> Empty = new ORSet<T>();
 
-        private readonly IImmutableDictionary<T, VersionVector> _elementsMap;
+        internal readonly ImmutableDictionary<T, VersionVector> ElementsMap;
         private readonly VersionVector _versionVector;
 
-        /// <summary>
-        /// INTERNAL API
-        /// Subtract the <paramref name="vvector"/> from the <paramref name="dot"/>.
-        /// What this means is that any (node, version) pair in
-        /// <paramref name="dot"/> that is &lt;= an entry in <paramref name="vvector"/> is removed from <paramref name="dot"/>.
-        /// Example [{a, 3}, {b, 2}, {d, 14}, {g, 22}] -
-        ///         [{a, 4}, {b, 1}, {c, 1}, {d, 14}, {e, 5}, {f, 2}] =
-        ///         [{b, 2}, {g, 22}]
-        /// </summary>
-        private static VersionVector SubtractDots(VersionVector dot, VersionVector vvector)
+
+        internal static ImmutableDictionary<T, VersionVector> MergeCommonKeys(IEnumerable<T> commonKeys, ORSet<T> lhs, ORSet<T> rhs) => commonKeys.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, k) =>
         {
-            if (dot.IsEmpty) return VersionVector.Empty;
-
-            if (dot is SingleVersionVector)
-            {
-                // if dot is dominated by version vector, drop it
-                var single = (SingleVersionVector)dot;
-                return vvector.VersionAt(single.Node) >= single.Version ? VersionVector.Empty : dot;
-            }
-
-            if (dot is MultiVersionVector)
-            {
-                var multi = (MultiVersionVector)dot;
-                var acc = ImmutableDictionary<UniqueAddress, long>.Empty.ToBuilder();
-                foreach (var pair in multi.Versions)
-                {
-                    var v2 = vvector.VersionAt(pair.Key);
-                    if (v2 < pair.Value) acc.Add(pair);
-                }
-
-                return VersionVector.Create(acc.ToImmutable());
-            }
-
-            throw new NotSupportedException("Cannot subtract dots from provided version vector");
-        }
-
-        private static IImmutableDictionary<T, VersionVector> MergeCommonKeys(IEnumerable<T> commonKeys, ORSet<T> lhs, ORSet<T> rhs) => commonKeys.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, k) =>
-        {
-            var l = lhs._elementsMap[k];
-            var r = rhs._elementsMap[k];
+            var l = lhs.ElementsMap[k];
+            var r = rhs.ElementsMap[k];
 
             if (l is SingleVersionVector)
             {
@@ -129,8 +135,8 @@ namespace Akka.DistributedData
                     }
                     else
                     {
-                        var lhsKeep = SubtractDots(lhsDots, rhs._versionVector);
-                        var rhsKeep = SubtractDots(rhsDots, lhs._versionVector);
+                        var lhsKeep = ORSet.SubtractDots(lhsDots, rhs._versionVector);
+                        var rhsKeep = ORSet.SubtractDots(rhsDots, lhs._versionVector);
                         var merged = lhsKeep.Merge(rhsKeep);
                         return merged.IsEmpty ? acc : acc.SetItem(k, merged);
                     }
@@ -144,8 +150,8 @@ namespace Akka.DistributedData
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUnique = commonDotKeys.Length != 0 ? VersionVector.Empty : lhsDots;
                     var rhsUniqueDots = rhsDots.Versions.RemoveRange(commonDotKeys);
-                    var lhsKeep = SubtractDots(lhsUnique, rhs._versionVector);
-                    var rhsKeep = SubtractDots(new MultiVersionVector(rhsUniqueDots), lhs._versionVector);
+                    var lhsKeep = ORSet.SubtractDots(lhsUnique, rhs._versionVector);
+                    var rhsKeep = ORSet.SubtractDots(new MultiVersionVector(rhsUniqueDots), lhs._versionVector);
                     var merged = lhsKeep.Merge(rhsKeep).Merge(new MultiVersionVector(commonDots));
 
                     return merged.IsEmpty ? acc : acc.SetItem(k, merged);
@@ -163,8 +169,8 @@ namespace Akka.DistributedData
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
                     var rhsUnique = commonDotKeys.IsEmpty ? rhsDots : VersionVector.Empty;
-                    var lhsKeep = SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
-                    var rhsKeep = SubtractDots(rhsUnique, lhs._versionVector);
+                    var lhsKeep = ORSet.SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
+                    var rhsKeep = ORSet.SubtractDots(rhsUnique, lhs._versionVector);
                     var merged = lhsKeep.Merge(rhsKeep).Merge(VersionVector.Create(commonDots));
                     return merged.IsEmpty ? acc : acc.SetItem(k, merged);
                 }
@@ -180,33 +186,45 @@ namespace Akka.DistributedData
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
                     var rhsUniqueDots = rhsDots.Versions.RemoveRange(commonDotKeys);
-                    var lhsKeep = SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
-                    var rhsKeep = SubtractDots(VersionVector.Create(rhsUniqueDots), lhs._versionVector);
+                    var lhsKeep = ORSet.SubtractDots(VersionVector.Create(lhsUniqueDots), rhs._versionVector);
+                    var rhsKeep = ORSet.SubtractDots(VersionVector.Create(rhsUniqueDots), lhs._versionVector);
                     var merged = lhsKeep.Merge(rhsKeep).Merge(VersionVector.Create(commonDots));
                     return merged.IsEmpty ? acc : acc.SetItem(k, merged);
                 }
             }
         });
 
-        public ORSet()
+        public ORSet() : this(ImmutableDictionary<T, VersionVector>.Empty, VersionVector.Empty, null)
         {
-            _elementsMap = ImmutableDictionary<T, VersionVector>.Empty;
-            _versionVector = VersionVector.Empty;
         }
 
-        public ORSet(IImmutableDictionary<T, VersionVector> elementsMap, VersionVector versionVector)
+        public ORSet(ImmutableDictionary<T, VersionVector> elementsMap, VersionVector versionVector)
+            : this(elementsMap, versionVector, null)
         {
-            _elementsMap = elementsMap;
+        }
+
+        internal ORSet(T element, VersionVector vector, VersionVector versionVector, IDeltaOperation delta)
+            : this(
+                ImmutableDictionary.CreateRange(new[] { new KeyValuePair<T, VersionVector>(element, vector) }),
+                versionVector,
+                delta)
+        {
+        }
+
+        internal ORSet(ImmutableDictionary<T, VersionVector> elementsMap, VersionVector versionVector, IDeltaOperation delta)
+        {
+            ElementsMap = elementsMap;
             _versionVector = versionVector;
+            _delta = delta;
         }
 
-        public IImmutableSet<T> Elements => _elementsMap.Keys.ToImmutableHashSet();
+        public IImmutableSet<T> Elements => ElementsMap.Keys.ToImmutableHashSet();
 
-        public bool Contains(T elem) => _elementsMap.ContainsKey(elem);
+        public bool Contains(T elem) => ElementsMap.ContainsKey(elem);
 
-        public bool IsEmpty => _elementsMap.Count == 0;
+        public bool IsEmpty => ElementsMap.Count == 0;
 
-        public int Count => _elementsMap.Count;
+        public int Count => ElementsMap.Count;
 
         /// <summary>
         /// Adds an element to the set
@@ -218,9 +236,15 @@ namespace Akka.DistributedData
         /// </summary>
         public ORSet<T> Add(UniqueAddress node, T element)
         {
-            var vec = _versionVector.Increment(node);
-            var dot = VersionVector.Create(node, vec.VersionAt(node));
-            return AssignAncestor(new ORSet<T>(_elementsMap.SetItem(element, dot), vec));
+            var newVersionVector = _versionVector.Increment(node);
+            var newDot = VersionVector.Create(node, newVersionVector.VersionAt(node));
+            IDeltaOperation newDelta = new AddDeltaOperation(new ORSet<T>(element, newDot, newDot, null));
+            if (Delta != null)
+            {
+                newDelta = (IDeltaOperation)Delta.Merge(newDelta);
+            }
+
+            return AssignAncestor(new ORSet<T>(ElementsMap.SetItem(element, newDot), newVersionVector, newDelta));
         }
 
         /// <summary>
@@ -232,11 +256,38 @@ namespace Akka.DistributedData
         /// <summary>
         /// Removes an element from the set.
         /// </summary>
-        public ORSet<T> Remove(UniqueAddress node, T element) =>
-            AssignAncestor(new ORSet<T>(_elementsMap.Remove(element), _versionVector));
+        public ORSet<T> Remove(UniqueAddress node, T element)
+        {
+            var deltaDot = VersionVector.Create(node, _versionVector.VersionAt(node));
+            IDeltaOperation newDelta = new RemoveDeltaOperation(new ORSet<T>(element, deltaDot, _versionVector, null));
+            if (Delta != null)
+            {
+                newDelta = (IDeltaOperation)Delta.Merge(newDelta);
+            }
 
-        public ORSet<T> Clear(UniqueAddress node) =>
-            AssignAncestor(new ORSet<T>(ImmutableDictionary<T, VersionVector>.Empty, _versionVector));
+            return AssignAncestor(new ORSet<T>(ElementsMap.Remove(element), _versionVector, newDelta));
+        }
+
+        /// <summary>
+        /// Removes all elements from the set, but keeps the history.
+        /// This has the same result as using <see cref="Remove(Akka.Cluster.Cluster,T)"/> for each
+        /// element, but it is more efficient.
+        /// </summary>
+        public ORSet<T> Clear(Akka.Cluster.Cluster node) => Clear(node.SelfUniqueAddress);
+
+        /// <summary>
+        /// Removes all elements from the set, but keeps the history.
+        /// This has the same result as using <see cref="Remove(UniqueAddress,T)"/> for each
+        /// element, but it is more efficient.
+        /// </summary>
+        public ORSet<T> Clear(UniqueAddress node)
+        {
+            var newFullState = new ORSet<T>(ImmutableDictionary<T, VersionVector>.Empty, _versionVector);
+            IDeltaOperation newDelta = new FullStateDeltaOperation(newFullState);
+            if (Delta != null) newDelta = (IDeltaOperation)Delta.Merge(newDelta);
+
+            return AssignAncestor(new ORSet<T>(ImmutableDictionary<T, VersionVector>.Empty, _versionVector, newDelta));
+        }
 
         /// <summary>
         /// When element is in this Set but not in that Set:
@@ -255,55 +306,61 @@ namespace Akka.DistributedData
         {
             if (ReferenceEquals(this, other) || other.IsAncestorOf(this)) return ClearAncestor();
             else if (IsAncestorOf(other)) return other.ClearAncestor();
-            else
-            {
-                var commonKeys = _elementsMap.Count < other._elementsMap.Count
-                    ? _elementsMap.Keys.Where(other._elementsMap.ContainsKey)
-                    : other._elementsMap.Keys.Where(_elementsMap.ContainsKey);
-                var entries00 = MergeCommonKeys(commonKeys, this, other);
-                var thisUniqueKeys = _elementsMap.Keys.Where(key => !other._elementsMap.ContainsKey(key));
-                var entries0 = MergeDisjointKeys(thisUniqueKeys, _elementsMap, other._versionVector, entries00);
-                var otherUniqueKeys = other._elementsMap.Keys.Where(key => !_elementsMap.ContainsKey(key));
-                var entries = MergeDisjointKeys(otherUniqueKeys, other._elementsMap, _versionVector, entries0);
-                var mergedVector = _versionVector.Merge(other._versionVector);
-
-                ClearAncestor();
-                return new ORSet<T>(entries, mergedVector);
-            }
+            else return DryMerge(other, addDeltaOp: false);
         }
 
-        internal IImmutableDictionary<T, VersionVector> MergeDisjointKeys(IEnumerable<T> keys,
-            IImmutableDictionary<T, VersionVector> elementsMap, VersionVector vector,
-            IImmutableDictionary<T, VersionVector> accumulator)
+        private ORSet<T> DryMerge(ORSet<T> other, bool addDeltaOp)
+        {
+            var commonKeys = ElementsMap.Count < other.ElementsMap.Count
+                ? ElementsMap.Keys.Where(other.ElementsMap.ContainsKey)
+                : other.ElementsMap.Keys.Where(ElementsMap.ContainsKey);
+
+            var entries00 = MergeCommonKeys(commonKeys, this, other);
+            var entries0 = addDeltaOp
+                ? entries00.AddRange(ElementsMap.Where(entry => !other.ElementsMap.ContainsKey(entry.Key)))
+                : MergeDisjointKeys(ElementsMap.Keys.Where(key => !other.ElementsMap.ContainsKey(key)), ElementsMap, other._versionVector, entries00);
+
+            var otherUniqueKeys = other.ElementsMap.Keys.Where(key => !ElementsMap.ContainsKey(key));
+            var entries = MergeDisjointKeys(otherUniqueKeys, other.ElementsMap, _versionVector, entries0);
+            var mergedVector = _versionVector.Merge(other._versionVector);
+
+            ClearAncestor();
+            return new ORSet<T>(entries, mergedVector);
+        }
+
+        internal static ImmutableDictionary<T, VersionVector> MergeDisjointKeys(IEnumerable<T> keys,
+            ImmutableDictionary<T, VersionVector> elementsMap, VersionVector vector,
+            ImmutableDictionary<T, VersionVector> accumulator)
         {
             return keys.Aggregate(accumulator, (acc, k) =>
             {
                 var dots = elementsMap[k];
-                return vector.IsSame(dots) || vector.IsAfter(dots) 
-                ? acc 
-                : acc.SetItem(k, SubtractDots(dots, vector));
+                return vector.IsSame(dots) || vector.IsAfter(dots)
+                    ? acc
+                    : acc.SetItem(k, ORSet.SubtractDots(dots, vector));
             });
         }
 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => _versionVector.ModifiedByNodes;
         public bool NeedPruningFrom(UniqueAddress removedNode) => _versionVector.NeedPruningFrom(removedNode);
 
         public ORSet<T> Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
-            var pruned = _elementsMap.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, kv) => kv.Value.NeedPruningFrom(removedNode)
+            var pruned = ElementsMap.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, kv) => kv.Value.NeedPruningFrom(removedNode)
                 ? acc.SetItem(kv.Key, kv.Value.Prune(removedNode, collapseInto))
                 : acc);
 
-            if (pruned.IsEmpty) return new ORSet<T>(_elementsMap, _versionVector.Prune(removedNode, collapseInto));
+            if (pruned.IsEmpty) return new ORSet<T>(ElementsMap, _versionVector.Prune(removedNode, collapseInto));
             else
             {
-                var newSet = new ORSet<T>(_elementsMap.AddRange(pruned), _versionVector.Prune(removedNode, collapseInto));
+                var newSet = new ORSet<T>(ElementsMap.AddRange(pruned), _versionVector.Prune(removedNode, collapseInto));
                 return pruned.Keys.Aggregate(newSet, (set, elem) => set.Add(collapseInto, elem));
             }
         }
 
         public ORSet<T> PruningCleanup(UniqueAddress removedNode)
         {
-            var updated = _elementsMap.Aggregate(_elementsMap, (acc, kv) => kv.Value.NeedPruningFrom(removedNode)
+            var updated = ElementsMap.Aggregate(ElementsMap, (acc, kv) => kv.Value.NeedPruningFrom(removedNode)
                 ? acc.SetItem(kv.Key, kv.Value.PruningCleanup(removedNode))
                 : acc);
 
@@ -315,10 +372,10 @@ namespace Akka.DistributedData
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return _versionVector == other._versionVector && _elementsMap.SequenceEqual(other._elementsMap);
+            return _versionVector == other._versionVector && ElementsMap.SequenceEqual(other.ElementsMap);
         }
 
-        public IEnumerator<T> GetEnumerator() => _elementsMap.Keys.GetEnumerator();
+        public IEnumerator<T> GetEnumerator() => ElementsMap.Keys.GetEnumerator();
 
         public override bool Equals(object obj) => obj is ORSet<T> && Equals((ORSet<T>)obj);
 
@@ -326,9 +383,14 @@ namespace Akka.DistributedData
         {
             unchecked
             {
-                return (_elementsMap.GetHashCode() * 397) ^ (_versionVector.GetHashCode());
+                return (ElementsMap.GetHashCode() * 397) ^ (_versionVector.GetHashCode());
             }
         }
+
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((IDeltaOperation) delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -339,5 +401,215 @@ namespace Akka.DistributedData
             sb.Append(')');
             return sb.ToString();
         }
+
+        #region delta replication
+
+        public interface IDeltaOperation : IReplicatedDelta, IRequireCausualDeliveryOfDeltas
+        {
+        }
+
+        internal abstract class AtomicDeltaOperation : IDeltaOperation
+        {
+            public abstract ORSet<T> Underlying { get; }
+            public abstract IReplicatedData Merge(IReplicatedData other);
+
+            public IDeltaReplicatedData Zero => ORSet<T>.Empty;
+        }
+
+        internal sealed class AddDeltaOperation : AtomicDeltaOperation
+        {
+            public AddDeltaOperation(ORSet<T> underlying)
+            {
+                Underlying = underlying;
+            }
+
+            public override ORSet<T> Underlying { get; }
+            public override IReplicatedData Merge(IReplicatedData other)
+            {
+                if (other is AddDeltaOperation)
+                {
+                    var u = ((AddDeltaOperation)other).Underlying;
+                    // Note that we only merge deltas originating from the same node
+                    return new AddDeltaOperation(new ORSet<T>(
+                        ConcatElementsMap(u.ElementsMap),
+                        Underlying._versionVector.Merge(u._versionVector)));
+                }
+                else if (other is AtomicDeltaOperation)
+                {
+                    return new DeltaGroup(ImmutableArray.Create(this, other));
+                }
+                else if (other is DeltaGroup)
+                {
+                    var vector = ((DeltaGroup)other).Operations;
+                    return new DeltaGroup(vector.Add(this));
+                }
+                else throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
+            }
+
+            private ImmutableDictionary<T, VersionVector> ConcatElementsMap(
+                ImmutableDictionary<T, VersionVector> thatMap)
+            {
+                var u = Underlying.ElementsMap.ToBuilder();
+                foreach (var entry in thatMap)
+                {
+                    u[entry.Key] = entry.Value;
+                }
+                return u.ToImmutable();
+            }
+        }
+
+        internal sealed class RemoveDeltaOperation : AtomicDeltaOperation
+        {
+            public RemoveDeltaOperation(ORSet<T> underlying)
+            {
+                if (underlying.Count != 1)
+                    throw new ArgumentException($"RemoveDeltaOperation should contain one removed element, but was {underlying}");
+
+                Underlying = underlying;
+            }
+
+            public override ORSet<T> Underlying { get; }
+            public override IReplicatedData Merge(IReplicatedData other)
+            {
+                if (other is AtomicDeltaOperation)
+                {
+                    return new DeltaGroup(ImmutableArray.Create(this, other));
+                }
+                else if (other is DeltaGroup)
+                {
+                    var vector = ((DeltaGroup)other).Operations;
+                    return new DeltaGroup(vector.Add(this));
+                }
+                else throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
+            }
+        }
+
+        internal sealed class FullStateDeltaOperation : AtomicDeltaOperation
+        {
+            public FullStateDeltaOperation(ORSet<T> underlying)
+            {
+                Underlying = underlying;
+            }
+
+            public override ORSet<T> Underlying { get; }
+            public override IReplicatedData Merge(IReplicatedData other)
+            {
+                if (other is AtomicDeltaOperation)
+                {
+                    return new DeltaGroup(ImmutableArray.Create(this, other));
+                }
+                else if (other is DeltaGroup)
+                {
+                    var vector = ((DeltaGroup)other).Operations;
+                    return new DeltaGroup(vector.Add(this));
+                }
+                else throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
+            }
+        }
+
+        internal sealed class DeltaGroup : IDeltaOperation
+        {
+            public ImmutableArray<IReplicatedData> Operations { get; }
+
+            public DeltaGroup(ImmutableArray<IReplicatedData> operations)
+            {
+                Operations = operations;
+            }
+
+            public IReplicatedData Merge(IReplicatedData other)
+            {
+                if (other is AddDeltaOperation)
+                {
+                    // merge AddDeltaOp into last AddDeltaOp in the group, if possible
+                    var last = Operations[Operations.Length - 1];
+                    return last is AddDeltaOperation
+                        ? new DeltaGroup(Operations.SetItem(Operations.Length - 1, other.Merge(last)))
+                        : new DeltaGroup(Operations.Add(other));
+                }
+                else if (other is DeltaGroup)
+                {
+                    var otherVector = ((DeltaGroup)other).Operations;
+                    return new DeltaGroup(Operations.AddRange(otherVector));
+                }
+                else
+                {
+                    return new DeltaGroup(Operations.Add(other));
+                }
+            }
+
+            public IDeltaReplicatedData Zero => ORSet<T>.Empty;
+        }
+
+        [NonSerialized]
+        private readonly IDeltaOperation _delta;
+
+        public IDeltaOperation Delta => _delta;
+
+        public ORSet<T> MergeDelta(IDeltaOperation delta)
+        {
+            if (delta is AddDeltaOperation) return DryMerge(((AddDeltaOperation)delta).Underlying, addDeltaOp: true);
+            else if (delta is RemoveDeltaOperation) return MergeRemoveDelta((RemoveDeltaOperation)delta);
+            else if (delta is FullStateDeltaOperation) return DryMerge(((FullStateDeltaOperation)delta).Underlying, addDeltaOp: false);
+            else if (delta is DeltaGroup)
+            {
+                var group = (DeltaGroup)delta;
+                var acc = this;
+                foreach (var op in group.Operations)
+                {
+                    if (op is AddDeltaOperation) acc = acc.DryMerge(((AddDeltaOperation)op).Underlying, addDeltaOp: true);
+                    else if (op is RemoveDeltaOperation) acc = acc.MergeRemoveDelta((RemoveDeltaOperation)op);
+                    else if (op is FullStateDeltaOperation) acc = acc.DryMerge(((RemoveDeltaOperation)op).Underlying, addDeltaOp: false);
+                    else throw new ArgumentException("DeltaGroup shouldn't be nested");
+                }
+
+                return acc;
+            }
+            else throw new ArgumentException($"Cannot merge delta of type {delta?.GetType()}", nameof(delta));
+        }
+
+        private ORSet<T> MergeRemoveDelta(RemoveDeltaOperation delta)
+        {
+            var other = delta.Underlying;
+            var kv = other.ElementsMap.First();
+            var elem = kv.Key;
+
+            var deleteDotNodes = new List<UniqueAddress>();
+            var allLessThanOrEq = true;
+            using (var deleteDots = other._versionVector.VersionEnumerator)
+            {
+                while (deleteDots.MoveNext())
+                {
+                    var curr = deleteDots.Current;
+                    deleteDotNodes.Add(curr.Key);
+                    allLessThanOrEq &= _versionVector.VersionAt(curr.Key) <= curr.Value;
+                }
+            }
+
+            var newElementsMap = ElementsMap;
+            if (allLessThanOrEq)
+            {
+                VersionVector dot;
+                if (ElementsMap.TryGetValue(elem, out dot))
+                {
+                    using (var e = dot.VersionEnumerator)
+                    {
+                        var allContains = true;
+                        while (e.MoveNext()) allContains &= deleteDotNodes.Contains(e.Current.Key);
+                        if (allContains)
+                            newElementsMap = ElementsMap.Remove(elem);
+                    }
+                }
+            }
+
+            ClearAncestor();
+            return new ORSet<T>(newElementsMap, _versionVector.Merge(other._versionVector));
+        }
+
+        public ORSet<T> ResetDelta()
+        {
+            return Delta == null ? this : AssignAncestor(new ORSet<T>(ElementsMap, _versionVector));
+        }
+
+        #endregion
     }
 }
