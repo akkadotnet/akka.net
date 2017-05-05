@@ -16,6 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="reference.conf" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />

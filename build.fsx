@@ -67,7 +67,6 @@ Target "RunTests" (fun _ ->
     let projects = !! "./**/core/**/*.Tests.csproj"
                    ++ "./**/contrib/**/*.Tests.csproj"
                    -- "./**/Akka.Streams.Tests.csproj"
-                   -- "./**/Akka.Persistence.Sqlite.Tests.csproj"
                    -- "./**/Akka.Remote.TestKit.Tests.csproj"
 
     let runSingleProject project =
