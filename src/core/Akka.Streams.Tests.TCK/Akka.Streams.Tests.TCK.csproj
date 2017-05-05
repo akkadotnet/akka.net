@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
-    <PackageReference Include="Reactive.Streams.TCK" Version="1.0.0-RC1" />
+    <PackageReference Include="Reactive.Streams.TCK" Version="1.0.2" />
     <PackageReference Include="NUnit" Version="3.4.1" />
   </ItemGroup>
 
