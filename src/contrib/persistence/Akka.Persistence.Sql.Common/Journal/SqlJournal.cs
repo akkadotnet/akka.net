@@ -513,14 +513,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected ITimestampProvider GetTimestampProvider(string typeName)
         {
             var type = Type.GetType(typeName, true);
-            try
-            {
-                return (ITimestampProvider)Activator.CreateInstance(type, Context.System);
-            }
-            catch (Exception)
-            {
-                return (ITimestampProvider)Activator.CreateInstance(type);
-            }
+            return (ITimestampProvider) Context.System.DependencyResolver.Resolve(type);
         }
 
         [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]

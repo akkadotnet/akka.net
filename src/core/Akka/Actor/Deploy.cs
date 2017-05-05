@@ -186,6 +186,22 @@ namespace Akka.Actor
             get { return _dispatcher; }
         }
 
+        public override bool Equals(object obj) => Equals(obj as Deploy);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (_config != null ? _config.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (_dispatcher != null ? _dispatcher.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (_mailbox != null ? _mailbox.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (_path != null ? _path.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (_routerConfig != null ? _routerConfig.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (_scope != null ? _scope.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
@@ -195,15 +211,15 @@ namespace Akka.Actor
         /// </returns>
         public bool Equals(Deploy other)
         {
-            if (other == null) return false;
-            return ((string.IsNullOrEmpty(_mailbox) && string.IsNullOrEmpty(other._mailbox)) ||
-                    string.Equals(_mailbox, other._mailbox)) &&
+            if (ReferenceEquals(this, other)) return true;
+            if (ReferenceEquals(other, null)) return false;
+            return string.Equals(_mailbox, other._mailbox) &&
                    string.Equals(_dispatcher, other._dispatcher) &&
                    string.Equals(_path, other._path) &&
                    _routerConfig.Equals(other._routerConfig) &&
                    ((_config.IsNullOrEmpty() && other._config.IsNullOrEmpty()) ||
                     _config.ToString().Equals(other._config.ToString())) &&
-                   (_scope == null && other._scope == null || (_scope != null && _scope.Equals(other._scope)));
+                   Equals(_scope, other._scope);
         }
 
         /// <summary>

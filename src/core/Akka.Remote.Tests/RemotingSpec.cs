@@ -386,13 +386,11 @@ namespace Akka.Remote.Tests
         {
             try
             {
-                Resolve.SetResolver(new TestResolver());
-                var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
+                var r = Sys.ActorOf(Props.Create<Echo2>(), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
             }
             finally
             {
-                Resolve.SetResolver(null);
             }
         }
 
@@ -401,15 +399,13 @@ namespace Akka.Remote.Tests
         {
             try
             {
-                Resolve.SetResolver(new TestResolver());
-                var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
+                var r = Sys.ActorOf(Props.Create<Echo2>(), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
                 r.Tell("ping", TestActor);
                 ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
             }
             finally
             {
-                Resolve.SetResolver(null);
             }
         }
 
@@ -697,14 +693,6 @@ namespace Akka.Remote.Tests
             {
                 if (Sender.Path.Equals(_one.Path)) _another.Tell(message);
                 if (Sender.Path.Equals(_another.Path)) _one.Tell(message);
-            }
-        }
-
-        class TestResolver : IResolver
-        {
-            public T Resolve<T>(object[] args)
-            {
-                return Activator.CreateInstance(typeof(T), args).AsInstanceOf<T>();
             }
         }
 

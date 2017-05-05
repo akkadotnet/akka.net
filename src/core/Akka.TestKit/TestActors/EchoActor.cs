@@ -22,15 +22,15 @@ namespace Akka.TestKit.TestActors
         /// </summary>
         /// <param name="testkit">TBD</param>
         /// <param name="echoBackToSenderAsWell">TBD</param>
-        public EchoActor(TestKitBase testkit, bool echoBackToSenderAsWell=true)
+        public EchoActor(TestKitBase testkit, bool echoBackToSenderAsWell = true)
         {
             ReceiveAny(msg =>
             {
                 var sender = Sender;
                 var testActor = testkit.TestActor;
-                if(echoBackToSenderAsWell && testActor != sender)
+                if (echoBackToSenderAsWell && !Equals(testActor, sender))
                     sender.Forward(msg);
-                testActor.Tell(msg,Sender);
+                testActor.Tell(msg, Sender);
             });
         }
 
@@ -47,7 +47,7 @@ namespace Akka.TestKit.TestActors
         /// <returns>TBD</returns>
         public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
         {
-            return Actor.Props.Create(()=>new EchoActor(testkit, echoBackToSenderAsWell));
+            return Actor.Props.Create(() => new EchoActor(testkit, echoBackToSenderAsWell));
         }
     }
 }

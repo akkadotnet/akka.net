@@ -235,7 +235,11 @@ namespace Akka.IO
             _system = system;
             Settings = new DnsSettings(system.Settings.Config.GetConfig("akka.io.dns"));
             //TODO: system.dynamicAccess.getClassFor[DnsProvider](Settings.ProviderObjectName).get.newInstance()
-            Provider = (IDnsProvider) Activator.CreateInstance(Type.GetType(Settings.ProviderObjectName));
+            var dnsProviderType = Type.GetType(Settings.ProviderObjectName, true);
+            if (!typeof(IDnsProvider).IsAssignableFrom(dnsProviderType))
+                throw new ArgumentException($"{Settings.ProviderObjectName} doesn't implement {nameof(IDnsProvider)} interface.");
+
+            Provider = (IDnsProvider) system.DependencyResolver.Resolve(dnsProviderType);
             Cache = Provider.Cache;
         }
 

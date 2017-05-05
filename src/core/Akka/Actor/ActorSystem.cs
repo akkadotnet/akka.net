@@ -75,6 +75,11 @@ namespace Akka.Actor
         public abstract ILoggingAdapter Log { get; }
 
         /// <summary>
+        /// Gets the dependency resolver used to create various components inside the actor system itself.
+        /// </summary>
+        public abstract IDependencyResolver DependencyResolver { get; }
+
+        /// <summary>
         /// Start-up time since the epoch.
         /// </summary>
         public TimeSpan StartTime { get; } = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -118,6 +123,13 @@ namespace Akka.Actor
             system.Start();
             return system;
         }
+
+        /// <summary>
+        /// Sets a provided <paramref name="dependencyResolver"/> as a new default one.
+        /// If it was different from existing one, it disposes an old version.
+        /// </summary>
+        /// <param name="dependencyResolver"></param>
+        public abstract void UseDependencyResolver(IDependencyResolver dependencyResolver);
 
         /// <summary>
         /// Retrieves the specified extension that is registered to this actor system.

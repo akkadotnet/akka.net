@@ -397,17 +397,9 @@ namespace Akka.Persistence.Journal
         {
             var type = Type.GetType(qualifiedName);
             if (!typeof(T).IsAssignableFrom(type))
-                throw new ArgumentException(string.Format("Couldn't create instance of [{0}] from provided qualified type name [{1}], because it's not assignable from it",
-                    typeof(T), qualifiedName));
+                throw new ArgumentException($"Couldn't create instance of [{typeof(T)}] from provided qualified type name [{qualifiedName}], because it's not assignable from it");
 
-            try
-            {
-                return (T)Activator.CreateInstance(type, system);
-            }
-            catch (MissingMethodException)
-            {
-                return (T)Activator.CreateInstance(type);
-            }
+            return (T)system.DependencyResolver.Resolve(type);
         }
 
         private static IDictionary<string, string> ConfigToMap(Config config, string path)
