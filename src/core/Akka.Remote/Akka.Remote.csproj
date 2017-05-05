@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION;AKKAIO</DefineConstants>
+    <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">

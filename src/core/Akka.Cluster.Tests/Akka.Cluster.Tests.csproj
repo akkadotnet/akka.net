@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Tests</AssemblyTitle>
-    <TargetFrameworks>net452;netcoreapp1.0</TargetFrameworks>
+    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>
@@ -20,7 +20,7 @@
     <DefineConstants>$(DefineConstants);SERIALIZABLE</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 

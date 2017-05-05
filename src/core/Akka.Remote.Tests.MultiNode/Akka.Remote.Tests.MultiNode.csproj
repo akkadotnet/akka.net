@@ -2,7 +2,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Remote.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
   </PropertyGroup>
   
   <ItemGroup>
@@ -18,10 +17,8 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">

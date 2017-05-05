@@ -12,17 +12,15 @@
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.6' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
-    <PackageReference Include="Reactive.Streams" version="1.0.0-RC1" />
+    <PackageReference Include="Reactive.Streams" version="1.0.2" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
-    <PackageReference Include="Microsoft.NETCore.Portable.Compatibility" version="1.0.1" />
     <PackageReference Include="System.Reflection.TypeExtensions" version="4.3.0" />
   </ItemGroup>
 

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.FSharp.Tests</AssemblyTitle>
-    <TargetFrameworks>net451</TargetFrameworks>
+    <TargetFrameworks>net452</TargetFrameworks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
@@ -29,7 +29,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <Reference Include="System" />
     <Reference Include="System.Numerics" />
   </ItemGroup>

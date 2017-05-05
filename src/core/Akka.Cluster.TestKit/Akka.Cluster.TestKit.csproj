@@ -5,7 +5,7 @@
     <Description>Helper classes for combining the Akka.Remote.TestKit with Akka.Cluster</Description>
     <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
     <VersionPrefix>1.3.0</VersionPrefix>
-    <TargetFrameworks>net45</TargetFrameworks>
+    <TargetFrameworks>net452</TargetFrameworks>
     <PackageTags>akka;actors;actor model;Akka;concurrency;network;cluster;testkit</PackageTags>
     <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
@@ -18,7 +18,7 @@
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
 

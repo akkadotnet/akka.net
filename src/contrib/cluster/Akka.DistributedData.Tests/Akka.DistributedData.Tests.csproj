@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyTitle>Akka.DistributedData.Tests</AssemblyTitle>
-    <TargetFrameworks>net452;netcoreapp1.0</TargetFrameworks>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
+    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>
@@ -15,10 +14,6 @@
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
     <PackageReference Include="FluentAssertions" Version="4.14.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">
-    <PackageReference Include="Microsoft.NETCore.Portable.Compatibility" version="1.0.1" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">

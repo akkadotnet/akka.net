@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyTitle>Akka.Tests</AssemblyTitle>
-    <TargetFrameworks>net452;netcoreapp1.0</TargetFrameworks>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
+    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>
@@ -24,8 +23,7 @@
     <PackageReference Include="FsCheck.Xunit"  Version="2.6.2" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">
-    <PackageReference Include="Microsoft.NETCore.Portable.Compatibility" version="1.0.1" />
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
     <PackageReference Include="System.Net.Sockets" version="4.3.0" />
     <PackageReference Include="System.Runtime.Extensions" version="4.3.0" />
   </ItemGroup>
@@ -34,7 +32,7 @@
     <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;FSCHECK</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 

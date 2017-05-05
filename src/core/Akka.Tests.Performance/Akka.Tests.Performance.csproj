@@ -2,11 +2,12 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Tests.Performance</AssemblyTitle>
-    <TargetFrameworks>net45</TargetFrameworks>
+    <TargetFrameworks>net452</TargetFrameworks>
     <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="App.config" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>
@@ -17,10 +18,8 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Xml" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

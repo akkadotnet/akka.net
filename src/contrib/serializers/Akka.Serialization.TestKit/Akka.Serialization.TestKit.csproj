@@ -6,7 +6,7 @@
     <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
     <VersionPrefix>1.3.0</VersionPrefix>
     <VersionSuffix>beta</VersionSuffix>
-    <TargetFrameworks>net45</TargetFrameworks>
+    <TargetFrameworks>net452</TargetFrameworks>
     <PackageTags>akka;actors;actor model;Akka;concurrency;hyperion;serializer;serialize;testkit</PackageTags>
     <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
@@ -17,12 +17,7 @@
     <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
 

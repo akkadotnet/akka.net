@@ -4,9 +4,9 @@
     <AssemblyTitle>Akka.Persistence.Sql.TestKit</AssemblyTitle>
     <Description>Akka.NET TestKit for SQL-based ADO.NET Persistence middleware</Description>
     <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
-    <VersionPrefix>1.5.0</VersionPrefix>
+    <VersionPrefix>1.3.0</VersionPrefix>
     <VersionSuffix>beta</VersionSuffix>
-    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
+    <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
     <PackageTags>akka;actors;actor model;Akka;concurrency;persistence;testkit;eventsource;sql;reactive;streams</PackageTags>
     <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
@@ -22,15 +22,11 @@
     <PackageReference Include="FluentAssertions" Version="4.14.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <Reference Include="System" />
-  </ItemGroup>
-
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
     <PackageReference Include="Microsoft.NETCore.Portable.Compatibility" version="1.0.1" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
   </PropertyGroup>
 

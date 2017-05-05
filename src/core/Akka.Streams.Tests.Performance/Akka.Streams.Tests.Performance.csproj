@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="App.config" />
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.Streams.Tests\Akka.Streams.Tests.csproj" />
     <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
@@ -19,10 +20,8 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Xml" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

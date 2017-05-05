@@ -2,7 +2,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.DistributedData.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
   </PropertyGroup>
  
   <ItemGroup>
@@ -17,10 +16,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
     <PackageReference Include="FluentAssertions" Version="4.14.0" />
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <DefineConstants>$(DefineConstants);</DefineConstants>
-  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
