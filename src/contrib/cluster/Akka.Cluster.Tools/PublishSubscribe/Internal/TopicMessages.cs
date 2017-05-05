@@ -441,6 +441,28 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             Message = message;
         }
+
+        private bool Equals(SendToOneSubscriber other)
+        {
+            return Equals(Message, other.Message);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is SendToOneSubscriber && Equals((SendToOneSubscriber)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Message != null ? Message.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return $"SendToOneSubscriber<Message:{Message}>";
+        }
     }
 
     /// <summary>

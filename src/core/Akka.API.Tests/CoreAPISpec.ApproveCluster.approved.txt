@@ -4,6 +4,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.Performance")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
@@ -321,7 +322,9 @@ namespace Akka.Cluster.Routing
         public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) { }
         public ClusterRouterPoolSettings(int totalInstances, int maxInstancesPerNode, bool allowLocalRoutees, string useRole = null) { }
         public int MaxInstancesPerNode { get; }
+        public override bool Equals(object obj) { }
         public static Akka.Cluster.Routing.ClusterRouterPoolSettings FromConfig(Akka.Configuration.Config config) { }
+        public override int GetHashCode() { }
     }
     public abstract class ClusterRouterSettingsBase
     {
@@ -329,5 +332,15 @@ namespace Akka.Cluster.Routing
         public bool AllowLocalRoutees { get; }
         public int TotalInstances { get; }
         public string UseRole { get; }
+    }
+}
+namespace Akka.Cluster.Serialization
+{
+    public class ClusterMessageSerializer : Akka.Serialization.Serializer
+    {
+        public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
     }
 }

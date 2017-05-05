@@ -13,7 +13,7 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote.Transport
 {

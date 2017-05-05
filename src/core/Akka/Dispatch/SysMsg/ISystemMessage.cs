@@ -456,7 +456,7 @@ namespace Akka.Dispatch.SysMsg
     public class Watch : SystemMessage
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Watch" /> class.
+        /// Initializes a new instance of the <see cref="Watch" /> class.
         /// </summary>
         /// <param name="watchee">The watchee.</param>
         /// <param name="watcher">The watcher.</param>
@@ -467,16 +467,37 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        ///     Gets the watchee.
+        /// Gets the watchee.
         /// </summary>
         /// <value>The watchee.</value>
-        public IInternalActorRef Watchee { get; private set; }
+        public IInternalActorRef Watchee { get; }
 
         /// <summary>
-        ///     Gets the watcher.
+        /// Gets the watcher.
         /// </summary>
         /// <value>The watcher.</value>
-        public IInternalActorRef Watcher { get; private set; }
+        public IInternalActorRef Watcher { get; }
+
+        protected bool Equals(Watch other)
+        {
+            return Equals(Watchee, other.Watchee) && Equals(Watcher, other.Watcher);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Watch)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Watchee?.GetHashCode() ?? 0) * 397) ^ (Watcher?.GetHashCode() ?? 0);
+            }
+        }
 
         /// <summary>
         /// TBD
@@ -484,7 +505,7 @@ namespace Akka.Dispatch.SysMsg
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return "<Watch>: " + Watcher + " wants to watch " + Watchee;
+            return $"<Watch>: {Watcher} wants to watch {Watchee}";
         }
     }
 
@@ -494,7 +515,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class Unwatch : SystemMessage
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Unwatch" /> class.
+        /// Initializes a new instance of the <see cref="Unwatch" /> class.
         /// </summary>
         /// <param name="watchee">The watchee.</param>
         /// <param name="watcher">The watcher.</param>
@@ -505,16 +526,36 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        ///     Gets the watchee.
+        /// Gets the watchee.
         /// </summary>
         /// <value>The watchee.</value>
-        public IInternalActorRef Watchee { get; private set; }
+        public IInternalActorRef Watchee { get; }
 
         /// <summary>
-        ///     Gets the watcher.
+        /// Gets the watcher.
         /// </summary>
         /// <value>The watcher.</value>
-        public IInternalActorRef Watcher { get; private set; }
+        public IInternalActorRef Watcher { get; }
+
+        private bool Equals(Unwatch other)
+        {
+            return Equals(Watchee, other.Watchee) && Equals(Watcher, other.Watcher);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is Unwatch && Equals((Unwatch)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Watchee?.GetHashCode() ?? 0) * 397) ^ (Watcher?.GetHashCode() ?? 0);
+            }
+        }
 
         /// <summary>
         /// TBD
@@ -522,7 +563,7 @@ namespace Akka.Dispatch.SysMsg
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return "<Unwatch>: " + Watcher + " wants to unwatch " + Watchee;
+            return $"<Unwatch>: {Watcher} wants to unwatch {Watchee}";
         }
     }
 
@@ -779,23 +820,35 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Create : SystemMessage
     {
-        private readonly ActorInitializationException _failure;
-
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Create" /> class.
         /// </summary>
         /// <param name="failure">TBD</param>
         public Create(ActorInitializationException failure = null)
         {
-            _failure = failure;
+            Failure = failure;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorInitializationException Failure
+        public ActorInitializationException Failure { get; }
+
+        private bool Equals(Create other)
         {
-            get { return _failure; }
+            return Equals(Failure, other.Failure);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is Create && Equals((Create)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return Failure?.GetHashCode() ?? 0;
         }
 
         /// <summary>
@@ -804,7 +857,7 @@ namespace Akka.Dispatch.SysMsg
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return "<Create>" + (_failure == null ? "" : " Failure: " + _failure);
+            return $"<Create>{(Failure == null ? "" : " Failure: " + Failure)}";
         }
     }
 

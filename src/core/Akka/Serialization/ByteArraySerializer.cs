@@ -26,20 +26,9 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Completely unique value to identify this implementation of the <see cref="Serializer"/> used to optimize network traffic
-        /// </summary>
-        public override int Identifier
-        {
-            get { return 4; }
-        }
-
-        /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
         /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return false; }
-        }
+        public override bool IncludeManifest => false;
 
         /// <summary>
         /// Serializes the given object into a byte array
