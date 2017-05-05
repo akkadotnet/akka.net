@@ -33,13 +33,13 @@ namespace Akka.Persistence.Query.Sql
             return ConfigurationFactory.FromResource<SqlReadJournal>("Akka.Persistence.Query.Sql.reference.conf");
         }
         
-        private readonly TimeSpan _refershInterval;
+        private readonly TimeSpan _refreshInterval;
         private readonly string _writeJournalPluginId;
         private readonly int _maxBufferSize;
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
-            _refershInterval = config.GetTimeSpan("refresh-interval");
+            _refreshInterval = config.GetTimeSpan("refresh-interval");
             _writeJournalPluginId = config.GetString("write-plugin");
             _maxBufferSize = config.GetInt("max-buffer-size");
         }
@@ -106,7 +106,7 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
-                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refershInterval, _maxBufferSize, _writeJournalPluginId))
+                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
                     .Named("EventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
 
@@ -156,7 +156,7 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refershInterval, _maxBufferSize, _writeJournalPluginId))
+            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByTag-" + tag);
 

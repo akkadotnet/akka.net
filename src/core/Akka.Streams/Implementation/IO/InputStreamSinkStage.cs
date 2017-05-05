@@ -157,11 +157,11 @@ namespace Akka.Streams.Implementation.IO
             public Logic(InputStreamSinkStage stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _callback = GetAsyncCallback((IAdapterToStageMessage messagae) =>
+                _callback = GetAsyncCallback((IAdapterToStageMessage message) =>
                 {
-                    if(messagae is ReadElementAcknowledgement)
+                    if(message is ReadElementAcknowledgement)
                         SendPullIfAllowed();
-                    else if (messagae is Close)
+                    else if (message is Close)
                         CompleteStage();
                 });
 

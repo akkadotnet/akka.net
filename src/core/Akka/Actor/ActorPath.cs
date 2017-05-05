@@ -222,7 +222,7 @@ namespace Akka.Actor
                 return myElems;
             }
 
-            // walking from `this` instance upto root actor
+            // walking from `this` instance up to root actor
             var current = actorPath;
             var elements = new List<string>();
             while (!(current is RootActorPath))

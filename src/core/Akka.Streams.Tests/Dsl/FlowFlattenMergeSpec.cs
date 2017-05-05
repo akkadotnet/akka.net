@@ -89,7 +89,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FlattenMerge_must_propage_late_failure_from_main_stream()
+        public void A_FlattenMerge_must_propagate_late_failure_from_main_stream()
         {
             var ex = new TestException("buh");
 

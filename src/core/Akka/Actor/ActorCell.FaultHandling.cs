@@ -197,7 +197,7 @@ namespace Akka.Actor
                 // separate iteration because this is a very rare case that should not penalize normal operation
                 foreach (var child in Children)
                 {
-                    if(!child.AsInstanceOf<IActorRefScope>().IsLocal) // send ourselves a deathwatch notification pre-emptively for non-local children
+                    if(!child.AsInstanceOf<IActorRefScope>().IsLocal) // send ourselves a deathwatch notification preemptively for non-local children
                         Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new DeathWatchNotification(child, true, false));
                 }
             }

@@ -15,7 +15,7 @@ namespace Akka.Persistence.Tests
     public class AtomicWriteSpec
     {
         [Fact]
-        public void AtomicWrite_must_only_contain_messages_for_the_same_persitence_id()
+        public void AtomicWrite_must_only_contain_messages_for_the_same_persistence_id()
         {
             new AtomicWrite(ImmutableList.Create<IPersistentRepresentation>(
                     new Persistent("", 1, "p1"),

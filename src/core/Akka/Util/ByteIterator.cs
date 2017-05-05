@@ -820,10 +820,7 @@ namespace Akka.Util
             return new ArrayLinearSeq<T>(_array, _offset + 1, _length - 1);
         }
 
-        /// <summary>
-        /// Retrieves an enumerator that iterates through the collection.
-        /// </summary>
-        /// <returns>An enumerator that can be used to iterate through the collection.</returns>
+        /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator()
         {
             return new Enumerator(this);

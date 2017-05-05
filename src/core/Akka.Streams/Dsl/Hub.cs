@@ -510,7 +510,7 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and broadcasts them to a dynamic set
         /// of consumers. After the <see cref="Sink{TIn,TMat}"/> returned by this method is materialized, it returns a <see cref="Source{TOut,TMat}"/> as materialized
         /// value. This <see cref="Source{TOut,TMat}"/> can be materialized arbitrary many times and each materialization will receive the
-        /// broadcast elements form the ofiginal <see cref="Sink{TIn,TMat}"/>.
+        /// broadcast elements from the original <see cref="Sink{TIn,TMat}"/>.
         ///
         /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
         /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.

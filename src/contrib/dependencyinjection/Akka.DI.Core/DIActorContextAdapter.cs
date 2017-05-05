@@ -28,7 +28,7 @@ namespace Akka.DI.Core
         /// </exception>
         public DIActorContextAdapter(IActorContext context)
         {
-            if (context == null) throw new ArgumentNullException(nameof(context), $"DIAcotrContextAdapter requires {nameof(context)} to be provided");
+            if (context == null) throw new ArgumentNullException(nameof(context), $"DIActorContextAdapter requires {nameof(context)} to be provided");
             this.context = context;
             this.producer = context.System.GetExtension<DIExt>();
         }

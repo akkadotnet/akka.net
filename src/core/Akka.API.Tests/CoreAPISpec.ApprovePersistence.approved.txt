@@ -1101,7 +1101,7 @@ namespace Akka.Persistence.Journal
         protected WriteJournalBase() { }
         protected System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> AdaptFromJournal(Akka.Persistence.IPersistentRepresentation representation) { }
         protected Akka.Persistence.IPersistentRepresentation AdaptToJournal(Akka.Persistence.IPersistentRepresentation representation) { }
-        protected System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> PreparePersistentBatch(System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentEnvelope> resequencables) { }
+        protected System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> PreparePersistentBatch(System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentEnvelope> resequenceables) { }
     }
 }
 namespace Akka.Persistence.Serialization

@@ -33,7 +33,11 @@ namespace Akka.Remote
         /// <param name="endpoint">TBD</param>
         /// <param name="uid">TBD</param>
         /// <param name="refuseUid">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="address"/> does not have
+        /// an <see cref="EndpointManager.EndpointPolicy"/> of <see cref="EndpointManager.Pass"/>
+        /// in the registry.
+        /// </exception>
         /// <returns>TBD</returns>
         public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid, int? refuseUid)
         {
@@ -43,8 +47,7 @@ namespace Akka.Remote
             var pass = existing as EndpointManager.Pass;
             if (pass != null) // if we already have a writable endpoint....
             {
-                var e = pass.Endpoint;
-                throw new ArgumentException("Attempting to overwrite existing endpoint " + e + " with " + endpoint);
+                throw new ArgumentException($"Attempting to overwrite existing endpoint {pass.Endpoint} with {endpoint}");
             }
 
             _addressToWritable[address] = new EndpointManager.Pass(endpoint, uid, refuseUid);

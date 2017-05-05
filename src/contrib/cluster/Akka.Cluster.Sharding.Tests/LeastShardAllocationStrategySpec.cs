@@ -74,7 +74,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_should_limit_number_of_simultanious_rebalances()
+        public void LeastShardAllocationStrategy_should_limit_number_of_simultaneous_rebalances()
         {
             var allocations = new Dictionary<IActorRef, IImmutableList<string>>
             {

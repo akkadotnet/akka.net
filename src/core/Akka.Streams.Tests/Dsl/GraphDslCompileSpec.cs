@@ -159,12 +159,12 @@ namespace Akka.Streams.Tests.Dsl
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast1 = b.Add(new Broadcast<string>(2));
                 var broadcast2 = b.Add(new Broadcast<string>(2));
-                var feedbackLoopBffer = Flow.Create<string>().Buffer(10, OverflowStrategy.DropBuffer);
+                var feedbackLoopBuffer = Flow.Create<string>().Buffer(10, OverflowStrategy.DropBuffer);
 
                 b.From(In1).Via(F1).To(merge.In(0));
                 b.From(merge).Via(F2).To(broadcast1);
                 b.From(broadcast1.Out(0)).Via(F3).To(Out1);
-                b.From(broadcast1.Out(1)).Via(feedbackLoopBffer).To(broadcast2);
+                b.From(broadcast1.Out(1)).Via(feedbackLoopBuffer).To(broadcast2);
                 b.From(broadcast2.Out(0)).Via(F5).To(merge.In(1)); // cycle
                 b.From(broadcast2.Out(1)).Via(F6).To(Out2);
 
@@ -180,13 +180,13 @@ namespace Akka.Streams.Tests.Dsl
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast1 = b.Add(new Broadcast<string>(2));
                 var broadcast2 = b.Add(new Broadcast<string>(2));
-                var feedbackLoopBffer = Flow.Create<string>().Buffer(10, OverflowStrategy.DropBuffer);
+                var feedbackLoopBuffer = Flow.Create<string>().Buffer(10, OverflowStrategy.DropBuffer);
                 var i1 = b.Add(In1);
                 var o1 = b.Add(Out1);
                 var o2 = b.Add(Out2);
 
                 b.From(i1).Via(F2).Via(merge).Via(F2).Via(broadcast1).Via(F3).To(o1);
-                b.From(broadcast1).Via(feedbackLoopBffer).Via(broadcast2).Via(F5).To(merge);
+                b.From(broadcast1).Via(feedbackLoopBuffer).Via(broadcast2).Via(F5).To(merge);
                 b.From(broadcast2).Via(F6).To(o2);
 
                 return ClosedShape.Instance;

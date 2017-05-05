@@ -58,7 +58,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly ZipWith<<#= typeParams #>, TOut> _stage;
-            // Without this field the completion signalling would take one extra pull
+            // Without this field the completion signaling would take one extra pull
             private bool _willShutDown;
             private int _pending;
             public Logic(Shape shape, ZipWith<<#= typeParams #>, TOut> stage) : base(shape)

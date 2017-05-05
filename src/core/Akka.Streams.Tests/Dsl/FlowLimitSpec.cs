@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_greather_than_input_length()
+        public void A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_greater_than_input_length()
         {
             var input = Enumerable.Range(1, 6).ToList();
             var n = input.Count + 2; // n > input.Count

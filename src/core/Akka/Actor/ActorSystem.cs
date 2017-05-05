@@ -221,7 +221,7 @@ namespace Akka.Actor
         //    Dispose(false);
         //}
 
-        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(true);
@@ -230,12 +230,6 @@ namespace Akka.Actor
             GC.SuppressFinalize(this);
         }
 
-
-        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
-        /// user's code. Managed and unmanaged resources will be disposed.<br />
-        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
-        /// unmanaged resources can be disposed.</param>
         private void Dispose(bool disposing)
         {
             // If disposing equals false, the method has been called by the

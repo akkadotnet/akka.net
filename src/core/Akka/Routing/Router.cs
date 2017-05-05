@@ -115,11 +115,7 @@ namespace Akka.Routing
             return Actor.Ask(message, timeout);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -128,20 +124,13 @@ namespace Akka.Routing
             return Equals((ActorRefRoutee)obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected bool Equals(ActorRefRoutee other)
         {
             return Equals(Actor, other.Actor);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Actor != null ? Actor.GetHashCode() : 0);
@@ -190,11 +179,7 @@ namespace Akka.Routing
             return _actor.Ask(message, timeout);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -203,20 +188,13 @@ namespace Akka.Routing
             return Equals((ActorSelectionRoutee)obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected bool Equals(ActorSelectionRoutee other)
         {
             return Equals(_actor, other._actor);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (_actor != null ? _actor.GetHashCode() : 0);

@@ -20,7 +20,7 @@ namespace Akka.Tests.Actor
     {
         public class Tick { }
 
-        public class TransperentTick : INotInfluenceReceiveTimeout { }
+        public class TransparentTick : INotInfluenceReceiveTimeout { }
 
         public class TimeoutActor : ActorBase
         {
@@ -50,7 +50,7 @@ namespace Akka.Tests.Actor
                     return true;
                 }
 
-                if (message is TransperentTick)
+                if (message is TransparentTick)
                 {
                     return true;
                 }
@@ -174,7 +174,7 @@ namespace Akka.Tests.Actor
                 TimeSpan.FromMilliseconds(100),
                 () =>
                 {
-                    timeoutActor.Tell(new TransperentTick());
+                    timeoutActor.Tell(new TransparentTick());
                     timeoutActor.Tell(new Identify(null));
                 }, cancellationToken.Token);
 
