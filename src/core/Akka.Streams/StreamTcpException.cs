@@ -16,30 +16,32 @@ namespace Akka.Streams
     public class StreamTcpException : Exception
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="StreamTcpException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public StreamTcpException(string message) : base(message)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="StreamTcpException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="innerException">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public StreamTcpException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="StreamTcpException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected StreamTcpException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -48,7 +50,7 @@ namespace Akka.Streams
     public class BindFailedException : StreamTcpException
     {
         /// <summary>
-        /// TBD
+        /// The single instance of this exception
         /// </summary>
         public static readonly BindFailedException Instance = new BindFailedException();
 
@@ -56,14 +58,16 @@ namespace Akka.Streams
         {
         }
 
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="BindFailedException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected BindFailedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -72,29 +76,31 @@ namespace Akka.Streams
     public class ConnectionException : StreamTcpException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ConnectionException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public ConnectionException(string message) : base(message)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ConnectionException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="innerException">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public ConnectionException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ConnectionException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected ConnectionException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

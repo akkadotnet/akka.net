@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -51,7 +51,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public class FailedRegisterIncoming
+        public class FailedRegisterIncoming : INoSerializationVerificationNeeded
         {
             /// <summary>
             /// TBD
@@ -235,3 +235,4 @@ namespace Akka.IO
         }
     }
 }
+#endif

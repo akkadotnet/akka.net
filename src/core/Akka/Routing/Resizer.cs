@@ -212,8 +212,8 @@ namespace Akka.Routing
         ///           default UnboundedMailbox is O(N) operation.</li>
         /// </ul>
         /// </summary>
-        /// <param name="currentRoutees">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="currentRoutees">An enumeration of the current routees</param>
+        /// <returns>The number of routees considered to be above pressure level.</returns>
         public int Pressure(IEnumerable<Routee> currentRoutees)
         {
             return currentRoutees.Count(
@@ -348,6 +348,11 @@ namespace Akka.Routing
         /// </summary>
         public int MessagesPerResize { get; private set; }
 
+        /// <summary>
+        /// Determines whether the specified resizer, is equal to this instance.
+        /// </summary>
+        /// <param name="other">The resizer to compare.</param>
+        /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
         public bool Equals(DefaultResizer other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -356,10 +361,12 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -369,9 +376,11 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked

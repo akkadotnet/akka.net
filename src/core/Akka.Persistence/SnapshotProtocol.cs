@@ -33,16 +33,18 @@ namespace Akka.Persistence
     public sealed class SnapshotMetadata : IEquatable<SnapshotMetadata>
     {
         /// <summary>
-        /// TBD
+        /// This class represents an <see cref="IComparer{T}"/> used when comparing two <see cref="SnapshotMetadata"/> objects.
         /// </summary>
         internal class SnapshotMetadataComparer : IComparer<SnapshotMetadata>
         {
             /// <summary>
-            /// TBD
+            /// Compares two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
             /// </summary>
-            /// <param name="x">TBD</param>
-            /// <param name="y">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="x">The first object to compare.</param>
+            /// <param name="y">The second object to compare.</param>
+            /// <returns>
+            /// A signed integer that indicates the relative values of <paramref name="x" /> and <paramref name="y" />, as shown in the following table.Value Meaning Less than zero<paramref name="x" /> is less than <paramref name="y" />.Zero<paramref name="x" /> equals <paramref name="y" />.Greater than zero<paramref name="x" /> is greater than <paramref name="y" />.
+            /// </returns>
             public int Compare(SnapshotMetadata x, SnapshotMetadata y)
             {
                 var compare = string.Compare(x.PersistenceId, y.PersistenceId, StringComparison.Ordinal);
@@ -59,28 +61,29 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly IComparer<SnapshotMetadata> Comparer = new SnapshotMetadataComparer();
+        public static IComparer<SnapshotMetadata> Comparer { get; } = new SnapshotMetadataComparer();
+
         /// <summary>
         /// TBD
         /// </summary>
         public static DateTime TimestampNotSpecified = DateTime.MinValue;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="sequenceNr">TBD</param>
+        /// <param name="persistenceId">The id of the persistent actor fro mwhich the snapshot was taken.</param>
+        /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
         public SnapshotMetadata(string persistenceId, long sequenceNr)
             : this(persistenceId, sequenceNr, TimestampNotSpecified)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="sequenceNr">TBD</param>
-        /// <param name="timestamp">TBD</param>
+        /// <param name="persistenceId">The id of the persistent actor fro mwhich the snapshot was taken.</param>
+        /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
+        /// <param name="timestamp">The time at which the snapshot was saved.</param>
         [JsonConstructor]
         public SnapshotMetadata(string persistenceId, long sequenceNr, DateTime timestamp)
         {
@@ -90,35 +93,24 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Id of the persistent actor, from which the snapshot was taken.
+        /// Id of the persistent actor from which the snapshot was taken.
         /// </summary>
-        public readonly string PersistenceId;
+        public string PersistenceId { get; }
 
         /// <summary>
         /// Sequence number at which a snapshot was taken.
         /// </summary>
-        public readonly long SequenceNr;
+        public long SequenceNr { get; }
 
         /// <summary>
         /// Time at which the snapshot was saved.
         /// </summary>
-        public readonly DateTime Timestamp;
+        public DateTime Timestamp { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as SnapshotMetadata);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as SnapshotMetadata);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(SnapshotMetadata other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -127,10 +119,7 @@ namespace Akka.Persistence
             return string.Equals(PersistenceId, other.PersistenceId) && SequenceNr == other.SequenceNr && Timestamp.Equals(other.Timestamp);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -142,14 +131,8 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("SnapshotMetadata<pid: {0}, seqNr: {1}, timestamp: {2:yyyy/MM/dd}>", PersistenceId, SequenceNr, Timestamp);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"SnapshotMetadata<pid: {PersistenceId}, seqNr: {SequenceNr}, timestamp: {Timestamp:yyyy/MM/dd}>";
     }
 
     /// <summary>
@@ -159,24 +142,20 @@ namespace Akka.Persistence
     public sealed class SaveSnapshotSuccess : ISnapshotResponse, IEquatable<SaveSnapshotSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SaveSnapshotSuccess"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
         public SaveSnapshotSuccess(SnapshotMetadata metadata)
         {
             Metadata = metadata;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(SaveSnapshotSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -185,33 +164,14 @@ namespace Akka.Persistence
             return Equals(Metadata, other.Metadata);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as SaveSnapshotSuccess);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as SaveSnapshotSuccess);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override int GetHashCode()
-        {
-            return (Metadata != null ? Metadata.GetHashCode() : 0);
-        }
+        /// <inheritdoc/>
+        public override int GetHashCode() => Metadata != null ? Metadata.GetHashCode() : 0;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("SaveSnapshotSuccess<{0}>", Metadata);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"SaveSnapshotSuccess<{Metadata}>";
     }
 
     /// <summary>
@@ -221,24 +181,20 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshotSuccess : ISnapshotResponse, IEquatable<DeleteSnapshotSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshotSuccess"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
         public DeleteSnapshotSuccess(SnapshotMetadata metadata)
         {
             Metadata = metadata;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshotSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -247,33 +203,14 @@ namespace Akka.Persistence
             return Equals(Metadata, other.Metadata);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as DeleteSnapshotSuccess);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as DeleteSnapshotSuccess);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override int GetHashCode()
-        {
-            return (Metadata != null ? Metadata.GetHashCode() : 0);
-        }
+        /// <inheritdoc/>
+        public override int GetHashCode() => Metadata != null ? Metadata.GetHashCode() : 0;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("DeleteSnapshotSuccess<{0}>", Metadata);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"DeleteSnapshotSuccess<{Metadata}>";
     }
 
     /// <summary>
@@ -283,24 +220,26 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshotsSuccess : ISnapshotResponse, IEquatable<DeleteSnapshotsSuccess>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshotsSuccess"/> class.
         /// </summary>
-        /// <param name="criteria">TBD</param>
+        /// <param name="criteria">Snapshot selection criteria.</param>
         public DeleteSnapshotsSuccess(SnapshotSelectionCriteria criteria)
         {
             Criteria = criteria;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot selection criteria.
         /// </summary>
-        public readonly SnapshotSelectionCriteria Criteria;
+        public SnapshotSelectionCriteria Criteria { get; }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="DeleteSnapshotsSuccess" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="DeleteSnapshotsSuccess" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="DeleteSnapshotsSuccess" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(DeleteSnapshotsSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -310,31 +249,37 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeleteSnapshotsSuccess);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return (Criteria != null ? Criteria.GetHashCode() : 0);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("DeleteSnapshotsSuccess<{0}>", Criteria);
+            return $"DeleteSnapshotsSuccess<{Criteria}>";
         }
     }
 
@@ -345,10 +290,10 @@ namespace Akka.Persistence
     public sealed class SaveSnapshotFailure : ISnapshotResponse, IEquatable<SaveSnapshotFailure>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SaveSnapshotFailure"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="cause">A failure cause.</param>
         public SaveSnapshotFailure(SnapshotMetadata metadata, Exception cause)
         {
             Metadata = metadata;
@@ -358,18 +303,20 @@ namespace Akka.Persistence
         /// <summary>
         /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
         /// A failure cause.
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="SaveSnapshotFailure" />, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The <see cref="SaveSnapshotFailure" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="SaveSnapshotFailure" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(SaveSnapshotFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -379,19 +326,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return Equals(obj as SaveSnapshotFailure);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -401,12 +352,14 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("SaveSnapshotFailure<meta: {0}, cause: {1}>", Metadata, Cause);
+            return $"SaveSnapshotFailure<meta: {Metadata}, cause: {Cause}>";
         }
     }
 
@@ -417,10 +370,10 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshotFailure : ISnapshotResponse, IEquatable<DeleteSnapshotFailure>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshotFailure"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="cause">A failure cause.</param>
         public DeleteSnapshotFailure(SnapshotMetadata metadata, Exception cause)
         {
             Metadata = metadata;
@@ -430,18 +383,14 @@ namespace Akka.Persistence
         /// <summary>
         /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
         /// A failure cause.
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshotFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -450,20 +399,10 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause) && Equals(Metadata, other.Metadata);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as DeleteSnapshotFailure);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as DeleteSnapshotFailure);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -472,14 +411,8 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("DeleteSnapshotFailure<meta: {0}, cause: {1}>", Metadata, Cause);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"DeleteSnapshotFailure<meta: {Metadata}, cause: {Cause}>";
     }
 
     /// <summary>
@@ -489,10 +422,10 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshotsFailure : ISnapshotResponse, IEquatable<DeleteSnapshotsFailure>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshotsFailure"/> class.
         /// </summary>
-        /// <param name="criteria">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="criteria">Snapshot selection criteria.</param>
+        /// <param name="cause">A failure cause.</param>
         public DeleteSnapshotsFailure(SnapshotSelectionCriteria criteria, Exception cause)
         {
             Criteria = criteria;
@@ -500,20 +433,16 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Snapshot metadata.
+        /// Snapshot selection criteria.
         /// </summary>
-        public readonly SnapshotSelectionCriteria Criteria;
+        public SnapshotSelectionCriteria Criteria { get; }
 
         /// <summary>
         /// A failure cause.
         /// </summary>
-        public readonly Exception Cause;
+        public Exception Cause { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshotsFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -522,20 +451,10 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause) && Equals(Criteria, other.Criteria);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as DeleteSnapshotsFailure);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as DeleteSnapshotsFailure);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -544,14 +463,8 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("DeleteSnapshotsFailure<criteria: {0}, cause: {1}>", Criteria, Cause);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"DeleteSnapshotsFailure<criteria: {Criteria}, cause: {Cause}>";
     }
 
     /// <summary>
@@ -562,10 +475,10 @@ namespace Akka.Persistence
     public sealed class SnapshotOffer : IEquatable<SnapshotOffer>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotOffer"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="snapshot">Snapshot.</param>
         public SnapshotOffer(SnapshotMetadata metadata, object snapshot)
         {
             Metadata = metadata;
@@ -573,19 +486,16 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly object Snapshot;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
-        /// TBD
+        /// Snapshot.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        public object Snapshot { get; }
+
+        /// <inheritdoc/>
         public bool Equals(SnapshotOffer other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -594,20 +504,10 @@ namespace Akka.Persistence
             return Equals(Metadata, other.Metadata) && Equals(Snapshot, other.Snapshot);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as SnapshotOffer);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as SnapshotOffer);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -616,14 +516,8 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("SnapshotOffer<meta: {0}, snapshot: {1}>", Metadata, Snapshot);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"SnapshotOffer<meta: {Metadata}, snapshot: {Snapshot}>";
     }
 
     /// <summary>
@@ -633,21 +527,22 @@ namespace Akka.Persistence
     public sealed class SnapshotSelectionCriteria : IEquatable<SnapshotSelectionCriteria>
     {
         /// <summary>
-        /// TBD
+        /// The latest saved snapshot.
         /// </summary>
-        public static readonly SnapshotSelectionCriteria Latest = new SnapshotSelectionCriteria(long.MaxValue, DateTime.MaxValue);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly SnapshotSelectionCriteria None = new SnapshotSelectionCriteria(0L, DateTime.MinValue);
+        public static SnapshotSelectionCriteria Latest { get; } = new SnapshotSelectionCriteria(long.MaxValue, DateTime.MaxValue);
 
         /// <summary>
-        /// TBD
+        /// No saved snapshot matches.
         /// </summary>
-        /// <param name="maxSequenceNr">TBD</param>
-        /// <param name="maxTimeStamp">TBD</param>
-        /// <param name="minSequenceNr">TBD</param>
-        /// <param name="minTimestamp">TBD</param>
+        public static SnapshotSelectionCriteria None { get; } = new SnapshotSelectionCriteria(0L, DateTime.MinValue);
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SnapshotSelectionCriteria"/> class.
+        /// </summary>
+        /// <param name="maxSequenceNr">Upper bound for a selected snapshot's sequence number.</param>
+        /// <param name="maxTimeStamp">Upper bound for a selected snapshot's timestamp.</param>
+        /// <param name="minSequenceNr">Lower bound for a selected snapshot's sequence number</param>
+        /// <param name="minTimestamp">Lower bound for a selected snapshot's timestamp</param>
         [JsonConstructor]
         public SnapshotSelectionCriteria(long maxSequenceNr, DateTime maxTimeStamp, long minSequenceNr = 0L, DateTime? minTimestamp = null)
         {
@@ -668,74 +563,50 @@ namespace Akka.Persistence
         /// <summary>
         /// Upper bound for a selected snapshot's sequence number.
         /// </summary>
-        public readonly long MaxSequenceNr;
+        public long MaxSequenceNr { get; }
 
         /// <summary>
         /// Upper bound for a selected snapshot's timestamp.
         /// </summary>
-        public readonly DateTime MaxTimeStamp;
+        public DateTime MaxTimeStamp { get; }
 
         /// <summary>
         /// Lower bound for a selected snapshot's sequence number
         /// </summary>
-        public readonly long MinSequenceNr;
+        public long MinSequenceNr { get; }
 
         /// <summary>
         /// Lower bound for a selected snapshot's timestamp
         /// </summary>
-        public readonly DateTime? MinTimestamp;
+        public DateTime? MinTimestamp { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
         internal SnapshotSelectionCriteria Limit(long toSequenceNr)
         {
             return toSequenceNr < MaxSequenceNr
-                ? new SnapshotSelectionCriteria(toSequenceNr, MaxTimeStamp)
+                ? new SnapshotSelectionCriteria(toSequenceNr, MaxTimeStamp, MinSequenceNr, MinTimestamp)
                 : this;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <returns>TBD</returns>
         internal bool IsMatch(SnapshotMetadata metadata)
         {
             return metadata.SequenceNr <= MaxSequenceNr && metadata.Timestamp <= MaxTimeStamp &&
-                metadata.SequenceNr >= MinSequenceNr && metadata.Timestamp >= MinTimestamp;
+                   metadata.SequenceNr >= MinSequenceNr && metadata.Timestamp >= MinTimestamp;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(SnapshotSelectionCriteria other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
             return MaxSequenceNr == other.MaxSequenceNr && MaxTimeStamp == other.MaxTimeStamp &&
-                MinSequenceNr == other.MinSequenceNr && MinTimestamp == other.MinTimestamp;
+                   MinSequenceNr == other.MinSequenceNr && MinTimestamp == other.MinTimestamp;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as SnapshotSelectionCriteria);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as SnapshotSelectionCriteria);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -749,16 +620,8 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format(
-                "SnapshotSelectionCriteria<maxSeqNr: {0}, maxTimestamp: {1:yyyy/MM/dd}, minSeqNr: {2}, minTimestamp: {3:yyyy/MM/dd}>",
-                MaxSequenceNr, MaxTimeStamp, MinSequenceNr, MinTimestamp);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"SnapshotSelectionCriteria<maxSeqNr: {MaxSequenceNr}, maxTimestamp: {MaxTimeStamp:yyyy/MM/dd}, minSeqNr: {MinSequenceNr}, minTimestamp: {MinTimestamp:yyyy/MM/dd}>";
     }
 
     /// <summary>
@@ -768,10 +631,10 @@ namespace Akka.Persistence
     public sealed class SelectedSnapshot : IEquatable<SelectedSnapshot>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SelectedSnapshot"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="snapshot">Snapshot.</param>
         public SelectedSnapshot(SnapshotMetadata metadata, object snapshot)
         {
             Metadata = metadata;
@@ -779,19 +642,16 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly object Snapshot;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
-        /// TBD
+        /// Snapshot.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        public object Snapshot { get; }
+
+        /// <inheritdoc/>
         public bool Equals(SelectedSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -800,20 +660,10 @@ namespace Akka.Persistence
             return Equals(Metadata, other.Metadata) && Equals(Snapshot, other.Snapshot);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as SelectedSnapshot);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as SelectedSnapshot);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -822,31 +672,22 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("SelectedSnapshot<meta: {0}, snapshot: {1}>", Metadata, Snapshot);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"SelectedSnapshot<meta: {Metadata}, snapshot: {Snapshot}>";
     }
-
-
-    #region Internal API for Snapshot protocol
 
     /// <summary>
     /// Instructs a snapshot store to load the snapshot.
     /// </summary>
     [Serializable]
-    public sealed class LoadSnapshot: ISnapshotRequest, IEquatable<LoadSnapshot>
+    public sealed class LoadSnapshot : ISnapshotRequest, IEquatable<LoadSnapshot>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="LoadSnapshot"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="persistenceId">Persistent actor identifier.</param>
+        /// <param name="criteria">Criteria for selecting snapshot, from which the recovery should start.</param>
+        /// <param name="toSequenceNr">Upper, inclusive sequence number bound for recovery.</param>
         public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
             PersistenceId = persistenceId;
@@ -857,23 +698,19 @@ namespace Akka.Persistence
         /// <summary>
         /// Persistent actor identifier.
         /// </summary>
-        public readonly string PersistenceId;
+        public string PersistenceId { get; }
 
         /// <summary>
         /// Criteria for selecting snapshot, from which the recovery should start.
         /// </summary>
-        public readonly SnapshotSelectionCriteria Criteria;
+        public SnapshotSelectionCriteria Criteria { get; }
 
         /// <summary>
         /// Upper, inclusive sequence number bound for recovery.
         /// </summary>
-        public readonly long ToSequenceNr;
+        public long ToSequenceNr { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(LoadSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -884,20 +721,10 @@ namespace Akka.Persistence
                    && Equals(Criteria, other.Criteria);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as LoadSnapshot);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as LoadSnapshot);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -909,14 +736,8 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("LoadSnapshot<pid: {0}, toSeqNr: {1}, criteria: {2}>", PersistenceId, ToSequenceNr, Criteria);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"LoadSnapshot<pid: {PersistenceId}, toSeqNr: {ToSequenceNr}, criteria: {Criteria}>";
     }
 
     /// <summary>
@@ -926,10 +747,10 @@ namespace Akka.Persistence
     public sealed class LoadSnapshotResult : ISnapshotResponse, IEquatable<LoadSnapshotResult>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="LoadSnapshotResult"/> class.
         /// </summary>
-        /// <param name="snapshot">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="snapshot">Loaded snapshot or null if none provided.</param>
+        /// <param name="toSequenceNr">Upper sequence number bound (inclusive) for recovery.</param>
         public LoadSnapshotResult(SelectedSnapshot snapshot, long toSequenceNr)
         {
             Snapshot = snapshot;
@@ -939,40 +760,27 @@ namespace Akka.Persistence
         /// <summary>
         /// Loaded snapshot or null if none provided.
         /// </summary>
-        public readonly SelectedSnapshot Snapshot;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly long ToSequenceNr;
+        public SelectedSnapshot Snapshot { get; }
 
         /// <summary>
-        /// TBD
+        /// Upper sequence number bound (inclusive) for recovery.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        public long ToSequenceNr { get; }
+
+        /// <inheritdoc/>
         public bool Equals(LoadSnapshotResult other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
             return Equals(ToSequenceNr, other.ToSequenceNr)
-                && Equals(Snapshot, other.Snapshot);
+                   && Equals(Snapshot, other.Snapshot);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as LoadSnapshotResult);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as LoadSnapshotResult);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -981,14 +789,41 @@ namespace Akka.Persistence
             }
         }
 
+        /// <inheritdoc/>
+        public override string ToString() => $"LoadSnapshotResult<toSeqNr: {ToSequenceNr}, snapshot: {Snapshot}>";
+    }
+
+    /// <summary>
+    /// Reply message to a failed <see cref="LoadSnapshot"/> request.
+    /// </summary>
+    public sealed class LoadSnapshotFailed : ISnapshotResponse
+    {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="LoadSnapshotFailed"/> class.
         /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
+        /// <param name="cause">Failure cause.</param>
+        public LoadSnapshotFailed(Exception cause)
         {
-            return string.Format("LoadSnapshotResult<toSeqNr: {0}, snapshot: {1}>", ToSequenceNr, Snapshot);
+            Cause = cause;
         }
+
+        /// <summary>
+        /// Failure cause.
+        /// </summary>
+        public Exception Cause { get; }
+
+        private bool Equals(LoadSnapshotFailed other) => Equals(Cause, other.Cause);
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is LoadSnapshotFailed && Equals((LoadSnapshotFailed)obj);
+        }
+
+        public override int GetHashCode() => Cause?.GetHashCode() ?? 0;
+
+        public override string ToString() => $"LoadSnapshotFailed<Cause: {Cause}>";
     }
 
     /// <summary>
@@ -998,34 +833,31 @@ namespace Akka.Persistence
     public sealed class SaveSnapshot : ISnapshotRequest, IEquatable<SaveSnapshot>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SaveSnapshot"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="snapshot">Snapshot.</param>
         /// <exception cref="ArgumentNullException">TBD</exception>
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
             if (metadata == null)
-                throw new ArgumentNullException("metadata", "SaveSnapshot requires SnapshotMetadata to be provided");
+                throw new ArgumentNullException(nameof(metadata), "SaveSnapshot requires SnapshotMetadata to be provided");
 
             Metadata = metadata;
             Snapshot = snapshot;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly object Snapshot;
+        public SnapshotMetadata Metadata { get; }
 
         /// <summary>
-        /// TBD
+        /// Snapshot.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        public object Snapshot { get; }
+
+        /// <inheritdoc/>
         public bool Equals(SaveSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -1034,20 +866,10 @@ namespace Akka.Persistence
             return Equals(Metadata, other.Metadata) && Equals(Snapshot, other.Snapshot);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as SaveSnapshot);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as SaveSnapshot);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -1056,14 +878,8 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("SaveSnapshot<meta: {0}, snapshot: {1}>", Metadata, Snapshot);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"SaveSnapshot<meta: {Metadata}, snapshot: {Snapshot}>";
     }
 
     /// <summary>
@@ -1073,28 +889,24 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshot : ISnapshotRequest, IEquatable<DeleteSnapshot>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshot"/> class.
         /// </summary>
-        /// <param name="metadata">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
         /// <exception cref="ArgumentNullException">TBD</exception>
         public DeleteSnapshot(SnapshotMetadata metadata)
         {
-            if(metadata == null)
-                throw new ArgumentNullException("metadata", "DeleteSnapshot requires SnapshotMetadata to be provided");
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata), "DeleteSnapshot requires SnapshotMetadata to be provided");
 
             Metadata = metadata;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot metadata.
         /// </summary>
-        public readonly SnapshotMetadata Metadata;
+        public SnapshotMetadata Metadata { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -1103,33 +915,14 @@ namespace Akka.Persistence
             return Equals(Metadata, other.Metadata);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as DeleteSnapshot);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as DeleteSnapshot);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override int GetHashCode()
-        {
-            return Metadata.GetHashCode();
-        }
+        /// <inheritdoc/>
+        public override int GetHashCode() => Metadata.GetHashCode();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("DeleteSnapshot<meta: {0}>", Metadata);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"DeleteSnapshot<meta: {Metadata}>";
     }
 
     /// <summary>
@@ -1139,10 +932,10 @@ namespace Akka.Persistence
     public sealed class DeleteSnapshots : ISnapshotRequest, IEquatable<DeleteSnapshots>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="DeleteSnapshots"/> class.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
+        /// <param name="persistenceId">Persistent actor id.</param>
+        /// <param name="criteria">Criteria for selecting snapshots to be deleted.</param>
         public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             PersistenceId = persistenceId;
@@ -1150,19 +943,16 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Persistent actor id.
         /// </summary>
-        public readonly string PersistenceId;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly SnapshotSelectionCriteria Criteria;
+        public string PersistenceId { get; }
 
         /// <summary>
-        /// TBD
+        /// Criteria for selecting snapshots to be deleted.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        public SnapshotSelectionCriteria Criteria { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshots other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -1172,20 +962,10 @@ namespace Akka.Persistence
                    && Equals(Criteria, other.Criteria);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as DeleteSnapshots);
-        }
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as DeleteSnapshots);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -1194,16 +974,7 @@ namespace Akka.Persistence
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format("DeleteSnapshots<pid: {0}, criteria: {1}>", PersistenceId, Criteria);
-        }
+        /// <inheritdoc/>
+        public override string ToString() => $"DeleteSnapshots<pid: {PersistenceId}, criteria: {Criteria}>";
     }
-
-    #endregion
 }
-

@@ -85,7 +85,7 @@ namespace Akka.DistributedData.Local
         public bool IsEmpty => _crdt.IsEmpty;
 
         /// <summary>
-        /// Gets or sets provided key-valu of the underlying ORDicationary within scope of the current cluster node.
+        /// Gets or sets provided key-value of the underlying <see cref="ORDictionary"/> within scope of the current cluster node.
         /// </summary>
         /// <param name="key">TBD</param>
         public TVal this[TKey key] => _crdt[key];
@@ -147,10 +147,10 @@ namespace Akka.DistributedData.Local
             new LocalLWWDictionary<TKey, TVal>(_currentNode, _crdt.Merge(dictionary));
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.Local.LocalLWWDictionary{TKey, TVal}" /> to <see cref="Akka.DistributedData.LWWDictionary{TKey, TVal}" />.
         /// </summary>
-        /// <param name="set">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="set">The set to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator LWWDictionary<TKey, TVal>(LocalLWWDictionary<TKey, TVal> set) => set._crdt;
     }
 }

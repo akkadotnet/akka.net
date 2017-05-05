@@ -24,6 +24,9 @@ namespace Akka.Streams.Implementation
         /// <param name="bufferSize">TBD</param>
         /// <param name="overflowStrategy">TBD</param>
         /// <param name="settings">TBD</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown when the specified <paramref name="overflowStrategy"/> is <see cref="Akka.Streams.OverflowStrategy.Backpressure"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Props Props(int bufferSize, OverflowStrategy overflowStrategy, ActorMaterializerSettings settings)
         {
@@ -179,7 +182,7 @@ namespace Akka.Streams.Implementation
                 Context.Stop(Self);
             else if (message is Status.Failure && IsActive)
             {
-                // errors must be signalled as soon as possible,
+                // errors must be signaled as soon as possible,
                 // even if previously valid completion was requested via Status.Success
                 OnErrorThenStop(((Status.Failure)message).Cause);
             }

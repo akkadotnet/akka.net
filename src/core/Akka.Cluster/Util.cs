@@ -100,19 +100,6 @@ namespace Akka.Cluster
             }
         }
 
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="this">TBD</param>
-        /// <param name="key">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use GetTimeSpanWithOffSwitch instead")]
-        public static TimeSpan? GetMillisDurationWithOffSwitch(this Config @this, string key)
-        {
-            return GetTimeSpanWithOffSwitch(@this, key);
-        }
-
         /// <summary>
         /// TBD
         /// </summary>

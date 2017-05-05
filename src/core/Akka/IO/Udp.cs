@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +20,7 @@ namespace Akka.IO
     ///
     /// This extension implements the connectionless UDP protocol without
     /// calling `connect` on the underlying sockets, i.e. without restricting
-    /// from whom data can be received. For “connected” UDP mode see <see cref="UdpConnected"/>.
+    /// from whom data can be received. For "connected" UDP mode see <see cref="UdpConnected"/>.
     ///
     /// For a full description of the design and philosophy behind this IO
     /// implementation please refer to <see href="http://doc.akka.io/">the Akka online documentation</see>.
@@ -79,7 +79,7 @@ namespace Akka.IO
         {
             /// <summary>
             /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
-            /// explicitly provided. Its “token” is `null`.
+            /// explicitly provided. Its "token" is <see langword="null"/>.
             /// </summary>
             public static readonly NoAck Instance = new NoAck(null);
 
@@ -99,7 +99,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// This message is understood by the “simple sender” which can be obtained by
+        /// This message is understood by the "simple sender" which can be obtained by
         /// sending the <see cref="SimpleSender"/> query to the <see cref="UdpExt.Manager"/> as well as by
         /// the listener actors which are created in response to <see cref="Bind"/>. It will send
         /// the given payload data as one UDP datagram to the given target address. The
@@ -109,7 +109,7 @@ namespace Akka.IO
         /// object as soon as the datagram has been successfully enqueued to the O/S
         /// kernel.
         ///
-        /// The sending UDP socket’s address belongs to the “simple sender” which does
+        /// The sending UDP socket’s address belongs to the "simple sender" which does
         /// not handle inbound datagrams and sends from an ephemeral port; therefore
         /// sending using this mechanism is not suitable if replies are expected, use
         /// <see cref="Bind"/> in that case.
@@ -216,13 +216,13 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// Retrieve a reference to a “simple sender” actor of the UDP extension.
-        /// The newly created “simple sender” will reply with the <see cref="SimpleSenderReady" /> notification.
+        /// Retrieve a reference to a "simple sender" actor of the UDP extension.
+        /// The newly created "simple sender" will reply with the <see cref="SimpleSenderReady" /> notification.
         ///
-        /// The “simple sender” is a convenient service for being able to send datagrams
+        /// The "simple sender" is a convenient service for being able to send datagrams
         /// when the originating address is meaningless, i.e. when no reply is expected.
         ///
-        /// The “simple sender” will not stop itself, you will have to send it a <see cref="Akka.Actor.PoisonPill"/>
+        /// The "simple sender" will not stop itself, you will have to send it a <see cref="Akka.Actor.PoisonPill"/>
         /// when you want to close the socket.
         /// </summary>
         public class SimpleSender : Command
@@ -351,7 +351,7 @@ namespace Akka.IO
             public EndPoint LocalAddress { get; private set; }
         }
 
-        /// <summary> The “simple sender” sends this message type in response to a <see cref="SimpleSender"/> query. </summary>
+        /// <summary> The "simple sender" sends this message type in response to a <see cref="SimpleSender"/> query. </summary>
         public sealed class SimpleSenderReady : Event
         {
             /// <summary>
@@ -514,3 +514,4 @@ namespace Akka.IO
     }
 
 }
+#endif

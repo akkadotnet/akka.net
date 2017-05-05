@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Configuration;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,20 +39,20 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         private readonly SnapshotStoreSettings _settings;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SqlSnapshotStore"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The configuration used to configure the snapshot store.</param>
         protected SqlSnapshotStore(Config config)
         {
             _settings = new SnapshotStoreSettings(config);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
 
-        private ILoggingAdapter _log;
         /// <summary>
         /// TBD
         /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log ?? Context.GetLogger());
+        private ILoggingAdapter _log;
 
         /// <summary>
         /// TBD
@@ -105,13 +104,20 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             _pendingRequestsCancellation.Cancel();
         }
 
-        private async Task<Initialized> Initialize()
+        private async Task<object> Initialize()
         {
-            using (var connection = CreateDbConnection())
+            try
             {
-                await connection.OpenAsync(_pendingRequestsCancellation.Token);
-                await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
-                return Initialized.Instance;
+                using (var connection = CreateDbConnection())
+                {
+                    await connection.OpenAsync(_pendingRequestsCancellation.Token);
+                    await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
+                    return Initialized.Instance;
+                }
+            }
+            catch (Exception e)
+            {
+                return new Failure {Exception = e};
             }
         }
 
@@ -123,7 +129,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             })
             .With<Failure>(failure =>
             {
-                _log.Error(failure.Exception, "Error during snapshot store initialization");
+                Log.Error(failure.Exception, "Error during snapshot store initialization");
                 Context.Stop(Self);
             })
             .Default(_ => Stash.Stash())
@@ -136,9 +142,15 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual string GetConnectionString()
         {
             var connectionString = _settings.ConnectionString;
-            return string.IsNullOrEmpty(connectionString)
-                ? ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString
-                : connectionString;
+
+#if CONFIGURATION
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+            }
+#endif
+
+            return connectionString;
         }
 
         /// <summary>

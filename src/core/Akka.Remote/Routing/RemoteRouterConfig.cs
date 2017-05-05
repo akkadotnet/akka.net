@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -26,14 +27,17 @@ namespace Akka.Remote.Routing
         private readonly AtomicCounter _childNameCounter = new AtomicCounter();
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RemoteRouterConfig"/> class.
         /// </summary>
         /// <param name="local">TBD</param>
         /// <param name="nodes">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the enumeration of specified nodes is empty.
+        /// </exception>
         public RemoteRouterConfig(Pool local, IEnumerable<Address> nodes) 
             : base(local.NrOfInstances,local.Resizer,local.SupervisorStrategy,local.RouterDispatcher,local.UsePoolDispatcher)
         {
-            if (!nodes.Any()) throw new ArgumentException("Must specify list of remote target nodes.", "nodes");
+            if (!nodes.Any()) throw new ArgumentException("Must specify list of remote target nodes.", nameof(nodes));
 
             Local = local;
             Nodes = nodes.ToList();
@@ -51,10 +55,10 @@ namespace Akka.Remote.Routing
         internal IList<Address> Nodes { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The ActorSystem this router belongs to.</param>
+        /// <returns>The newly created router tied to the given system.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             return Local.CreateRouter(system);
@@ -102,7 +106,7 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieve the strategy to use when supervising the pool.
         /// </summary>
         public override SupervisorStrategy SupervisorStrategy
         {
@@ -110,7 +114,7 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Dispatcher ID to use for running the "head" actor, which handles supervision, death watch and router management messages.
         /// </summary>
         public override string RouterDispatcher
         {
@@ -118,7 +122,7 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieve the resizer to use when dynamically allocating routees to the pool.
         /// </summary>
         public override Resizer Resizer
         {
@@ -126,16 +130,19 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Configures the current router with an auxiliary router for routes that it does not know how to handle.
         /// </summary>
-        /// <param name="routerConfig">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="routerConfig">The router to use as an auxiliary source.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the specified router is another <see cref="RemoteRouterConfig"/>.
+        /// This configuration is not allowed.
+        /// </exception>
+        /// <returns>The router configured with the auxiliary information.</returns>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             var other = routerConfig as RemoteRouterConfig;
             if (other != null && other.Local is RemoteRouterConfig)
-                throw new ArgumentException("RemoteRouterConfig is not allowed to wrap a RemoteRouterConfig", "routerConfig");
+                throw new ConfigurationException("RemoteRouterConfig is not allowed to wrap a RemoteRouterConfig");
             if (other != null && other.Local != null)
                 return Copy(Local.WithFallback(other.Local).AsInstanceOf<Pool>());
             return Copy(Local.WithFallback(routerConfig).AsInstanceOf<Pool>());
@@ -147,10 +154,10 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the specified router, is equal to this instance.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The group to compare.</param>
+        /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
         public bool Equals(RouterConfig other)
         {
             if (!base.Equals(other)) return false;
@@ -161,10 +168,10 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current router.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current router.</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return new RemoteRouterConfigSurrogate
@@ -175,7 +182,8 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// This class represents a surrogate of a <see cref="RemoteRouterConfig"/> router.
+        /// Its main use is to help during the serialization process.
         /// </summary>
         public class RemoteRouterConfigSurrogate : ISurrogate
         {
@@ -189,10 +197,10 @@ namespace Akka.Remote.Routing
             public Address[] Nodes { get; set; }
 
             /// <summary>
-            /// TBD
+            /// Creates a <see cref="RemoteRouterConfig"/> encapsulated by this surrogate.
             /// </summary>
-            /// <param name="system">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="RemoteRouterConfig"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new RemoteRouterConfig(Local, Nodes);

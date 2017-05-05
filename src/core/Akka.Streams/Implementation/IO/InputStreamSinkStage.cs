@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -236,7 +236,9 @@ namespace Akka.Streams.Implementation.IO
         /// TBD
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the maximum size of the input buffer is less than or equal to zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
@@ -377,6 +379,12 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when an <see cref="Initialized"/> message is not the first message.
+        /// </exception>
+        /// <exception cref="IOException">
+        /// This exception is thrown when a timeout occurs waiting on new data.
+        /// </exception>
         /// <returns>TBD</returns>
         public sealed override int ReadByte()
         {
@@ -390,15 +398,27 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="buffer">TBD</param>
         /// <param name="offset">TBD</param>
         /// <param name="count">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <exception cref="IOException">TBD</exception>
+        /// <exception cref="ArgumentException">TBD
+        /// This exception is thrown for a number of reasons. These include:
+        /// <ul>
+        /// <li>the specified <paramref name="buffer"/> size is less than or equal to zero</li>
+        /// <li>the specified <paramref name="buffer"/> size is less than the combination of <paramref name="offset"/> and <paramref name="count"/></li>
+        /// <li>the specified <paramref name="offset"/> is less than zero</li>
+        /// <li>the specified <paramref name="count"/> is less than or equal to zero</li>
+        /// </ul>
+        /// </exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when an <see cref="Initialized"/> message is not the first message.
+        /// </exception>
+        /// <exception cref="IOException">
+        /// This exception is thrown when a timeout occurs waiting on new data.
+        /// </exception>
         /// <returns>TBD</returns>
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (buffer.Length <= 0) throw new ArgumentException("array size must be > 0");
-            if (offset < 0) throw new ArgumentException("offset must be >= 0");
-            if (count <= 0) throw new ArgumentException("count must be > 0");
+            if (buffer.Length <= 0) throw new ArgumentException("array size must be > 0", nameof(buffer));
+            if (offset < 0) throw new ArgumentException("offset must be >= 0", nameof(offset));
+            if (count <= 0) throw new ArgumentException("count must be > 0", nameof(count));
             if (offset + count > buffer.Length) throw new ArgumentException("offset + count must be smaller or equal to the array length");
 
             return ExecuteIfNotClosed(() =>
@@ -524,3 +544,4 @@ namespace Akka.Streams.Implementation.IO
         public override bool CanWrite => false;
     }
 }
+#endif

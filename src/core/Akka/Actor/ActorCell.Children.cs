@@ -321,11 +321,11 @@ namespace Akka.Actor
         // In Akka JVM there is a getAllChildStats here. Use ChildrenRefs.Stats instead
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="TryGetSingleChild(string, out IInternalActorRef)"/> instead.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use TryGetSingleChild")]
+        /// <param name="name">N/A</param>
+        /// <returns>N/A</returns>
+        [Obsolete("Use TryGetSingleChild [0.7.1]")]
         public IInternalActorRef GetSingleChild(string name)
         {
             IInternalActorRef child;
@@ -399,7 +399,7 @@ namespace Akka.Actor
 
         private IInternalActorRef MakeChild(Props props, string name, bool async, bool systemService)
         {
-            if (_systemImpl.Settings.SerializeAllCreators && !systemService && props.Deploy != Deploy.Local)
+            if (_systemImpl.Settings.SerializeAllCreators && !systemService && !(props.Deploy.Scope is LocalScope))
             {
                 var ser = _systemImpl.Serialization;
                 if (props.Arguments != null)
@@ -408,13 +408,12 @@ namespace Akka.Actor
                     {
                         if (argument != null && !(argument is INoSerializationVerificationNeeded))
                         {
-                            var objectType = argument.GetType();
-                            var serializer = ser.FindSerializerFor(objectType);
-                            var bytes = serializer.ToBinary(objectType);
+                            var serializer = ser.FindSerializerFor(argument);
+                            var bytes = serializer.ToBinary(argument);
                             var manifestSerializer = serializer as SerializerWithStringManifest;
                             if (manifestSerializer != null)
                             {
-                                var manifest = manifestSerializer.Manifest(objectType);
+                                var manifest = manifestSerializer.Manifest(argument);
                                 if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
                                 {
                                     throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
@@ -422,7 +421,7 @@ namespace Akka.Actor
                             }
                             else
                             {
-                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().AssemblyQualifiedName) == null)
+                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().TypeQualifiedName()) == null)
                                 {
                                     throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
                                 }

@@ -17,7 +17,7 @@ namespace Akka.Actor
     {
         /// <summary>
         /// Create new actor as child of this context with the given name, which must
-        /// not start with “$”. If the given name is already in use,
+        /// not start with "$". If the given name is already in use,
         /// and <see cref="InvalidActorNameException"/> is thrown.
         /// 
         /// See <see cref="Props"/> for details on how to obtain a <see cref="Props"/> object.

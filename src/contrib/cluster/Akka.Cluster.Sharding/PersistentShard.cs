@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Persistence;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
 {
@@ -59,11 +60,13 @@ namespace Akka.Cluster.Sharding
 
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy => Settings.TunningParameters.EntityRecoveryStrategy == "constant"
+            ? EntityRecoveryStrategy.ConstantStrategy(
+                Context.System,
+                Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
+                Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
+            : EntityRecoveryStrategy.AllStrategy;
+
         protected override bool ReceiveCommand(object message)
         {
             return HandleCommand(message);
@@ -93,11 +96,9 @@ namespace Akka.Cluster.Sharding
             }
             else if (message is RecoveryCompleted)
             {
-                foreach (var entry in State.Entries)
-                    GetEntity(entry);
-
+                RestartRememberedEntities();
                 base.Initialized();
-                Log.Debug("Shard recovery completed [{0}]", ShardId);
+                Log.Debug("PersistentShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
             }
             else return false;
             return true;
@@ -185,6 +186,13 @@ namespace Akka.Cluster.Sharding
             else
                 child.Tell(payload, sender);
         }
+        
+        private void RestartRememberedEntities()
+        {
+            RememberedEntitiesRecoveryStrategy.RecoverEntities(State.Entries).ForEach(scheduledRecovery =>
+                scheduledRecovery.ContinueWith(t => new RestartEntities(t.Result)).PipeTo(Self));
+        }
+
 
         /// <summary>
         /// TBD

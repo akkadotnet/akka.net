@@ -16,32 +16,25 @@ using Akka.Tools.MatchHandler;
 namespace Akka.Persistence
 {
     /// <summary>
-    /// TBD
+    /// Sent to a <see cref="PersistentActor"/> when the journal replay has been finished.
     /// </summary>
     [Serializable]
     public sealed class RecoveryCompleted
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="RecoveryCompleted"/>.
         /// </summary>
         public static readonly RecoveryCompleted Instance = new RecoveryCompleted();
         private RecoveryCompleted(){}
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
-        public override bool Equals(object obj)
-        {
-            return obj is RecoveryCompleted;
-        }
+        public override bool Equals(object obj) => obj is RecoveryCompleted;
+        public override int GetHashCode() => nameof(RecoveryCompleted).GetHashCode();
     }
 
     /// <summary>
-    /// Recovery mode configuration object to be return in <see cref="PersistentActor.get_Recovery()"/>
+    /// Recovery mode configuration object to be return in <see cref="Eventsourced.Recovery"/>
     /// 
-    /// By default recovers from latest snashot replays through to the last available event (last sequenceNr).
+    /// By default recovers from latest snapshot replays through to the last available event (last sequenceNr).
     /// 
     /// Recovery will start from a snapshot if the persistent actor has previously saved one or more snapshots
     /// and at least one of these snapshots matches the specified <see cref="FromSnapshot"/> criteria.
@@ -57,45 +50,46 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Recovery Default = new Recovery(SnapshotSelectionCriteria.Latest);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly Recovery None = new Recovery(SnapshotSelectionCriteria.Latest, 0);
+        public static Recovery Default { get; } = new Recovery(SnapshotSelectionCriteria.Latest);
 
         /// <summary>
-        /// TBD
+        /// Convenience method for skipping recovery in <see cref="PersistentActor"/>.
+        /// </summary>
+        public static Recovery None { get; } = new Recovery(SnapshotSelectionCriteria.Latest, 0);
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Recovery"/> class.
         /// </summary>
         public Recovery() : this(SnapshotSelectionCriteria.Latest)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Recovery"/> class.
         /// </summary>
-        /// <param name="fromSnapshot">TBD</param>
+        /// <param name="fromSnapshot">Criteria for selecting a saved snapshot from which recovery should start. Default is latest(= youngest) snapshot.</param>
         public Recovery(SnapshotSelectionCriteria fromSnapshot) : this(fromSnapshot, long.MaxValue)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Recovery"/> class.
         /// </summary>
-        /// <param name="fromSnapshot">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="fromSnapshot">Criteria for selecting a saved snapshot from which recovery should start. Default is latest(= youngest) snapshot.</param>
+        /// <param name="toSequenceNr">Upper, inclusive sequence number bound for recovery. Default is no upper bound.</param>
         public Recovery(SnapshotSelectionCriteria fromSnapshot, long toSequenceNr) : this(fromSnapshot, toSequenceNr, long.MaxValue)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Recovery"/> class.
         /// </summary>
-        /// <param name="fromSnapshot">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <param name="replayMax">TBD</param>
+        /// <param name="fromSnapshot">Criteria for selecting a saved snapshot from which recovery should start. Default is latest(= youngest) snapshot.</param>
+        /// <param name="toSequenceNr">Upper, inclusive sequence number bound for recovery. Default is no upper bound.</param>
+        /// <param name="replayMax">Maximum number of messages to replay. Default is no limit.</param>
         public Recovery(SnapshotSelectionCriteria fromSnapshot = null, long toSequenceNr = long.MaxValue, long replayMax = long.MaxValue)
         {
-            FromSnapshot = fromSnapshot != null ? fromSnapshot : SnapshotSelectionCriteria.Latest;
+            FromSnapshot = fromSnapshot ?? SnapshotSelectionCriteria.Latest;
             ToSequenceNr = toSequenceNr;
             ReplayMax = replayMax;
         }
@@ -103,17 +97,17 @@ namespace Akka.Persistence
         /// <summary>
         /// Criteria for selecting a saved snapshot from which recovery should start. Default is latest (= youngest) snapshot.
         /// </summary>
-        public SnapshotSelectionCriteria FromSnapshot { get; private set; }
+        public SnapshotSelectionCriteria FromSnapshot { get; }
 
         /// <summary>
         /// Upper, inclusive sequence number bound for recovery. Default is no upper bound.
         /// </summary>
-        public long ToSequenceNr { get; private set; }
+        public long ToSequenceNr { get; }
 
         /// <summary>
         /// Maximum number of messages to replay. Default is no limit.
         /// </summary>
-        public long ReplayMax { get; private set; }
+        public long ReplayMax { get; }
     }
 
     /// <summary>
@@ -122,29 +116,31 @@ namespace Akka.Persistence
     public sealed class RecoveryTimedOutException : AkkaException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RecoveryTimedOutException"/> class.
         /// </summary>
         public RecoveryTimedOutException()
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RecoveryTimedOutException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public RecoveryTimedOutException(string message, Exception cause = null) : base(message, cause)
         {
         }
 
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="RecoveryTimedOutException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         public RecoveryTimedOutException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -159,9 +155,9 @@ namespace Akka.Persistence
     public class DiscardToDeadLetterStrategy : IStashOverflowStrategy
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="DiscardToDeadLetterStrategy"/>.
         /// </summary>
-        public static readonly DiscardToDeadLetterStrategy Instance = new DiscardToDeadLetterStrategy();
+        public static DiscardToDeadLetterStrategy Instance { get; } = new DiscardToDeadLetterStrategy();
 
         private DiscardToDeadLetterStrategy() { }
     }
@@ -176,9 +172,9 @@ namespace Akka.Persistence
     public class ThrowOverflowExceptionStrategy : IStashOverflowStrategy
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="ThrowOverflowExceptionStrategy"/>.
         /// </summary>
-        public static readonly ThrowOverflowExceptionStrategy Instance = new ThrowOverflowExceptionStrategy();
+        public static ThrowOverflowExceptionStrategy Instance { get; } = new ThrowOverflowExceptionStrategy();
 
         private ThrowOverflowExceptionStrategy() { }
     }
@@ -189,7 +185,7 @@ namespace Akka.Persistence
     public sealed class ReplyToStrategy : IStashOverflowStrategy
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ReplyToStrategy"/> class.
         /// </summary>
         /// <param name="response">TBD</param>
         public ReplyToStrategy(object response)
@@ -200,7 +196,7 @@ namespace Akka.Persistence
         /// <summary>
         /// The message replying to sender with
         /// </summary>
-        public object Response { get; private set; }
+        public object Response { get; }
     }
 
     /// <summary>
@@ -255,48 +251,32 @@ namespace Akka.Persistence
     /// </summary>
     public abstract class PersistentActor : Eventsourced
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override bool Receive(object message)
         {
             return ReceiveCommand(message);
         }
     }
-    
+
     /// <summary>
     /// Persistent actor - can be used to implement command or eventsourcing.
     /// </summary>
     public abstract class UntypedPersistentActor : Eventsourced
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override bool Receive(object message)
         {
             return ReceiveCommand(message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected sealed override bool ReceiveCommand(object message)
         {
             OnCommand(message);
             return true;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected sealed override bool ReceiveRecover(object message)
         {
             OnRecover(message);
@@ -308,26 +288,12 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="message">TBD</param>
         protected abstract void OnCommand(object message);
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="message">TBD</param>
         protected abstract void OnRecover(object message);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        protected void Become(UntypedReceive receive, bool discardOld = true)
-        {
-            if (discardOld)
-                Context.Become(receive);
-            else
-                Context.BecomeStacked(receive);
-        }
-
 
         /// <summary>
         /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
@@ -350,11 +316,10 @@ namespace Akka.Persistence
             Context.BecomeStacked(receive);
         }
 
-
         /// <summary>
         /// TBD
         /// </summary>
-        protected static new IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
+        protected new static IUntypedActorContext Context => (IUntypedActorContext)ActorBase.Context;
     }
 
     /// <summary>
@@ -362,7 +327,6 @@ namespace Akka.Persistence
     /// </summary>
     public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
     {
-        
         private bool _shouldUnhandle = true;
         private readonly Stack<MatchBuilder> _matchCommandBuilders = new Stack<MatchBuilder>();
         private readonly Stack<MatchBuilder> _matchRecoverBuilders = new Stack<MatchBuilder>();
@@ -371,7 +335,7 @@ namespace Akka.Persistence
         private bool _hasBeenInitialized;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ReceivePersistentActor"/> class.
         /// </summary>
         protected ReceivePersistentActor()
         {
@@ -382,7 +346,7 @@ namespace Akka.Persistence
         {
             //This might be called directly after the constructor, or when the same actor instance has been returned
             //during recreate. Make sure what happens here is idempotent
-            if(!_hasBeenInitialized)	//Do not perform this when "recreating" the same instance
+            if (!_hasBeenInitialized)	//Do not perform this when "recreating" the same instance
             {
                 _partialReceiveCommand = BuildNewReceiveHandler(_matchCommandBuilders.Pop());
                 _partialReceiveRecover = BuildNewReceiveHandler(_matchRecoverBuilders.Pop());
@@ -427,19 +391,13 @@ namespace Akka.Persistence
             base.BecomeStacked(m => ExecutePartialMessageHandler(m, newHandler));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc/>
         protected sealed override void OnCommand(object message)
         {
             ExecutePartialMessageHandler(message, _partialReceiveCommand);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc/>
         protected sealed override void OnRecover(object message)
         {
             ExecutePartialMessageHandler(message, _partialReceiveRecover);
@@ -647,4 +605,3 @@ namespace Akka.Persistence
         #endregion
     }
 }
-

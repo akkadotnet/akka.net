@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -37,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
             task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
         }
 
         [Fact]
@@ -111,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
                 task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
                 var expected = Enumerable.Range(1, 15).ToList();
                 expected.Add(20);
-                task.Result.ShouldAllBeEquivalentTo(expected);
+                task.Result.Should().BeEquivalentTo(expected);
             }, Materializer);
         }
 
@@ -213,31 +214,34 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Delay_must_properly_delay_according_to_buffer_size()
         {
             // With a buffer size of 1, delays add up 
-            var task = Source.From(Enumerable.Range(1, 5))
+            Source.From(Enumerable.Range(1, 5))
                 .Delay(TimeSpan.FromMilliseconds(500), DelayOverflowStrategy.Backpressure)
                 .WithAttributes(Attributes.CreateInputBuffer(1, 1))
-                .RunWith(Sink.Ignore<int>(), Materializer);
+                .RunWith(Sink.Ignore<int>(), Materializer)
+                .PipeTo(TestActor, success: () => Done.Instance);
 
-            task.Wait(TimeSpan.FromSeconds(2)).ShouldBeFalse();
-            task.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+            ExpectNoMsg(TimeSpan.FromSeconds(2));
+            ExpectMsg<Done>();
 
             // With a buffer large enough to hold all arriving elements, delays don't add up 
-            task = Source.From(Enumerable.Range(1, 100))
+            Source.From(Enumerable.Range(1, 100))
                 .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.Backpressure)
                 .WithAttributes(Attributes.CreateInputBuffer(100, 100))
-                .RunWith(Sink.Ignore<int>(), Materializer);
+                .RunWith(Sink.Ignore<int>(), Materializer)
+                .PipeTo(TestActor, success: () => Done.Instance);
 
-            task.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+            ExpectMsg<Done>();
 
             // Delays that are already present are preserved when buffer is large enough 
-            task = Source.Tick(TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100), NotUsed.Instance)
+            Source.Tick(TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100), NotUsed.Instance)
                 .Take(10)
                 .Delay(TimeSpan.FromSeconds(1), DelayOverflowStrategy.Backpressure)
                 .WithAttributes(Attributes.CreateInputBuffer(10, 10))
-                .RunWith(Sink.Ignore<NotUsed>(), Materializer);
+                .RunWith(Sink.Ignore<NotUsed>(), Materializer)
+                .PipeTo(TestActor, success: () => Done.Instance);
 
-            task.Wait(TimeSpan.FromMilliseconds(900)).ShouldBeFalse();
-            task.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+            ExpectNoMsg(TimeSpan.FromMilliseconds(900));
+            ExpectMsg<Done>();
         }
 
         [Fact]

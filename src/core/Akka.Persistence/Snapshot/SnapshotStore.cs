@@ -22,9 +22,11 @@ namespace Akka.Persistence.Snapshot
         private readonly CircuitBreaker _breaker;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SnapshotStore"/> class.
         /// </summary>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the associated Persistence extension has not been used in current actor system context.
+        /// </exception>
         protected SnapshotStore()
         {
             var extension = Persistence.Instance.Apply(Context.System);
@@ -59,8 +61,8 @@ namespace Akka.Persistence.Snapshot
 
                 _breaker.WithCircuitBreaker(() => LoadAsync(msg.PersistenceId, msg.Criteria.Limit(msg.ToSequenceNr)))
                     .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
-                        ? new LoadSnapshotResult(t.Result, msg.ToSequenceNr)
-                        : new LoadSnapshotResult(null, msg.ToSequenceNr), _continuationOptions)
+                        ? new LoadSnapshotResult(t.Result, msg.ToSequenceNr) as ISnapshotResponse
+                        : new LoadSnapshotFailed(t.Exception) as ISnapshotResponse, _continuationOptions)
                     .PipeTo(Sender);
             }
             else if (message is SaveSnapshot)
@@ -256,4 +258,3 @@ namespace Akka.Persistence.Snapshot
         }
     }
 }
-

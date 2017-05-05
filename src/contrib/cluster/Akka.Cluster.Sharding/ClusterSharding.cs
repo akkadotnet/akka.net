@@ -201,7 +201,7 @@ namespace Akka.Cluster.Sharding
     /// host any entities itself, but knows how to delegate messages to the right location.
     /// A <see cref="Sharding.ShardRegion"/> starts in proxy only mode if the roles of the node does not include
     /// the node role specified in `akka.contrib.cluster.sharding.role` config property
-    /// or if the specified `EntityProps` is `null`.
+    /// or if the specified `EntityProps` is <see langword="null"/>.
     /// </para>
     /// <para>
     /// If the state of the entities are persistent you may stop entities that are not used to
@@ -291,6 +291,9 @@ namespace Akka.Cluster.Sharding
         /// The message that will be sent to entities when they are to be stopped for a rebalance or 
         /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
         /// </param>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
+        /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef Start(
             string typeName, //TODO: change type name to type instance?
@@ -335,6 +338,9 @@ namespace Akka.Cluster.Sharding
         /// The message that will be sent to entities when they are to be stopped for a rebalance or 
         /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
         /// </param>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
+        /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public async Task<IActorRef> StartAsync(
             string typeName, //TODO: change type name to type instance?
@@ -661,14 +667,15 @@ namespace Akka.Cluster.Sharding
             {
                 return region;
             }
-            throw new ArgumentException(string.Format("Shard type [{0}] must be started first", typeName));
+            throw new ArgumentException($"Shard type [{typeName}] must be started first");
         }
 
         private void RequireClusterRole(string role)
         {
             if (!(string.IsNullOrEmpty(role) || _cluster.SelfRoles.Contains(role)))
             {
-                throw new IllegalStateException(string.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
+                throw new IllegalStateException(
+                    $"This cluster member [{_cluster.SelfAddress}] doesn't have the role [{role}]");
             }
         }
     }
@@ -712,7 +719,7 @@ namespace Akka.Cluster.Sharding
     {
         /// <summary>
         /// Extract the entity id from an incoming <paramref name="message"/>. 
-        /// If `null` is returned the message will be `unhandled`, i.e. posted as `Unhandled`
+        /// If <see langword="null"/> is returned the message will be `unhandled`, i.e. posted as `Unhandled`
         ///  messages on the event stream
         /// </summary>
         /// <param name="message">TBD</param>

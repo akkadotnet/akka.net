@@ -17,7 +17,23 @@ namespace Akka.Tests.Performance.Actor
     /// </summary>
     public class ActorMemoryFootprintSpec
     {
-        class MemoryUntypedActor : UntypedActor {
+        #region Actor classes
+        internal class MemoryActorBasePatternMatchActor : ActorBase
+        {
+            protected override bool Receive(object message)
+            {
+                return message.Match()
+                    .With<string>(s => { })
+                    .With<int>(i => { })
+                    .With<bool>(b => { })
+                    .WasHandled;
+            }
+
+            public static Props Props { get; } = Props.Create(() => new MemoryActorBasePatternMatchActor());
+        }
+
+        internal class MemoryUntypedActor : UntypedActor
+        {
             protected override void OnReceive(object message)
             {
                 if (message is string) return;
@@ -25,9 +41,11 @@ namespace Akka.Tests.Performance.Actor
                 if (message is bool) return;
                 Unhandled(message);
             }
+
+            public static Props Props { get; } = Props.Create(() => new MemoryUntypedActor());
         }
 
-        class MemoryReceiveActor : ReceiveActor
+        internal class MemoryReceiveActor : ReceiveActor
         {
             public MemoryReceiveActor()
             {
@@ -35,7 +53,10 @@ namespace Akka.Tests.Performance.Actor
                 Receive<int>(i => { });
                 Receive<bool>(b => { });
             }
+
+            public static Props Props { get; } = Props.Create(() => new MemoryReceiveActor());
         }
+        #endregion
 
         private static readonly AtomicCounter Counter = new AtomicCounter(0);
         private ActorSystem _system;
@@ -43,15 +64,24 @@ namespace Akka.Tests.Performance.Actor
 
         private const string CreateThroughputCounter = "ActorCreateThroughput";
         private const int ActorCreateNumber = 10000;
-
-        private static readonly Props UntypedActorProps = Props.Create(() => new MemoryUntypedActor());
-        private static readonly Props ReceiveActorProps = Props.Create(() => new MemoryReceiveActor());
         
         [PerfSetup]
         public void Setup(BenchmarkContext context)
         {
-            _system = ActorSystem.Create("ActorMemoryFootprintSpec" + Counter.GetAndIncrement());
+            _system = ActorSystem.Create($"ActorMemoryFootprintSpec{Counter.GetAndIncrement()}");
             _createActorThroughput = context.GetCounter(CreateThroughputCounter);
+        }
+
+        [PerfBenchmark(Description = "Measures the amount of memory used by 10,000 ActorBase + PatternMatch", RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
+        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
+        [CounterMeasurement(CreateThroughputCounter)]
+        public void ActorBase_PatternMatch_memory_footprint(BenchmarkContext context)
+        {
+            for (var i = 0; i < ActorCreateNumber; i++)
+            {
+                _system.ActorOf(MemoryActorBasePatternMatchActor.Props);
+                _createActorThroughput.Increment();
+            }
         }
 
         [PerfBenchmark(Description = "Measures the amount of memory used by 10,000 UntypedActors", RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
@@ -61,7 +91,7 @@ namespace Akka.Tests.Performance.Actor
         {
             for (var i = 0; i < ActorCreateNumber; i++)
             {
-                _system.ActorOf(UntypedActorProps);
+                _system.ActorOf(MemoryUntypedActor.Props);
                 _createActorThroughput.Increment();
             }
         }
@@ -73,7 +103,7 @@ namespace Akka.Tests.Performance.Actor
         {
             for (var i = 0; i < ActorCreateNumber; i++)
             {
-                _system.ActorOf(ReceiveActorProps);
+                _system.ActorOf(MemoryReceiveActor.Props);
                 _createActorThroughput.Increment();
             }
         }

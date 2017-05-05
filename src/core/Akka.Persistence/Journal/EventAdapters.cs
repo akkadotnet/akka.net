@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -41,7 +42,7 @@ namespace Akka.Persistence.Journal
     public interface IWriteEventAdapter
     {
         /// <summary>
-        /// Return the manifest (type hint) that will be provided in the <see cref="FromJournal"/> method.
+        /// Return the manifest (type hint) that will be provided in the <see cref="IReadEventAdapter.FromJournal"/> method.
         /// Use empty string if not needed.
         /// </summary>
         /// <param name="evt">TBD</param>
@@ -89,146 +90,83 @@ namespace Akka.Persistence.Journal
     }
 
     /// <summary>
-    /// TBD
+    /// No-op model adapter which passes through the incoming events as-is.
     /// </summary>
     [Serializable]
-    public class IdentityEventAdapter : IEventAdapter
+    public sealed class IdentityEventAdapter : IEventAdapter
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="IdentityEventAdapter"/>.
         /// </summary>
-        public static readonly IdentityEventAdapter Instance = new IdentityEventAdapter();
+        public static IdentityEventAdapter Instance { get; } = new IdentityEventAdapter();
 
         private IdentityEventAdapter() { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public string Manifest(object evt)
         {
             return string.Empty;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public object ToJournal(object evt)
         {
             return evt;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="manifest">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public IEventSequence FromJournal(object evt, string manifest)
         {
             return EventSequence.Single(evt);
         }
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal class NoopWriteEventAdapter : IEventAdapter
     {
         private readonly IReadEventAdapter _readEventAdapter;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="readEventAdapter">TBD</param>
         public NoopWriteEventAdapter(IReadEventAdapter readEventAdapter)
         {
             _readEventAdapter = readEventAdapter;
         }
 
-        // no-op write
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <returns>TBD</returns>
         public string Manifest(object evt)
         {
             return string.Empty;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <returns>TBD</returns>
         public object ToJournal(object evt)
         {
             return evt;
         }
 
-        // pass-through read
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="manifest">TBD</param>
-        /// <returns>TBD</returns>
         public IEventSequence FromJournal(object evt, string manifest)
         {
             return _readEventAdapter.FromJournal(evt, manifest);
         }
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal class NoopReadEventAdapter : IEventAdapter
     {
         private readonly IWriteEventAdapter _writeEventAdapter;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="writeEventAdapter">TBD</param>
         public NoopReadEventAdapter(IWriteEventAdapter writeEventAdapter)
         {
             _writeEventAdapter = writeEventAdapter;
         }
 
-        // pass-through write
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <returns>TBD</returns>
         public string Manifest(object evt)
         {
             return _writeEventAdapter.Manifest(evt);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <returns>TBD</returns>
         public object ToJournal(object evt)
         {
             return _writeEventAdapter.ToJournal(evt);
         }
 
-        // no-op read
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="manifest">TBD</param>
-        /// <returns>TBD</returns>
         public IEventSequence FromJournal(object evt, string manifest)
         {
             return EventSequence.Single(evt);
@@ -244,12 +182,10 @@ namespace Akka.Persistence.Journal
         private static readonly Exception OnlyReadSideException = new IllegalStateException(
                 "CombinedReadEventAdapter must not be used when writing (creating manifests) events!");
 
-        private readonly IEventAdapter[] _adapters;
-
         /// <summary>
         /// TBD
         /// </summary>
-        public IEnumerable<IEventAdapter> Adapters { get { return _adapters; } }
+        public IEnumerable<IEventAdapter> Adapters { get; }
 
         /// <summary>
         /// TBD
@@ -257,7 +193,7 @@ namespace Akka.Persistence.Journal
         /// <param name="adapters">TBD</param>
         public CombinedReadEventAdapter(IEnumerable<IEventAdapter> adapters)
         {
-            _adapters = adapters.ToArray();
+            Adapters = adapters.ToArray();
         }
 
         /// <summary>
@@ -290,7 +226,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public IEventSequence FromJournal(object evt, string manifest)
         {
-            return EventSequence.Create(_adapters.SelectMany(adapter => adapter.FromJournal(evt, manifest).Events));
+            return EventSequence.Create(Adapters.SelectMany(adapter => adapter.FromJournal(evt, manifest).Events));
         }
     }
 
@@ -329,7 +265,7 @@ namespace Akka.Persistence.Journal
         private readonly ILoggingAdapter _log;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EventAdapters"/> class.
         /// </summary>
         /// <param name="system">TBD</param>
         /// <param name="config">TBD</param>
@@ -366,7 +302,7 @@ namespace Akka.Persistence.Journal
                 var type = Type.GetType(kv.Key);
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
-                    : new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h]));
+                    : new NoopWriteEventAdapter(new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h])));
                 return new KeyValuePair<Type, IEventAdapter>(type, adapter);
             }).ToList());
 
@@ -405,7 +341,7 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="EventAdapters"/> class.
         /// </summary>
         /// <param name="map">TBD</param>
         /// <param name="bindings">TBD</param>

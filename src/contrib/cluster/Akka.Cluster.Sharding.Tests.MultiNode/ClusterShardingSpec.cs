@@ -56,6 +56,11 @@ namespace Akka.Cluster.Sharding.Tests
                   shard-start-timeout = 5s
                   entity-restart-backoff = 1s
                   rebalance-interval = 2 s
+                  entity-recovery-strategy = ""all""
+                  entity-recovery-constant-rate-strategy {
+                    frequency = 1 ms
+                    number-of-entities = 1
+                  }
                   least-shard-allocation-strategy {
                     rebalance-threshold = 2
                     max-simultaneous-rebalance = 1
@@ -296,12 +301,12 @@ namespace Akka.Cluster.Sharding.Tests
             foreach (var typeName in typeNames)
             {
                 var rebalanceEnabled = string.Equals(typeName, "rebalancing", StringComparison.InvariantCultureIgnoreCase);
-                var singletonProps = Props.Create(() => new BackoffSupervisor(
+                var singletonProps = BackoffSupervisor.Props(
                     CoordinatorProps(typeName, rebalanceEnabled),
                     "coordinator",
                     TimeSpan.FromSeconds(5),
                     TimeSpan.FromSeconds(5),
-                    0.1)).WithDeploy(Deploy.Local);
+                    0.1).WithDeploy(Deploy.Local);
 
                 Sys.ActorOf(ClusterSingletonManager.Props(
                     singletonProps,

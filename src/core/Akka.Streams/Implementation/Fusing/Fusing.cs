@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
@@ -277,11 +278,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// 
         /// The materialized value computation is rewritten as well in that all
         /// leaf nodes point to the copied modules and all nested computations are
-        /// “inlined”, resulting in only one big computation tree for the whole
+        /// "inlined", resulting in only one big computation tree for the whole
         /// normalized overall module. The contained MaterializedValueSource stages
         /// are also rewritten to point to the copied MaterializedValueNodes. This
         /// correspondence is then used during materialization to trigger these sources
-        /// when “their” node has received its value.
+        /// when "their" node has received its value.
         /// </summary>
         private static LinkedList<KeyValuePair<IModule, IMaterializedValueNode>> Descend<T>(
             IModule module,
@@ -866,7 +867,7 @@ namespace Akka.Streams.Implementation.Fusing
             Type stageType;
             return copiedModule != null
                 && (graphStageModule = copiedModule.CopyOf as GraphStageModule) != null
-                && (stageType = graphStageModule.Stage.GetType()).IsGenericType
+                && (stageType = graphStageModule.Stage.GetType()).GetTypeInfo().IsGenericType
                 && stageType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>);
         }
 
@@ -897,7 +898,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// See through copied modules to the “real” module.
+        /// See through copied modules to the "real" module.
         /// </summary>
         private static IModule GetRealModule(IModule module)
         {

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Event;
@@ -107,16 +108,19 @@ namespace Akka.Streams.Implementation
     public class NormalShutdownException : IllegalStateException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="NormalShutdownException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public NormalShutdownException(string message) : base(message) { }
+
+#if SERIALIZATION
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="NormalShutdownException"/> class.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected NormalShutdownException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     /// <summary>

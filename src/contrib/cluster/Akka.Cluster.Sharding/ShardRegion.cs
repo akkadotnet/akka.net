@@ -227,6 +227,9 @@ namespace Akka.Cluster.Sharding
         private bool _loggedFullBufferWarning = false;
         private const int RetryCountThreshold = 5;
 
+        private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
+        private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new TaskCompletionSource<Done>();
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -253,6 +256,17 @@ namespace Akka.Cluster.Sharding
             MembersByAge = membersByAgeBuilder.ToImmutable();
 
             _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RetryInterval, Settings.TunningParameters.RetryInterval, Self, Retry.Instance, Self);
+            SetupCoordinatedShutdown();
+        }
+
+        private void SetupCoordinatedShutdown()
+        {
+            var self = Self;
+            _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShardingShutdownRegion, "region-shutdown", () =>
+            {
+                self.Tell(GracefulShutdown.Instance);
+                return _gracefulShutdownProgress.Task;
+            });
         }
 
         private ILoggingAdapter _log;
@@ -263,7 +277,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public bool GracefulShutdownInProgres { get; private set; }
+        public bool GracefulShutdownInProgress { get; private set; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -294,21 +308,18 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
             base.PostStop();
             Cluster.Unsubscribe(Self);
+            _gracefulShutdownProgress.TrySetResult(Done.Instance);
             _retryTask.Cancel();
         }
 
@@ -339,11 +350,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="ActorBase.Receive"/>
         protected override bool Receive(object message)
         {
             if (message is Terminated) HandleTerminated(message as Terminated);
@@ -507,7 +514,7 @@ namespace Akka.Cluster.Sharding
             else if (command is GracefulShutdown)
             {
                 Log.Debug("Starting graceful shutdown of region and all its shards");
-                GracefulShutdownInProgres = true;
+                GracefulShutdownInProgress = true;
                 SendGracefulShutdownToCoordinator();
                 TryCompleteGracefulShutdown();
             }
@@ -553,16 +560,28 @@ namespace Akka.Cluster.Sharding
             return Task.WhenAll(tasks);
         }
 
+        private List<ActorSelection> GracefulShutdownCoordinatorSelections
+        {
+            get
+            {
+                return
+                    MembersByAge.Take(2)
+                        .Select(m => Context.ActorSelection(new RootActorPath(m.Address) + CoordinatorPath))
+                        .ToList();
+            }
+        }
+
         private void TryCompleteGracefulShutdown()
         {
-            if(GracefulShutdownInProgres && Shards.Count == 0 && ShardBuffers.Count == 0)
+            if(GracefulShutdownInProgress && Shards.Count == 0 && ShardBuffers.Count == 0)
                 Context.Stop(Self);     // all shards have been rebalanced, complete graceful shutdown
         }
 
         private void SendGracefulShutdownToCoordinator()
         {
-            if (GracefulShutdownInProgres && _coordinator != null)
-                _coordinator.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self));
+            if (GracefulShutdownInProgress)
+                GracefulShutdownCoordinatorSelections
+                    .ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
         }
 
         private void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)

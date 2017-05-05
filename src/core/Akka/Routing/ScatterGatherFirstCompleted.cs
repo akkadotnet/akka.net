@@ -296,7 +296,7 @@ namespace Akka.Routing
 
         #region Surrogate
         /// <summary>
-        /// Creeates a surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.
+        /// Creates a surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.
         /// </summary>
         /// <param name="system">The actor system that owns this router.</param>
         /// <returns>The surrogate representation of the current <see cref="ScatterGatherFirstCompletedPool"/>.</returns>
@@ -419,7 +419,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="routees">N/A</param>
         /// <param name="within">N/A</param>
-        [Obsolete("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within) instead")]
+        [Obsolete("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString()), within) instead [1.1.0]")]
         public ScatterGatherFirstCompletedGroup(IEnumerable<IActorRef> routees, TimeSpan within)
             : this(routees.Select(c => c.Path.ToString()), within, Dispatchers.DefaultDispatcherId)
         {

@@ -15,7 +15,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public interface IMatchCompiler<in T>
+    internal interface IMatchCompiler<in T>
     {
         /// <summary>
         /// TBD
@@ -25,6 +25,8 @@ namespace Akka.Tools.MatchHandler
         /// <param name="signature">TBD</param>
         /// <returns>TBD</returns>
         PartialAction<T> Compile(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature);
+
+#if !CORECLR
         /// <summary>
         /// TBD
         /// </summary>
@@ -36,6 +38,7 @@ namespace Akka.Tools.MatchHandler
         /// <param name="methodAttributes">TBD</param>
         /// <returns>TBD</returns>
         void CompileToMethod(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature, TypeBuilder typeBuilder, string methodName, MethodAttributes methodAttributes = MethodAttributes.Public | MethodAttributes.Static);
+#endif
     }
 }
 

@@ -106,13 +106,13 @@ namespace Akka.Pattern
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task<T> Invoke<T>(Func<Task<T>> body)
+        public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
             if (!_lock.CompareAndSet(true, false))
             {
                 throw new OpenCircuitException();
             }
-            return await CallThrough(body);
+            return CallThrough(body);
         }
 
         /// <summary>
@@ -122,13 +122,13 @@ namespace Akka.Pattern
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task Invoke(Func<Task> body)
+        public override Task Invoke(Func<Task> body)
         {
             if (!_lock.CompareAndSet(true, false))
             {
                 throw new OpenCircuitException();
             }
-            await CallThrough(body);
+            return CallThrough(body);
         }
 
         /// <summary>
@@ -188,9 +188,9 @@ namespace Akka.Pattern
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task<T> Invoke<T>(Func<Task<T>> body)
+        public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            return await CallThrough(body);
+            return CallThrough(body);
         }
 
         /// <summary>
@@ -198,9 +198,9 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task Invoke(Func<Task> body)
+        public override Task Invoke(Func<Task> body)
         {
-            await CallThrough(body);
+            return CallThrough(body);
         }
 
         /// <summary>
@@ -232,12 +232,14 @@ namespace Akka.Pattern
         }
 
         /// <summary>
-        /// Override for more descriptive toString
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return string.Format("Closed with failure count = {0}", Current);
+            return $"Closed with failure count = {Current}";
         }
     }
 }

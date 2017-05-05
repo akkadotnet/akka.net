@@ -15,7 +15,7 @@ namespace Akka.Serialization
     /// </summary>
     public class NullSerializer : Serializer
     {
-        private static readonly byte[] nullBytes = {};
+        private static readonly byte[] EmptyBytes = {};
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NullSerializer" /> class.
@@ -29,18 +29,12 @@ namespace Akka.Serialization
         /// <summary>
         /// Completely unique value to identify this implementation of the <see cref="Serializer"/> used to optimize network traffic
         /// </summary>
-        public override int Identifier
-        {
-            get { return 0; }
-        }
+        public override int Identifier => 0;
 
         /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
         /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return false; }
-        }
+        public override bool IncludeManifest => false;
 
         /// <summary>
         /// Serializes the given object into a byte array
@@ -49,7 +43,7 @@ namespace Akka.Serialization
         /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
-            return nullBytes;
+            return EmptyBytes;
         }
 
         /// <summary>
@@ -64,4 +58,3 @@ namespace Akka.Serialization
         }
     }
 }
-

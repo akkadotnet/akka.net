@@ -379,6 +379,7 @@ namespace ApiApprover
             "System.CodeDom.Compiler.GeneratedCodeAttribute",
             "System.ComponentModel.EditorBrowsableAttribute",
             "System.Runtime.CompilerServices.AsyncStateMachineAttribute",
+            "System.Runtime.CompilerServices.IteratorStateMachineAttribute",
             "System.Runtime.CompilerServices.CompilerGeneratedAttribute",
             "System.Runtime.CompilerServices.CompilationRelaxationsAttribute",
             "System.Runtime.CompilerServices.ExtensionAttribute",

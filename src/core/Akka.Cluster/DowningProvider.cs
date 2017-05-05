@@ -59,6 +59,7 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public TimeSpan DownRemovalMargin => Cluster.Get(_system).Settings.DownRemovalMargin;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -75,7 +76,9 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="downingProviderType">TBD</param>
         /// <param name="system">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when the specified <paramref name="downingProviderType"/> does not implement <see cref="IDowningProvider"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         public static IDowningProvider Load(Type downingProviderType, ActorSystem system)
         {
@@ -92,4 +95,3 @@ namespace Akka.Cluster
     }
 
 }
-

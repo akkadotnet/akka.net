@@ -2028,23 +2028,25 @@ namespace Akka.Streams.Implementation
         public class MaterializationPanicException : Exception
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MaterializationPanicException"/> class.
             /// </summary>
-            /// <param name="innerException">TBD</param>
+            /// <param name="innerException">The exception that is the cause of the current exception.</param>
             public MaterializationPanicException(Exception innerException)
                 : base("Materialization aborted.", innerException)
             {
             }
 
+#if SERIALIZATION
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="MaterializationPanicException" /> class.
             /// </summary>
-            /// <param name="info">TBD</param>
-            /// <param name="context">TBD</param>
+            /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+            /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
             protected MaterializationPanicException(SerializationInfo info, StreamingContext context)
                 : base(info, context)
             {
             }
+#endif
         }
 
         /// <summary>

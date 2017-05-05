@@ -56,6 +56,7 @@ namespace Akka.TestKit.Xunit
         /// <param name="actual">TBD</param>
         /// <param name="format">TBD</param>
         /// <param name="args">TBD</param>
+        /// <exception cref="AkkaEqualException">TBD</exception>
         public void AssertEqual<T>(T expected, T actual, string format = "", params object[] args)
         {
             var comparer = new AkkaAssertEqualityComparer<T>();
@@ -72,6 +73,7 @@ namespace Akka.TestKit.Xunit
         /// <param name="comparer">TBD</param>
         /// <param name="format">TBD</param>
         /// <param name="args">TBD</param>
+        /// <exception cref="AkkaEqualException">TBD</exception>
         public void AssertEqual<T>(T expected, T actual, Func<T, T, bool> comparer, string format = "", params object[] args)
         {
             if(!comparer(expected, actual))

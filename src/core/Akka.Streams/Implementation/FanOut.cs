@@ -712,7 +712,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// TODO Find out where this class will be used and check if the type parameter fit
-    /// since we need to cast messages into a tuple and therefore maybe need aditional type parameters
+    /// since we need to cast messages into a tuple and therefore maybe need additional type parameters
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     internal sealed class Unzip<T> : FanOut<T>

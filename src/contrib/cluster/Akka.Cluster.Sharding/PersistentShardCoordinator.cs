@@ -28,7 +28,7 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the event sourced PersistentShardCoordinator.
         /// </summary>
         [Serializable]
-        internal protected sealed class State
+        protected internal sealed class State
         {
             /// <summary>
             /// TBD
@@ -90,14 +90,14 @@ namespace Akka.Cluster.Sharding
                 if (e is ShardRegionRegistered)
                 {
                     var message = e as ShardRegionRegistered;
-                    if (Regions.ContainsKey(message.Region)) throw new ArgumentException(string.Format("Region {0} is already registered", message.Region));
+                    if (Regions.ContainsKey(message.Region)) throw new ArgumentException($"Region {message.Region} is already registered", nameof(e));
 
                     return Copy(regions: Regions.SetItem(message.Region, ImmutableList<ShardId>.Empty));
                 }
                 else if (e is ShardRegionProxyRegistered)
                 {
                     var message = e as ShardRegionProxyRegistered;
-                    if (RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException(string.Format("Region proxy {0} is already registered", message.RegionProxy));
+                    if (RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException($"Region proxy {message.RegionProxy} is already registered", nameof(e));
 
                     return Copy(regionProxies: RegionProxies.Add(message.RegionProxy));
                 }
@@ -105,7 +105,7 @@ namespace Akka.Cluster.Sharding
                 {
                     IImmutableList<ShardId> shardRegions;
                     var message = e as ShardRegionTerminated;
-                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException(string.Format("Region {0} not registered", message.Region));
+                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
 
                     return Copy(
                         regions: Regions.Remove(message.Region),
@@ -115,7 +115,7 @@ namespace Akka.Cluster.Sharding
                 else if (e is ShardRegionProxyTerminated)
                 {
                     var message = e as ShardRegionProxyTerminated;
-                    if (!RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException(string.Format("Region proxy {0} not registered", message.RegionProxy));
+                    if (!RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException($"Region proxy {message.RegionProxy} not registered", nameof(e));
 
                     return Copy(regionProxies: RegionProxies.Remove(message.RegionProxy));
                 }
@@ -123,8 +123,8 @@ namespace Akka.Cluster.Sharding
                 {
                     IImmutableList<ShardId> shardRegions;
                     var message = e as ShardHomeAllocated;
-                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException(string.Format("Region {0} not registered", message.Region));
-                    if (Shards.ContainsKey(message.Shard)) throw new ArgumentException(string.Format("Shard {0} is already allocated", message.Shard));
+                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
+                    if (Shards.ContainsKey(message.Shard)) throw new ArgumentException($"Shard {message.Shard} is already allocated", nameof(e));
 
                     return Copy(
                         shards: Shards.SetItem(message.Shard, message.Region),
@@ -136,8 +136,8 @@ namespace Akka.Cluster.Sharding
                     IActorRef region;
                     IImmutableList<ShardId> shardRegions;
                     var message = e as ShardHomeDeallocated;
-                    if (!Shards.TryGetValue(message.Shard, out region)) throw new ArgumentException(string.Format("Shard {0} not allocated", message.Shard));
-                    if (!Regions.TryGetValue(region, out shardRegions)) throw new ArgumentException(string.Format("Region {0} for shard {1} not registered", region, message.Shard));
+                    if (!Shards.TryGetValue(message.Shard, out region)) throw new ArgumentException($"Shard {message.Shard} not allocated", nameof(e));
+                    if (!Regions.TryGetValue(region, out shardRegions)) throw new ArgumentException($"Region {region} for shard {message.Shard} not registered", nameof(e));
 
                     return Copy(
                         shards: Shards.Remove(message.Shard),

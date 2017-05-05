@@ -9,11 +9,10 @@ using System;
 using System.Collections.Generic;
 using Akka.Remote.Transport;
 using Akka.Util;
-using Helios.Buffers;
-using Helios.Channels;
-using Helios.Codecs;
-using Helios.Logging;
-using Helios.Util;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
+using Microsoft.Extensions.Logging;
 using TCP;
 using Address = Akka.Actor.Address;
 
@@ -21,7 +20,7 @@ namespace Akka.Remote.TestKit
 {
     internal class MsgDecoder : MessageToMessageDecoder<object>
     {
-        private readonly ILogger _logger = LoggingFactory.GetLogger<MsgDecoder>();
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<MsgDecoder>();
 
         public static Address Proto2Address(TCP.Address addr)
         {
@@ -44,7 +43,7 @@ namespace Akka.Remote.TestKit
 
         protected object Decode(object message)
         {
-            _logger.Debug("Decoding {0}", message);
+            _logger.LogDebug("Decoding {0}", message);
             var w = message as TCP.Wrapper;
             if (w != null && w.AllFields.Count == 1)
             {
@@ -99,17 +98,17 @@ namespace Akka.Remote.TestKit
                 }
                 else
                 {
-                    throw new ArgumentException(string.Format("wrong message {0}", message));
+                    throw new ArgumentException($"wrong message {message}");
                 }
             }
 
-            throw new ArgumentException(string.Format("wrong message {0}", message));
+            throw new ArgumentException($"wrong message {message}");
         }
 
         protected override void Decode(IChannelHandlerContext context, object message, List<object> output)
         {
             var o = Decode(message);
-            _logger.Debug("Decoded {0}", o);
+            _logger.LogDebug("Decoded {0}", o);
             output.Add(o);
         }
     }

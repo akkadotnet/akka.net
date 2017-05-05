@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Akka.Tools.MatchHandler
 {
@@ -16,7 +17,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public class MatchExpressionBuilder<T> : IMatchExpressionBuilder
+    internal class MatchExpressionBuilder<T> : IMatchExpressionBuilder
     {
         //See the end of file a description of what this class does
 
@@ -71,7 +72,7 @@ namespace Akka.Tools.MatchHandler
                 }
                 else
                 {
-                    if(handlesType.IsValueType)
+                    if(handlesType.GetTypeInfo().IsValueType)
                     {
                         //For value types we cannot use as-operator and check for nu, s0 we create the following code:
                         //  if(inputVariable is HandlesType)

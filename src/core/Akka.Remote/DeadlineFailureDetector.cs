@@ -13,8 +13,8 @@ using Akka.Event;
 namespace Akka.Remote
 {
     /// <summary>
-    /// Implementation of failure detector using an absolute timeout of missing heartbeats
-    /// to trigger unavailability
+    /// This class represents a <see cref="FailureDetector"/> that uses an absolute timeout
+    /// of missing heartbeats to trigger unavailability.
     /// </summary>
     public class DeadlineFailureDetector : FailureDetector
     {
@@ -25,25 +25,32 @@ namespace Akka.Remote
         private readonly long _deadlineMillis;
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="DeadlineFailureDetector(TimeSpan, TimeSpan, Clock)"/> instead.
         /// </summary>
-        /// <param name="acceptableHeartbeatPause">TBD</param>
-        /// <param name="clock">TBD</param>
-        [Obsolete("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) instead. (1.1.2)")]
+        /// <param name="acceptableHeartbeatPause">N/A</param>
+        /// <param name="clock">N/A</param>
+        [Obsolete("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) instead. [1.1.2]")]
         public DeadlineFailureDetector(TimeSpan acceptableHeartbeatPause, Clock clock = null) 
             : this(acceptableHeartbeatPause, TimeSpan.Zero, clock)
         {
         }
 
         /// <summary>
-        /// Procedural constructor for <see cref="DeadlineFailureDetector"/>
+        /// Initializes a new instance of the <see cref="DeadlineFailureDetector"/> class.
         /// </summary>
         /// <param name="acceptableHeartbeatPause">Duration corresponding to number of potentially lost/delayed
         /// heartbeats that will be accepted before considering it to be an anomaly.
         /// This margin is important to be able to survive sudden, occasional, pauses in heartbeat
         /// arrivals, due to for example garbage collect or network drop.</param>
-        /// <param name="heartbeatInterval"></param>
+        /// <param name="heartbeatInterval">The amount of time between heartbeats</param>
         /// <param name="clock">The clock, returning current time in milliseconds, but can be faked for testing purposes. It is only used for measuring intervals (duration).</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown for the following reasons:
+        /// <ul>
+        /// <li>The specified <paramref name="acceptableHeartbeatPause"/> is less than zero.</li>
+        /// <li>The specified <paramref name="heartbeatInterval"/> is less than zero</li>
+        /// </ul>
+        /// </exception>
         public DeadlineFailureDetector(
             TimeSpan acceptableHeartbeatPause,
             TimeSpan heartbeatInterval,
@@ -51,12 +58,12 @@ namespace Akka.Remote
         {
             if (acceptableHeartbeatPause <= TimeSpan.Zero)
             {
-                throw new ArgumentException("failure-detector.acceptable-heartbeat-pause must be >= 0s");
+                throw new ArgumentOutOfRangeException(nameof(acceptableHeartbeatPause), "failure-detector.acceptable-heartbeat-pause must be >= 0s");
             }
 
             if (heartbeatInterval <= TimeSpan.Zero)
             {
-                throw new ArgumentException("failure-detector.heartbeat-interval must be > 0s");
+                throw new ArgumentOutOfRangeException(nameof(heartbeatInterval), "failure-detector.heartbeat-interval must be > 0s");
             }
 
             _clock = clock ?? DefaultClock;
@@ -64,18 +71,20 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Constructor that reads parameters from an Akka <see cref="Config"/> section.
-        /// Expects property 'acceptable-heartbeat-pause'.
+        /// Initializes a new instance of the <see cref="DeadlineFailureDetector"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="ev">TBD</param>
-        public DeadlineFailureDetector(Config config, EventStream ev) 
+        /// <param name="config">
+        /// The configuration used to configure this failure detector.
+        /// <note>The configuration must define the 'akka.cluster.failure-detector.acceptable-heartbeat-pause' key.</note>
+        /// </param>
+        /// <param name="eventStream">N/A. This parameter is not used.</param>
+        public DeadlineFailureDetector(Config config, EventStream eventStream) 
             : this(
                   config.GetTimeSpan("acceptable-heartbeat-pause"),
                   config.GetTimeSpan("heartbeat-interval")) { }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the resource is considered to be up and healthy.
         /// </summary>
         public override bool IsAvailable => IsAvailableTicks(_clock());
 
@@ -86,12 +95,12 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the failure detector has received any heartbeats or has started monitoring the resource.
         /// </summary>
         public override bool IsMonitoring => _active;
 
         /// <summary>
-        /// TBD
+        /// Notifies the failure detector that a heartbeat arrived from the monitored resource.
         /// </summary>
         public override void HeartBeat()
         {

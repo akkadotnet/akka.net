@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.IO;
 using System.Linq;
@@ -365,3 +365,4 @@ namespace Akka.Streams.Tests.IO
             => TestSinkStage<ByteString, Stream>.Create(new InputStreamSinkStage(Timeout), probe);
     }
 }
+#endif

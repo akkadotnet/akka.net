@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Xunit;
 
 namespace Akka.Remote.Tests.Transport{

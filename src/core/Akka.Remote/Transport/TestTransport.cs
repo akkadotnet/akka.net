@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote.Transport
 {
@@ -193,7 +193,7 @@ namespace Akka.Remote.Transport
                 return (AssociationHandle) localHandle;
             }
 
-            throw new InvalidAssociationException(string.Format("No registered transport: {0}", remoteAddress));
+            throw new InvalidAssociationException($"No registered transport: {remoteAddress}");
         }
 
         private Tuple<TestAssociationHandle, TestAssociationHandle> CreateHandlePair(TestTransport remoteTransport,
@@ -430,8 +430,8 @@ namespace Akka.Remote.Transport
     ///     currently active behavior. The bottom of the stack always contains the <see cref="DefaultBehavior" /> which
     ///     can not be popped out.
     /// </summary>
-	/// <typeparam name="TIn"></typeparam>
-	/// <typeparam name="TOut"></typeparam">
+    /// <typeparam name="TIn"></typeparam>
+    /// <typeparam name="TOut"></typeparam">
     public class SwitchableLoggedBehavior<TIn, TOut>
     {
         private readonly ConcurrentStack<Func<TIn, Task<TOut>>> _behaviorStack =

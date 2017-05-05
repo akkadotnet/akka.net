@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -24,7 +25,7 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// A <see cref="Source{TOut,TMat}"/> is a set of stream processing steps that has one open output. It can comprise
     /// any number of internal sources and transformations that are wired together, or it can be
-    /// an “atomic” source, e.g. from a collection or a file. Materialization turns a Source into
+    /// an "atomic" source, e.g. from a collection or a file. Materialization turns a Source into
     /// a Reactive Streams <see cref="IPublisher{T}"/> (at least conceptually).
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
@@ -253,7 +254,7 @@ namespace Akka.Streams.Dsl
             => RunWith(Sink.Aggregate(zero, aggregate), materializer);
 
         /// <summary>
-        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a asnyc <paramref name="aggregate"/> function.
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a async <paramref name="aggregate"/> function.
         /// The given function is invoked for every received element, giving it its previous
         /// output (or the given <paramref name="zero"/> value) and the element as input.
         /// The returned <see cref="Task{TOut2}"/> will be completed with value of the final
@@ -574,7 +575,7 @@ namespace Akka.Streams.Dsl
         /// If the materialized promise is completed with a Some, that value will be produced downstream,
         /// followed by completion.
         /// If the materialized promise is completed with a None, no value will be produced downstream and completion will
-        /// be signalled immediately.
+        /// be signaled immediately.
         /// If the materialized promise is completed with a failure, then the returned source will terminate with that error.
         /// If the downstream of this source cancels before the promise has been completed, then the promise will be completed
         /// with None.
@@ -621,7 +622,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="props">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified actor <paramref name="props"/> is not of type <see cref="Actors.ActorPublisher{T}"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Source<T, IActorRef> ActorPublisher<T>(Props props)
         {
@@ -662,7 +665,12 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="bufferSize"/> is less than zero.
+        /// </exception>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown when the specified <paramref name="overflowStrategy"/> is of type <see cref="OverflowStrategy.Backpressure"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Source<T, IActorRef> ActorRef<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {
@@ -697,7 +705,7 @@ namespace Akka.Streams.Dsl
 
 
         /// <summary>
-        /// Combine the elements of multiple streams into a stream of lists.
+        /// Combines the elements of multiple streams into a stream of lists.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="sources">TBD</param>
@@ -706,7 +714,7 @@ namespace Akka.Streams.Dsl
             => ZipWithN(x => x, sources);
 
         /// <summary>
-        /// Combine the elements of multiple streams into a stream of sequences using a combiner function.
+        /// Combines the elements of multiple streams into a stream of sequences using a combiner function.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TOut2">TBD</typeparam>
@@ -751,6 +759,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="bufferSize"/> is less than zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public static Source<T, ISourceQueueWithComplete<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {

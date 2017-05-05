@@ -272,19 +272,18 @@ namespace Akka.Cluster
         /// </summary>
         internal ImmutableHashSet<Address> SeenBy { get { return State.SeenBy; } }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="disposing">TBD</param>
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
+        /// user's code. Managed and unmanaged resources will be disposed.<br />
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
+        /// unmanaged resources can be disposed.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)

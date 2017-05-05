@@ -6,22 +6,21 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using DotNetty.Buffers;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
 using Google.ProtocolBuffers;
-using Helios.Buffers;
-using Helios.Channels;
-using Helios.Codecs;
-using Helios.Logging;
-using Helios.Util;
+using Microsoft.Extensions.Logging;
 
 namespace Akka.Remote.TestKit.Proto
 {
     /// <summary>
-    /// Decodes a message from a <see cref="IByteBuf"/> into a Google protobuff wire format
+    /// Decodes a message from a <see cref="IByteBuffer"/> into a Google protobuff wire format
     /// </summary>
     public class ProtobufDecoder : ByteToMessageDecoder
     {
-        private readonly ILogger _logger = LoggingFactory.GetLogger<ProtobufDecoder>();
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<ProtobufDecoder>();
         private readonly IMessageLite _prototype;
         private readonly ExtensionRegistry _extensions;
 
@@ -36,9 +35,9 @@ namespace Akka.Remote.TestKit.Proto
             _extensions = extensions;
         }
 
-        protected override void Decode(IChannelHandlerContext context, IByteBuf input, List<object> output)
+        protected override void Decode(IChannelHandlerContext context, IByteBuffer input, List<object> output)
         {
-            _logger.Debug("Decoding {0} into Protobuf", input);
+            _logger.LogDebug("Decoding {0} into Protobuf", input);
 
             var readable = input.ReadableBytes;
             var buf = new byte[readable];

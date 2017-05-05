@@ -33,13 +33,15 @@ namespace Akka.Serialization
             encodeTypeNames: true,
             preverveObjectReferences: true,
             converters: Enumerable.Empty<Type>());
-        
+
         /// <summary>
         /// Creates a new instance of the <see cref="NewtonSoftJsonSerializerSettings"/> based on a provided <paramref name="config"/>.
         /// Config may define several key-values:
-        /// 1. `encode-type-names` (boolean) mapped to <see cref="EncodeTypeNames"/>
-        /// 2. `preserve-object-references` (boolean) mapped to <see cref="PreserveObjectReferences"/>
-        /// 3. `converters` (type list) mapped to <see cref="Converters"/>. They must implement <see cref="JsonConverter"/> and define either default constructor or constructor taking <see cref="ExtendedActorSystem"/> as its only parameter.
+        /// <ul>
+        /// <li>`encode-type-names` (boolean) mapped to <see cref="EncodeTypeNames"/></li>
+        /// <li>`preserve-object-references` (boolean) mapped to <see cref="PreserveObjectReferences"/></li>
+        /// <li>`converters` (type list) mapped to <see cref="Converters"/>. They must implement <see cref="JsonConverter"/> and define either default constructor or constructor taking <see cref="ExtendedActorSystem"/> as its only parameter.</li>
+        /// </ul>
         /// </summary>
         /// <exception cref="ArgumentNullException">Raised when no <paramref name="config"/> was provided.</exception>
         /// <exception cref="ArgumentException">Raised when types defined in `converters` list didn't inherit <see cref="JsonConverter"/>.</exception>
@@ -83,7 +85,7 @@ namespace Akka.Serialization
         public bool PreserveObjectReferences { get; }
 
         /// <summary>
-        /// A collection of an aditional converter types to be applied to a <see cref="NewtonSoftJsonSerializer"/>.
+        /// A collection of an additional converter types to be applied to a <see cref="NewtonSoftJsonSerializer"/>.
         /// Converters must inherit from <see cref="JsonConverter"/> class and implement a default constructor.
         /// </summary>
         public IEnumerable<Type> Converters { get; }
@@ -111,13 +113,12 @@ namespace Akka.Serialization
     /// </summary>
     public class NewtonSoftJsonSerializer : Serializer
     {
-        private readonly JsonSerializerSettings _settings;
         private readonly JsonSerializer _serializer;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public JsonSerializerSettings Settings { get { return _settings; } }
+        public JsonSerializerSettings Settings { get; }
 
         /// <summary>
         /// TBD
@@ -149,7 +150,7 @@ namespace Akka.Serialization
             converters.Add(new SurrogateConverter(this));
             converters.Add(new DiscriminatedUnionConverter());
 
-            _settings = new JsonSerializerSettings
+            Settings = new JsonSerializerSettings
             {
                 PreserveReferencesHandling = settings.PreserveObjectReferences 
                     ? PreserveReferencesHandling.Objects 
@@ -166,7 +167,7 @@ namespace Akka.Serialization
                 ContractResolver = new AkkaContractResolver()
             };
 
-            _serializer = JsonSerializer.Create(_settings);
+            _serializer = JsonSerializer.Create(Settings);
         }
 
         private static JsonConverter CreateConverter(Type converterType, ExtendedActorSystem actorSystem)
@@ -183,17 +184,8 @@ namespace Akka.Serialization
                 : (JsonConverter)Activator.CreateInstance(converterType, actorSystem);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public class AkkaContractResolver : DefaultContractResolver
+        internal class AkkaContractResolver : DefaultContractResolver
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="member">TBD</param>
-            /// <param name="memberSerialization">TBD</param>
-            /// <returns>TBD</returns>
             protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
             {
                 var prop = base.CreateProperty(member, memberSerialization);
@@ -213,20 +205,9 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Completely unique value to identify this implementation of the <see cref="Serializer"/> used to optimize network traffic
-        /// </summary>
-        public override int Identifier
-        {
-            get { return -3; }
-        }
-
-        /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
         /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return false; }
-        }
+        public override bool IncludeManifest => false;
 
         /// <summary>
         /// Serializes the given object into a byte array
@@ -235,7 +216,7 @@ namespace Akka.Serialization
         /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
-            string data = JsonConvert.SerializeObject(obj, Formatting.None, _settings);
+            string data = JsonConvert.SerializeObject(obj, Formatting.None, Settings);
             byte[] bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }
@@ -249,7 +230,7 @@ namespace Akka.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             string data = Encoding.UTF8.GetString(bytes);
-            object res = JsonConvert.DeserializeObject(data, _settings);
+            object res = JsonConvert.DeserializeObject(data, Settings);
             return TranslateSurrogate(res, this, type);
         }
 
@@ -295,7 +276,7 @@ namespace Akka.Serialization
         /// <summary>
         /// TBD
         /// </summary>
-        public class SurrogateConverter : JsonConverter
+        internal class SurrogateConverter : JsonConverter
         {
             private readonly NewtonSoftJsonSerializer _parent;
             /// <summary>
@@ -326,7 +307,7 @@ namespace Akka.Serialization
             }
 
             /// <summary>
-            ///     Reads the JSON representation of the object.
+            /// Reads the JSON representation of the object.
             /// </summary>
             /// <param name="reader">The <see cref="T:Newtonsoft.Json.JsonReader" /> to read from.</param>
             /// <param name="objectType">Type of the object.</param>
@@ -339,8 +320,6 @@ namespace Akka.Serialization
                 return DeserializeFromReader(reader, serializer, objectType);
             }
 
-
-
             private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer, Type objecType)
             {
                 var surrogate = serializer.Deserialize(reader);
@@ -348,7 +327,7 @@ namespace Akka.Serialization
             }
 
             /// <summary>
-            ///     Writes the JSON representation of the object.
+            /// Writes the JSON representation of the object.
             /// </summary>
             /// <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter" /> to write to.</param>
             /// <param name="value">The value.</param>
@@ -391,4 +370,3 @@ namespace Akka.Serialization
         }
     }
 }
-

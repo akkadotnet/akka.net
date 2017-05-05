@@ -119,7 +119,7 @@ namespace Akka.DistributedData.Local
 
         /// <summary>
         /// Adds or updated a value in entry with given <paramref name="key"/> using <paramref name="modify"/> function
-        /// if other value existed there previously, within a constext of the current cluster node.
+        /// if other value existed there previously, within a context of the current cluster node.
         /// </summary>
         /// <param name="key">TBD</param>
         /// <param name="value">TBD</param>
@@ -159,10 +159,10 @@ namespace Akka.DistributedData.Local
             new LocalORDictionary<TKey, TVal>(_currentNode, _crdt.Merge(dictionary));
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.Local.LocalORDictionary{TKey, TVal}" /> to <see cref="Akka.DistributedData.ORDictionary{TKey, TVal}" />.
         /// </summary>
-        /// <param name="set">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="set">The set to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator ORDictionary<TKey, TVal>(LocalORDictionary<TKey, TVal> set) => set._crdt;
     }
 }

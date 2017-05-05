@@ -14,7 +14,7 @@ namespace Akka.Streams.Dsl
     /// Flow with attached input and output, can be executed.
     /// </summary>
     /// <typeparam name="TMat">TBD</typeparam>
-    public interface IRunnableGraph<TMat> : IGraph<ClosedShape, TMat>
+    public interface IRunnableGraph<out TMat> : IGraph<ClosedShape, TMat>
     {
         /// <summary>
         /// Transform only the materialized value of this RunnableGraph, leaving all other properties as they were.

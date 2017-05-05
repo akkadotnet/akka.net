@@ -10,7 +10,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class Argument
+    internal class Argument
     {
         private readonly PredicateAndHandler _predicateAndHandler;
         private readonly object _value;

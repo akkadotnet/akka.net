@@ -73,7 +73,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="partialFunc">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use RecoverWithRetries instead.")]
+        [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static Source<TOut, TMat> RecoverWith<TOut, TMat>(this Source<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
@@ -624,7 +624,7 @@ namespace Akka.Streams.Dsl
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
         /// 
-        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// If the stream is empty (i.e. completes before signaling any elements),
         /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
         /// which is semantically in-line with that standard library collections do in such situations.
         /// <para>
@@ -670,7 +670,7 @@ namespace Akka.Streams.Dsl
         /// <param name="start">TBD</param>
         /// <param name="inject">TBD</param>
         /// <param name="end">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static Source<TOut, TMat> Intersperse<TOut, TMat>(this Source<TOut, TMat> flow, TOut start, TOut inject, TOut end)
         {
@@ -699,7 +699,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="inject">TBD</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is undefined.</exception>
         /// <returns>TBD</returns>
         public static Source<TOut, TMat> Intersperse<TOut, TMat>(this Source<TOut, TMat> flow, TOut inject)
         {
@@ -1065,7 +1065,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="stageFactory">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Use Via(GraphStage) instead.")]
+        [Obsolete("Use Via(GraphStage) instead. [1.1.2]")]
         public static Source<TOut2, TMat> Transform<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Transform(flow, stageFactory);
@@ -1480,7 +1480,7 @@ namespace Akka.Streams.Dsl
         /// <param name="per">TBD</param>
         /// <param name="maximumBurst">TBD</param>
         /// <param name="mode">TBD</param>
-        /// <exception cref="ArgumentException">Thow when <paramref name="elements"/> is less than or equal zero, 
+        /// <exception cref="ArgumentException">Thrown when <paramref name="elements"/> is less than or equal zero, 
         /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
         /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
         /// <returns>TBD</returns>

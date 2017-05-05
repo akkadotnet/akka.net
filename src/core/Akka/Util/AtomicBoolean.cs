@@ -74,20 +74,20 @@ namespace Akka.Util
         #region Conversion operators
 
         /// <summary>
-        /// Implicit conversion operator = automatically casts the <see cref="AtomicBoolean"/> to a <see cref="bool"/>
+        /// Performs an implicit conversion from <see cref="AtomicBoolean"/> to <see cref="System.Boolean"/>.
         /// </summary>
-        /// <param name="boolean">TBD</param>
-        /// <returns>TBD</returns>
-        public static implicit operator bool(AtomicBoolean boolean)
+        /// <param name="atomicBoolean">The boolean to convert</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator bool(AtomicBoolean atomicBoolean)
         {
-            return boolean.Value;
+            return atomicBoolean.Value;
         }
 
         /// <summary>
-        /// Implicit conversion operator = allows us to cast any bool directly into a <see cref="AtomicBoolean"/> instance.
+        /// Performs an implicit conversion from <see cref="System.Boolean"/> to <see cref="AtomicBoolean"/>.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="value">The boolean to convert</param>
+        /// <returns>The result of the conversion.</returns>
         public static implicit operator AtomicBoolean(bool value)
         {
             return new AtomicBoolean(value);

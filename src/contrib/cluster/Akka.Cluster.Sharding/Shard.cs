@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
 {
@@ -39,7 +40,7 @@ namespace Akka.Cluster.Sharding
         /// When a <see cref="StateChange"/> fails to write to the journal, we will retry it after a back off.
         /// </summary>
         [Serializable]
-        internal protected class RetryPersistence : IShardCommand
+        protected internal class RetryPersistence : IShardCommand
         {
             /// <summary>
             /// TBD
@@ -60,7 +61,7 @@ namespace Akka.Cluster.Sharding
         /// The Snapshot tick for the shards.
         /// </summary>
         [Serializable]
-        internal protected sealed class SnapshotTick : IShardCommand
+        protected internal sealed class SnapshotTick : IShardCommand
         {
             /// <summary>
             /// TBD
@@ -77,7 +78,7 @@ namespace Akka.Cluster.Sharding
         /// we restart it after a back off using this message.
         /// </summary>
         [Serializable]
-        internal protected sealed class RestartEntity : IShardCommand
+        protected internal sealed class RestartEntity : IShardCommand
         {
             /// <summary>
             /// TBD
@@ -95,9 +96,31 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
+        /// When initialising a shard with remember entities enabled the following message is used to restart 
+        /// batches of entity actors at a time.
+        /// </summary>
+        [Serializable]
+        protected internal sealed class RestartEntities : IShardCommand
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public readonly IImmutableSet<EntityId> Entries;
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="entries">TBD</param>
+            public RestartEntities(IImmutableSet<EntityId> entries)
+            {
+                Entries = entries;
+            }
+        }
+
+        /// <summary>
         /// TBD
         /// </summary>
-        internal protected abstract class StateChange
+        protected internal abstract class StateChange
         {
             /// <summary>
             /// TBD
@@ -115,11 +138,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as StateChange;
@@ -130,10 +149,7 @@ namespace Akka.Cluster.Sharding
                 return EntityId.Equals(other.EntityId);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -149,7 +165,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardState"/> change for starting an entity in this `Shard`
         /// </summary>
         [Serializable]
-        internal protected sealed class EntityStarted : StateChange
+        protected internal sealed class EntityStarted : StateChange
         {
             /// <summary>
             /// TBD
@@ -164,7 +180,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardState"/> change for an entity which has terminated.
         /// </summary>
         [Serializable]
-        internal protected sealed class EntityStopped : StateChange
+        protected internal sealed class EntityStopped : StateChange
         {
             /// <summary>
             /// TBD
@@ -262,11 +278,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardStats;
@@ -278,10 +290,7 @@ namespace Akka.Cluster.Sharding
                     && EntityCount.Equals(other.EntityCount);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -301,7 +310,7 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the Shard.
         /// </summary>
         [Serializable]
-        internal protected class ShardState : IClusterShardingSerializable
+        protected internal class ShardState : IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -324,11 +333,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as ShardState;
@@ -339,10 +344,7 @@ namespace Akka.Cluster.Sharding
                 return Entries.SequenceEqual(other.Entries);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -532,9 +534,9 @@ namespace Akka.Cluster.Sharding
 
         private void HandleShardCommand(IShardCommand message)
         {
-            var restart = message as RestartEntity;
-            if (restart != null)
-                GetEntity(restart.EntityId);
+            message.Match()
+                .With<RestartEntity>(restartEntity => GetEntity(restartEntity.EntityId))
+                .With<RestartEntities>(restartEntities => restartEntities.Entries.ForEach(entityId => GetEntity(entityId)));
         }
 
         private void HandleShardRegionCommand(IShardRegionCommand message)

@@ -234,8 +234,13 @@ namespace Akka.Remote
         /// <param name="deploy">TBD</param>
         /// <param name="lookupDeploy">TBD</param>
         /// <param name="async">TBD</param>
-        /// <exception cref="ActorInitializationException">TBD</exception>
-        /// <exception cref="ConfigurationException">TBD</exception>
+        /// <exception cref="ActorInitializationException">
+        /// This exception is thrown when the remote deployment to the specified <paramref name="path"/> fails.
+        /// </exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown when either the scope of the deployment is local
+        /// or the specified <paramref name="props"/> is invalid for deployment to the specified <paramref name="path"/>.
+        /// </exception>
         /// <returns>TBD</returns>
         public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
@@ -293,8 +298,7 @@ namespace Akka.Remote
                 //check for correct scope configuration
                 if (props.Deploy.Scope is LocalScope)
                 {
-                    throw new ConfigurationException(
-                        string.Format("configuration requested remote deployment for local-only Props at {0}", path));
+                    throw new ConfigurationException($"configuration requested remote deployment for local-only Props at {path}");
                 }
 
                 try
@@ -308,9 +312,7 @@ namespace Akka.Remote
                     catch (Exception ex)
                     {
                         throw new ConfigurationException(
-                            string.Format(
-                                "Configuration problem while creating {0} with dispatcher [{1}] and mailbox [{2}]", path,
-                                props.Dispatcher, props.Mailbox), ex);
+                            $"Configuration problem while creating {path} with dispatcher [{props.Dispatcher}] and mailbox [{props.Mailbox}]", ex);
                     }
                     var localAddress = Transport.LocalAddressForRemote(addr);
                     var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() /
@@ -321,7 +323,7 @@ namespace Akka.Remote
                 }
                 catch (Exception ex)
                 {
-                    throw new ActorInitializationException(string.Format("Remote deployment failed for [{0}]", path), ex);
+                    throw new ActorInitializationException($"Remote deployment failed for [{path}]", ex);
                 }
 
             }

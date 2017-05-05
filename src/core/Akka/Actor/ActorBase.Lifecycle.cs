@@ -12,7 +12,7 @@ namespace Akka.Actor
     public abstract partial class ActorBase
     {
         /// <summary>
-        ///     Can be overridden to intercept calls to `preRestart`. Calls `preRestart` by default.
+        /// Can be overridden to intercept calls to `PreRestart`. Calls `PreRestart` by default.
         /// </summary>
         /// <param name="cause">The cause.</param>
         /// <param name="message">The message.</param>
@@ -22,7 +22,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Can be overridden to intercept calls to `preStart`. Calls `preStart` by default.
+        /// Can be overridden to intercept calls to `PreStart`. Calls `PreStart` by default.
         /// </summary>
         public virtual void AroundPreStart()
         {
@@ -41,7 +41,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Can be overridden to intercept calls to `postRestart`. Calls `postRestart` by default.
+        ///     Can be overridden to intercept calls to `PostRestart`. Calls `PostRestart` by default.
         /// </summary>
         /// <param name="cause">The cause.</param>
         /// <param name="message">The message.</param>
@@ -69,7 +69,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     User overridable callback: By default it calls `preStart()`.
+        ///     User overridable callback: By default it calls `PreStart()`.
         ///     <p />
         ///     Is called right AFTER restart on the newly created Actor to allow reinitialization after an Actor crash.
         /// </summary>
@@ -80,7 +80,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Can be overridden to intercept calls to `postStop`. Calls `postStop` by default..
+        ///     Can be overridden to intercept calls to `PostStop`. Calls `PostStop` by default..
         /// </summary>
         public virtual void AroundPostStop()
         {

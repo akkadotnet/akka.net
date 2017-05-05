@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -44,11 +45,9 @@ namespace Akka.Actor
         /// <param name="failedChildStats">TBD</param>
         /// <param name="allChildren">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete]
+        [Obsolete("This method is deprecated [1.1.2]")]
         public bool HandleFailure(ActorCell actorCell, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
-            // for compatibility, since 1.1.2
-
             return HandleFailure(actorCell, failedChildStats.Child, cause, failedChildStats, allChildren);
         }
 
@@ -130,8 +129,7 @@ namespace Akka.Actor
         /// <param name="failedChildStats">TBD</param>
         /// <param name="allChildren">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete]
-        // for compatibility, since 1.1.2
+        [Obsolete("This method is deprecated [1.1.2]")]
         protected abstract void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren);
 
         /// <summary>
@@ -192,7 +190,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Determines if failures are logged
         /// </summary>
         protected bool LoggingEnabled { get; set; }
 
@@ -233,10 +231,10 @@ namespace Akka.Actor
         public abstract void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children);
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current <see cref="SupervisorStrategy"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="SupervisorStrategy"/>.</returns>
         public abstract ISurrogate ToSurrogate(ActorSystem system);
     }
 
@@ -251,7 +249,8 @@ namespace Akka.Actor
         private readonly IDecider _decider;
 
         /// <summary>
-        /// TBD
+        /// The number of times a child actor is allowed to be restarted, negative value means no limit,
+        /// if the limit is exceeded the child actor is stopped.
         /// </summary>
         public int MaxNumberOfRetries
         {
@@ -259,7 +258,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The duration in milliseconds of the time window for <see cref="MaxNumberOfRetries"/>, negative values means no window.
         /// </summary>
         public int WithinTimeRangeMilliseconds
         {
@@ -267,7 +266,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The mapping from an <see cref="Exception"/> to <see cref="Directive"/>
         /// </summary>
         public override IDecider Decider
         {
@@ -288,7 +287,6 @@ namespace Akka.Actor
         public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> localOnlyDecider)
             : this(maxNrOfRetries.GetValueOrDefault(-1), (int)withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, localOnlyDecider)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -305,7 +303,6 @@ namespace Akka.Actor
         public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, IDecider decider)
             : this(maxNrOfRetries.GetValueOrDefault(-1), (int)withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, decider)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -323,7 +320,6 @@ namespace Akka.Actor
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true)
             : this(maxNrOfRetries, withinTimeMilliseconds, new LocalOnlyDecider(localOnlyDecider), loggingEnabled)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -352,7 +348,6 @@ namespace Akka.Actor
         /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive" /></param>
         public OneForOneStrategy(Func<Exception, Directive> localOnlyDecider) : this(-1, -1, localOnlyDecider, true)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -362,7 +357,6 @@ namespace Akka.Actor
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
         public OneForOneStrategy(Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true) : this(-1, -1, localOnlyDecider, loggingEnabled)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -372,7 +366,6 @@ namespace Akka.Actor
         public OneForOneStrategy(IDecider decider)
             : this(-1, -1, decider, true)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -380,7 +373,6 @@ namespace Akka.Actor
         /// </summary>
         protected OneForOneStrategy() : this(DefaultDecider)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -395,14 +387,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="ProcessFailure(IActorContext,bool,IActorRef,Exception,ChildRestartStats,IReadOnlyCollection{Akka.Actor.Internal.ChildRestartStats})"/> instead.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="restart">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <param name="failedChildStats">TBD</param>
-        /// <param name="allChildren">TBD</param>
-        [Obsolete]
+        /// <param name="context">N/A</param>
+        /// <param name="restart">N/A</param>
+        /// <param name="cause">N/A</param>
+        /// <param name="failedChildStats">N/A</param>
+        /// <param name="allChildren">N/A</param>
+        [Obsolete("This method is deprecated [1.1.2]")]
         protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
             // for compatibility, since 1.1.2
@@ -438,34 +430,37 @@ namespace Akka.Actor
             //Intentionally left blank
         }
 
-        #region Surrogate		
+        #region Surrogate
+
         /// <summary>
-        /// TBD
+        /// This class represents a surrogate of a <see cref="OneForOneStrategy"/> router.
+        /// Its main use is to help during the serialization process.
         /// </summary>
         public class OneForOneStrategySurrogate : ISurrogate
         {
             /// <summary>
-            /// TBD
+            /// The number of times a child actor is allowed to be restarted, negative value means no limit,
+            /// if the limit is exceeded the child actor is stopped.
             /// </summary>
             public int MaxNumberOfRetries { get; set; }
             /// <summary>
-            /// TBD
+            /// The duration in milliseconds of the time window for <see cref="MaxNumberOfRetries"/>, negative values means no window.
             /// </summary>
             public int WithinTimeRangeMilliseconds { get; set; }
             /// <summary>
-            /// TBD
+            /// The mapping from an <see cref="Exception"/> to <see cref="Directive"/>
             /// </summary>
             public IDecider Decider { get; set; }
             /// <summary>
-            /// TBD
+            /// Determines if failures are logged
             /// </summary>
             public bool LoggingEnabled { get; set; }
 
             /// <summary>
-            /// TBD
+            /// Creates a <see cref="OneForOneStrategy"/> encapsulated by this surrogate.
             /// </summary>
-            /// <param name="system">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="OneForOneStrategy"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new OneForOneStrategy(MaxNumberOfRetries, WithinTimeRangeMilliseconds, Decider, LoggingEnabled);
@@ -473,11 +468,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current <see cref="OneForOneStrategy"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system that owns this router.</param>
         /// <exception cref="NotSupportedException">This exception is thrown if the <see cref="Decider"/> is of type <see cref="LocalOnlyDecider"/>.</exception>
-        /// <returns>TBD</returns>
+        /// <returns>The surrogate representation of the current <see cref="OneForOneStrategy"/>.</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             if (Decider is LocalOnlyDecider)
@@ -493,11 +488,8 @@ namespace Akka.Actor
         #endregion
 
         #region Equals
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+
+        /// <inheritdoc/>
         public bool Equals(OneForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -508,20 +500,13 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as OneForOneStrategy);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -532,6 +517,7 @@ namespace Akka.Actor
                 return hashCode;
             }
         }
+
         #endregion
     }
 
@@ -546,7 +532,8 @@ namespace Akka.Actor
         private readonly int _maxNumberOfRetries;
 
         /// <summary>
-        /// TBD
+        /// The number of times a child actor is allowed to be restarted, negative value means no limit,
+        /// if the limit is exceeded the child actor is stopped.
         /// </summary>
         public int MaxNumberOfRetries
         {
@@ -554,7 +541,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The duration in milliseconds of the time window for <see cref="MaxNumberOfRetries"/>, negative values means no window.
         /// </summary>
         public int WithinTimeRangeMilliseconds
         {
@@ -562,7 +549,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The mapping from an <see cref="Exception"/> to <see cref="Directive"/>
         /// </summary>
         public override IDecider Decider
         {
@@ -600,7 +587,6 @@ namespace Akka.Actor
         public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, IDecider decider)
             : this(maxNrOfRetries.GetValueOrDefault(-1), (int)withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, decider)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -618,7 +604,6 @@ namespace Akka.Actor
         public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true)
             : this(maxNrOfRetries, withinTimeMilliseconds, new LocalOnlyDecider(localOnlyDecider), loggingEnabled)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -648,7 +633,6 @@ namespace Akka.Actor
         public AllForOneStrategy(Func<Exception, Directive> localOnlyDecider)
             : this(-1, -1, localOnlyDecider, true)
         {
-            //Intentionally left blank
         }
 
         /// <summary>
@@ -682,14 +666,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="ProcessFailure(IActorContext,bool,IActorRef,Exception,ChildRestartStats, IReadOnlyCollection{ChildRestartStats})"/> instead.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="restart">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <param name="failedChildStats">TBD</param>
-        /// <param name="allChildren">TBD</param>
-        [Obsolete]
+        /// <param name="context">N/A</param>
+        /// <param name="restart">N/A</param>
+        /// <param name="cause">N/A</param>
+        /// <param name="failedChildStats">N/A</param>
+        /// <param name="allChildren">N/A</param>
+        [Obsolete("This method is deprecated [1.1.2]")]
         protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
             // for compatibility, since 1.1.2
@@ -738,34 +722,37 @@ namespace Akka.Actor
             //Intentionally left blank
         }
 
-        #region Surrogate		
+        #region Surrogate
+
         /// <summary>
-        /// TBD
+        /// This class represents a surrogate of a <see cref="AllForOneStrategy"/> router.
+        /// Its main use is to help during the serialization process.
         /// </summary>
         public class AllForOneStrategySurrogate : ISurrogate
         {
             /// <summary>
-            /// TBD
+            /// The number of times a child actor is allowed to be restarted, negative value means no limit,
+            /// if the limit is exceeded the child actor is stopped.
             /// </summary>
             public int MaxNumberOfRetries { get; set; }
             /// <summary>
-            /// TBD
+            /// The duration in milliseconds of the time window for <see cref="MaxNumberOfRetries"/>, negative values means no window.
             /// </summary>
             public int WithinTimeRangeMilliseconds { get; set; }
             /// <summary>
-            /// TBD
+            /// The mapping from an <see cref="Exception"/> to <see cref="Directive"/>
             /// </summary>
             public IDecider Decider { get; set; }
             /// <summary>
-            /// TBD
+            /// Determines if failures are logged
             /// </summary>
             public bool LoggingEnabled { get; set; }
 
             /// <summary>
-            /// TBD
+            /// Creates a <see cref="OneForOneStrategy"/> encapsulated by this surrogate.
             /// </summary>
-            /// <param name="system">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="OneForOneStrategy"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new AllForOneStrategy(MaxNumberOfRetries, WithinTimeRangeMilliseconds, Decider, LoggingEnabled);
@@ -773,10 +760,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current <see cref="AllForOneStrategy"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="AllForOneStrategy"/>.</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return new AllForOneStrategySurrogate
@@ -787,14 +774,12 @@ namespace Akka.Actor
                 WithinTimeRangeMilliseconds = WithinTimeRangeMilliseconds
             };
         }
+
         #endregion
 
         #region Equals
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+
+        /// <inheritdoc/>
         public bool Equals(AllForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -805,20 +790,13 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as AllForOneStrategy);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -829,6 +807,7 @@ namespace Akka.Actor
                 return hashCode;
             }
         }
+
         #endregion
     }
 
@@ -1059,11 +1038,7 @@ namespace Akka.Actor
             return DefaultDirective;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(DeployableDecider other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -1073,20 +1048,13 @@ namespace Akka.Actor
                    Pairs.SequenceEqual(other.Pairs);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeployableDecider);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked

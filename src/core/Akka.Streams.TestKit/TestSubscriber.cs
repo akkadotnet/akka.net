@@ -259,7 +259,7 @@ namespace Akka.Streams.TestKit
             }
 
             /// <summary>
-            /// Expect subscription to be followed immediatly by an error signal. By default single demand will be signalled in order to wake up a possibly lazy upstream. 
+            /// Expect subscription to be followed immediately by an error signal. By default single demand will be signaled in order to wake up a possibly lazy upstream. 
             /// <seealso cref="ExpectSubscriptionAndError(bool)"/>
             /// </summary>
             public Exception ExpectSubscriptionAndError()
@@ -268,8 +268,8 @@ namespace Akka.Streams.TestKit
             }
 
             /// <summary>
-            /// Expect subscription to be followed immediatly by an error signal. Depending on the `signalDemand` parameter demand may be signalled 
-            /// immediatly after obtaining the subscription in order to wake up a possibly lazy upstream.You can disable this by setting the `signalDemand` parameter to `false`.
+            /// Expect subscription to be followed immediately by an error signal. Depending on the `signalDemand` parameter demand may be signaled 
+            /// immediately after obtaining the subscription in order to wake up a possibly lazy upstream.You can disable this by setting the `signalDemand` parameter to `false`.
             /// <seealso cref="ExpectSubscriptionAndError()"/>
             /// </summary>
             public Exception ExpectSubscriptionAndError(bool signalDemand)
@@ -280,7 +280,7 @@ namespace Akka.Streams.TestKit
             }
 
             /// <summary>
-            /// Fluent DSL. Expect subscription followed by immediate stream completion. By default single demand will be signalled in order to wake up a possibly lazy upstream
+            /// Fluent DSL. Expect subscription followed by immediate stream completion. By default single demand will be signaled in order to wake up a possibly lazy upstream
             /// </summary>
             /// <seealso cref="ExpectSubscriptionAndComplete(bool)"/>
             public ManualProbe<T> ExpectSubscriptionAndComplete()
@@ -290,7 +290,7 @@ namespace Akka.Streams.TestKit
 
             /// <summary>
             /// Fluent DSL. Expect subscription followed by immediate stream completion. Depending on the `signalDemand` parameter 
-            /// demand may be signalled immediatly after obtaining the subscription in order to wake up a possibly lazy upstream.
+            /// demand may be signaled immediately after obtaining the subscription in order to wake up a possibly lazy upstream.
             /// You can disable this by setting the `signalDemand` parameter to `false`.
             /// </summary>
             /// <seealso cref="ExpectSubscriptionAndComplete()"/>
@@ -303,7 +303,7 @@ namespace Akka.Streams.TestKit
             }
 
             /// <summary>
-            /// Expect given next element or error signal, returning whichever was signalled.
+            /// Expect given next element or error signal, returning whichever was signaled.
             /// </summary>
             public object ExpectNextOrError()
             {
@@ -327,7 +327,7 @@ namespace Akka.Streams.TestKit
             }
 
             /// <summary>
-            /// Expect given next element or stream completion, returning whichever was signalled.
+            /// Expect given next element or stream completion, returning whichever was signaled.
             /// </summary>
             public object ExpectNextOrComplete()
             {

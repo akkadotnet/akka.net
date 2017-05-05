@@ -211,7 +211,9 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class ThreadPoolExecutorServiceFactory : ExecutorServiceConfigurator
     {
+#if APPDOMAIN
         private static readonly bool IsFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
+#endif
 
         /// <summary>
         /// TBD
@@ -220,8 +222,10 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public override ExecutorService Produce(string id)
         {
+#if APPDOMAIN
             if (IsFullTrusted)
                 return new FullThreadPoolExecutorServiceImpl(id);
+#endif
             return new PartialTrustThreadPoolExecutorService(id);
         }
 
@@ -248,7 +252,7 @@ namespace Akka.Dispatch
         protected MessageDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
-            Config = config;
+            Config = new CachingConfig(config);
         }
 
         /// <summary>
@@ -415,7 +419,7 @@ namespace Akka.Dispatch
 
         private long AddInhabitants(long add)
         {
-            // Intelocked.Add returns the NEW value, not the previous one - which is why this line is different from the JVM
+            // Interlocked.Add returns the NEW value, not the previous one - which is why this line is different from the JVM
             var ret = Interlocked.Add(ref _inhabitantsDoNotCallMeDirectly, add);
             if (ret < 0)
             {

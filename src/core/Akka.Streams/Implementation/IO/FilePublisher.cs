@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -34,17 +34,25 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="chunkSize">TBD</param>
         /// <param name="initialBuffer">TBD</param>
         /// <param name="maxBuffer">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when one of the following conditions is met.
+        /// 
+        /// <ul>
+        /// <li>The specified <paramref name="chunkSize"/> is less than or equal to zero.</li>
+        /// <li>The specified <paramref name="initialBuffer"/> is less than or equal to zero.</li>
+        /// <li>The specified <paramref name="maxBuffer"/> is less than the specified <paramref name="initialBuffer"/>.</li>
+        /// </ul>
+        /// </exception>
         /// <returns>TBD</returns>
         public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize,
             int initialBuffer, int maxBuffer)
         {
             if (chunkSize <= 0)
-                throw new ArgumentException($"chunkSize must be > 0 (was {chunkSize})");
+                throw new ArgumentException($"chunkSize must be > 0 (was {chunkSize})", nameof(chunkSize));
             if (initialBuffer <= 0)
-                throw new ArgumentException($"initialBuffer must be > 0 (was {initialBuffer})");
+                throw new ArgumentException($"initialBuffer must be > 0 (was {initialBuffer})", nameof(initialBuffer));
             if (maxBuffer < initialBuffer)
-                throw new ArgumentException($"maxBuffer must be >= initialBuffer (was {maxBuffer})");
+                throw new ArgumentException($"maxBuffer must be >= initialBuffer (was {maxBuffer})", nameof(maxBuffer));
 
             return Actor.Props.Create(() => new FilePublisher(f, completionPromise, chunkSize, maxBuffer))
                 .WithDeploy(Deploy.Local);
@@ -195,3 +203,4 @@ namespace Akka.Streams.Implementation.IO
     }
 }
 
+#endif

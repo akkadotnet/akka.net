@@ -17,15 +17,15 @@ using Akka.Util;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Obsolete. Use <see cref="HashedWheelTimerScheduler"/> instead.
     /// </summary>
-    [Obsolete("Replaced with HashedWheelTimerScheduler")]
+    [Obsolete("Replaced with HashedWheelTimerScheduler [1.1.2]")]
     public class DedicatedThreadScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
         private readonly ConcurrentQueue<ScheduledWork> _workQueue = new ConcurrentQueue<ScheduledWork>();
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler.TimeNow"/> instead.
         /// </summary>
         protected override DateTimeOffset TimeNow
         {
@@ -33,7 +33,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler.MonotonicClock"/> instead.
         /// </summary>
         public override TimeSpan MonotonicClock
         {
@@ -41,7 +41,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler.HighResMonotonicClock"/> instead.
         /// </summary>
         public override TimeSpan HighResMonotonicClock
         {
@@ -51,17 +51,17 @@ namespace Akka.Actor
         private TimeSpan _shutdownTimeout;
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler(Config, ILoggingAdapter"/> instead.
         /// </summary>
-        /// <param name="sys">TBD</param>
-        [Obsolete("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter log) instead.")]
+        /// <param name="sys">N/A</param>
+        [Obsolete("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter log) instead. [1.1.2]")]
         public DedicatedThreadScheduler(ActorSystem sys) : this(sys.Settings.Config, sys.Log) { }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler(Config, ILoggingAdapter"/> instead.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="config">N/A</param>
+        /// <param name="log">N/A</param>
         public DedicatedThreadScheduler(Config config, ILoggingAdapter log) : base(config, log)
         {
             var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
@@ -114,13 +114,13 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler.InternalScheduleTellOnce(TimeSpan, ICanTell, object, IActorRef, ICancelable)"/> instead.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="delay">N/A</param>
+        /// <param name="receiver">N/A</param>
+        /// <param name="message">N/A</param>
+        /// <param name="sender">N/A</param>
+        /// <param name="cancelable">N/A</param>
         protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message,
             IActorRef sender, ICancelable cancelable)
         {
@@ -132,14 +132,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler.InternalScheduleTellRepeatedly(TimeSpan, TimeSpan, ICanTell, object, IActorRef, ICancelable)"/> instead.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="initialDelay">N/A</param>
+        /// <param name="interval">N/A</param>
+        /// <param name="receiver">N/A</param>
+        /// <param name="message">N/A</param>
+        /// <param name="sender">N/A</param>
+        /// <param name="cancelable">N/A</param>
         protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval,
             ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
@@ -148,11 +148,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler.InternalScheduleOnce(TimeSpan, Action, ICancelable)"/> instead.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="delay">N/A</param>
+        /// <param name="action">N/A</param>
+        /// <param name="cancelable">N/A</param>
         protected override void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
             var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
@@ -160,12 +160,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="HashedWheelTimerScheduler.InternalScheduleRepeatedly(TimeSpan, TimeSpan, Action, ICancelable)"/> instead.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="initialDelay">N/A</param>
+        /// <param name="interval">N/A</param>
+        /// <param name="action">N/A</param>
+        /// <param name="cancelable">N/A</param>
         protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action,
             ICancelable cancelable)
         {
@@ -250,9 +250,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Dispose()
         {
             if (!Stop().Wait(_shutdownTimeout))
@@ -286,7 +284,7 @@ namespace Akka.Actor
         /// <param name="tickExpires">TBD</param>
         /// <param name="action">TBD</param>
         /// <param name="token">TBD</param>
-        public ScheduledWork(long tickExpires, Action action,CancellationToken token)
+        public ScheduledWork(long tickExpires, Action action, CancellationToken token)
         {
             TickExpires = tickExpires;
             Action = action;

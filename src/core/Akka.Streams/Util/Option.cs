@@ -12,7 +12,7 @@ namespace Akka.Streams.Util
     /// <summary>
     /// Allows tracking of whether a value has be initialized (even with the default value) for both
     /// reference and value types.
-    /// Useful where distinguishing between null (or zero, or false) and unitialized is significant.
+    /// Useful where distinguishing between null (or zero, or false) and uninitialized is significant.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     public struct Option<T>
@@ -43,48 +43,34 @@ namespace Akka.Streams.Util
         public T Value { get; }
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="T"/> to <see cref="Option{T}"/>.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="value">The object to convert</param>
+        /// <returns>The result of the conversion.</returns>
         public static implicit operator Option<T>(T value) => new Option<T>(value);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
                 return false;
-            return obj is Option<T> && Equals((Option<T>) obj);
+            return obj is Option<T> && Equals((Option<T>)obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
             {
-                return (EqualityComparer<T>.Default.GetHashCode(Value)*397) ^ HasValue.GetHashCode();
+                return (EqualityComparer<T>.Default.GetHashCode(Value) * 397) ^ HasValue.GetHashCode();
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => HasValue ? $"Some<{Value}>" : "None";
     }
 }

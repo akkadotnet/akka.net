@@ -37,6 +37,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.actor.serialize-messages = off
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500

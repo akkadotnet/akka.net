@@ -44,26 +44,23 @@ namespace Akka.Actor
         public class Failure : Status
         {
             /// <summary>
-            /// TBD
+            /// The cause of the failure
             /// </summary>
             public readonly Exception Cause;
 
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="Failure"/> class.
             /// </summary>
-            /// <param name="cause">TBD</param>
+            /// <param name="cause">The cause of the failure</param>
             public Failure(Exception cause)
             {
                 Cause = cause;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
-                return "Failure: " + Cause.ToString();
+                return $"Failure: {Cause}";
             }
         }
     }
@@ -73,18 +70,6 @@ namespace Akka.Actor
     /// </summary>
     public interface ILogReceive
     {
-    }
-
-    /// <summary>
-    /// Interface used on Actors that have an explicit requirement for a logger
-    /// </summary>
-    [Obsolete()]
-    public interface IActorLogging
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        ILoggingAdapter Log { get; }
     }
 
     /// <summary>
@@ -106,7 +91,7 @@ namespace Akka.Actor
     public abstract partial class ActorBase : IInternalActor
     {
         private IActorRef _clearedSelf;
-        private bool HasBeenCleared { get { return _clearedSelf != null; } }
+        private bool HasBeenCleared => _clearedSelf != null;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorBase" /> class.
@@ -125,16 +110,13 @@ namespace Akka.Actor
         ///     Gets the sending ActorRef of the current message
         /// </summary>
         /// <value>The sender ActorRef</value>
-        protected IActorRef Sender
-        {
-            get { return Context.Sender; }
-        }
+        protected IActorRef Sender => Context.Sender;
 
         /// <summary>
         ///     Gets the self ActorRef
         /// </summary>
         /// <value>Self ActorRef</value>
-        protected IActorRef Self { get { return HasBeenCleared ? _clearedSelf : Context.Self; } }
+        protected IActorRef Self => HasBeenCleared ? _clearedSelf : Context.Self;
 
         /// <summary>
         ///     Gets the context.
@@ -143,12 +125,7 @@ namespace Akka.Actor
         /// <exception cref="NotSupportedException">
         /// This exception is thrown if there is no active ActorContext. The most likely cause is due to use of async operations from within this actor.
         /// </exception>
-        IActorContext IInternalActor.ActorContext
-        {
-            get {
-                return Context;
-            }
-        }
+        IActorContext IInternalActor.ActorContext => Context;
 
         /// <summary>
         ///     Gets the context.
@@ -176,10 +153,10 @@ namespace Akka.Actor
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        internal protected virtual bool AroundReceive(Receive receive, object message)
+        protected internal virtual bool AroundReceive(Receive receive, object message)
         {
             var wasHandled = receive(message);
-            if(!wasHandled)
+            if (!wasHandled)
             {
                 Unhandled(message);
             }
@@ -211,25 +188,11 @@ namespace Akka.Actor
         protected virtual void Unhandled(object message)
         {
             var terminatedMessage = message as Terminated;
-            if(terminatedMessage != null)
+            if (terminatedMessage != null)
             {
                 throw new DeathPactException(terminatedMessage.ActorRef);
             }
             Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="discardOld">TBD</param>
-        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
-        protected void Become(Receive receive, bool discardOld = true)
-        {
-            if(discardOld)
-                Context.Become(receive);
-            else
-                Context.BecomeStacked(receive);
         }
 
         /// <summary>
@@ -264,15 +227,6 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
-        protected void Unbecome()
-        {
-            UnbecomeStacked();
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <param name="self">TBD</param>
         internal void Clear(IActorRef self)
         {
@@ -286,7 +240,6 @@ namespace Akka.Actor
         {
             _clearedSelf = null;
         }
-
 
         /// <summary>
         /// <para>
@@ -312,4 +265,3 @@ namespace Akka.Actor
         }
     }
 }
-

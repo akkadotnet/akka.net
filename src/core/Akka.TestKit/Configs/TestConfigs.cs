@@ -10,7 +10,7 @@ using Akka.Configuration;
 namespace Akka.TestKit.Configs
 {
     /// <summary>
-    /// TBD
+    /// Default Akka.TestKit configurations
     /// </summary>
     public static class TestConfigs
     {

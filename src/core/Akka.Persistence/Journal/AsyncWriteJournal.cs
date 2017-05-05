@@ -16,14 +16,11 @@ using Akka.Pattern;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// TBD
+    /// Abstract journal, optimized for asynchronous, non-blocking writes.
     /// </summary>
     public abstract class AsyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
         private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected readonly bool CanPublish;
         private readonly CircuitBreaker _breaker;
         private readonly ReplayFilterMode _replayFilterMode;
@@ -36,9 +33,15 @@ namespace Akka.Persistence.Journal
         private long _resequencerCounter = 1L;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="AsyncWriteJournal"/> class.
         /// </summary>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the Persistence extension related to this journal has not been used in the current <see cref="ActorSystem"/> context.
+        /// </exception>
+        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the configuration.
+        /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
+        /// </exception>
         protected AsyncWriteJournal()
         {
             var extension = Persistence.Instance.Apply(Context.System);
@@ -71,7 +74,7 @@ namespace Akka.Persistence.Journal
                     _replayFilterMode = ReplayFilterMode.Warn;
                     break;
                 default:
-                    throw new ArgumentException(string.Format("Invalid replay-filter.mode [{0}], supported values [off, repair-by-discard-old, fail, warn]", replayFilterMode));
+                    throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
             _replayFilterWindowSize = config.GetInt("replay-filter.window-size");
@@ -81,24 +84,10 @@ namespace Akka.Persistence.Journal
             _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="recoveryCallback">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
 
         /// <summary>
@@ -150,7 +139,7 @@ namespace Akka.Persistence.Journal
         /// null for the happy path, i.e. when no messages are rejected.
         /// 
         /// Calls to this method are serialized by the enclosing journal actor. If you spawn
-        /// work in asyncronous tasks it is alright that they complete the futures in any order,
+        /// work in asynchronous tasks it is alright that they complete the futures in any order,
         /// but the actual writes for a specific persistenceId should be serialized to avoid
         /// issues such as events of a later write are visible to consumers (query side, or replay)
         /// before the events of an earlier write are visible.
@@ -195,11 +184,7 @@ namespace Akka.Persistence.Journal
             return false;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected sealed override bool Receive(object message)
         {
             return ReceiveWriteJournal(message) || ReceivePluginInternal(message);
@@ -214,7 +199,6 @@ namespace Akka.Persistence.Journal
         {
             if (message is WriteMessages) HandleWriteMessages((WriteMessages)message);
             else if (message is ReplayMessages) HandleReplayMessages((ReplayMessages)message);
-            else if (message is ReadHighestSequenceNr) HandleReadHighestSequenceNr((ReadHighestSequenceNr)message);
             else if (message is DeleteMessagesTo) HandleDeleteMessagesTo((DeleteMessagesTo)message);
             else return false;
             return true;
@@ -241,22 +225,6 @@ namespace Akka.Persistence.Journal
                     if (!resultTask.IsFaulted && !resultTask.IsCanceled && CanPublish)
                         eventStream.Publish(message);
                 }, _continuationOptions);
-        }
-
-        private void HandleReadHighestSequenceNr(ReadHighestSequenceNr message)
-        {
-            // Send read highest sequence number to persistentActor directly. No need
-            // to resequence the result relative to written and looped messages.
-            ReadHighestSequenceNrAsync(message.PersistenceId, message.FromSequenceNr)
-                .ContinueWith(t => t.IsFaulted || t.IsCanceled
-                    ? (object)
-                        new ReadHighestSequenceNrFailure(
-                            t.IsFaulted
-                                ? TryUnwrapException(t.Exception)
-                                : new OperationCanceledException(
-                                    "ReadHighestSequenceNrAsync canceled, possibly due to timing out."))
-                    : new ReadHighestSequenceNrSuccess(t.Result))
-                .PipeTo(message.PersistentActor);
         }
 
         private void HandleReplayMessages(ReplayMessages message)
@@ -414,8 +382,7 @@ namespace Akka.Persistence.Journal
                     if (!t.IsFaulted && !t.IsCanceled && writeMessagesAsyncException == null)
                     {
                         if (t.Result != null && t.Result.Count != atomicWriteCount)
-                            throw new IllegalStateException(string.Format("AsyncWriteMessages return invalid number or results. " +
-                                "Expected [{0}], but got [{1}].", atomicWriteCount, t.Result.Count));
+                            throw new IllegalStateException($"AsyncWriteMessages return invalid number or results. Expected [{atomicWriteCount}], but got [{t.Result.Count}].");
 
 
                         _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
@@ -437,18 +404,8 @@ namespace Akka.Persistence.Journal
                 }, _continuationOptions);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         internal sealed class Desequenced
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="message">TBD</param>
-            /// <param name="sequenceNr">TBD</param>
-            /// <param name="target">TBD</param>
-            /// <param name="sender">TBD</param>
             public Desequenced(object message, long sequenceNr, IActorRef target, IActorRef sender)
             {
                 Message = message;
@@ -457,37 +414,20 @@ namespace Akka.Persistence.Journal
                 Sender = sender;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly object Message;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly long SequenceNr;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IActorRef Target;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IActorRef Sender;
+            public object Message { get; }
+
+            public long SequenceNr { get; }
+
+            public IActorRef Target { get; }
+
+            public IActorRef Sender { get; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         internal class Resequencer : ActorBase
         {
             private readonly IDictionary<long, Desequenced> _delayed = new Dictionary<long, Desequenced>();
             private long _delivered = 0L;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="message">TBD</param>
-            /// <returns>TBD</returns>
             protected override bool Receive(object message)
             {
                 Desequenced d;
@@ -527,4 +467,3 @@ namespace Akka.Persistence.Journal
         }
     }
 }
-

@@ -78,6 +78,8 @@ namespace Akka.Cluster
                 DowningProviderType = typeof(AutoDowning);
             else
                 DowningProviderType = typeof(NoDowning);
+
+            RunCoordinatedShutdownWhenDown = cc.GetBoolean("run-coordinated-shutdown-when-down");
         }
 
         /// <summary>
@@ -86,12 +88,12 @@ namespace Akka.Cluster
         public bool LogInfo { get; }
 
         /// <summary>
-        /// TBD
+        /// The configuration for the underlying failure detector used by Akka.Cluster.
         /// </summary>
         public Config FailureDetectorConfig => _failureDetectorConfig;
 
         /// <summary>
-        /// TBD
+        /// The fully qualified type name of the failure detector class that will be used.
         /// </summary>
         public string FailureDetectorImplementationClass { get; }
 
@@ -101,7 +103,7 @@ namespace Akka.Cluster
         public TimeSpan HeartbeatInterval { get; }
 
         /// <summary>
-        /// TBD
+        /// The amount of time we expect a heartbeat response after first contact with a new node.
         /// </summary>
         public TimeSpan HeartbeatExpectedResponseAfter { get; }
 
@@ -203,7 +205,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Obsolete. Use <see cref="P:Cluster.DowningProvider.DownRemovalMargin"/>.
         /// </summary>
-        [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin")]
+        [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
         public TimeSpan DownRemovalMargin { get; }
 
         /// <summary>
@@ -215,6 +217,12 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public Type DowningProviderType { get; }
+
+        /// <summary>
+        /// Trigger the <see cref="CoordinatedShutdown"/> even if this node was removed by non-graceful
+        /// means, such as being downed.
+        /// </summary>
+        public bool RunCoordinatedShutdownWhenDown { get; }
     }
 }
 

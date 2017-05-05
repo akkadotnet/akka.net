@@ -18,7 +18,7 @@ namespace Akka.Tools.MatchHandler
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public class CachedMatchCompiler<T> : IMatchCompiler<T>
+    internal class CachedMatchCompiler<T> : IMatchCompiler<T>
     {
         private readonly IMatchExpressionBuilder _expressionBuilder;
         private readonly IPartialActionBuilder _actionBuilder;
@@ -72,6 +72,7 @@ namespace Akka.Tools.MatchHandler
             return compiledLambda;
         }
 
+#if !CORECLR
         /// <summary>
         /// TBD
         /// </summary>
@@ -90,6 +91,7 @@ namespace Akka.Tools.MatchHandler
             var method = typeBuilder.DefineMethod(methodName, methodAttributes, typeof(bool), parameterTypes);
             _expressionCompiler.CompileToMethod(lambdaExpression, method);
         }
+#endif
     }
 }
 

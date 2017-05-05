@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Collections.Immutable;
 using System.Net;
@@ -180,7 +180,7 @@ namespace Akka.Streams.Dsl
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
-            // DnsEnpoint isn't allowed
+            // DnsEndpoint isn't allowed
             var ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;
             if (ipAddresses.Length == 0)
                 throw new ArgumentException($"Couldn't resolve IpAdress for host {host}", nameof(host));
@@ -276,3 +276,4 @@ namespace Akka.Streams.Dsl
         public static TcpExt TcpStream(this ActorSystem system) => system.WithExtension<TcpExt, Tcp>();
     }
 }
+#endif

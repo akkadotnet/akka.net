@@ -27,3 +27,5 @@
 
 # Needed for API Approvals
 *.txt text eol=crlf
+
+build.sh eol=lf

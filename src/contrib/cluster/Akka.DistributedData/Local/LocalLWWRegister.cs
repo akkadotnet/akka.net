@@ -106,10 +106,10 @@ namespace Akka.DistributedData.Local
             new LocalLWWRegister<T>(_currentNode, _crdt.Merge(register));
 
         /// <summary>
-        /// TBD
+        /// Performs an implicit conversion from <see cref="Akka.DistributedData.Local.LocalLWWRegister{T}" /> to <see cref="Akka.DistributedData.LWWRegister{T}" />.
         /// </summary>
-        /// <param name="set">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="set">The set to convert</param>
+        /// <returns>The result of the conversion</returns>
         public static implicit operator LWWRegister<T>(LocalLWWRegister<T> set) => set._crdt;
     }
 }

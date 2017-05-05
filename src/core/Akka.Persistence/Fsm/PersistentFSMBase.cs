@@ -245,7 +245,7 @@ namespace Akka.Persistence.Fsm
         /// <returns>TBD</returns>
         public State Stop()
         {
-            return Stop(new FSMBase.Normal());
+            return Stop(FSMBase.Normal.Instance);
         }
 
         /// <summary>
@@ -507,11 +507,9 @@ namespace Akka.Persistence.Fsm
                 MakeTransition(upcomingState);
                 return;
             }
-            var replies = upcomingState.Replies;
-            replies.Reverse();
-            foreach (var reply in replies)
+            for (var i = upcomingState.Replies.Count - 1; i >= 0; i--)
             {
-                Sender.Tell(reply);
+                Sender.Tell(upcomingState.Replies[i]);
             }
             Terminate(upcomingState);
             Context.Stop(Self);
@@ -528,11 +526,9 @@ namespace Akka.Persistence.Fsm
             }
             else
             {
-                var replies = upcomingState.Replies;
-                replies.Reverse();
-                foreach (var r in replies)
+                for (var i = upcomingState.Replies.Count - 1; i >= 0; i--)
                 {
-                    Sender.Tell(r);
+                    Sender.Tell(upcomingState.Replies[i]);
                 }
                 if (!_currentState.StateName.Equals(upcomingState.StateName))
                 {
@@ -659,7 +655,7 @@ namespace Akka.Persistence.Fsm
              * Setting this instance's state to Terminated does no harm during restart, since
              * the new instance will initialize fresh using StartWith.
              */
-            Terminate(Stay().WithStopReason(new FSMBase.Shutdown()));
+            Terminate(Stay().WithStopReason(FSMBase.Shutdown.Instance));
             base.PostStop();
         }
 
@@ -1059,7 +1055,7 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// TBD
             /// </summary>
-            public List<object> Replies
+            public IReadOnlyList<object> Replies
             {
                 get
                 {
@@ -1137,7 +1133,7 @@ namespace Akka.Persistence.Fsm
             /// <param name="domainEvents">TBD</param>
             /// <param name="afterTransitionDo">TBD</param>
             public State(TState stateName, TData stateData, TimeSpan? timeout = null, FSMBase.Reason stopReason = null,
-                List<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
+                IReadOnlyList<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
                 : base(stateName, stateData, timeout, stopReason, replies)
             {
                 AfterTransitionHandler = afterTransitionDo;
@@ -1208,7 +1204,7 @@ namespace Akka.Persistence.Fsm
             /// <param name="afterTransitionDo">TBD</param>
             /// <returns>TBD</returns>
             public State Copy(TimeSpan? timeout, FSMBase.Reason stopReason = null,
-                List<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
+                IReadOnlyList<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
             {
                 return new State(StateName, StateData, timeout ?? Timeout, stopReason ?? StopReason,
                     replies ?? Replies,

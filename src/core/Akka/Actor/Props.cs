@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using Akka.Dispatch;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
@@ -131,13 +132,7 @@ namespace Akka.Actor
             return true;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        /// <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -146,12 +141,7 @@ namespace Akka.Actor
             return Equals((Props) obj);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -396,7 +386,7 @@ namespace Akka.Actor
         /// <param name="factory">The lambda expression used to create the actor.</param>
         /// <param name="supervisorStrategy">Optional: The supervisor strategy used to manage the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        /// <exception cref="System.ArgumentException">The create function must be a 'new T (args)' expression</exception>
+        /// <exception cref="ArgumentException">The create function must be a 'new T (args)' expression</exception>
         public static Props Create<TActor>(Expression<Func<TActor>> factory, SupervisorStrategy supervisorStrategy=null) where TActor : ActorBase
         {
             if (factory.Body is UnaryExpression)
@@ -437,7 +427,7 @@ namespace Akka.Actor
         /// Creates an actor using a specified supervisor strategy.
         /// </summary>
         /// <typeparam name="TActor">The type of the actor to create.</typeparam>
-        /// <param name="supervisorStrategy">The supervisor stratgey used to manage the actor.</param>
+        /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
         {
@@ -552,7 +542,7 @@ namespace Akka.Actor
         ///  This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
         ///  </note>
         ///  </summary>
-        ///  <param name="supervisorStrategy">The supervisor stratgey used to manage the actor.</param>
+        ///  <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
         /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided <paramref name="supervisorStrategy" />.</returns>
         public Props WithSupervisorStrategy(SupervisorStrategy supervisorStrategy)
         {
@@ -781,7 +771,12 @@ namespace Akka.Actor
         protected override Props Copy()
         {
             Props initialCopy = base.Copy();
+#if CLONEABLE
             var invokerCopy = (Func<TActor>)invoker.Clone();
+#else
+            // TODO: CORECLR FIX IT
+            var invokerCopy = (Func<TActor>)invoker;
+#endif
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 

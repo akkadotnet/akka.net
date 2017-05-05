@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Persistence.Tests.Journal
 {
@@ -40,6 +41,7 @@ akka.persistence.journal {
       precise  = """ + typeof (PreciseAdapter).FullName + @", Akka.Persistence.Tests""
       reader  = """ + typeof (ReaderAdapter).FullName + @", Akka.Persistence.Tests""
       writer  = """ + typeof (WriterAdapter).FullName + @", Akka.Persistence.Tests""
+      another-reader  = """ + typeof(AnotherReaderAdapter).FullName + @", Akka.Persistence.Tests""
     }
     event-adapter-bindings = {
       """ + typeof (IEventMarkerInterface).FullName + @", Akka.Persistence.Tests"" = marker
@@ -47,6 +49,7 @@ akka.persistence.journal {
       """ + typeof (PreciseAdapterEvent).FullName + @", Akka.Persistence.Tests"" = precise
       """ + typeof (ReadMeEvent).FullName + @", Akka.Persistence.Tests"" = reader
       """ + typeof (WriteMeEvent).FullName + @", Akka.Persistence.Tests"" = writer
+      """ + typeof(ReadMeTwiceEvent).FullName + @", Akka.Persistence.Tests"" = [reader, another-reader]
     }
   }
 }").WithFallback(ConfigurationFactory.Load());
@@ -59,7 +62,7 @@ akka.persistence.journal {
         public void EventAdapters_should_parse_configuration_and_resolve_adapter_definitions()
         {
             var adapters = EventAdapters.Create(_extendedActorySystem, _memoryConfig);
-            adapters.Get<IEventMarkerInterface>().GetType().ShouldBe(typeof (MarkerInterfaceAdapter));
+            adapters.Get<IEventMarkerInterface>().GetType().Should().Be(typeof (MarkerInterfaceAdapter));
         }
 
         [Fact]
@@ -68,16 +71,16 @@ akka.persistence.journal {
             var adapters = EventAdapters.Create(_extendedActorySystem, _memoryConfig);
 
             // sanity check: precise case, matching non-user classes
-            adapters.Get<string>().GetType().ShouldBe(typeof (ExampleEventAdapter));
+            adapters.Get<string>().GetType().Should().Be(typeof (ExampleEventAdapter));
 
             // pick adapter by implemented marker interface
-            adapters.Get<SampleEvent>().GetType().ShouldBe(typeof (MarkerInterfaceAdapter));
+            adapters.Get<SampleEvent>().GetType().Should().Be(typeof (MarkerInterfaceAdapter));
 
             // more general adapter matches as well, but most specific one should be picked
-            adapters.Get<PreciseAdapterEvent>().GetType().ShouldBe(typeof (PreciseAdapter));
+            adapters.Get<PreciseAdapterEvent>().GetType().Should().Be(typeof (PreciseAdapter));
 
             // no adapter defined for Long, should return identity adapter
-            adapters.Get<long>().GetType().ShouldBe(typeof (IdentityEventAdapter));
+            adapters.Get<long>().GetType().Should().Be(typeof (IdentityEventAdapter));
         }
 
         [Fact] public void EventAdapters_should_fail_with_useful_message_when_binding_to_not_defined_adapter()
@@ -91,7 +94,7 @@ akka.persistence.journal.inmem {
             var combinedConfig = badConfig.GetConfig("akka.persistence.journal.inmem");
 
             var ex = Assert.Throws<ArgumentException>(() => EventAdapters.Create(_extendedActorySystem, combinedConfig));
-            ex.Message.Contains("System.Integer was bound to undefined event-adapter: undefined-adapter").ShouldBeTrue();
+            ex.Message.Contains("System.Integer was bound to undefined event-adapter: undefined-adapter").Should().BeTrue();
         }
 
         [Fact]
@@ -101,7 +104,7 @@ akka.persistence.journal.inmem {
 
             // read-side only adapter
             var readAdapter = adapters.Get<ReadMeEvent>();
-            readAdapter.FromJournal(readAdapter.ToJournal(new ReadMeEvent()), "").Events.First().ShouldBe("from-ReadMeEvent()");
+            readAdapter.FromJournal(readAdapter.ToJournal(new ReadMeEvent()), "").Events.First().Should().Be("from-ReadMeEvent()");
         }
 
         [Fact]
@@ -111,7 +114,20 @@ akka.persistence.journal.inmem {
 
             // write-side only adapter
             var writeAdapter = adapters.Get<WriteMeEvent>();
-            writeAdapter.FromJournal(writeAdapter.ToJournal(new WriteMeEvent()), "").Events.First().ShouldBe("to-WriteMeEvent()");
+            writeAdapter.FromJournal(writeAdapter.ToJournal(new WriteMeEvent()), "").Events.First().Should().Be("to-WriteMeEvent()");
+        }
+
+        [Fact]
+        public void EventAdapters_should_allow_combining_only_the_readside_CombinedReadEventAdapter()
+        {
+            var adapters = EventAdapters.Create(_extendedActorySystem, _memoryConfig);
+
+            // combined-read-side only adapter
+            var readAdapter = adapters.Get<ReadMeTwiceEvent>();
+            readAdapter.FromJournal(readAdapter.ToJournal(new ReadMeTwiceEvent()), "").Events
+                .Select(c => c.ToString())
+                .Should()
+                .BeEquivalentTo("from-ReadMeTwiceEvent()", "again-ReadMeTwiceEvent()");
         }
     }
 
@@ -144,11 +160,28 @@ akka.persistence.journal.inmem {
             return "ReadMeEvent()";
         }
     }
+
+    public class ReadMeTwiceEvent
+    {
+        public override string ToString()
+        {
+            return "ReadMeTwiceEvent()";
+        }
+    }
+
     public class ReaderAdapter : IReadEventAdapter
     {
         public IEventSequence FromJournal(object evt, string manifest)
         {
             return EventSequence.Single("from-" + evt);
+        }
+    }
+
+    public class AnotherReaderAdapter : IReadEventAdapter
+    {
+        public IEventSequence FromJournal(object evt, string manifest)
+        {
+            return EventSequence.Single("again-" + evt);
         }
     }
 

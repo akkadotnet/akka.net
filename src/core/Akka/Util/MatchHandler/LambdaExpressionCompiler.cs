@@ -14,7 +14,7 @@ namespace Akka.Tools.MatchHandler
     /// <summary>
     /// TBD
     /// </summary>
-    public class LambdaExpressionCompiler : ILambdaExpressionCompiler
+    internal class LambdaExpressionCompiler : ILambdaExpressionCompiler
     {
         /// <summary>
         /// TBD
@@ -26,6 +26,7 @@ namespace Akka.Tools.MatchHandler
             return expression.Compile();
         }
 
+#if !CORECLR
         /// <summary>
         /// TBD
         /// </summary>
@@ -36,6 +37,7 @@ namespace Akka.Tools.MatchHandler
         {
             expression.CompileToMethod(method);
         }
+#endif
     }
 }
 

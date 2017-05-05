@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Configuration;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
@@ -282,19 +281,26 @@ namespace Akka.Persistence.Sql.Common.Journal
                 .WasHandled;
         }
 
-        private async Task<AllPersistenceIds> Initialize()
+        private async Task<object> Initialize()
         {
-            using (var connection = CreateDbConnection())
+            try
             {
-                await connection.OpenAsync();
-
-                if (_settings.AutoInitialize)
+                using (var connection = CreateDbConnection())
                 {
-                    await QueryExecutor.CreateTablesAsync(connection, _pendingRequestsCancellation.Token);
-                }
+                    await connection.OpenAsync();
 
-                var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, _pendingRequestsCancellation.Token);
-                return new AllPersistenceIds(ids);
+                    if (_settings.AutoInitialize)
+                    {
+                        await QueryExecutor.CreateTablesAsync(connection, _pendingRequestsCancellation.Token);
+                    }
+
+                    var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, _pendingRequestsCancellation.Token);
+                    return new AllPersistenceIds(ids);
+                }
+            }
+            catch (Exception e)
+            {
+                return new Failure {Exception = e};
             }
         }
 
@@ -488,10 +494,13 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string GetConnectionString()
         {
             var connectionString = _settings.ConnectionString;
+
+#if CONFIGURATION
             if (string.IsNullOrEmpty(connectionString))
             {
-                connectionString = ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
             }
+#endif
 
             return connectionString;
         }

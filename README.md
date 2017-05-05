@@ -17,6 +17,7 @@
 **Akka.NET** is a community-driven port of the popular Java/Scala framework [Akka](http://akka.io) to .NET.
 
 * Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
+* Gitter chat: https://gitter.im/akkadotnet/akka.net
 * Support forum: https://groups.google.com/forum/#!forum/akkadotnet-user-list
 * Mail: hi@getakka.net
 * Stack Overflow: http://stackoverflow.com/questions/tagged/akka.net

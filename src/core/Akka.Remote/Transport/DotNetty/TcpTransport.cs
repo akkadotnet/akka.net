@@ -17,7 +17,7 @@ using Akka.Event;
 using DotNetty.Buffers;
 using DotNetty.Common.Utilities;
 using DotNetty.Transport.Channels;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote.Transport.DotNetty
 {
@@ -186,10 +186,10 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 var clientBootstrap = ClientFactory(remoteAddress);
                 var socketAddress = AddressToSocketAddress(remoteAddress);
-                socketAddress = await MapEndpointAsync(socketAddress);
-                var associate = await clientBootstrap.ConnectAsync(socketAddress);
+                socketAddress = await MapEndpointAsync(socketAddress).ConfigureAwait(false);
+                var associate = await clientBootstrap.ConnectAsync(socketAddress).ConfigureAwait(false);
                 var handler = (TcpClientHandler)associate.Pipeline.Last();
-                return await handler.StatusFuture;
+                return await handler.StatusFuture.ConfigureAwait(false);
             }
             catch (AggregateException e) when (e.InnerException is ConnectException)
             {
@@ -217,7 +217,7 @@ namespace Akka.Remote.Transport.DotNetty
 
             var dns = socketAddress as DnsEndPoint;
             if (dns != null)
-                ipEndPoint = await DnsToIPEndpoint(dns);
+                ipEndPoint = await DnsToIPEndpoint(dns).ConfigureAwait(false);
             else
                 ipEndPoint = (IPEndPoint) socketAddress;
 
