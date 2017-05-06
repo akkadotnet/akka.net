@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util.Reflection;
@@ -81,11 +82,11 @@ namespace Akka.Dispatch
         /// <returns><c>true</c> if this actor has a message queue type requirement. <c>false</c> otherwise.</returns>
         public bool HasRequiredType(Type actorType)
         {
-            var interfaces = actorType.GetInterfaces();
+            var interfaces = actorType.GetTypeInfo().GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
             {
                 var element = interfaces[i];
-                if (element.IsGenericType && element.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
+                if (element.GetTypeInfo().IsGenericType && element.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
                 {
                     return true;
                 }
@@ -101,11 +102,11 @@ namespace Akka.Dispatch
         /// <returns><c>true</c> if this mailboxtype produces queues. <c>false</c> otherwise.</returns>
         public bool ProducesMessageQueue(Type mailboxType)
         {
-            var interfaces = mailboxType.GetInterfaces();
+            var interfaces = mailboxType.GetTypeInfo().GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
             {
                 var element = interfaces[i];
-                if (element.IsGenericType && element.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
+                if (element.GetTypeInfo().IsGenericType && element.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
                 {
                     return true;
                 }
@@ -211,11 +212,11 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public Type GetRequiredType(Type actorType)
         {
-            var interfaces = actorType.GetInterfaces();
+            var interfaces = actorType.GetTypeInfo().GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
             {
                 var element = interfaces[i];
-                if (element.IsGenericType && element.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
+                if (element.GetTypeInfo().IsGenericType && element.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
                 {
                     return element.GetGenericArguments()[0];
                 }
@@ -227,11 +228,11 @@ namespace Akka.Dispatch
         private static readonly Type ProducesMessageQueueGenericType = typeof (IProducesMessageQueue<>);
         private Type GetProducedMessageQueueType(MailboxType mailboxType)
         {
-            var interfaces = mailboxType.GetType().GetInterfaces();
+            var interfaces = mailboxType.GetType().GetTypeInfo().GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
             {
                 var element = interfaces[i];
-                if (element.IsGenericType && element.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
+                if (element.GetTypeInfo().IsGenericType && element.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
                 {
                     return element.GetGenericArguments()[0];
                 }

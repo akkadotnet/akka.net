@@ -998,6 +998,7 @@ namespace Akka.DistributedData
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="DataDeletedException"/> class.
         /// </summary>
@@ -1006,6 +1007,7 @@ namespace Akka.DistributedData
         protected DataDeletedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     public interface IReplicatorMessage { }

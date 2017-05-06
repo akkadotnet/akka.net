@@ -1,126 +1,38 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{59CFFC88-8A73-445D-B191-281E40BE9421}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.DistributedData</RootNamespace>
-    <AssemblyName>Akka.DistributedData</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
+    <AssemblyTitle>Akka.DistributedData</AssemblyTitle>
+    <Description>Replicated data using CRDT structures</Description>
+    <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
+    <VersionPrefix>1.3.0</VersionPrefix>
+    <VersionSuffix>beta</VersionSuffix>
+    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
+    <PackageTags>akka;actors;actor model;Akka;concurrency;network;cluster;crdt;replication</PackageTags>
+    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\Akka.DistributedData.xml</DocumentationFile>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="Google.Protobuf, Version=3.2.0.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Google.Protobuf.3.2.0\lib\net45\Google.Protobuf.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Hyperion, Version=0.9.2.2, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Hyperion.0.9.2\lib\net45\Hyperion.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Core" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\..\..\SharedAssemblyInfo.cs">
-      <Link>Properties\SharedAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="Durable\Messages.cs" />
-    <Compile Include="Local\ClusterReplicatedDataExtensions.cs" />
-    <Compile Include="DistributedData.cs" />
-    <Compile Include="Dsl.cs" />
-    <Compile Include="FastMerge.cs" />
-    <Compile Include="Flag.cs" />
-    <Compile Include="GCounter.cs" />
-    <Compile Include="GSet.cs" />
-    <Compile Include="Internal\Internal.cs" />
-    <Compile Include="IReplicatedDataSerialization.cs" />
-    <Compile Include="Key.cs" />
-    <Compile Include="Local\LocalLWWDictionary.cs" />
-    <Compile Include="Local\LocalLWWRegister.cs" />
-    <Compile Include="Local\LocalORDictionary.cs" />
-    <Compile Include="Local\LocalORMultiDictionary.cs" />
-    <Compile Include="Local\LocalORSet.cs" />
-    <Compile Include="Local\LocalPNCounter.cs" />
-    <Compile Include="Local\LocalPNCounterDictionary.cs" />
-    <Compile Include="LWWDictionary.cs" />
-    <Compile Include="LWWRegister.cs" />
-    <Compile Include="ORDictionary.cs" />
-    <Compile Include="ORMultiDictionary.cs" />
-    <Compile Include="ORSet.cs" />
-    <Compile Include="PNCounter.cs" />
-    <Compile Include="PNCounterDictionary.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="PruningState.cs" />
-    <Compile Include="ReadAggregator.cs" />
-    <Compile Include="ReadWriteAggregator.cs" />
-    <Compile Include="ReplicatedData.cs" />
-    <Compile Include="Replicator.cs" />
-    <Compile Include="Replicator.Messages.cs" />
-    <Compile Include="ReplicatorSettings.cs" />
-    <Compile Include="Local\LocalGCounter.cs" />
-    <Compile Include="Serialization\ReplicatedDataSerializer.cs" />
-    <Compile Include="Serialization\ReplicatorMessageSerializer.cs" />
-    <Compile Include="VersionVector.cs" />
-    <Compile Include="WriteAggregator.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
-      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
-      <Name>Akka.Cluster</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
-      <Name>Akka</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Akka.DistributedData.nuspec" />
-    <None Include="packages.config">
-      <SubType>Designer</SubType>
-    </None>
     <EmbeddedResource Include="reference.conf" />
+    <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
   </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
+  <ItemGroup>
+    <PackageReference Include="Hyperion" version="0.9.5" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <DefineConstants>$(DefineConstants);SERIALIZATION;CLONABLE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
 </Project>

@@ -7,6 +7,7 @@
 // -----------------------------------------------------------------------
 #endregion
 
+#if HELIOS
 using System;
 using System.Linq;
 using Akka.Actor;
@@ -30,7 +31,6 @@ namespace Akka.Remote.Tests.Transport
             akka {
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
 
-                # explicitly make use of helios configuration instead of dot-netty
                 remote.helios.tcp {
                     hostname = ""localhost""
                     port = 11311
@@ -144,3 +144,4 @@ namespace Akka.Remote.Tests.Transport
         #endregion
     }
 }
+#endif

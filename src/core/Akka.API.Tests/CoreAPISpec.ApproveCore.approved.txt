@@ -109,8 +109,8 @@ namespace Akka.Actor
         public static Akka.Actor.NameAndUid SplitNameAndUid(string name) { }
         public virtual void Start() { }
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
-        public void Stop() { }
         public void Stop(Akka.Actor.IActorRef child) { }
+        public void Stop() { }
         public void Suspend() { }
         protected void TellWatchersWeDied() { }
         public void TerminatedQueuedFor(Akka.Actor.IActorRef subject) { }
@@ -4905,6 +4905,12 @@ namespace Akka.Util.Internal
 }
 namespace Akka.Util.Internal.Collections
 {
+    public class EmptyReadOnlyCollections<T>
+    {
+        public EmptyReadOnlyCollections() { }
+        public static System.Collections.Generic.IReadOnlyCollection<T> Collection { get; }
+        public static System.Collections.Generic.IReadOnlyList<T> List { get; }
+    }
     public class static EnumeratorExtensions
     {
         public static Akka.Util.Internal.Collections.Iterator<T> Iterator<T>(this System.Collections.Generic.IEnumerable<T> enumerable) { }

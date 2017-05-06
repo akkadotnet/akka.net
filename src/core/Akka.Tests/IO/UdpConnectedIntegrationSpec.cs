@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Linq;
 using System.Net;
@@ -103,3 +103,4 @@ namespace Akka.Tests.IO
         }
     }
 }
+#endif

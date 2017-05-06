@@ -48,6 +48,7 @@ namespace Akka.Remote.Transport
             Msg = msg;
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="FailureInjectorException"/> class.
         /// </summary>
@@ -57,6 +58,7 @@ namespace Akka.Remote.Transport
             : base(info, context)
         {
         }
+#endif
 
         /// <summary>
         /// Retrieves the message of the simulated failure.
@@ -69,7 +71,7 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal class FailureInjectorTransportAdapter : AbstractTransportAdapter, IAssociationEventListener
     {
-        #region Internal message classes
+#region Internal message classes
 
         /// <summary>
         /// TBD
@@ -178,7 +180,7 @@ namespace Akka.Remote.Transport
             public double InboundDropP { get; private set; }
         }
 
-        #endregion
+#endregion
 
         /// <summary>
         /// TBD
@@ -213,7 +215,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         protected int MaximumOverhead = 0;
 
-        #region AbstractTransportAdapter members
+#region AbstractTransportAdapter members
 
         // ReSharper disable once InconsistentNaming
         private static readonly SchemeAugmenter _augmenter = new SchemeAugmenter(FailureInjectorSchemeIdentifier);
@@ -250,9 +252,9 @@ namespace Akka.Remote.Transport
             return WrappedTransport.ManagementCommand(message);
         }
 
-        #endregion
+#endregion
 
-        #region IAssociationEventListener members
+#region IAssociationEventListener members
 
         /// <summary>
         /// TBD
@@ -322,9 +324,9 @@ namespace Akka.Remote.Transport
             }
         }
 
-        #endregion
+#endregion
 
-        #region Internal methods
+#region Internal methods
 
         /// <summary>
         /// TBD
@@ -399,7 +401,7 @@ namespace Akka.Remote.Transport
             return PassThru.Instance;
         }
 
-        #endregion
+#endregion
     }
 
     /// <summary>
@@ -446,7 +448,7 @@ namespace Akka.Remote.Transport
             WrappedHandle.Disassociate();
         }
 
-        #region IHandleEventListener members
+#region IHandleEventListener members
 
         /// <summary>
         /// TBD
@@ -460,7 +462,7 @@ namespace Akka.Remote.Transport
             }
         }
 
-        #endregion
+#endregion
     }
 }
 

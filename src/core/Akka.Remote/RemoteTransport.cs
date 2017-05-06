@@ -129,6 +129,7 @@ namespace Akka.Remote
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoteTransportException"/> class.
         /// </summary>
@@ -138,6 +139,7 @@ namespace Akka.Remote
             : base(info, context)
         {
         }
+#endif
     }
 }
 

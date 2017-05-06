@@ -106,6 +106,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="DotNettyTransportException"/> class.
         /// </summary>
@@ -114,6 +115,7 @@ namespace Akka.Remote.Transport.DotNetty
         protected DotNettyTransportException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
     
     internal abstract class DotNettyTransport : Transport
@@ -303,7 +305,7 @@ namespace Akka.Remote.Transport.DotNetty
             return endpoint;
         }
 
-        #region private methods 
+#region private methods 
 
         private void SetInitialChannelPipeline(IChannel channel)
         {
@@ -416,9 +418,9 @@ namespace Akka.Remote.Transport.DotNetty
             return new IPEndPoint(found, address.Port);
         }
 
-        #endregion
+#endregion
 
-        #region static methods
+#region static methods
 
         public static Address MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string hostName = null)
         {
@@ -468,7 +470,7 @@ namespace Akka.Remote.Transport.DotNetty
             return listenAddress;
         }
 
-        #endregion
+#endregion
     }
 
     internal class HeliosBackwardsCompatabilityLengthFramePrepender : LengthFieldPrepender

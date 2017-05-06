@@ -62,6 +62,7 @@ namespace Akka.Remote.Transport
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public AkkaProtocolException(string message, Exception cause = null) : base(message, cause) { }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaProtocolException"/> class.
         /// </summary>
@@ -71,6 +72,7 @@ namespace Akka.Remote.Transport
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -174,14 +176,14 @@ namespace Akka.Remote.Transport
             return (AkkaProtocolHandle)await statusPromise.Task.ConfigureAwait(false);
         }
 
-        #region Static properties
+#region Static properties
 
         /// <summary>
         /// TBD
         /// </summary>
         public static AtomicCounter UniqueId = new AtomicCounter(0);
 
-        #endregion
+#endregion
     }
 
     /// <summary>
@@ -218,7 +220,7 @@ namespace Akka.Remote.Transport
             return _supervisor;
         }
 
-        #region ActorBase / ActorTransportAdapterManager overrides
+#region ActorBase / ActorTransportAdapterManager overrides
 
         /// <summary>
         /// TBD
@@ -246,9 +248,9 @@ namespace Akka.Remote.Transport
                 .With<AssociateUnderlyingRefuseUid>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusCompletionSource, au.RefuseUid));
         }
 
-        #endregion
+#endregion
 
-        #region Actor creation methods
+#region Actor creation methods
 
         private string ActorNameFor(Address remoteAddress)
         {
@@ -279,7 +281,7 @@ namespace Akka.Remote.Transport
                 _settings.TransportFailureDetectorConfig);
         }
 
-        #endregion
+#endregion
     }
 
     /// <summary>
@@ -847,7 +849,7 @@ namespace Akka.Remote.Transport
             InitializeFSM();
         }
 
-        #region FSM bindings
+#region FSM bindings
 
         private void InitializeFSM()
         {
@@ -1185,9 +1187,9 @@ namespace Akka.Remote.Transport
                 base.LogTermination(reason);
         }
 
-        #endregion
+#endregion
 
-        #region Actor methods
+#region Actor methods
 
         /// <summary>
         /// TBD
@@ -1198,9 +1200,9 @@ namespace Akka.Remote.Transport
             base.PostStop(); //pass to OnTermination
         }
 
-        #endregion
+#endregion
 
-        #region Internal protocol messaging methods
+#region Internal protocol messaging methods
 
         private Exception DisassociateException(DisassociateInfo info)
         {
@@ -1321,9 +1323,9 @@ namespace Akka.Remote.Transport
             _log.Error(transportError.Cause, transportError.Message);
         }
 
-        #endregion
+#endregion
 
-        #region Static methods
+#region Static methods
 
 
 
@@ -1365,7 +1367,7 @@ namespace Akka.Remote.Transport
             return Props.Create(() => new ProtocolStateActor(handshakeInfo, wrappedHandle, associationEventListener, settings, codec, failureDetector));
         }
 
-        #endregion
+#endregion
     }
 }
 

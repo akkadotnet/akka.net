@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using Akka.Actor;
 
 namespace Akka.IO
@@ -20,3 +20,4 @@ namespace Akka.IO
         public abstract IActorRef Manager { get; }
     }
 }
+#endif

@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 
 namespace Akka.IO
@@ -30,3 +30,4 @@ namespace Akka.IO
         public Type ManagerClass { get { return typeof (SimpleDnsManager); } }
     }
 }
+#endif

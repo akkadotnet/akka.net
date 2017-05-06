@@ -13,7 +13,10 @@ using System.Collections.Immutable;
 
 namespace Akka.DistributedData
 {
-    public sealed class ReplicatorSettings : ICloneable
+    public sealed class ReplicatorSettings
+#if CLONABLE
+     : ICloneable
+#endif
     {
         /// <summary>
         /// Create settings from the default configuration `akka.cluster.distributed-data`.

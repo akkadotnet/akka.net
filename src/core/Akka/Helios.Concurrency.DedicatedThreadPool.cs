@@ -32,6 +32,7 @@ namespace Helios.Concurrency
         /// </summary>
         public const ThreadType DefaultThreadType = ThreadType.Background;
 
+#if UNSAFE_THREADING
         /// <summary>
         /// TBD
         /// </summary>
@@ -85,6 +86,23 @@ namespace Helios.Concurrency
             if (numThreads <= 0)
                 throw new ArgumentOutOfRangeException(nameof(numThreads), $"numThreads must be at least 1. Was {numThreads}");
         }
+#else
+        public DedicatedThreadPoolSettings(int numThreads, string name = null, TimeSpan? deadlockTimeout = null)
+            : this(numThreads, DefaultThreadType, name, deadlockTimeout)
+        { }
+
+        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, string name = null, TimeSpan? deadlockTimeout = null)
+        {
+            Name = name ?? ("DedicatedThreadPool-" + Guid.NewGuid());
+            ThreadType = threadType;
+            NumThreads = numThreads;
+            DeadlockTimeout = deadlockTimeout;
+            if (deadlockTimeout.HasValue && deadlockTimeout.Value.TotalMilliseconds <= 0)
+                throw new ArgumentOutOfRangeException("deadlockTimeout", string.Format("deadlockTimeout must be null or at least 1ms. Was {0}.", deadlockTimeout));
+            if (numThreads <= 0)
+                throw new ArgumentOutOfRangeException("numThreads", string.Format("numThreads must be at least 1. Was {0}", numThreads));
+        }
+#endif
 
         /// <summary>
         /// The total number of threads to run in this thread pool.
@@ -96,10 +114,12 @@ namespace Helios.Concurrency
         /// </summary>
         public ThreadType ThreadType { get; private set; }
 
+#if UNSAFE_THREADING
         /// <summary>
         /// Apartment state for threads to run in this thread pool
         /// </summary>
         public ApartmentState ApartmentState { get; private set; }
+#endif
 
         /// <summary>
         /// Interval to check for thread deadlocks.
@@ -364,7 +384,7 @@ namespace Helios.Concurrency
             Task.WaitAll(_workers.Select(worker => worker.ThreadExit).ToArray(), timeout);
         }
 
-        #region Pool worker implementation
+#region Pool worker implementation
 
         private class PoolWorker
         {
@@ -382,15 +402,21 @@ namespace Helios.Concurrency
                 _pool = pool;
                 _threadExit = new TaskCompletionSource<object>();
 
+#if UNSAFE_THREADING
                 var thread = new Thread(RunThread, pool.Settings.ThreadMaxStackSize);
+#else
+                var thread = new Thread(RunThread);
+#endif
 
                 thread.IsBackground = pool.Settings.ThreadType == ThreadType.Background;
 
                 if (pool.Settings.Name != null)
                     thread.Name = string.Format("{0}_{1}", pool.Settings.Name, workerId);
 
+#if UNSAFE_THREADING
                 if (pool.Settings.ApartmentState != ApartmentState.Unknown)
                     thread.SetApartmentState(pool.Settings.ApartmentState);
+#endif
 
                 thread.Start();
             }
@@ -418,9 +444,9 @@ namespace Helios.Concurrency
             }
         }
 
-        #endregion
+#endregion
 
-        #region WorkQueue implementation
+#region WorkQueue implementation
 
         private class ThreadPoolWorkQueue
         {
@@ -544,9 +570,9 @@ namespace Helios.Concurrency
             }
         }
 
-        #endregion
+#endregion
 
-        #region UnfairSemaphore implementation
+#region UnfairSemaphore implementation
 
         // This class has been translated from:
         // https://github.com/dotnet/coreclr/blob/97433b9d153843492008652ff6b7c3bf4d9ff31c/src/vm/win32threadpool.h#L124
@@ -771,7 +797,7 @@ namespace Helios.Concurrency
             }
         }
 
-        #endregion
+#endregion
     }
 }
 

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#if FSCHECK
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -317,4 +318,4 @@ namespace Akka.Remote.Tests.Transport
         }
     }
 }
-
+#endif
