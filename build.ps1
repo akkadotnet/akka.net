@@ -34,7 +34,7 @@ $NBenchVersion = "0.3.4"
 $DotNetChannel = "preview";
 $DotNetVersion = "1.0.3";
 $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1";
-$NugetVersion = "4.0.0";
+$NugetVersion = "4.1.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
 
 # Make sure tools folder exists
@@ -122,6 +122,20 @@ if (!(Test-Path $NBenchDllPath)) {
     Invoke-Expression "&`"$NugetPath`" install NBench.Runner -ExcludeVersion -Version $NBenchVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
     if ($LASTEXITCODE -ne 0) {
         Throw "An error occured while restoring NBench.Runner from NuGet."
+    }
+}
+
+###########################################################################
+# Google.Protobuf.Tools
+###########################################################################
+
+# Make sure Google.Protobuf.Tools has been installed.
+$ProtobufExePath = Join-Path $ToolPath "Google.Protobuf.Tools/tools/windows_x64/protoc.exe"
+if (!(Test-Path $ProtobufExePath)) {
+    Write-Host "Installing Google.Protobuf.Tools..."
+    Invoke-Expression "&`"$NugetPath`" install Google.Protobuf.Tools -ExcludeVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
+    if ($LASTEXITCODE -ne 0) {
+        Throw "An error occured while restoring Google.Protobuf.Tools from NuGet."
     }
 }
 
