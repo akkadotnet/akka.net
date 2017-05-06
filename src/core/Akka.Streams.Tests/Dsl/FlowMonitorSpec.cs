@@ -140,13 +140,13 @@ namespace Akka.Streams.Tests.Dsl
             var source = t.Item1.Item1;
             var monitor = t.Item1.Item2;
             var sink = t.Item2;
-            var messsage = new FlowMonitor.Received<string>("message");
-            source.SendNext(messsage);
-            sink.RequestNext(messsage);
+            var message = new FlowMonitor.Received<string>("message");
+            source.SendNext(message);
+            sink.RequestNext(message);
             AwaitAssert(() =>
             {
                 var state = monitor.State as FlowMonitor.Received<FlowMonitor.Received<string>>;
-                if (state != null && state.Message == messsage)
+                if (state != null && state.Message == message)
                     return;
 
                 throw new Exception();

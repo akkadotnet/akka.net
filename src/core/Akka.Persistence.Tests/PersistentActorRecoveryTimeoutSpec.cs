@@ -94,7 +94,7 @@ namespace Akka.Persistence.Tests
                 ConfigurationFactory.ParseString(
                     @"akka.persistence.journal.stepping-inmem.recovery-event-timeout = 1s
                     akka.actor.serialize-messages = off"))
-                  .WithFallback(Configuration("PersistentActoryRecoveryTimeoutSpec")))
+                  .WithFallback(Configuration("PersistentActorRecoveryTimeoutSpec")))
         {
             // initialize journal early
             Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.stepping-inmem");

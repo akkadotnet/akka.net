@@ -8,6 +8,13 @@
     <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <Compile Include="DurableDataSpec.cs" />
+    <Compile Include="DurablePruningSpec.cs" />
+    <Compile Include="JepsenInspiredInsertSpec.cs" />
+    <Compile Include="ReplicatorChaosSpec.cs" />
+    <Compile Include="ReplicatorPruningSpec.cs" />
+    <Compile Include="ReplicatorSpec.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
 
   <ItemGroup>

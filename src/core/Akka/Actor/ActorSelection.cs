@@ -225,13 +225,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -240,22 +234,13 @@ namespace Akka.Actor
             return Equals((ActorSelection)obj);
         }
 
-        /// <summary>
-        /// Determines whether the specified actor selection, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The actor selection to compare.</param>
-        /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <inheritdoc/>
         protected bool Equals(ActorSelection other)
         {
             return Equals(Anchor, other.Anchor) && Equals(PathString, other.PathString);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -264,12 +249,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -314,12 +294,7 @@ namespace Akka.Actor
         /// </summary>
         public bool WildCardFanOut { get; }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             var elements = string.Join<SelectionPathElement>("/", Elements);

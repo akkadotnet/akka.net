@@ -71,7 +71,7 @@ namespace Akka.Actor
             * _cell before we call init and start, since we can start using "this"
             * object from another thread as soon as we run init.
             */
-            // ReSharper disable once VirtualMemberCallInContructor 
+            // ReSharper disable once VirtualMemberCallInConstructor 
             _cell = NewActorCell(_system, this, _props, _dispatcher, _supervisor); // _cell needs to be assigned before Init is called. 
             _cell.Init(true, MailboxType);
         }

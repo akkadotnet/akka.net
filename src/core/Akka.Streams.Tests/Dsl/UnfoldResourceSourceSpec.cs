@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happend()
+        public void A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happened()
         {
             this.AssertAllStagesStopped(() =>
             {

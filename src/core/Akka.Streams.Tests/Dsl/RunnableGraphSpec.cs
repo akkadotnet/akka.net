@@ -21,7 +21,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_RunnableGraph_must_suitably_override_attibute_handling_methods()
+        public void A_RunnableGraph_must_suitably_override_attribute_handling_methods()
         {
             var r =
                 RunnableGraph.FromGraph(Source.Empty<int>().To(Sink.Ignore<int>()))

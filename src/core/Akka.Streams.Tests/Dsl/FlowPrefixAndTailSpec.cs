@@ -318,7 +318,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PrefixAndTail_must_handle_substream_cacellation()
+        public void PrefixAndTail_must_handle_substream_cancellation()
         {
             this.AssertAllStagesStopped(() =>
             {

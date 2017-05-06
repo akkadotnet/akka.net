@@ -570,7 +570,7 @@ namespace Akka.Dispatch
     /// A factory to create <see cref="IMessageQueue"/>s for an optionally provided <see cref="IActorContext"/>.
     /// </summary>
     /// <remarks>
-    /// Possibily important notice.
+    /// Possibly important notice.
     /// 
     /// When implementing a custom MailboxType, be aware that there is special semantics attached to
     /// <see cref="ActorSystem.ActorOf"/> in that sending the returned <see cref="IActorRef"/> may, for a short
@@ -613,7 +613,7 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    /// Compilment to <see cref="IRequiresMessageQueue{T}"/>
+    /// Compliment to <see cref="IRequiresMessageQueue{T}"/>
     /// </summary>
     /// <typeparam name="TQueue">The type of <see cref="IMessageQueue"/> produced by this class.</typeparam>
     public interface IProducesMessageQueue<TQueue> where TQueue : IMessageQueue { }

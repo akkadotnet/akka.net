@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests
         }
 
         [Fact]
-        public void Fusing_must_not_fuse_accross_AsyncBoundary()
+        public void Fusing_must_not_fuse_across_AsyncBoundary()
         {
             var g = Graph(true);
             var fused = Fusing.Aggressive(g);

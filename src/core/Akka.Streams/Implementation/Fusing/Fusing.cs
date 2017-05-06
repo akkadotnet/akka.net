@@ -608,7 +608,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the stack of materialized value sources is empty.
+        /// </exception>
         /// <returns>TBD</returns>
         public IImmutableList<CopiedModule> ExitMaterializationContext()
         {
@@ -622,7 +624,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="module">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the stack of materialized value sources is empty.
+        /// </exception>
         public void PushMaterializationSource(CopiedModule module)
         {
             if (_materializedSources.Count == 0) throw new ArgumentException("PushMaterializationSource without context");

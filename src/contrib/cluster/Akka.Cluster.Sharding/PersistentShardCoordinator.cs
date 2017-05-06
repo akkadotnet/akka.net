@@ -167,11 +167,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as State;
@@ -185,10 +181,7 @@ namespace Akka.Cluster.Sharding
                     && UnallocatedShards.SequenceEqual(other.UnallocatedShards);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked

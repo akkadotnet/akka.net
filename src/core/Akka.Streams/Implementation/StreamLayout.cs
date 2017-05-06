@@ -877,11 +877,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public abstract IModule WithAttributes(Attributes attributes);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(IModule other) => GetHashCode().CompareTo(other.GetHashCode());
     }
 
@@ -1090,11 +1086,8 @@ namespace Akka.Streams.Implementation
                 return new CopiedModule(Shape, attributes, CopyOf);
             return this;
         }
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+
+        /// <inheritdoc/>
         public override string ToString() => $"{GetHashCode()} copy of {CopyOf}";
     }
 
@@ -1209,10 +1202,7 @@ namespace Akka.Streams.Implementation
                 );
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"\n  CompositeModule [{GetHashCode()}%08x]" +
@@ -1333,10 +1323,7 @@ namespace Akka.Streams.Implementation
                 new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes,
                     Info);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"\n  Name: {Attributes.GetNameOrDefault("unnamed")}" +
@@ -1908,7 +1895,7 @@ namespace Akka.Streams.Implementation
      * defers to the upstream that is connected during materialization. This would
      * be trivial if it were not for materialized value computations that may even
      * spawn the code that does `pub.subscribe(sub)` in a Future, running concurrently
-     * with the actual materialization. Therefore we implement a minimial shell here
+     * with the actual materialization. Therefore we implement a minimal shell here
      * that plugs the downstream and the upstream together as soon as both are known.
      * Using a VirtualProcessor would technically also work, but it would defeat the
      * purpose of subscription timeouts�the subscription would always already be

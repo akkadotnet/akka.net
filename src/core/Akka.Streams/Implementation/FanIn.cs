@@ -258,7 +258,9 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when dequeuing with no input.
+        /// TBD</exception>
         /// <returns>TBD</returns>
         public int IdToDequeue()
         {
@@ -279,14 +281,16 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="id">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">TBD
+        /// This exception is thrown when either dequeuing from an empty <paramref name="id"/> or there are no pending inputs.
+        /// </exception>
         /// <returns>TBD</returns>
         public object Dequeue(int id)
         {
             if (IsDepleted(id))
-                throw new ArgumentException("Can't dequeue from depleted " + id, nameof(id));
+                throw new ArgumentException($"Can't dequeue from depleted {id}", nameof(id));
             if (!IsPending(id))
-                throw new ArgumentException("No pending input at " + id, nameof(id));
+                throw new ArgumentException($"No pending input at {id}", nameof(id));
 
             _lastDequeuedId = id;
             var input = _inputs[id];
@@ -627,8 +631,9 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="settings">TBD</param>
         /// <param name="inputCount">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the pump has not been initialized with a phase.
+        /// </exception>
         protected FanIn(ActorMaterializerSettings settings, int inputCount)
         {
             Settings = settings;
@@ -642,11 +647,11 @@ namespace Akka.Streams.Implementation
 
         #region Actor impl
 
-        private ILoggingAdapter _log;
         /// <summary>
         /// TBD
         /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        private ILoggingAdapter _log;
 
         /// <summary>
         /// TBD
@@ -676,8 +681,9 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="reason">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="IllegalStateException">TBD
+        /// This exception is thrown automatically since the actor cannot be restarted.
+        /// </exception>
         protected override void PostRestart(Exception reason)
         {
             base.PostRestart(reason);

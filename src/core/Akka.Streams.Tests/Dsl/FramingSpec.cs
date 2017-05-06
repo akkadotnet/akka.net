@@ -148,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Delimiter_bytes_based_framing_must_report_truncated_frames()
         {
             var task =
-                Source.Single(ByteString.FromString("I habe no end"))
+                Source.Single(ByteString.FromString("I have no end"))
                     .Via(SimpleLines("\n", 256, false))
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<string>>(), Materializer);

@@ -278,7 +278,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void A_VectorClock_must_support_prunning()
+        public void A_VectorClock_must_support_pruning()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");

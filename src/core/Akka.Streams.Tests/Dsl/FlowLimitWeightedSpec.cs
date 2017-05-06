@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Limit_must_produce_empty_sequence_regardless_of_cost_when_source_is_empty_and_n_euqals_0()
+        public void Limit_must_produce_empty_sequence_regardless_of_cost_when_source_is_empty_and_n_equals_0()
         {
             var input = new List<int>();
             var n = input.Count;

@@ -195,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_LazySink_must_contine_if_supervision_is_resume()
+        public void A_LazySink_must_continue_if_supervision_is_resume()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -225,7 +225,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_LazySink_must_fail_task_when_zero_throws_expception()
+        public void A_LazySink_must_fail_task_when_zero_throws_exception()
         {
             this.AssertAllStagesStopped(() =>
             {

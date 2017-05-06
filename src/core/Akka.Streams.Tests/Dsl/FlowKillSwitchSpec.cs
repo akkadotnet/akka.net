@@ -371,7 +371,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_should_not_cause_problems_if_swith_is_shudown_after_flow_completed_normally()
+        public void A_SharedKillSwitch_should_not_cause_problems_if_switch_is_shutdown_after_flow_completed_normally()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -386,7 +386,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SharedKillSwitch_must_provide_flows_that_mtaerialize_to_its_owner_KillSwitch()
+        public void A_SharedKillSwitch_must_provide_flows_that_materialize_to_its_owner_KillSwitch()
         {
             this.AssertAllStagesStopped(() =>
             {

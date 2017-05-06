@@ -4450,7 +4450,7 @@ namespace Akka.Serialization
     public sealed class NewtonSoftJsonSerializerSettings
     {
         public static readonly Akka.Serialization.NewtonSoftJsonSerializerSettings Default;
-        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preverveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters) { }
+        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters) { }
         public System.Collections.Generic.IEnumerable<System.Type> Converters { get; }
         public bool EncodeTypeNames { get; }
         public bool PreserveObjectReferences { get; }

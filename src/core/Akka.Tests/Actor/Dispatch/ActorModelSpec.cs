@@ -158,7 +158,7 @@ namespace Akka.Tests.Actor.Dispatch
         {
             private Restart() { }
 
-            public static readonly Restart Intance = new Restart();
+            public static readonly Restart Instance = new Restart();
         }
 
         sealed class DoubleStop : IActorModelMessage

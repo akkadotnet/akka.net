@@ -111,10 +111,8 @@ namespace Akka.DistributedData.Local
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
         public ISurrogate ToSurrogate(ActorSystem system) => new Surrogate(_crdt);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+
+        /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator() => _crdt.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

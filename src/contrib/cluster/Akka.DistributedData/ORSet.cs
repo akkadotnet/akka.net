@@ -310,6 +310,7 @@ namespace Akka.DistributedData
             return new ORSet<T>(updated, _versionVector.PruningCleanup(removedNode));
         }
 
+        /// <inheritdoc/>
         public bool Equals(ORSet<T> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -318,10 +319,14 @@ namespace Akka.DistributedData
             return _versionVector == other._versionVector && _elementsMap.SequenceEqual(other._elementsMap);
         }
 
+        /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator() => _elementsMap.Keys.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is ORSet<T> && Equals((ORSet<T>)obj);
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -330,8 +335,7 @@ namespace Akka.DistributedData
             }
         }
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
+        /// <inheritdoc/>
         public override string ToString()
         {
             var sb = new StringBuilder("ORSet(");

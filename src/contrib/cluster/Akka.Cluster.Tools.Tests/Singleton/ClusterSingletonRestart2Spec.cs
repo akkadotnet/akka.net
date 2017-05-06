@@ -91,7 +91,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             Cluster.Get(_sys1).Leave(Cluster.Get(_sys1).SelfAddress);
 
-            // at the same time, shutdown sys2, which would be the exepcted next singleton node
+            // at the same time, shutdown sys2, which would be the expected next singleton node
             Shutdown(_sys2);
             // it will be downed by the join attempts of the new incarnation
 

@@ -2812,7 +2812,7 @@ namespace Akka.Streams.Implementation
         protected readonly Akka.Streams.Implementation.ICursors Cursors;
         public ResizableMultiReaderRingBuffer(int initialSize, int maxSize, Akka.Streams.Implementation.ICursors cursors) { }
         public int CapacityLeft { get; }
-        public int ImmediatellyAvailable { get; }
+        public int ImmediatelyAvailable { get; }
         public bool IsEmpty { get; }
         public int Length { get; }
         public bool NonEmpty { get; }

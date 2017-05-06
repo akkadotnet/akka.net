@@ -173,6 +173,7 @@ namespace Akka.IO
 
         class ExpiryEntryComparer : IComparer<ExpiryEntry>
         {
+            /// <inheritdoc/>
             public int Compare(ExpiryEntry x, ExpiryEntry y)
             {
                 return x.Until.CompareTo(y.Until);

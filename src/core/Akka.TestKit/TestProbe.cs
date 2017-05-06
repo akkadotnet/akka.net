@@ -173,11 +173,7 @@ namespace Akka.TestKit
             ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
-        /// <summary>
-        /// Compares the underlying actor ref to the object.
-        /// </summary>
-        /// <param name="obj">The object to be compared to; ideally an <see cref="IActorRef"/>.</param>
-        /// <returns>An integer indicating if the actor sorts higher, lower, or equal to <paramref name="obj"/>.</returns>
+        /// <inheritdoc/>
         public int CompareTo(object obj)
         {
             return TestActor.CompareTo(obj);
