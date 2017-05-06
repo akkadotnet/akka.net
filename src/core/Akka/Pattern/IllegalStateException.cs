@@ -33,6 +33,7 @@ namespace Akka.Pattern
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="IllegalStateException"/> class.
         /// </summary>
@@ -42,5 +43,6 @@ namespace Akka.Pattern
             : base(info, context)
         {
         }
+#endif
     }
 }

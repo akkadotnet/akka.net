@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Configuration;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -143,9 +142,15 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual string GetConnectionString()
         {
             var connectionString = _settings.ConnectionString;
-            return string.IsNullOrEmpty(connectionString)
-                ? ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString
-                : connectionString;
+
+#if CONFIGURATION
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+            }
+#endif
+
+            return connectionString;
         }
 
         /// <summary>

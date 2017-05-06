@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;

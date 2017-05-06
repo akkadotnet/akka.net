@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 
 namespace Akka.Persistence.Sql.Common
 {
@@ -21,7 +22,7 @@ namespace Akka.Persistence.Sql.Common
         /// <returns>TBD</returns>
         public static string QualifiedTypeName(this Type type)
         {
-            return type.FullName + ", " + type.Assembly.GetName().Name;
+            return type.FullName + ", " + type.GetTypeInfo().Assembly.GetName().Name;
         }
     }
 }
