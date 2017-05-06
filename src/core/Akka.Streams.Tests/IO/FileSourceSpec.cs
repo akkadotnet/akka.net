@@ -220,7 +220,7 @@ namespace Akka.Streams.Tests.IO
 
         [Fact(Skip = "overriding dispatcher should be made available with dispatcher alias support in materializer (#17929)")]
         //FIXME: overriding dispatcher should be made available with dispatcher alias support in materializer (#17929)
-        public void FileSource_should_should_allow_overriding_the_dispather_using_Attributes()
+        public void FileSource_should_should_allow_overriding_the_dispatcher_using_Attributes()
         {
             var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
             var materializer = sys.Materializer();

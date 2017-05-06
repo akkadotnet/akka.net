@@ -272,7 +272,7 @@ namespace Akka.Dispatch
 
             if (!hasMailboxType && !_mailboxSizeWarningIssued && dispatcherConfig.HasPath("mailbox-size"))
             {
-                Warn($"Ignoring setting 'mailbox-size for disaptcher [{id}], you need to specify 'mailbox-type=bounded`");
+                Warn($"Ignoring setting 'mailbox-size for dispatcher [{id}], you need to specify 'mailbox-type=bounded`");
                 _mailboxSizeWarningIssued = true;
             }
 

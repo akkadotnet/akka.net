@@ -136,7 +136,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         _replicator.Tell(Dsl.Get(KeyB, ReadLocal.Instance));
                         var set = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, KeyB)).Get(KeyB);
                         set.Elements.Should().BeEquivalentTo(new[] { "c", "b", "a" });
-                        set.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{set} shouldn't need prunning from {thirdUniqueAddress}");
+                        set.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{set} shouldn't need pruning from {thirdUniqueAddress}");
                     });
                 });
 
@@ -148,7 +148,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         var map = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, KeyC)).Get(KeyC);
                         map["x"].Should().Be(3);
                         map["y"].Should().Be(3);
-                        map.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{map} shouldn't need prunning from {thirdUniqueAddress}");
+                        map.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{map} shouldn't need pruning from {thirdUniqueAddress}");
                     });
                 });
             }, First, Second);

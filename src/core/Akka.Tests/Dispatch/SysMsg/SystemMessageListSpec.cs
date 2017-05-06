@@ -52,7 +52,7 @@ namespace Akka.Tests.Dispatch.SysMsg
         }
 
         [Fact]
-        public void SystemMessageList_value_class_must_be_able_to_properly_report_size_and_emptyness()
+        public void SystemMessageList_value_class_must_be_able_to_properly_report_size_and_emptiness()
         {
             var create0 = new Failed(null, null, 0);
             var create1 = new Failed(null, null, 1);

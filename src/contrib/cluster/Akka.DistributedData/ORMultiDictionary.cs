@@ -193,6 +193,7 @@ namespace Akka.DistributedData
         public ORMultiDictionary<TKey, TValue> PruningCleanup(UniqueAddress removedNode) => 
             new ORMultiDictionary<TKey, TValue>(_underlying.PruningCleanup(removedNode));
 
+        /// <inheritdoc/>
         public bool Equals(ORMultiDictionary<TKey, TValue> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -201,15 +202,19 @@ namespace Akka.DistributedData
             return Equals(_underlying, other._underlying);
         }
 
+        /// <inheritdoc/>
         public IEnumerator<KeyValuePair<TKey, IImmutableSet<TValue>>> GetEnumerator() => 
             _underlying.Select(x => new KeyValuePair<TKey, IImmutableSet<TValue>>(x.Key, x.Value.Elements)).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) => 
             obj is ORMultiDictionary<TKey, TValue> && Equals((ORMultiDictionary<TKey, TValue>) obj);
 
+        /// <inheritdoc/>
         public override int GetHashCode() => _underlying.GetHashCode();
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             var sb = new StringBuilder("ORMutliDictionary(");

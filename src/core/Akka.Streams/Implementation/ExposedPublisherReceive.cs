@@ -58,7 +58,7 @@ namespace Akka.Streams.Implementation
                 ReceiveExposedPublisher(publisher);
                 if (_stash.Any())
                 {
-                    // we don't use sender() so this is allright
+                    // we don't use sender() so this is alright
                     foreach (var msg in _stash)
                         if (!ActiveReceive(msg)) Unhandled(msg);
                 }

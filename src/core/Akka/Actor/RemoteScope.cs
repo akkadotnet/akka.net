@@ -36,13 +36,7 @@ namespace Akka.Actor
         /// </summary>
         public Address Address { get; set; }
 
-        /// <summary>
-        /// Indicates whether the current object is equal to another object of the same type.
-        /// </summary>
-        /// <param name="other">An object to compare with this object.</param>
-        /// <returns>
-        /// <c>true</c> if the current object is equal to the <paramref name="other" /> parameter; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(RemoteScope other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -50,13 +44,7 @@ namespace Akka.Actor
             return Equals(Address, other.Address);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -65,12 +53,7 @@ namespace Akka.Actor
             return Equals((RemoteScope) obj);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Address != null ? Address.GetHashCode() : 0);

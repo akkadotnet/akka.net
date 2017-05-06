@@ -60,7 +60,9 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         /// <param name="name">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="name"/> is undefined.
+        /// </exception>
         protected Inlet(string name)
         {
             if (name == null) throw new ArgumentException("Inlet name must be defined");
@@ -78,10 +80,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Inlet CarbonCopy();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public sealed override string ToString() => Name;
     }
 
@@ -146,10 +145,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Outlet CarbonCopy();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public sealed override string ToString() => Name;
     }
 
@@ -239,10 +235,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public object Clone() => DeepCopy();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public sealed override string ToString() => $"{GetType().Name}([{string.Join(", ", Inlets)}] [{string.Join(", ", Outlets)}])";
     }
 
@@ -280,7 +273,10 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="inlets">TBD</param>
         /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is zero
+        /// or the size of the specified <paramref name="outlets"/> array is zero.
+        /// </exception>
         /// <returns>TBD</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
@@ -529,10 +525,12 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         /// <param name="inlet">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="inlet"/> is undefined.
+        /// </exception>
         public SinkShape(Inlet<TIn> inlet)
         {
-            if (inlet == null) throw new ArgumentNullException(nameof(inlet));
+            if (inlet == null) throw new ArgumentNullException(nameof(inlet), "SinkShape expected non-null inlet");
             Inlet = inlet;
             Inlets = ImmutableArray.Create<Inlet>(inlet);
         }

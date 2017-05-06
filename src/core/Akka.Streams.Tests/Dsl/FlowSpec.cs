@@ -655,7 +655,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_broken_Flow_must_suitably_override_attribute_hanling_methods()
+        public void A_broken_Flow_must_suitably_override_attribute_handling_methods()
         {
             var f = Flow.Create<int>().Select(x => x + 1).Async().AddAttributes(Attributes.None).Named("name");
             f.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");

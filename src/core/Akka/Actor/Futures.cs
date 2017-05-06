@@ -274,11 +274,7 @@ namespace Akka.Actor
 
             #region Equality
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(StoppedWithPath other)
             {
                 if (ReferenceEquals(null, other)) return false;
@@ -286,11 +282,7 @@ namespace Akka.Actor
                 return Equals(Path, other.Path);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -298,10 +290,7 @@ namespace Akka.Actor
                 return obj is StoppedWithPath && Equals((StoppedWithPath)obj);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (Path != null ? Path.GetHashCode() : 0);

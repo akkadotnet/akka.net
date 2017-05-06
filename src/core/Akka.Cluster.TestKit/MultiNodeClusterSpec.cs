@@ -410,6 +410,7 @@ namespace Akka.Cluster.TestKit
                 _spec = spec;
             }
 
+            /// <inheritdoc/>
             public int Compare(RoleName x, RoleName y)
             {
                 return Member.AddressOrdering.Compare(_spec.GetAddress(x), _spec.GetAddress(y));

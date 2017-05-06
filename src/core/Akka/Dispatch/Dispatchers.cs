@@ -447,7 +447,7 @@ namespace Akka.Dispatch
         /// Used to configure and produce <see cref="Dispatcher"/> instances for use with actors.
         /// </summary>
         /// <param name="config">The configuration for this dispatcher.</param>
-        /// <param name="prerequisites">System pre-reqs needed to run this dispatcher.</param>
+        /// <param name="prerequisites">System prerequisites needed to run this dispatcher.</param>
         public DispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {

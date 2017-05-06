@@ -666,7 +666,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// The subcriber
+            /// The actor that is subscribed to cluster events.
             /// </summary>
             public IActorRef Subscriber
             {

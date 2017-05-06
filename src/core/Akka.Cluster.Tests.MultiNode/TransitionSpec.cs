@@ -164,7 +164,7 @@ namespace Akka.Cluster.Tests.MultiNode
             A_Cluster_must_start_nodes_as_singleton_clusters();
             A_Cluster_must_perform_correct_transitions_when_second_joining_first();
             A_Cluster_must_perform_correct_transitions_when_third_joins_second();
-            A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailble();
+            A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailable();
         }
 
         private void A_Cluster_must_start_nodes_as_singleton_clusters()
@@ -304,7 +304,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-3");
         }
 
-        private void A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailble()
+        private void A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailable()
         {
             RunOn(() =>
             {

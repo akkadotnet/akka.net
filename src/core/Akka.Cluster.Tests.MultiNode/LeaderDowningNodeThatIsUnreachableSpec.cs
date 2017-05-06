@@ -25,7 +25,7 @@ namespace Akka.Cluster.Tests.MultiNode
         public RoleName Third { get; private set; }
         public RoleName Fourth { get; private set; }
 
-        public LeaderDowningNodeThatIsUnreachableConfig(bool failureDectectorPuppet)
+        public LeaderDowningNodeThatIsUnreachableConfig(bool failureDetectorPuppet)
         {
             First = Role("first");
             Second = Role("second");
@@ -34,7 +34,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.auto-down-unreachable-after = 2s"))
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDectectorPuppet));
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
         }
     }
 

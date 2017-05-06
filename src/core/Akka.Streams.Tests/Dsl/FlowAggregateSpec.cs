@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Aggregate_must_complete_task_with_failure_when_Aggregateing_functions_throws()
+        public void A_Aggregate_must_complete_task_with_failure_when_Aggregating_functions_throws()
         {
             this.AssertAllStagesStopped(() =>
             {

@@ -294,7 +294,7 @@ namespace Akka.Cluster
         /// <param name="cancellationToken">The cancellation token to cancel awaiting.</param>
         /// <returns>A <see cref="Task"/> that will return upon the current node being removed from the cluster, or if await was cancelled.</returns>
         /// <remarks>
-        /// The cancellation token doesn't cancel leave from the cluster, it only lets to give up on awating (by timeout for example).
+        /// The cancellation token doesn't cancel leave from the cluster, it only lets to give up on awaiting (by timeout for example).
         /// </remarks>
         public Task LeaveAsync(CancellationToken cancellationToken)
         {
@@ -520,8 +520,8 @@ namespace Akka.Cluster
         /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
         /// </summary>
         /// <param name="template">The template being rendered and logged.</param>
-        /// <param name="arg1">The first argument that fills in the cooresponding template placeholder.</param>
-        /// <param name="arg2">The second argument that fills in the cooresponding template placeholder.</param>
+        /// <param name="arg1">The first argument that fills in the corresponding template placeholder.</param>
+        /// <param name="arg2">The second argument that fills in the corresponding template placeholder.</param>
         internal void LogInfo(string template, object arg1, object arg2)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);

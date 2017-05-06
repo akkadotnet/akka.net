@@ -348,11 +348,7 @@ namespace Akka.Routing
         /// </summary>
         public int MessagesPerResize { get; private set; }
 
-        /// <summary>
-        /// Determines whether the specified resizer, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The resizer to compare.</param>
-        /// <returns><c>true</c> if the specified router is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <inheritdoc/>
         public bool Equals(DefaultResizer other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -360,13 +356,7 @@ namespace Akka.Routing
             return MessagesPerResize == other.MessagesPerResize && BackoffRate.Equals(other.BackoffRate) && RampupRate.Equals(other.RampupRate) && BackoffThreshold.Equals(other.BackoffThreshold) && UpperBound == other.UpperBound && PressureThreshold == other.PressureThreshold && LowerBound == other.LowerBound;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -375,12 +365,7 @@ namespace Akka.Routing
             return Equals((DefaultResizer)obj);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked

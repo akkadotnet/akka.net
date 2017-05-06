@@ -139,47 +139,25 @@ namespace Akka.Persistence.Sql.Common.Queries
             Manifest = manifest;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="WithManifest" />, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="WithManifest" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="WithManifest" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(WithManifest other)
         {
             return other != null && other.Manifest.Equals(Manifest);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as WithManifest);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (Manifest != null ? Manifest.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"WithManifest<manifest: {Manifest}>";
@@ -211,13 +189,7 @@ namespace Akka.Persistence.Sql.Common.Queries
             PersistenceIds = new HashSet<string>(persistenceIds);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="PersistenceIdRange" />, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="PersistenceIdRange" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="PersistenceIdRange" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(PersistenceIdRange other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -225,35 +197,19 @@ namespace Akka.Persistence.Sql.Common.Queries
             return other.PersistenceIds.SetEquals(PersistenceIds);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as PersistenceIdRange);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return (PersistenceIds != null ? PersistenceIds.GetHashCode() : 0);
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"PersistenceIdRange<pids: [{string.Join(", ", PersistenceIds)}]>";
@@ -299,13 +255,7 @@ namespace Akka.Persistence.Sql.Common.Queries
             To = to;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="TimestampRange" />, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="TimestampRange" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="TimestampRange" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(TimestampRange other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -314,24 +264,13 @@ namespace Akka.Persistence.Sql.Common.Queries
             return Equals(From, other.From) && Equals(To, other.To);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as TimestampRange);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -340,12 +279,7 @@ namespace Akka.Persistence.Sql.Common.Queries
             }
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             var from = From?.ToString() ?? "undefined";

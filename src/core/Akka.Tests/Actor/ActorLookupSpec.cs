@@ -107,7 +107,7 @@ namespace Akka.Tests.Actor
             root = SysImpl.LookupRoot;
         }
 
-        private IActorRef Emtpy(string path)
+        private IActorRef Empty(string path)
         {
             return new EmptyLocalActorRef(SysImpl.Provider, root.Path / path, Sys.EventStream);
         }

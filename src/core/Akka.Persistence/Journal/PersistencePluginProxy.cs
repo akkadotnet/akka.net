@@ -93,10 +93,13 @@ namespace Akka.Persistence.Journal
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PersistencePluginProxy"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="config">The configuration used to configure the proxy.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when configuration is undefined for the plugin
+        /// or an unknown plugin type is defined.
+        /// </exception>
         public PersistencePluginProxy(Config config)
         {
             _config = config;

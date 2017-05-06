@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
         public void PreferredMerge_must_prefer_selected_input_more_than_others()
         {
             const int numElements = 10000;
-            var preffered =
+            var preferred =
                 Source.From(Enumerable.Range(1, numElements).Select(_ => 1))
                     .MapMaterializedValue<Task<IEnumerable<int>>>(_ => null);
             var aux = Source.From(Enumerable.Range(1, numElements).Select(_ => 2))
@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.Dsl
             var result = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
             {
                 var merge = b.Add(new MergePreferred<int>(3));
-                b.From(preffered).To(merge.Preferred);
+                b.From(preferred).To(merge.Preferred);
                 b.From(merge.Out).Via(Flow.Create<int>().Grouped(numElements*2)).To(sink.Inlet);
                 b.From(aux).To(merge.In(0));
                 b.From(aux).To(merge.In(1));
@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PreferredMerge_must_disallow_multiple_preffered_inputs()
+        public void PreferredMerge_must_disallow_multiple_preferred_inputs()
         {
             var s = Source.From(Enumerable.Range(0, 4));
             Action action = () =>

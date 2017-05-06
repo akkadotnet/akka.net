@@ -1,6 +1,6 @@
 ﻿#region copyright
 // -----------------------------------------------------------------------
-//  <copyright file="DurablePrunningSpec.cs" company="Akka.NET project">
+//  <copyright file="DurablePruningSpec.cs" company="Akka.NET project">
 //      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet>
 //  </copyright>
@@ -18,12 +18,12 @@ using Akka.TestKit.Xunit2;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
-    public class DurablePrunningSpecConfig : MultiNodeConfig
+    public class DurablePruningSpecConfig : MultiNodeConfig
     {
         public readonly RoleName First;
         public readonly RoleName Second;
 
-        public DurablePrunningSpecConfig()
+        public DurablePruningSpecConfig()
         {
             First = Role("first");
             Second = Role("second");
@@ -40,17 +40,17 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
     }
 
-    public class DurablePrunningSpec : MultiNodeClusterSpec
+    public class DurablePruningSpec : MultiNodeClusterSpec
     {
         private readonly Cluster.Cluster cluster;
         private readonly RoleName first = new RoleName("first");
         private readonly RoleName second = new RoleName("second");
-        private readonly TimeSpan maxPrunningDissemination = TimeSpan.FromSeconds(3);
+        private readonly TimeSpan maxPruningDissemination = TimeSpan.FromSeconds(3);
         private readonly TimeSpan timeout;
         private readonly GCounterKey keyA = new GCounterKey("A");
         private readonly IActorRef replicator;
 
-        protected DurablePrunningSpec() : base(new DurablePrunningSpecConfig())
+        protected DurablePruningSpec() : base(new DurablePruningSpecConfig())
         {
             InitialParticipantsValueFactory = Roles.Count;
             cluster = Akka.Cluster.Cluster.Get(Sys);
@@ -60,7 +60,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         protected override int InitialParticipantsValueFactory { get; }
 
         [MultiNodeFact(Skip = "FIXME")]
-        public void Prunning_of_durable_CRDT_should_move_data_from_removed_node()
+        public void Pruning_of_durable_CRDT_should_move_data_from_removed_node()
         {
             Join(first, first);
             Join(second, first);
@@ -178,7 +178,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             return system.ActorOf(Replicator.Props(
                     ReplicatorSettings.Create(system)
                         .WithGossipInterval(TimeSpan.FromSeconds(1))
-                        .WithPruning(TimeSpan.FromSeconds(1), maxPrunningDissemination)),
+                        .WithPruning(TimeSpan.FromSeconds(1), maxPruningDissemination)),
                 "replicator");
         }
 

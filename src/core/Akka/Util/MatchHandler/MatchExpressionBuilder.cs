@@ -152,7 +152,7 @@ namespace Akka.Tools.MatchHandler
             //If we only have a few arguments, the parameters will be:
             //    (arguments_0, arguments_1)
             //If we have more than we can fit, we'll create an array at the end and add the last ones there
-            //    (arguments_0, ..., arguments_n, extrArgsArray)
+            //    (arguments_0, ..., arguments_n, extraArgsArray)
             int numberOfInlineParameters = arguments.Count;
             var numberOfExtraArgs = numberOfInlineParameters - MaxNumberOfInlineParameters;
             object[] argumentValues;
@@ -162,7 +162,7 @@ namespace Akka.Tools.MatchHandler
             {
                 //We have at least one extra argument. We have to make room for extraArgsArray parameter
                 numberOfInlineParameters = MaxNumberOfInlineParameters - 1;
-                numberOfExtraArgs++;    //Since we made room for the extraArgsArray we have to move one of the args to extraArgsArry
+                numberOfExtraArgs++;    //Since we made room for the extraArgsArray we have to move one of the args to extraArgsArray
 
                 argumentValues = new object[MaxNumberOfInlineParameters];
                 extraArgsValues = new object[numberOfExtraArgs];
@@ -181,7 +181,7 @@ namespace Akka.Tools.MatchHandler
                 var iPlus1 = i + 1;
                 var argument = arguments[i];
                 var argumentValue = argument.Value;
-                argumentValues[i] = argumentValue;               
+                argumentValues[i] = argumentValue;
                 var parameter = Expression.Parameter(argumentValue.GetType(), "arg" + iPlus1);
                 parameters[iPlus1] = parameter;
                 if(argument.ValueIsActionOrFunc)

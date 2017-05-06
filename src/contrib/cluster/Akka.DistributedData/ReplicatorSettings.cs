@@ -18,6 +18,8 @@ namespace Akka.DistributedData
         /// <summary>
         /// Create settings from the default configuration `akka.cluster.distributed-data`.
         /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static ReplicatorSettings Create(ActorSystem system) =>
             Create(system.Settings.Config.GetConfig("akka.cluster.distributed-data"));
 
@@ -25,6 +27,9 @@ namespace Akka.DistributedData
         /// Create settings from a configuration with the same layout as
         /// the default configuration `akka.cluster.distributed-data`.
         /// </summary>
+        /// <param name="config">TBD</param>
+        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <returns>TBD</returns>
         public static ReplicatorSettings Create(Config config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config), "DistributedData HOCON config not provided.");
