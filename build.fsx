@@ -12,7 +12,7 @@ open Fake.DotNetCli
 let configuration = "Release"
 
 // Directories
-let output = __SOURCE_DIRECTORY__  @@ "build"
+let output = __SOURCE_DIRECTORY__  @@ "bin"
 let outputTests = output @@ "tests"
 let outputPerfTests = output @@ "perf"
 let outputBinaries = output @@ "binaries"
@@ -101,14 +101,15 @@ Target "MultiNodeTests" (fun _ ->
     let multiNodeTestAssemblies = !! "src/**/bin/Release/**/Akka.Remote.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/**/Akka.Cluster.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/**/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Sharding.Tests.MultiNode.dll"
+                                     "src/**/bin/Release/**/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/Akka.DistributedData.Tests.MultiNode.dll"
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
     let runMultiNodeSpec assembly =
         let spec = getBuildParam "spec"
 
-        let args = new StringBuilder()
+        let args = StringBuilder()
                 |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
                 |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
@@ -137,11 +138,14 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.Cluster.Tools.csproj"
                    ++ "src/**/Akka.Cluster.Sharding.csproj"
                    ++ "src/**/Akka.DistributedData.csproj"
+                   ++ "src/**/Akka.DistributedData.LightningDB.csproj"
                    ++ "src/**/Akka.Persistence.csproj"
                    ++ "src/**/Akka.Persistence.Query.csproj"
                    ++ "src/**/Akka.Persistence.TestKit.csproj"
                    ++ "src/**/Akka.Persistence.Query.Sql.csproj"
                    ++ "src/**/Akka.Persistence.Sql.Common.csproj"
+                   ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
+                   ++ "src/**/Akka.Persistence.Sqlite.csproj"
                    ++ "src/**/Akka.Remote.csproj"
                    ++ "src/**/Akka.Remote.TestKit.csproj"
                    ++ "src/**/Akka.Streams.csproj"
@@ -152,6 +156,7 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.DI.TestKit.csproj"
                    ++ "src/**/Akka.Serialization.Hyperion.csproj"
                    ++ "src/**/Akka.Serialization.TestKit.csproj"
+                   ++ "src/**/Akka.Remote.Transport.Helios.csproj"
 
     let runSingleProject project =
         DotNetCli.Pack
@@ -203,7 +208,7 @@ Target "Protobuf" <| fun _ ->
 
     let runProtobuf assembly =
         let protoName, destinationPath = assembly
-        let args = new StringBuilder()
+        let args = StringBuilder()
                 |> append (sprintf "-I=%s;%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/") (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
                 |> append (sprintf "--csharp_out=%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
                 |> append "--csharp_opt=file_extension=.g.cs"
