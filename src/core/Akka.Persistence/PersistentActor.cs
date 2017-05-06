@@ -8,9 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Tools.MatchHandler;
 
 namespace Akka.Persistence
@@ -599,6 +601,57 @@ namespace Akka.Persistence
             var newHandler = BuildNewReceiveHandler(_matchCommandBuilders.Pop());
             return newHandler;
         }
+
+        #endregion
+
+        #region CommandAsync
+        private Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
+        {
+            return m => ActorTaskScheduler.RunTask(() => asyncHandler(m));
+        }
+
+        protected void CommandAsync<T>(Func<T, Task> handler, Predicate<T> shouldHandle = null)
+        {
+            Command(WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        protected void CommandAsync<T>(Predicate<T> shouldHandle, Func<T, Task> handler)
+        {
+            Command(shouldHandle, WrapAsyncHandler(handler));
+        }
+
+        protected void CommandAsync(Type messageType, Func<object, Task> handler, Predicate<object> shouldHandle = null)
+        {
+            Command(messageType, WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        protected void CommandAsync(Type messageType, Predicate<object> shouldHandle, Func<object, Task> handler)
+        {
+            Command(messageType, shouldHandle, WrapAsyncHandler(handler));
+        }
+
+        protected void CommandAsync(Func<object, Task> handler)
+        {
+            Command(WrapAsyncHandler(handler));
+        }
+
+        protected void CommandAnyAsync(Func<object, Task> handler)
+        {
+            CommandAny(WrapAsyncHandler(handler));
+        }
+        
+        //TODO: Fix it
+        //protected void PersistAsync<TEvent>(TEvent @event)
+        //{
+        //    var tcs = new TaskCompletionSource<TEvent>();
+        //    Func<TEvent, Task> asyncHandler = evt =>
+        //    {
+        //        Persist(evt, pEvent => tcs.TrySetResult(pEvent));
+        //        return tcs.Task;
+        //    };
+
+        //    WrapAsyncHandler(asyncHandler)(@event);
+        //}
 
         #endregion
     }
