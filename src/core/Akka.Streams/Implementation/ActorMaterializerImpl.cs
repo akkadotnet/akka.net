@@ -59,21 +59,23 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected IActorRef ActorOf(Props props, string name, string dispatcher)
         {
-            if (Supervisor is LocalActorRef)
-            {
-                var aref = (LocalActorRef)Supervisor;
-                return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
-            }
-            if (Supervisor is RepointableActorRef)
-            {
-                var aref = (RepointableActorRef)Supervisor;
-                if (aref.IsStarted)
-                    return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
+            var localActorRef = Supervisor as LocalActorRef;
+            if (localActorRef != null)
+                return ((ActorCell) localActorRef.Underlying).AttachChild(props.WithDispatcher(dispatcher),
+                    isSystemService: false, name: name);
 
-                var timeout = aref.Underlying.System.Settings.CreationTimeout;
-                var f = Supervisor.Ask<IActorRef>(new StreamSupervisor.Materialize(props.WithDispatcher(dispatcher), name), timeout);
+
+            var repointableActorRef = Supervisor as RepointableActorRef;
+            if (repointableActorRef != null)
+            {
+                if (repointableActorRef.IsStarted)
+                    return ((ActorCell)repointableActorRef.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
+
+                var timeout = repointableActorRef.Underlying.System.Settings.CreationTimeout;
+                var f = repointableActorRef.Ask<IActorRef>(new StreamSupervisor.Materialize(props.WithDispatcher(dispatcher), name), timeout);
                 return f.Result;
             }
+
             throw new IllegalStateException($"Stream supervisor must be a local actor, was [{Supervisor.GetType()}]");
         }
     }
@@ -282,15 +284,18 @@ namespace Akka.Streams.Implementation
         {
             return attributes.AttributeList.Aggregate(Settings, (settings, attribute) =>
             {
-                if (attribute is Attributes.InputBuffer)
-                {
-                    var inputBuffer = (Attributes.InputBuffer)attribute;
-                    return settings.WithInputBuffer(inputBuffer.Initial, inputBuffer.Max);
-                }
-                if (attribute is ActorAttributes.Dispatcher)
-                    return settings.WithDispatcher(((ActorAttributes.Dispatcher)attribute).Name);
-                if (attribute is ActorAttributes.SupervisionStrategy)
-                    return settings.WithSupervisionStrategy(((ActorAttributes.SupervisionStrategy)attribute).Decider);
+                var buffer = attribute as Attributes.InputBuffer;
+                if (buffer != null)
+                    return settings.WithInputBuffer(buffer.Initial, buffer.Max);
+
+                var dispatcher = attribute as ActorAttributes.Dispatcher;
+                if (dispatcher != null)
+                    return settings.WithDispatcher(dispatcher.Name);
+                
+                var strategy = attribute as ActorAttributes.SupervisionStrategy;
+                if (strategy != null)
+                    return settings.WithSupervisionStrategy(strategy.Decider);
+
                 return settings;
             });
         }
@@ -348,11 +353,19 @@ namespace Akka.Streams.Implementation
             return (TMat) matVal;
         }
 
-        private readonly Lazy<MessageDispatcher> _executionContext;
+        /// <summary>
+        /// Creates a new logging adapter.
+        /// </summary>
+        /// <param name="logSource">The source that produces the log events.</param>
+        /// <returns>The newly created logging adapter.</returns>
+        public override ILoggingAdapter MakeLogger(object logSource) => Logging.GetLogger(System, logSource);
+
         /// <summary>
         /// TBD
         /// </summary>
         public override MessageDispatcher ExecutionContext => _executionContext.Value;
+
+        private readonly Lazy<MessageDispatcher> _executionContext;
 
         /// <summary>
         /// TBD
@@ -469,6 +482,7 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public readonly Props Props;
+
             /// <summary>
             /// TBD
             /// </summary>

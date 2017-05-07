@@ -8,12 +8,14 @@
 using System;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Tests.Implementation.Fusing;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -225,9 +227,46 @@ namespace Akka.Streams.Tests.Implementation
                 => new ReadNEmitRestOnCompleteLogic(this);
         }
 
+        private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
+        {
+            #region internal classes
+
+            private sealed class Logic : GraphStageLogic
+            {
+                public Logic(RandomLettersSource stage) : base(stage.Shape)
+                {
+                    SetHandler(stage.Out, onPull: () =>
+                    {
+                        var c = NextChar(); // ASCII lower case letters
+
+                        Log.Debug($"Randomly generated: {c}");
+
+                        Push(stage.Out, c.ToString());
+                    });
+                }
+
+                private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z' + 1);
+            }
+
+            #endregion
+
+            public RandomLettersSource()
+            {
+                Shape = new SourceShape<string>(Out);
+            }
+
+            private Outlet<string> Out { get; } = new Outlet<string>("RandomLettersSource.out");
+
+            public override SourceShape<string> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        }
+
+        private static readonly Config Config = ConfigurationFactory.ParseString("akka.loglevel = DEBUG");
+
         private ActorMaterializer Materializer { get; }
 
-        public GraphStageLogicSpec(ITestOutputHelper output) : base(output)
+        public GraphStageLogicSpec(ITestOutputHelper output) : base(output, Config)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }
@@ -355,7 +394,20 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_infoke_livecycle_hooks_in_the_right_order()
+        public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
+        {
+            const int n = 10;
+            EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
+            {
+                Source.FromGraph(new RandomLettersSource())
+                    .Take(n)
+                    .RunWith(Sink.Ignore<string>(), Materializer)
+                    .Wait(TimeSpan.FromSeconds(3));
+            });
+        }
+
+        [Fact]
+        public void A_GraphStageLogic_must_invoke_livecycle_hooks_in_the_right_order()
         {
             this.AssertAllStagesStopped(() =>
             {
