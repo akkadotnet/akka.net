@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Journal;
 
@@ -64,7 +64,7 @@ namespace Akka.Persistence.Sqlite.Journal
     /// <summary>
     /// TBD
     /// </summary>
-    public class BatchingSqliteJournal : BatchingSqlJournal<SQLiteConnection, SQLiteCommand>
+    public class BatchingSqliteJournal : BatchingSqlJournal<SqliteConnection, SqliteCommand>
     {
         private DbConnection _anchor;
 
@@ -135,6 +135,6 @@ namespace Akka.Persistence.Sqlite.Journal
         /// </summary>
         /// <param name="connectionString">TBD</param>
         /// <returns>TBD</returns>
-        protected override SQLiteConnection CreateConnection(string connectionString) => new SQLiteConnection(connectionString);
+        protected override SqliteConnection CreateConnection(string connectionString) => new SqliteConnection(connectionString);
     }
 }
