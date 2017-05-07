@@ -420,7 +420,7 @@ namespace Akka.Streams.Stage
     ///  The stage logic is always stopped once all its input and output ports have been closed, i.e. it is not possible to
     ///  keep the stage alive for further processing once it does not have any open ports.
     /// </summary>
-    public abstract class GraphStageLogic
+    public abstract class GraphStageLogic : IStageLogging
     {
         #region internal classes
 
@@ -843,6 +843,7 @@ namespace Akka.Streams.Stage
         public virtual bool KeepGoingAfterAllPortsClosed => false;
 
         private StageActorRef _stageActorRef;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -853,6 +854,31 @@ namespace Akka.Streams.Stage
                 if (_stageActorRef == null)
                     throw StageActorRefNotInitializedException.Instance;
                 return _stageActorRef;
+            }
+        }
+
+        private ILoggingAdapter _log;
+
+        /// <summary>
+        /// Override to customise reported log source 
+        /// </summary>
+        protected object LogSource => this;
+
+        public ILoggingAdapter Log
+        {
+            get
+            {
+                // only used in StageLogic, i.e. thread safe
+                if (_log == null)
+                {
+                    var provider = Materializer as IMaterializerLoggingProvider;
+                    if (provider != null)
+                        _log = provider.MakeLogger(LogSource);
+                    else
+                        _log = NoLogger.Instance;
+                }
+
+                return _log;
             }
         }
 

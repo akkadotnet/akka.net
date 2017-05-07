@@ -99,6 +99,7 @@
     <Compile Include="FanOutShape.cs" />
     <Compile Include="FlowMonitor.cs" />
     <Compile Include="Fusing.cs" />
+    <Compile Include="IMaterializerLoggingProvider.cs" />
     <Compile Include="Implementation\ActorMaterializerImpl.cs" />
     <Compile Include="Implementation\ActorRefBackpressureSinkStage.cs" />
     <Compile Include="Implementation\ActorRefSinkActor.cs" />
@@ -166,6 +167,7 @@
     <Compile Include="Stage\AbstractStage.cs" />
     <Compile Include="Stage\Context.cs" />
     <Compile Include="Stage\GraphStage.cs" />
+    <Compile Include="Stage\IStageLogging .cs" />
     <Compile Include="Stage\Stage.cs" />
     <Compile Include="StreamLimitReachedException.cs" />
     <Compile Include="StreamTcpException.cs" />
