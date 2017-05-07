@@ -255,59 +255,6 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// 
-    /// Attaches a subscriber to this stream which will just discard all received elements.
-    /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    public sealed class SinkholeSink<TIn> : SinkModule<TIn, Task>
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <param name="attributes">TBD</param>
-        public SinkholeSink(SinkShape<TIn> shape, Attributes attributes) : base(shape)
-        {
-            Attributes = attributes;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override Attributes Attributes { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
-        public override IModule WithAttributes(Attributes attributes)
-            => new SinkholeSink<TIn>(AmendShape(attributes), attributes);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
-        protected override SinkModule<TIn, Task> NewInstance(SinkShape<TIn> shape)
-            => new SinkholeSink<TIn>(shape, Attributes);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
-        public override object Create(MaterializationContext context, out Task materializer)
-        {
-            var p = new TaskCompletionSource<NotUsed>();
-            materializer = p.Task;
-            return new SinkholeSubscriber<TIn>(p);
-        }
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    /// 
     /// Attaches a subscriber to this stream.
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>

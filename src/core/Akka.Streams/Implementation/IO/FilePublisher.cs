@@ -15,7 +15,6 @@ using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
-using Akka.Util;
 
 #pragma warning disable 1587
 
@@ -105,7 +104,7 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(new IOResult(0, Result.Failure<NotUsed>(ex)));
+                _completionPromise.TrySetResult(IOResult.Failed(0, ex));
                 OnErrorThenStop(ex);
             }
 
@@ -195,10 +194,10 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(new IOResult(_readBytesTotal, Result.Failure<NotUsed>(ex)));
+                _completionPromise.TrySetResult(IOResult.Failed(_readBytesTotal, ex));
             }
 
-            _completionPromise.TrySetResult(new IOResult(_readBytesTotal, Result.Success(NotUsed.Instance)));
+            _completionPromise.TrySetResult(IOResult.Success(_readBytesTotal));
         }
     }
 }
