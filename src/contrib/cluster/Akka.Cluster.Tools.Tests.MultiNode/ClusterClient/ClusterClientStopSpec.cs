@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
@@ -16,7 +16,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Client
+namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
 {
     public class ClusterClientStopSpecConfig : MultiNodeConfig
     {
@@ -89,14 +89,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             });
         }
 
-        private ImmutableHashSet<ActorPath> InitialContacts
+        private IEnumerable<ActorPath> InitialContacts
         {
             get
             {
-                return ImmutableHashSet
-                    .Create(_config.First, _config.Second)
-                    .Select(r => Node(r) / "system" / "receptionist")
-                    .ToImmutableHashSet();
+                return new List<RoleName> {_config.First, _config.Second}
+                    .Select(r => Node(r)/"system"/"receptionist");
             }
         }
 
@@ -135,8 +133,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             {
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client1");
-                    c.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client1");
+                    c.Tell(new Client.ClusterClient.Send("/user/testService", "hello", localAffinity: true));
                     ExpectMsg<string>(3.Seconds()).Should().Be("hello");
                     EnterBarrier("was-in-contact");
                     Watch(c);

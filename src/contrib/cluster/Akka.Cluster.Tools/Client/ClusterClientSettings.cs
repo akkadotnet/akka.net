@@ -44,7 +44,7 @@ namespace Akka.Cluster.Tools.Client
         /// <returns>TBD</returns>
         public static ClusterClientSettings Create(Config config)
         {
-            var initialContacts = config.GetStringList("initial-contacts").Select(ActorPath.Parse).ToImmutableSortedSet();
+            var initialContacts = config.GetStringList("initial-contacts").Select(ActorPath.Parse);
 
             TimeSpan? reconnectTimeout = config.GetString("reconnect-timeout").Equals("off")
                 ? null
@@ -113,7 +113,7 @@ namespace Akka.Cluster.Tools.Client
         /// <param name="reconnectTimeout">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         public ClusterClientSettings(
-            IImmutableSet<ActorPath> initialContacts,
+            IEnumerable<ActorPath> initialContacts,
             TimeSpan establishingGetContactsInterval,
             TimeSpan refreshContactsInterval,
             TimeSpan heartbeatInterval,
@@ -126,7 +126,7 @@ namespace Akka.Cluster.Tools.Client
                 throw new ArgumentException("BufferSize must be >= 0 and <= 10000");
             }
 
-            InitialContacts = initialContacts;
+            InitialContacts = initialContacts.ToImmutableHashSet();
             EstablishingGetContactsInterval = establishingGetContactsInterval;
             RefreshContactsInterval = refreshContactsInterval;
             HeartbeatInterval = heartbeatInterval;
@@ -141,9 +141,9 @@ namespace Akka.Cluster.Tools.Client
         /// <param name="initialContacts">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
-        public ClusterClientSettings WithInitialContacts(IImmutableSet<ActorPath> initialContacts)
+        public ClusterClientSettings WithInitialContacts(IEnumerable<ActorPath> initialContacts)
         {
-            if (initialContacts.Count == 0)
+            if (!initialContacts.Any())
             {
                 throw new ArgumentException("InitialContacts must be defined");
             }
@@ -202,7 +202,7 @@ namespace Akka.Cluster.Tools.Client
         }
 
         private ClusterClientSettings Copy(
-            IImmutableSet<ActorPath> initialContacts = null,
+            IEnumerable<ActorPath> initialContacts = null,
             TimeSpan? establishingGetContactsInterval = null,
             TimeSpan? refreshContactsInterval = null,
             TimeSpan? heartbeatInterval = null,
