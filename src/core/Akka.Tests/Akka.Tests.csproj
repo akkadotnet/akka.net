@@ -132,6 +132,7 @@
     <Compile Include="Actor\ActorRefSpec.cs" />
     <Compile Include="Actor\AddressSpec.cs" />
     <Compile Include="Actor\AskTimeoutSpec.cs" />
+    <Compile Include="Actor\BTActorSpec.cs" />
     <Compile Include="Actor\BugFix2176Spec.cs" />
     <Compile Include="Actor\Cancellation\AlreadyCancelledCancelableTests.cs" />
     <Compile Include="Actor\Cancellation\CancelableTests.cs" />
