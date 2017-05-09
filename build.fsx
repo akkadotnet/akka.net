@@ -48,6 +48,9 @@ Target "Build" (fun _ ->
                    ++ "./**/contrib/**/*.csproj"
                    -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                    -- "./**/serializers/**/*Wire*.csproj"
+    
+    if (isMono) then
+        setEnvironVar "FrameworkPathOverride" "/usr/lib/mono/4.5/"
 
     let runSingleProject project =
         DotNetCli.Build
