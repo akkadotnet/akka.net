@@ -51,7 +51,12 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public bool IsAvailable(T resource)
         {
-            return !ResourceToFailureDetector.ContainsKey(resource) || ResourceToFailureDetector[resource].IsAvailable;
+            FailureDetector failureDetector;
+            if (ResourceToFailureDetector.TryGetValue(resource, out failureDetector))
+            {
+                return failureDetector.IsAvailable;
+            }
+            return true;
         }
 
         /// <summary>
@@ -61,7 +66,12 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public bool IsMonitoring(T resource)
         {
-            return ResourceToFailureDetector.ContainsKey(resource) && ResourceToFailureDetector[resource].IsMonitoring;
+            FailureDetector failureDetector;
+            if (ResourceToFailureDetector.TryGetValue(resource, out failureDetector))
+            {
+                return failureDetector.IsMonitoring;
+            }
+            return false;
         }
 
         /// <summary>
@@ -70,9 +80,10 @@ namespace Akka.Remote
         /// <param name="resource">TBD</param>
         public void Heartbeat(T resource)
         {
-            if (ResourceToFailureDetector.ContainsKey(resource))
+            FailureDetector failureDetector;
+            if (ResourceToFailureDetector.TryGetValue(resource, out failureDetector))
             {
-                ResourceToFailureDetector[resource].HeartBeat();
+                failureDetector.HeartBeat();
             }
             else
             {
@@ -82,9 +93,9 @@ namespace Akka.Remote
                     // First check for non-existing key wa outside the lock, and a second thread might just have released the lock
                     // when this one acquired it, so the second check is needed (double-check locking pattern)
                     var oldTable = new Dictionary<T, FailureDetector>(ResourceToFailureDetector);
-                    if (oldTable.ContainsKey(resource))
+                    if (oldTable.TryGetValue(resource, out failureDetector))
                     {
-                        oldTable[resource].HeartBeat();
+                        failureDetector.HeartBeat();
                     }
                     else
                     {

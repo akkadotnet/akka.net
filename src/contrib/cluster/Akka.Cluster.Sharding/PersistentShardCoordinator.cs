@@ -468,7 +468,8 @@ namespace Akka.Cluster.Sharding
 
             IActorRef region;
             // The shard could have been removed by ShardRegionTerminated
-            if (_currentState.Shards.ContainsKey(done.Shard))
+
+            if (_currentState.Shards.TryGetValue(done.Shard, out region))
             {
                 if (done.Ok)
                     Update(new ShardHomeDeallocated(done.Shard), e =>
@@ -477,7 +478,7 @@ namespace Akka.Cluster.Sharding
                         Log.Debug("Shard [{0}] deallocated", e.Shard);
                         AllocateShardHomes();
                     });
-                else if (_currentState.Shards.TryGetValue(done.Shard, out region))
+                else
                     // rebalance not completed, graceful shutdown will be retried
                     _gracefullShutdownInProgress = _gracefullShutdownInProgress.Remove(region);
             }

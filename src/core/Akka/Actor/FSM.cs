@@ -844,12 +844,14 @@ namespace Akka.Actor
             {
                 _log.Debug($"setting {(repeat ? "repeating" : "")} timer {name}/{timeout}: {msg}");
             }
-            if (_timers.ContainsKey(name))
+
+            Timer timer;
+            if (_timers.TryGetValue(name, out timer))
             { 
-                _timers[name].Cancel();
+                timer.Cancel();
             }
 
-            var timer = new Timer(name, msg, repeat, _timerGen.Next(), Context);
+            timer = new Timer(name, msg, repeat, _timerGen.Next(), Context);
             timer.Schedule(Self, timeout);
             _timers[name] = timer;
         }
@@ -865,9 +867,10 @@ namespace Akka.Actor
                 _log.Debug($"Cancelling timer {name}");
             }
 
-            if (_timers.ContainsKey(name))
+            Timer timer;
+            if (_timers.TryGetValue(name, out timer))
             {
-                _timers[name].Cancel();
+                timer.Cancel();
                 _timers.Remove(name);
             }
         }
@@ -1028,9 +1031,10 @@ namespace Akka.Actor
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
-            if (_stateFunctions.ContainsKey(name))
+            StateFunction stateFunction;
+            if (_stateFunctions.TryGetValue(name, out stateFunction))
             {
-                _stateFunctions[name] = OrElse(_stateFunctions[name], function);
+                _stateFunctions[name] = OrElse(stateFunction, function);
                 _stateTimeouts[name] = _stateTimeouts[name] ?? timeout;
             }
             else
@@ -1122,7 +1126,8 @@ namespace Akka.Actor
             var timer = message as Timer;
             if (timer != null)
             {
-                if (_timers.ContainsKey(timer.Name) && _timers[timer.Name].Generation == timer.Generation)
+                Timer oldTimer;
+                if (_timers.TryGetValue(timer.Name, out oldTimer) && oldTimer.Generation == timer.Generation)
                 {
                     if (_timeoutFuture != null)
                     {

@@ -400,7 +400,10 @@ namespace Akka.Cluster.Serialization
 
         private static int MapWithErrorMessage<T>(Dictionary<T, int> map, T value, string unknown)
         {
-            if (map.ContainsKey(value)) return map[value];
+            int mapIndex;
+            if (map.TryGetValue(value, out mapIndex))
+                return mapIndex;
+
             throw new ArgumentException($"Unknown {unknown} [{value}] in cluster message");
         }
 

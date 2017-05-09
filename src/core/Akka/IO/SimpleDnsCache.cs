@@ -111,10 +111,8 @@ namespace Akka.IO
                 var until = _clock() + ttl;
 
                 var cache = new Dictionary<string, CacheEntry>(_cache);
-                if (cache.ContainsKey(answer.Name))
-                    cache[answer.Name] = new CacheEntry(answer, until);
-                else
-                    cache.Add(answer.Name, new CacheEntry(answer, until));
+
+                cache[answer.Name] = new CacheEntry(answer, until);
 
                 return new Cache(
                     queue: new SortedSet<ExpiryEntry>(_queue, new ExpiryEntryComparer()) { new ExpiryEntry(answer.Name, until) },
@@ -130,7 +128,9 @@ namespace Akka.IO
                     var minEntry = _queue.First();
                     var name = minEntry.Name;
                     _queue.Remove(minEntry);
-                    if (_cache.ContainsKey(name) && !_cache[name].IsValid(now))
+
+                    CacheEntry cacheEntry;
+                    if (_cache.TryGetValue(name, out cacheEntry) && !cacheEntry.IsValid(now))
                         _cache.Remove(name);
                 }
                 return new Cache(new SortedSet<ExpiryEntry>(), new Dictionary<string, CacheEntry>(_cache), _clock);

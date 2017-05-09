@@ -510,9 +510,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var address = entry.Key;
                 var bucket = entry.Value;
 
-                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.ContainsKey(path))
+                ValueHolder valueHolder;
+                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out valueHolder))
                 {
-                    var valueHolder = bucket.Content[path];
                     if (valueHolder != null && !valueHolder.Ref.Equals(ActorRefs.Nobody))
                     {
                         valueHolder.Ref.Forward(message);

@@ -1970,7 +1970,8 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    var canReplace = _receiveBuffers.ContainsKey(key) && _receiveBuffers[key].Equals(expectedState);
+                    EndpointManager.ResendState resendState;
+                    var canReplace = _receiveBuffers.TryGetValue(key, out resendState) && resendState.Equals(expectedState);
                     if (canReplace)
                     {
                         _receiveBuffers[key] = Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState);

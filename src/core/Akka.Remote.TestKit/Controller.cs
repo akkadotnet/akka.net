@@ -358,9 +358,11 @@ namespace Akka.Remote.TestKit
                         foreach (var ni in _nodes.Values) ni.FSM.Tell(new ToClient<Done>(Done.Instance));
                         _initialParticipants = 0;
                     }
-                    if (_addrInterest.ContainsKey(nodeInfo.Name))
+
+                    ImmutableHashSet<IActorRef> addr;
+                    if (_addrInterest.TryGetValue(nodeInfo.Name, out addr))
                     {
-                        foreach(var a in _addrInterest[nodeInfo.Name]) a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
+                        foreach(var a in addr) a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
                         _addrInterest = _addrInterest.Remove(nodeInfo.Name);
                     }
                 }
@@ -387,9 +389,10 @@ namespace Akka.Remote.TestKit
                 var getAddress = message as GetAddress;
                 if (getAddress != null)
                 {
+                    NodeInfo replyNodeInfo;
                     var node = getAddress.Node;
-                    if (_nodes.ContainsKey(node))
-                        Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, _nodes[node].Addr)));
+                    if (_nodes.TryGetValue(node, out replyNodeInfo))
+                        Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, replyNodeInfo.Addr)));
                     else
                     {
                         ImmutableHashSet<IActorRef> existing;

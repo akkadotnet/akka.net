@@ -439,9 +439,10 @@ namespace Akka.Cluster
         /// <returns>A newly created <see cref="VectorClock"/> that has the given node removed.</returns>
         public VectorClock Prune(Node removedNode)
         {
-            if (Versions.ContainsKey(removedNode))
+            var newVersions = Versions.Remove(removedNode);
+            if (!ReferenceEquals(newVersions, Versions))
             {
-                return Create(Versions.Remove(removedNode));
+                return Create(newVersions);
             }
             return this;
         }

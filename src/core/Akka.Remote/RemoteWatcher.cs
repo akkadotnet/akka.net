@@ -489,8 +489,17 @@ namespace Akka.Remote
 
             if (WatcheeByNodes.ContainsKey(from) && !Unreachable.Contains(from))
             {
-                if (!_addressUids.ContainsKey(from) || _addressUids[from] != uid)
+                int addressUid;
+                if (_addressUids.TryGetValue(from, out addressUid))
+                {
+                    if (addressUid == uid)
+                        ReWatch(from);
+                }
+                else
+                {
                     ReWatch(from);
+                }
+
                 _addressUids[from] = uid;
                 _failureDetector.Heartbeat(from);
             }
