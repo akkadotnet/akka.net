@@ -283,19 +283,14 @@ namespace Akka.Persistence.Fsm
             if (DebugEvent)
                 _log.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
 
+            Timer oldTimer;
+            if (_timers.TryGetValue(name, out oldTimer)) {
+                oldTimer.Cancel();
+            }
+
             var timer = new Timer(name, msg, repeat, _timerGen.Next(), Context, DebugEvent ? _log : null);
             timer.Schedule(Self, timeout);
-
-            Timer oldTimer;
-            if (!_timers.TryGetValue(name, out oldTimer))
-            {
-                _timers.Add(name, timer);
-            }
-            else
-            {
-                oldTimer.Cancel();
-                _timers[name] = timer;
-            }
+            _timers[name] = timer;
         }
 
         /// <summary>
