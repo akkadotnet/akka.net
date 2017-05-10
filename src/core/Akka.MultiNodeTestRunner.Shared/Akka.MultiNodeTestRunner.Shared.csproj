@@ -4,6 +4,7 @@
     <AssemblyTitle>Akka.MultiNodeTestRunner.Shared</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
