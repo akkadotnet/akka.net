@@ -48,6 +48,7 @@ namespace Akka.Persistence
         private readonly Lazy<string> _defaultJournalPluginId;
         private readonly Lazy<string> _defaultSnapshotPluginId;
         private readonly Lazy<IStashOverflowStrategy> _defaultInternalStashOverflowStrategy;
+        private readonly Lazy<IActorRef> _recoveryPermitter;
 
         private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _pluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
 
@@ -112,6 +113,12 @@ namespace Akka.Persistence
                     _log.Info("Auto-starting snapshot store `{0}`", id);
                 SnapshotStoreFor(id);
             });
+
+            _recoveryPermitter = new Lazy<IActorRef>(() =>
+            {
+                var maxPermits = _config.GetInt("max-concurrent-recoveries");
+                return _system.SystemActorOf(Akka.Persistence.RecoveryPermitter.Props(maxPermits), "recoveryPermitter");
+            });
         }
 
         /// <summary>
@@ -132,6 +139,15 @@ namespace Akka.Persistence
         public string PersistenceId(IActorRef actor)
         {
             return actor.Path.ToStringWithoutAddress();
+        }
+
+        /// <summary>
+        /// INTERNAL API: When starting many persistent actors at the same time the journal its data store is protected 
+        /// from being overloaded by limiting number of recoveries that can be in progress at the same time.
+        /// </summary>
+        public IActorRef RecoveryPermitter()
+        {
+            return _recoveryPermitter.Value;
         }
 
         /// <summary>
