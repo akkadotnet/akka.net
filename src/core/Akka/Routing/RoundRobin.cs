@@ -98,18 +98,7 @@ namespace Akka.Routing
             : this(nrOfInstances, null, Pool.DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
         {
         }
-
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RoundRobinPool"/> class.
-        /// <note>
-        /// A <see cref="RoundRobinPool"/> configured in this way uses the <see cref="Pool.DefaultSupervisorStrategy"/> supervisor strategy.
-        /// </note>
-        /// </summary>
-        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
-        /// <param name="resizer">The resizer to use when dynamically allocating routees to the pool.</param>
-        public RoundRobinPool(int nrOfInstances, Resizer resizer) : this(nrOfInstances, resizer, Pool.DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId) { }
-
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="RoundRobinPool"/> class.
         /// </summary>
