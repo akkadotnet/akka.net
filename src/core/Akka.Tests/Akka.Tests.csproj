@@ -20,7 +20,7 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <Reference Include="System.Configuration" />
     <PackageReference Include="FsCheck" Version="2.6.2" />
-    <PackageReference Include="FsCheck.Xunit"  Version="2.6.2" />
+    <PackageReference Include="FsCheck.Xunit" Version="2.6.2" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
