@@ -72,12 +72,12 @@ Target "RunTests" (fun _ ->
                    -- "./**/Akka.Persistence.Tests.csproj"
 
     let runSingleProject project =
-        DotNetCli.Test
+        DotNetCli.RunCommand
             (fun p -> 
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    AdditionalArgs = [(sprintf "--logger trx;LogFileName=%s.trx" (outputTests @@ fileNameWithoutExt project) )]})
+                { p with 
+                    WorkingDir = (Directory.GetParent project).FullName
+                    TimeOut = TimeSpan.FromMinutes 10. })
+                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml -html %s_xunit.html" (outputTests @@ fileNameWithoutExt project) (outputTests @@ fileNameWithoutExt project)) 
 
     projects |> Seq.iter (runSingleProject)
 )
