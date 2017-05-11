@@ -69,6 +69,7 @@ Target "RunTests" (fun _ ->
                    -- "./**/Akka.Streams.Tests.csproj"
                    -- "./**/Akka.Remote.TestKit.Tests.csproj"
                    -- "./**/serializers/**/*Wire*.csproj"
+                   -- "./**/Akka.Persistence.Tests.csproj"
 
     let runSingleProject project =
         DotNetCli.Test
