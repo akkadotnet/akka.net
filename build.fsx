@@ -64,12 +64,20 @@ Target "Build" (fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "RunTests" (fun _ ->
+    //let projects = !! "./**/core/**/*.Tests.csproj"
+    //               ++ "./**/contrib/**/*.Tests.csproj"
+    //               -- "./**/Akka.Streams.Tests.csproj"
+    //               -- "./**/Akka.Remote.TestKit.Tests.csproj"
+    //               -- "./**/serializers/**/*Wire*.csproj"
+    //               -- "./**/Akka.Persistence.Tests.csproj"
+    if (isLinux) then
     let projects = !! "./**/core/**/*.Tests.csproj"
                    ++ "./**/contrib/**/*.Tests.csproj"
                    -- "./**/Akka.Streams.Tests.csproj"
                    -- "./**/Akka.Remote.TestKit.Tests.csproj"
                    -- "./**/serializers/**/*Wire*.csproj"
-                   -- "./**/Akka.Persistence.Tests.csproj"
+                   -- "./**/Akka.Persistence.Tests.csproj"        
+                   -- "./**/Akka.API.Tests.csproj"
 
     let runSingleProject project =
         DotNetCli.RunCommand
@@ -265,7 +273,7 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
 
 // tests dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "RunTests"
+"Clean" ==> "RestorePackages" ==> "RunTests"
 
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
