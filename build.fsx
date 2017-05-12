@@ -64,12 +64,25 @@ Target "Build" (fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "RunTests" (fun _ ->
-    let projects = !! "./**/core/**/*.Tests.csproj"
-                   ++ "./**/contrib/**/*.Tests.csproj"
-                   -- "./**/Akka.Streams.Tests.csproj"
-                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                   -- "./**/serializers/**/*Wire*.csproj"
-                   -- "./**/Akka.Persistence.Tests.csproj"
+    let projects =
+        match isWindows with
+        // Windows
+        | true -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/Akka.Streams.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.Persistence.Tests.csproj"
+        // Linux/Mono
+        | _ -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.Streams.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
+                  -- "./**/Akka.Persistence.Tests.csproj"
+                  -- "./**/Akka.API.Tests.csproj"
 
     let runSingleProject project =
         DotNetCli.RunCommand
@@ -77,7 +90,7 @@ Target "RunTests" (fun _ ->
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
                     TimeOut = TimeSpan.FromMinutes 10. })
-                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml -html %s_xunit.html" (outputTests @@ fileNameWithoutExt project) (outputTests @@ fileNameWithoutExt project)) 
+                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     projects |> Seq.iter (runSingleProject)
 )
