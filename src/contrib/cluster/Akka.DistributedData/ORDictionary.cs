@@ -164,8 +164,7 @@ namespace Akka.DistributedData
         public ORDictionary<TKey, TValue> AddOrUpdate(UniqueAddress node, TKey key, TValue initial,
             Func<TValue, TValue> modify)
         {
-            TValue value;
-            return ValueMap.TryGetValue(key, out value)
+            return ValueMap.TryGetValue(key, out TValue value)
                 ? new ORDictionary<TKey, TValue>(KeySet.Add(node, key), ValueMap.SetItem(key, modify(value)))
                 : new ORDictionary<TKey, TValue>(KeySet.Add(node, key), ValueMap.SetItem(key, modify(initial)));
         }
@@ -192,9 +191,8 @@ namespace Akka.DistributedData
             var mergedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
             foreach (var key in mergedKeys.Elements)
             {
-                TValue left, right;
-                var leftFound = ValueMap.TryGetValue(key, out left);
-                var rightFound = other.ValueMap.TryGetValue(key, out right);
+                var leftFound = ValueMap.TryGetValue(key, out TValue left);
+                var rightFound = other.ValueMap.TryGetValue(key, out TValue right);
                 if (leftFound && rightFound)
                     mergedValues.Add(key, (TValue) left.Merge(right));
                 else if (leftFound)

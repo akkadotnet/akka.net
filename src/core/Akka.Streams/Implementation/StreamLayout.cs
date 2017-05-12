@@ -176,8 +176,7 @@ namespace Akka.Streams.Implementation
             Func<int> ids = () => currentId++;
             Func<object, int> id = obj =>
             {
-                int x;
-                if (!idMap.TryGetValue(obj, out x))
+                if (!idMap.TryGetValue(obj, out int x))
                 {
                     x = ids();
                     idMap.Add(obj, x);
@@ -2230,8 +2229,7 @@ namespace Akka.Streams.Implementation
         {
             if (IsDebug) Console.WriteLine($"Registering source {materializedSource}");
 
-            LinkedList<IMaterializedValueSource> list;
-            if (MaterializedValueSource.TryGetValue(materializedSource.Computation, out list))
+            if (MaterializedValueSource.TryGetValue(materializedSource.Computation, out LinkedList<IMaterializedValueSource> list))
                 list.AddFirst(materializedSource);
             else
                 MaterializedValueSource.Add(materializedSource.Computation,
@@ -2336,8 +2334,7 @@ namespace Akka.Streams.Implementation
 
             if (IsDebug) Console.WriteLine($"{indent}result = {result}");
 
-            LinkedList<IMaterializedValueSource> sources;
-            if (MaterializedValueSource.TryGetValue(node, out sources))
+            if (MaterializedValueSource.TryGetValue(node, out LinkedList<IMaterializedValueSource> sources))
             {
                 if (IsDebug) Console.WriteLine($"{indent}triggering sources {sources}");
                 MaterializedValueSource.Remove(node);
@@ -2358,11 +2355,9 @@ namespace Akka.Streams.Implementation
             Subscribers[inPort] = subscriberOrVirtual;
             
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            OutPort outPort;
-            if (CurrentLayout.Upstreams.TryGetValue(inPort, out outPort))
+            if (CurrentLayout.Upstreams.TryGetValue(inPort, out OutPort outPort))
             {
-                IUntypedPublisher publisher;
-                if (Publishers.TryGetValue(outPort, out publisher))
+                if (Publishers.TryGetValue(outPort, out IUntypedPublisher publisher))
                     DoSubscribe(publisher, subscriberOrVirtual);
             }
         }
@@ -2377,11 +2372,9 @@ namespace Akka.Streams.Implementation
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            InPort inPort;
-            if (CurrentLayout.Downstreams.TryGetValue(outPort, out inPort))
+            if (CurrentLayout.Downstreams.TryGetValue(outPort, out InPort inPort))
             {
-                object subscriber;
-                if (Subscribers.TryGetValue(inPort, out subscriber))
+                if (Subscribers.TryGetValue(inPort, out object subscriber))
                     DoSubscribe(publisher, subscriber);
             }
         }

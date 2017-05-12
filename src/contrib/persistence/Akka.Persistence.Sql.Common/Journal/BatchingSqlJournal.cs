@@ -732,8 +732,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void NotifyTagChanged(string tag)
         {
-            HashSet<IActorRef> bucket;
-            if (_tagSubscribers.TryGetValue(tag, out bucket))
+            if (_tagSubscribers.TryGetValue(tag, out HashSet<IActorRef> bucket))
             {
                 var changed = new TaggedEventAppended(tag);
                 foreach (var subscriber in bucket)
@@ -745,8 +744,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void NotifyPersistenceIdChanged(string persitenceId)
         {
-            HashSet<IActorRef> bucket;
-            if (_persistenceIdSubscribers.TryGetValue(persitenceId, out bucket))
+            if (_persistenceIdSubscribers.TryGetValue(persitenceId, out HashSet<IActorRef> bucket))
             {
                 var changed = new EventAppended(persitenceId);
                 foreach (var subscriber in bucket)

@@ -94,8 +94,7 @@ namespace Akka.Remote
         }
         private void Check(Type type, long payloadBytes, long newMax)
         {
-            long max;
-            if (_maxPayloadBytes.TryGetValue(type, out max))
+            if (_maxPayloadBytes.TryGetValue(type, out long max))
             {
                 if (payloadBytes > max)
                 {

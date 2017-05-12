@@ -1051,8 +1051,7 @@ namespace Akka.Persistence.Tests
             {
                 var d = dWithDepth.Split('-')[0];
                 _probe.Tell(dWithDepth);
-                int currentDepth;
-                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (!_currentDepths.TryGetValue(d, out int currentDepth)) currentDepth = 1;
                 if (currentDepth < _maxDepth)
                 {
                     _currentDepths[d] = currentDepth + 1;
@@ -1095,8 +1094,7 @@ namespace Akka.Persistence.Tests
             {
                 var d = dWithDepth.Split('-')[0];
                 _probe.Tell(dWithDepth);
-                int currentDepth;
-                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (!_currentDepths.TryGetValue(d, out int currentDepth)) currentDepth = 1;
                 if (currentDepth < _maxDepth)
                 {
                     _currentDepths[d] = currentDepth + 1;

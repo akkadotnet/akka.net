@@ -359,8 +359,7 @@ namespace Akka.Remote.TestKit
                         _initialParticipants = 0;
                     }
 
-                    ImmutableHashSet<IActorRef> addr;
-                    if (_addrInterest.TryGetValue(nodeInfo.Name, out addr))
+                    if (_addrInterest.TryGetValue(nodeInfo.Name, out ImmutableHashSet<IActorRef> addr))
                     {
                         foreach(var a in addr) a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
                         _addrInterest = _addrInterest.Remove(nodeInfo.Name);
@@ -389,15 +388,13 @@ namespace Akka.Remote.TestKit
                 var getAddress = message as GetAddress;
                 if (getAddress != null)
                 {
-                    NodeInfo replyNodeInfo;
                     var node = getAddress.Node;
-                    if (_nodes.TryGetValue(node, out replyNodeInfo))
+                    if (_nodes.TryGetValue(node, out NodeInfo replyNodeInfo))
                         Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, replyNodeInfo.Addr)));
                     else
                     {
-                        ImmutableHashSet<IActorRef> existing;
                         _addrInterest = _addrInterest.SetItem(node,
-                            (_addrInterest.TryGetValue(node, out existing)
+                            (_addrInterest.TryGetValue(node, out ImmutableHashSet<IActorRef> existing)
                                 ? existing
                                 : ImmutableHashSet.Create<IActorRef>()
                                 ).Add(Sender));

@@ -234,8 +234,7 @@ namespace Akka.Streams.Stage
         private void OnInternalTimer(TimerMessages.Scheduled scheduled)
         {
             var id = scheduled.TimerId;
-            TimerMessages.Timer timer;
-            if (_keyToTimers.TryGetValue(scheduled.TimerKey, out timer) && timer.Id == id)
+            if (_keyToTimers.TryGetValue(scheduled.TimerKey, out TimerMessages.Timer timer) && timer.Id == id)
             {
                 if (!scheduled.IsRepeating)
                     _keyToTimers.Remove(scheduled.TimerKey);
@@ -304,8 +303,7 @@ namespace Akka.Streams.Stage
         /// <param name="timerKey">key of the timer to cancel</param>
         protected internal void CancelTimer(object timerKey)
         {
-            TimerMessages.Timer timer;
-            if (_keyToTimers.TryGetValue(timerKey, out timer))
+            if (_keyToTimers.TryGetValue(timerKey, out TimerMessages.Timer timer))
             {
                 timer.Task.Cancel();
                 _keyToTimers.Remove(timerKey);

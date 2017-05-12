@@ -90,8 +90,7 @@ namespace Akka.Remote.TestKit
 
         public void DeployOn(RoleName role, string deployment)
         {
-            ImmutableList<string> roleDeployments;
-            _deployments.TryGetValue(role, out roleDeployments);
+            _deployments.TryGetValue(role, out ImmutableList<string> roleDeployments);
             _deployments = _deployments.SetItem(role,
                 roleDeployments == null ? ImmutableList.Create(deployment) : roleDeployments.Add(deployment));
         }
@@ -150,8 +149,7 @@ namespace Akka.Remote.TestKit
                         : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
-                Config nodeConfig;
-                if (_nodeConf.TryGetValue(Myself, out nodeConfig)) builder.Add(nodeConfig);
+                if (_nodeConf.TryGetValue(Myself, out Config nodeConfig)) builder.Add(nodeConfig);
                 builder.Add(_commonConf);
                 builder.Add(transportConfig);
                 builder.Add(MultiNodeSpec.NodeConfig);
@@ -163,8 +161,7 @@ namespace Akka.Remote.TestKit
 
         internal ImmutableList<string> Deployments(RoleName node)
         {
-            ImmutableList<string> deployments;
-            _deployments.TryGetValue(node, out deployments);
+            _deployments.TryGetValue(node, out ImmutableList<string> deployments);
             return deployments == null ? _allDeploy : deployments.AddRange(_allDeploy);
         }
 

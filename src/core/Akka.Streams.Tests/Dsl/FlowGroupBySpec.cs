@@ -553,8 +553,7 @@ namespace Akka.Streams.Tests.Dsl
                     upstreamSubscription.ExpectRequest();
                     upstreamSubscription.SendNext(byteString);
 
-                    SubFlowState state;
-                    if (map.TryGetValue(index, out state))
+                    if (map.TryGetValue(index, out SubFlowState state))
                     {
                         if (state.FirstElement != null) //first element in subFlow 
                         {

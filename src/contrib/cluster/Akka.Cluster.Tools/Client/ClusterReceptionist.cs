@@ -546,8 +546,7 @@ namespace Akka.Cluster.Tools.Client
 
         private void UpdateClientInteractions(IActorRef client)
         {
-            DeadlineFailureDetector failureDetector;
-            if (_clientInteractions.TryGetValue(client, out failureDetector))
+            if (_clientInteractions.TryGetValue(client, out DeadlineFailureDetector failureDetector))
             {
                 failureDetector.HeartBeat();
             }

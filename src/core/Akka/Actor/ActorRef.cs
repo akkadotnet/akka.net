@@ -764,8 +764,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             var firstName = enumerator.Current;
             if (string.IsNullOrEmpty(firstName))
                 return this;
-            IInternalActorRef child;
-            if (_children.TryGetValue(firstName, out child))
+            if (_children.TryGetValue(firstName, out IInternalActorRef child))
                 return child.GetChild(new Enumerable<string>(enumerator));
             return ActorRefs.Nobody;
         }

@@ -277,8 +277,7 @@ namespace Akka.Remote.TestKit
         {
             var channel = context.Channel;
             _log.Debug("disconnect from {0}", channel.RemoteAddress);
-            IActorRef fsm;
-            if (_clients.TryGetValue(channel, out fsm))
+            if (_clients.TryGetValue(channel, out IActorRef fsm))
             {
                 fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
                 IActorRef removedActor;
@@ -292,8 +291,7 @@ namespace Akka.Remote.TestKit
             _log.Debug("message from {0}: {1}", channel.RemoteAddress, message);
             if (message is INetworkOp)
             {
-                IActorRef fsm;
-                if (_clients.TryGetValue(channel, out fsm))
+                if (_clients.TryGetValue(channel, out IActorRef fsm))
                 {
                     fsm.Tell(message);
                 }

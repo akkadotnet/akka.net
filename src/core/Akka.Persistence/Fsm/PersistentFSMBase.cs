@@ -283,8 +283,7 @@ namespace Akka.Persistence.Fsm
             if (DebugEvent)
                 _log.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
 
-            Timer oldTimer;
-            if (_timers.TryGetValue(name, out oldTimer)) {
+            if (_timers.TryGetValue(name, out Timer oldTimer)) {
                 oldTimer.Cancel();
             }
 
@@ -305,8 +304,7 @@ namespace Akka.Persistence.Fsm
                 _log.Debug("Cancelling timer {0}", name);
             }
 
-            Timer timer;
-            if (_timers.TryGetValue(name, out timer))
+            if (_timers.TryGetValue(name, out Timer timer))
             {
                 timer.Cancel();
                 _timers.Remove(name);
@@ -400,8 +398,7 @@ namespace Akka.Persistence.Fsm
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
-            StateFunction oldFunction;
-            if (_stateFunctions.TryGetValue(name, out oldFunction))
+            if (_stateFunctions.TryGetValue(name, out StateFunction oldFunction))
             {
                 _stateFunctions[name] = OrElse(oldFunction, function);
                 _stateTimeouts[name] = _stateTimeouts[name] ?? timeout;
@@ -567,8 +564,7 @@ namespace Akka.Persistence.Fsm
                 })
                 .With<Timer>(t => 
                 {
-                    Timer timer;
-                    if (_timers.TryGetValue(t.Name, out timer) && timer.Generation == t.Generation)
+                    if (_timers.TryGetValue(t.Name, out Timer timer) && timer.Generation == t.Generation)
                     {
                         if (_timeoutFuture != null)
                         {

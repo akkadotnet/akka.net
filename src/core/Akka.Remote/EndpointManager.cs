@@ -1016,8 +1016,7 @@ namespace Akka.Remote
             if (readonlyEndpoint != null)
             {
                 var endpoint = readonlyEndpoint.Item1;
-                AkkaProtocolHandle protocolHandle;
-                if (_pendingReadHandoffs.TryGetValue(endpoint, out protocolHandle)) protocolHandle.Disassociate();
+                if (_pendingReadHandoffs.TryGetValue(endpoint, out AkkaProtocolHandle protocolHandle)) protocolHandle.Disassociate();
 
                 _pendingReadHandoffs.AddOrSet(endpoint, handle);
                 endpoint.Tell(new EndpointWriter.TakeOver(handle, Self));
@@ -1158,8 +1157,7 @@ namespace Akka.Remote
 
         private void AcceptPendingReader(IActorRef takingOverFrom)
         {
-            AkkaProtocolHandle handle;
-            if (_pendingReadHandoffs.TryGetValue(takingOverFrom, out handle))
+            if (_pendingReadHandoffs.TryGetValue(takingOverFrom, out AkkaProtocolHandle handle))
             {
                 _pendingReadHandoffs.Remove(takingOverFrom);
                 _eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, inbound: true));
@@ -1171,8 +1169,7 @@ namespace Akka.Remote
 
         private void RemovePendingReader(IActorRef takingOverFrom, AkkaProtocolHandle withHandle)
         {
-            AkkaProtocolHandle handle;
-            if (_pendingReadHandoffs.TryGetValue(takingOverFrom, out handle) &&
+            if (_pendingReadHandoffs.TryGetValue(takingOverFrom, out AkkaProtocolHandle handle) &&
                 handle.Equals(withHandle))
             {
                 _pendingReadHandoffs.Remove(takingOverFrom);

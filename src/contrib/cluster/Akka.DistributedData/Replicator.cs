@@ -469,8 +469,7 @@ namespace Akka.DistributedData
 
         private ByteString GetDigest(string key)
         {
-            Tuple<DataEnvelope, ByteString> value;
-            var contained = _dataEntries.TryGetValue(key, out value);
+            var contained = _dataEntries.TryGetValue(key, out Tuple<DataEnvelope, ByteString> value);
             if (contained)
             {
                 if (Equals(value.Item2, LazyDigest))
@@ -506,8 +505,7 @@ namespace Akka.DistributedData
 
         private DataEnvelope GetData(string key)
         {
-            Tuple<DataEnvelope, ByteString> value;
-            if (!_dataEntries.TryGetValue(key, out value))
+            if (!_dataEntries.TryGetValue(key, out Tuple<DataEnvelope, ByteString> value))
             {
                 return null;
             }
@@ -534,8 +532,7 @@ namespace Akka.DistributedData
             {
                 foreach (var key in _changed)
                 {
-                    HashSet<IActorRef> subs;
-                    if (_subscribers.TryGetValue(key, out subs))
+                    if (_subscribers.TryGetValue(key, out HashSet<IActorRef> subs))
                         Notify(key, subs);
                 }
             }
@@ -547,8 +544,7 @@ namespace Akka.DistributedData
                 foreach (var kvp in _newSubscribers)
                 {
                     Notify(kvp.Key, kvp.Value);
-                    HashSet<IActorRef> set;
-                    if (!_subscribers.TryGetValue(kvp.Key, out set))
+                    if (!_subscribers.TryGetValue(kvp.Key, out HashSet<IActorRef> set))
                     {
                         set = new HashSet<IActorRef>();
                         _subscribers.Add(kvp.Key, set);
@@ -705,8 +701,7 @@ namespace Akka.DistributedData
 
         private void ReceiveSubscribe(IKey key, IActorRef subscriber)
         {
-            HashSet<IActorRef> set;
-            if (!_newSubscribers.TryGetValue(key.Id, out set))
+            if (!_newSubscribers.TryGetValue(key.Id, out HashSet<IActorRef> set))
             {
                 _newSubscribers[key.Id] = set = new HashSet<IActorRef>();
             }
@@ -720,8 +715,7 @@ namespace Akka.DistributedData
 
         private void ReceiveUnsubscribe(IKey key, IActorRef subscriber)
         {
-            HashSet<IActorRef> set;
-            if (_subscribers.TryGetValue(key.Id, out set) && set.Remove(subscriber) && set.Count == 0)
+            if (_subscribers.TryGetValue(key.Id, out HashSet<IActorRef> set) && set.Remove(subscriber) && set.Count == 0)
                 _subscribers.Remove(key.Id);
 
             if (_newSubscribers.TryGetValue(key.Id, out set) && set.Remove(subscriber) && set.Count == 0)
@@ -755,8 +749,7 @@ namespace Akka.DistributedData
 
                 foreach (var k in keys1)
                 {
-                    HashSet<IActorRef> set;
-                    if (_subscribers.TryGetValue(k, out set) && set.Remove(terminated) && set.Count == 0)
+                    if (_subscribers.TryGetValue(k, out HashSet<IActorRef> set) && set.Remove(terminated) && set.Count == 0)
                         _subscribers.Remove(k);
                 }
 
@@ -766,8 +759,7 @@ namespace Akka.DistributedData
 
                 foreach (var k in keys2)
                 {
-                    HashSet<IActorRef> set;
-                    if (_newSubscribers.TryGetValue(k, out set) && set.Remove(terminated) && set.Count == 0)
+                    if (_newSubscribers.TryGetValue(k, out HashSet<IActorRef> set) && set.Remove(terminated) && set.Count == 0)
                         _newSubscribers.Remove(k);
                 }
 

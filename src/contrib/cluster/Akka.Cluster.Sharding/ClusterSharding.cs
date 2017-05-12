@@ -662,8 +662,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public IActorRef ShardRegion(string typeName)
         {
-            IActorRef region;
-            if (_regions.TryGetValue(typeName, out region))
+            if (_regions.TryGetValue(typeName, out IActorRef region))
             {
                 return region;
             }

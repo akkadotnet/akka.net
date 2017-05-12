@@ -55,8 +55,7 @@ namespace Akka.DistributedData
 
         public bool TryGetValue(TKey key, out IImmutableSet<TValue> value)
         {
-            ORSet<TValue> set;
-            if (_underlying.TryGetValue(key, out set))
+            if (_underlying.TryGetValue(key, out ORSet<TValue> set))
             {
                 value = set.Elements;
                 return true;
@@ -154,8 +153,7 @@ namespace Akka.DistributedData
         public ORMultiDictionary<TKey, TValue> RemoveItem(UniqueAddress node, TKey key, TValue element)
         {
             var newUnderlying = _underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, set => set.Remove(node, element));
-            ORSet<TValue> found;
-            if (newUnderlying.TryGetValue(key, out found) && found.IsEmpty)
+            if (newUnderlying.TryGetValue(key, out ORSet<TValue> found) && found.IsEmpty)
             {
                 newUnderlying = newUnderlying.Remove(node, key);
             }

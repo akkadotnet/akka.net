@@ -25,8 +25,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public static void AddItem<TKey, TVal>(this Dictionary<TKey, HashSet<TVal>> dictionary, TKey key, TVal item)
         {
-            HashSet<TVal> bucket;
-            if (!dictionary.TryGetValue(key, out bucket))
+            if (!dictionary.TryGetValue(key, out HashSet<TVal> bucket))
             {
                 bucket = new HashSet<TVal>();
                 dictionary.Add(key, bucket);
@@ -46,8 +45,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public static void RemoveItem<TKey, TVal>(this Dictionary<TKey, HashSet<TVal>> dictionary, TKey key, TVal item)
         {
-            HashSet<TVal> bucket;
-            if (dictionary.TryGetValue(key, out bucket))
+            if (dictionary.TryGetValue(key, out HashSet<TVal> bucket))
             {
                 if (bucket.Remove(item) && bucket.Count == 0)
                 {

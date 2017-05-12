@@ -394,8 +394,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (key == null)
                         throw new ArgumentNullException(nameof(key), "Key cannot be null");
 
-                    SubstreamSource substreamSource;
-                    if (_activeSubstreams.TryGetValue(key, out substreamSource))
+                    if (_activeSubstreams.TryGetValue(key, out SubstreamSource substreamSource))
                     {
                         if (substreamSource.IsAvailable)
                             substreamSource.Push(element);
@@ -507,8 +506,7 @@ namespace Akka.Streams.Implementation.Fusing
             protected internal override void OnTimer(object timerKey)
             {
                 var key = (TKey) timerKey;
-                SubstreamSource substreamSource;
-                if (_activeSubstreams.TryGetValue(key, out substreamSource))
+                if (_activeSubstreams.TryGetValue(key, out SubstreamSource substreamSource))
                 {
                     substreamSource.Timeout(_timeout);
                     _closedSubstreams.Add(key);

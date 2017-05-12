@@ -71,8 +71,7 @@ namespace Akka.Actor
                 case "deadLetters":
                     return _deadLetters;
                 default:
-                    IInternalActorRef extraActorRef;
-                    if(_extraNames.TryGetValue(name, out extraActorRef))
+                    if(_extraNames.TryGetValue(name, out IInternalActorRef extraActorRef))
                         return extraActorRef;
                     return base.GetSingleChild(name);
             }

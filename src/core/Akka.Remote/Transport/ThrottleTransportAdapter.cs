@@ -496,8 +496,7 @@ namespace Akka.Remote.Transport
 
         private ThrottleMode GetInboundMode(Address nakedAddress)
         {
-            Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
+            if (_throttlingModes.TryGetValue(nakedAddress, out Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode))
             {
                 if (mode.Item2 == ThrottleTransportAdapter.Direction.Both ||
                     mode.Item2 == ThrottleTransportAdapter.Direction.Receive)
@@ -509,8 +508,7 @@ namespace Akka.Remote.Transport
 
         private ThrottleMode GetOutboundMode(Address nakedAddress)
         {
-            Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
+            if (_throttlingModes.TryGetValue(nakedAddress, out Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode))
             {
                 if (mode.Item2 == ThrottleTransportAdapter.Direction.Both ||
                     mode.Item2 == ThrottleTransportAdapter.Direction.Send)
@@ -521,8 +519,7 @@ namespace Akka.Remote.Transport
 
         private Task<SetThrottleAck> SetMode(Address nakedAddress, ThrottlerHandle handle)
         {
-             Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
+            if (_throttlingModes.TryGetValue(nakedAddress, out Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode))
             {
                 return SetMode(handle, mode.Item1, mode.Item2);
             }

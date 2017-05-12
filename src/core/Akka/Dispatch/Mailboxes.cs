@@ -117,8 +117,7 @@ namespace Akka.Dispatch
 
         private string LookupId(Type queueType)
         {
-            string id;
-            if (!_mailboxBindings.TryGetValue(queueType, out id))
+            if (!_mailboxBindings.TryGetValue(queueType, out string id))
             {
                 throw new ConfigurationException($"Mailbox Mapping for [{queueType}] not configured");
             }
@@ -155,8 +154,7 @@ namespace Akka.Dispatch
 
         private MailboxType LookupConfigurator(string id)
         {
-            MailboxType configurator;
-            if (!_mailboxTypeConfigurators.TryGetValue(id, out configurator))
+            if (!_mailboxTypeConfigurators.TryGetValue(id, out MailboxType configurator))
             {
                 // It doesn't matter if we create a mailbox type configurator that isn't used due to concurrent lookup.
                 if (id.Equals("unbounded")) configurator = new UnboundedMailbox();

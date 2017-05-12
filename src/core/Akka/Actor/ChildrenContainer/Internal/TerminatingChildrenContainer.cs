@@ -117,8 +117,7 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public override IChildrenContainer Unreserve(string name)
         {
-            IChildStats stats;
-            if (!InternalChildren.TryGetValue(name, out stats))
+            if (!InternalChildren.TryGetValue(name, out IChildStats stats))
                 return this;
             return new TerminatingChildrenContainer(InternalChildren.Remove(name), _toDie, _reason);
         }

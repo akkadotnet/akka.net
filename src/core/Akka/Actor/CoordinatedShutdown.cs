@@ -215,8 +215,7 @@ namespace Akka.Actor
                 throw new ConfigurationException($"Unknown phase [{phase}], known phases [{string.Join(",", _knownPhases)}]. " +
                     "All phases (along with their optional dependencies) must be defined in configuration.");
 
-            ImmutableList<Tuple<string, Func<Task<Done>>>> current;
-            if (!_tasks.TryGetValue(phase, out current))
+            if (!_tasks.TryGetValue(phase, out ImmutableList<Tuple<string, Func<Task<Done>>>> current))
             {
                 if (!_tasks.TryAdd(phase,
                     ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
@@ -311,8 +310,7 @@ namespace Akka.Actor
                         return TaskEx.Completed;
                     var remaining = remainingPhases.Skip(1).ToList();
                     Task<Done> phaseResult = null;
-                    ImmutableList<Tuple<string, Func<Task<Done>>>> phaseTasks;
-                    if (!_tasks.TryGetValue(phase, out phaseTasks))
+                    if (!_tasks.TryGetValue(phase, out ImmutableList<Tuple<string, Func<Task<Done>>>> phaseTasks))
                     {
                         if (debugEnabled)
                             Log.Debug("Performing phase [{0}] with [0] tasks.", phase);
@@ -448,8 +446,7 @@ namespace Akka.Actor
         /// <exception cref="ArgumentException">Thrown if <see cref="phase"/> doesn't exist in the set of registered phases.</exception>
         public TimeSpan Timeout(string phase)
         {
-            Phase p;
-            if (Phases.TryGetValue(phase, out p))
+            if (Phases.TryGetValue(phase, out Phase p))
             {
                 return p.Timeout;
             }
@@ -509,8 +506,7 @@ namespace Akka.Actor
                 if (unmarked.Contains(u))
                 {
                     tempMark.Add(u);
-                    Phase p;
-                    if (phases.TryGetValue(u, out p) && p.DependsOn.Any())
+                    if (phases.TryGetValue(u, out Phase p) && p.DependsOn.Any())
                     {
                         p.DependsOn.ForEach(depthFirstSearch);
                     }

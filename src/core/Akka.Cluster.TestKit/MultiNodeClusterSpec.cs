@@ -223,8 +223,7 @@ namespace Akka.Cluster.TestKit
 
         public Address GetAddress(RoleName role)
         {
-            Address address;
-            if (!_cachedAddresses.TryGetValue(role, out address))
+            if (!_cachedAddresses.TryGetValue(role, out Address address))
             {
                 address = Node(role).Address;
                 _cachedAddresses.TryAdd(role, address);

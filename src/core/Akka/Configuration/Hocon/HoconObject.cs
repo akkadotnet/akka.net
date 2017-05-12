@@ -116,8 +116,7 @@ namespace Akka.Configuration.Hocon
         /// </returns>
         public HoconValue GetKey(string key)
         {
-            HoconValue value;
-            if (Items.TryGetValue(key, out value))
+            if (Items.TryGetValue(key, out HoconValue value))
             {
                 return value;
             }
@@ -133,8 +132,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>The value associated with the supplied key.</returns>
         public HoconValue GetOrCreateKey(string key)
         {
-            HoconValue value;
-            if (Items.TryGetValue(key, out value))
+            if (Items.TryGetValue(key, out HoconValue value))
             {
                 return value;
             }
@@ -192,8 +190,7 @@ namespace Akka.Configuration.Hocon
             {
                 //if other key was present in this object and if we have a value, 
                 //just ignore the other value, unless it is an object
-                HoconValue thisItem;
-                if (thisItems.TryGetValue(otherItem.Key, out thisItem))
+                if (thisItems.TryGetValue(otherItem.Key, out HoconValue thisItem))
                 {
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
@@ -222,8 +219,7 @@ namespace Akka.Configuration.Hocon
             {
                 //if other key was present in this object and if we have a value,
                 //just ignore the other value, unless it is an object
-                HoconValue thisItem;
-                if (thisItems.TryGetValue(otherItem.Key, out thisItem))
+                if (thisItems.TryGetValue(otherItem.Key, out HoconValue thisItem))
                 {
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())

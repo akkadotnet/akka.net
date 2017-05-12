@@ -130,8 +130,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static TValue GetOrElse<TKey, TValue>(this IDictionary<TKey, TValue> hash, TKey key, TValue elseValue)
         {
-            TValue value;
-            if (hash.TryGetValue(key, out value))
+            if (hash.TryGetValue(key, out TValue value))
                 return value;
             return elseValue;
         }
