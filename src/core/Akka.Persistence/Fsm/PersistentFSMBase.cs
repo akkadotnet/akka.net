@@ -328,10 +328,7 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         /// <param name="state">TBD</param>
         /// <param name="timeout">TBD</param>
-        public void SetStateTimeout(TState state, TimeSpan? timeout)
-        {
-            _stateTimeouts[state] = timeout;
-        }
+        public void SetStateTimeout(TState state, TimeSpan? timeout) => _stateTimeouts[state] = timeout;
 
         /// <summary>
         ///     Set handler which is called upon each state transition, i.e. not when
