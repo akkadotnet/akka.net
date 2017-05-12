@@ -132,9 +132,7 @@ namespace Akka.Cluster.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (_fromBinaryMap.TryGetValue(type, out Func<byte[], object> factory))
-            {
                 return factory(bytes);
-            }
 
             throw new ArgumentException($"{nameof(ClusterMessageSerializer)} cannot deserialize object of type {type}");
         }

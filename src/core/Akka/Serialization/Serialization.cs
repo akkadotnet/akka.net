@@ -228,35 +228,31 @@ namespace Akka.Serialization
         public Serializer FindSerializerForType(Type objectType)
         {
             if (_serializerMap.TryGetValue(objectType, out Serializer fullMatchSerializer))
-            {
                 return fullMatchSerializer;
-            }
-            else
+
+            Serializer serializer = null;
+            Type type = objectType;
+
+            // TODO: see if we can do a better job with proper type sorting here - most specific to least specific (object serializer goes last)
+            foreach (var serializerType in _serializerMap)
             {
-                Serializer serializer = null;
-                Type type = objectType;
-
-                // TODO: see if we can do a better job with proper type sorting here - most specific to least specific (object serializer goes last)
-                foreach (var serializerType in _serializerMap)
+                // force deferral of the base "object" serializer until all other higher-level types have been evaluated
+                if (serializerType.Key.IsAssignableFrom(type) && serializerType.Key != _objectType)
                 {
-                    // force deferral of the base "object" serializer until all other higher-level types have been evaluated
-                    if (serializerType.Key.IsAssignableFrom(type) && serializerType.Key != _objectType)
-                    {
-                        serializer = serializerType.Value;
-                        break;
-                    }
+                    serializer = serializerType.Value;
+                    break;
                 }
-
-                // do a final check for the "object" serializer
-                if (serializer == null)
-                    _serializerMap.TryGetValue(_objectType, out serializer);
-
-                if (serializer == null)
-                    throw new SerializationException($"Serializer not found for type {objectType.Name}");
-
-                AddSerializationMap(type, serializer);
-                return serializer;
             }
+
+            // do a final check for the "object" serializer
+            if (serializer == null)
+                _serializerMap.TryGetValue(_objectType, out serializer);
+
+            if (serializer == null)
+                throw new SerializationException($"Serializer not found for type {objectType.Name}");
+
+            AddSerializationMap(type, serializer);
+            return serializer;
         }
 
         /// <summary>

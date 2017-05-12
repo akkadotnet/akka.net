@@ -361,7 +361,8 @@ namespace Akka.Remote.TestKit
 
                     if (_addrInterest.TryGetValue(nodeInfo.Name, out ImmutableHashSet<IActorRef> addr))
                     {
-                        foreach(var a in addr) a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
+                        foreach(var a in addr)
+                            a.Tell(new ToClient<AddressReply>(new AddressReply(nodeInfo.Name, nodeInfo.Addr)));
                         _addrInterest = _addrInterest.Remove(nodeInfo.Name);
                     }
                 }

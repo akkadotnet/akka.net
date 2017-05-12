@@ -71,9 +71,7 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         public override object FromBinary(byte[] bytes, string manifest)
         {
             if (_fromBinaryMap.TryGetValue(manifest, out Func<byte[], IClusterSingletonMessage> mapper))
-            {
                 return mapper(bytes);
-            }
 
             throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
         }

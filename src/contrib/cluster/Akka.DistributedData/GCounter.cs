@@ -120,7 +120,8 @@ namespace Akka.DistributedData
                 var total = v + delta;
                 return AssignAncestor(new GCounter(State.SetItem(node, total)));
             }
-            else return AssignAncestor(new GCounter(State.SetItem(node, delta)));
+
+            return AssignAncestor(new GCounter(State.SetItem(node, delta)));
         }
 
         /// <summary>

@@ -87,9 +87,7 @@ namespace Akka.Actor.Internal
         public override IChildrenContainer Unreserve(string name)
         {
             if (InternalChildren.TryGetValue(name, out IChildStats stats) && (stats is ChildNameReserved))
-            {
                 return Create(InternalChildren.Remove(name));
-            }
             return this;
         }
 

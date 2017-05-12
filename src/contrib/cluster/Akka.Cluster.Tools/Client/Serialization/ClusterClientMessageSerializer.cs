@@ -74,9 +74,7 @@ namespace Akka.Cluster.Tools.Client.Serialization
         public override object FromBinary(byte[] bytes, string manifest)
         {
             if (_fromBinaryMap.TryGetValue(manifest, out Func<byte[], IClusterClientMessage> deserializer))
-            {
                 return deserializer(bytes);
-            }
 
             throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {nameof(ClusterClientMessageSerializer)}");
         }

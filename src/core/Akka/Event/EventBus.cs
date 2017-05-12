@@ -112,10 +112,8 @@ namespace Akka.Event
                 var res = false;
 
                 if (_classifiers.TryGetValue(classifier, out List<Subscription<TSubscriber, TClassifier>> subscribers))
-                {
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
                         res = true;
-                }
                 else
                 {
                     foreach (var kvp in _classifiers)
@@ -181,9 +179,7 @@ namespace Akka.Event
             var eventClass = GetClassifier(@event);
 
             if (_cache.TryGetValue(eventClass, out List<TSubscriber> cachedSubscribers))
-            {
                 PublishToSubscribers(@event, cachedSubscribers);
-            }
             else
             {
                 cachedSubscribers = UpdateCacheForEventClassifier(@event, eventClass);

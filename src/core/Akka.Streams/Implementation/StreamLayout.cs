@@ -2312,7 +2312,8 @@ namespace Akka.Streams.Implementation
             int spaces)
         {
             var indent = Enumerable.Repeat(" ", spaces).Aggregate("", (s, s1) => s + s1);
-            if (IsDebug) Console.WriteLine($"{indent}{node}");
+            if (IsDebug)
+                Console.WriteLine($"{indent}{node}");
             object result;
             if (node is StreamLayout.Atomic)
             {
@@ -2330,13 +2331,16 @@ namespace Akka.Streams.Implementation
                 var transform = (StreamLayout.Transform) node;
                 result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
             }
-            else result = NotUsed.Instance;
+            else
+                result = NotUsed.Instance;
 
-            if (IsDebug) Console.WriteLine($"{indent}result = {result}");
+            if (IsDebug)
+                Console.WriteLine($"{indent}result = {result}");
 
             if (MaterializedValueSource.TryGetValue(node, out LinkedList<IMaterializedValueSource> sources))
             {
-                if (IsDebug) Console.WriteLine($"{indent}triggering sources {sources}");
+                if (IsDebug)
+                    Console.WriteLine($"{indent}triggering sources {sources}");
                 MaterializedValueSource.Remove(node);
                 foreach (var source in sources)
                     source.SetValue(result);
@@ -2356,10 +2360,8 @@ namespace Akka.Streams.Implementation
             
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
             if (CurrentLayout.Upstreams.TryGetValue(inPort, out OutPort outPort))
-            {
                 if (Publishers.TryGetValue(outPort, out IUntypedPublisher publisher))
                     DoSubscribe(publisher, subscriberOrVirtual);
-            }
         }
 
 
@@ -2373,10 +2375,8 @@ namespace Akka.Streams.Implementation
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
             if (CurrentLayout.Downstreams.TryGetValue(outPort, out InPort inPort))
-            {
                 if (Subscribers.TryGetValue(inPort, out object subscriber))
                     DoSubscribe(publisher, subscriber);
-            }
         }
 
         private void DoSubscribe(IUntypedPublisher publisher, object subscriberOrVirtual)

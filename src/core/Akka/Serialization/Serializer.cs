@@ -168,14 +168,10 @@ namespace Akka.Serialization
             var identifiers = config.AsEnumerable()
                 .ToDictionary(pair => Type.GetType(pair.Key, true), pair => pair.Value.GetInt());
 
-            if (identifiers.TryGetValue(type, out int value))
-            {
-                return value;
-            }
-            else
-            {
+            if (!identifiers.TryGetValue(type, out int value))
                 throw new ArgumentException($"Couldn't find serializer id for [{type}] under [{SerializationIdentifiers}] HOCON path", nameof(type));
-            }
+
+            return value;
         }
     }
 }

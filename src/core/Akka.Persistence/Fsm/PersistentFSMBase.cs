@@ -283,9 +283,8 @@ namespace Akka.Persistence.Fsm
             if (DebugEvent)
                 _log.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
 
-            if (_timers.TryGetValue(name, out Timer oldTimer)) {
+            if (_timers.TryGetValue(name, out Timer oldTimer))
                 oldTimer.Cancel();
-            }
 
             var timer = new Timer(name, msg, repeat, _timerGen.Next(), Context, DebugEvent ? _log : null);
             timer.Schedule(Self, timeout);
@@ -558,9 +557,7 @@ namespace Akka.Persistence.Fsm
                 .With<TimeoutMarker>(marker =>
                 {
                     if (_generation == marker.Generation)
-                    {
                         ProcessMsg(new StateTimeout(), "state timeout");
-                    }
                 })
                 .With<Timer>(t => 
                 {
@@ -573,9 +570,7 @@ namespace Akka.Persistence.Fsm
                         }
                         _generation++;
                         if (!t.Repeat)
-                        {
                             _timers.Remove(t.Name);
-                        }
                         ProcessMsg(t.Message, t);
                     }
                 })

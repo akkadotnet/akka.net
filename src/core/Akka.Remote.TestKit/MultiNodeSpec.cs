@@ -149,7 +149,8 @@ namespace Akka.Remote.TestKit
                         : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
-                if (_nodeConf.TryGetValue(Myself, out Config nodeConfig)) builder.Add(nodeConfig);
+                if (_nodeConf.TryGetValue(Myself, out Config nodeConfig)) 
+                    builder.Add(nodeConfig);
                 builder.Add(_commonConf);
                 builder.Add(transportConfig);
                 builder.Add(MultiNodeSpec.NodeConfig);

@@ -402,8 +402,10 @@ namespace Akka.Streams.Tests.Implementation
         {
             var group = module.SubModules.GroupBy(x => x.IsAtomic).ToDictionary(x => x.Key, x => x.ToImmutableHashSet());
 
-            if (!group.TryGetValue(true, out ImmutableHashSet<IModule> atomics)) atomics = ImmutableHashSet<IModule>.Empty;
-            if (!group.TryGetValue(false, out ImmutableHashSet<IModule> composites)) composites = ImmutableHashSet<IModule>.Empty;
+            if (!group.TryGetValue(true, out ImmutableHashSet<IModule> atomics))
+                atomics = ImmutableHashSet<IModule>.Empty;
+            if (!group.TryGetValue(false, out ImmutableHashSet<IModule> composites))
+                composites = ImmutableHashSet<IModule>.Empty;
 
             return atomics.Union(composites.SelectMany(GetAllAtomic));
         }

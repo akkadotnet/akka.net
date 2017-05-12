@@ -305,13 +305,9 @@ namespace Akka.Dispatch
                 // created until used, i.e. cheap.
                 MessageDispatcherConfigurator newConfigurator;
                 if (_cachingConfig.HasPath(id))
-                {
                     newConfigurator = ConfiguratorFrom(Config(id));
-                }
                 else
-                {
                     throw new ConfigurationException($"Dispatcher {id} not configured.");
-                }
 
                 return _dispatcherConfigurators.TryAdd(id, newConfigurator) ? newConfigurator : _dispatcherConfigurators[id];
             }

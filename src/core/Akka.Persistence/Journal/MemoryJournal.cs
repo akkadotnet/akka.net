@@ -229,7 +229,7 @@ namespace Akka.Persistence.Journal
             if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
             {
                 var last = persistents.LastOrDefault();
-                return last != null ? last.SequenceNr : 0L;
+                return last?.SequenceNr ?? 0L;
             }
 
             return 0L;

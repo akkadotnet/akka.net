@@ -58,9 +58,7 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (TypeLookup.TryGetValue(type.FullName, out MessageParser parser))
-            {
                 return parser.ParseFrom(bytes);
-            }
 
             throw new ArgumentException("Need a protobuf message class to be able to serialize bytes using protobuf");
         }

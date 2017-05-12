@@ -292,13 +292,9 @@ namespace Akka.Remote.TestKit
             if (message is INetworkOp)
             {
                 if (_clients.TryGetValue(channel, out IActorRef fsm))
-                {
                     fsm.Tell(message);
-                }
                 else
-                {
                     _log.Warning("Failed to get client for {0}", channel);
-                }
             }
             else
             {

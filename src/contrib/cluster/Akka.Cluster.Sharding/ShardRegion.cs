@@ -391,9 +391,8 @@ namespace Akka.Cluster.Sharding
             {
                 var shardId = restart.ShardId;
                 if (RegionByShard.TryGetValue(shardId, out IActorRef regionRef))
-                {
-                    if (Self.Equals(regionRef)) GetShard(shardId);
-                }
+                    if (Self.Equals(regionRef))
+                        GetShard(shardId);
                 else
                 {
                     if (!ShardBuffers.TryGetValue(shardId, out IImmutableList<KeyValuePair<Msg, IActorRef>> buffer))
@@ -639,10 +638,10 @@ namespace Akka.Cluster.Sharding
                         updatedShards = ImmutableHashSet<ShardId>.Empty;
 
                     updatedShards = updatedShards.Remove(shard);
-                    if (updatedShards.Count == 0)
-                        Regions = Regions.Remove(regionRef);
-                    else
-                        Regions = Regions.SetItem(regionRef, updatedShards);
+
+                    Regions = updatedShards.Count == 0 
+                        ? Regions = Regions.Remove(regionRef) 
+                        : Regions.SetItem(regionRef, updatedShards);
 
                     RegionByShard = RegionByShard.Remove(shard);
                 }
@@ -705,9 +704,8 @@ namespace Akka.Cluster.Sharding
                 Log.Debug("Deliver [{0}] buffered messages for shard [{1}]", buffer.Count, shardId);
 
                 foreach (var m in buffer)
-                {
                     receiver.Tell(m.Key, m.Value);
-                }
+
                 ShardBuffers = ShardBuffers.Remove(shardId);
             }
 
@@ -721,14 +719,12 @@ namespace Akka.Cluster.Sharding
             if (!Shards.TryGetValue(id, out IActorRef region))
             {
                 if (EntityProps == null || EntityProps.Equals(Actor.Props.Empty))
-                {
                     throw new IllegalStateException("Shard must not be allocated to a proxy only ShardRegion");
-                }
-                else if (ShardsByRef.Values.All(shardId => shardId != id))
+
+                if (ShardsByRef.Values.All(shardId => shardId != id))
                 {
                     Log.Debug("Starting shard [{0}] in region", id);
 
-                    //val name = URLEncoder.encode(id, "utf-8")
                     var name = Uri.EscapeDataString(id);
                     var shardRef = Context.Watch(Context.ActorOf(PersistentShard.Props(
                         TypeName,
@@ -779,9 +775,7 @@ namespace Akka.Cluster.Sharding
         private void HandleTerminated(Terminated terminated)
         {
             if (_coordinator != null && _coordinator.Equals(terminated.ActorRef))
-            {
                 _coordinator = null;
-            }
             else if (Regions.TryGetValue(terminated.ActorRef, out IImmutableSet<ShardId> shards))
             {
                 RegionByShard = RegionByShard.RemoveRange(shards);
@@ -805,9 +799,7 @@ namespace Akka.Cluster.Sharding
                     // if persist fails it will stop
                     Log.Debug("Shard [{0}] terminated while not being handed off", shard);
                     if (Settings.RememberEntities)
-                    {
                         Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.ShardFailureBackoff, Self, new RestartShard(shard), Self);
-                    }
                 }
 
                 TryCompleteGracefulShutdown();

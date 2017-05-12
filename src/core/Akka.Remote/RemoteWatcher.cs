@@ -479,25 +479,17 @@ namespace Akka.Remote
             var from = Sender.Path.Address;
 
             if (_failureDetector.IsMonitoring(from))
-            {
                 Log.Debug("Received heartbeat rsp from [{0}]", from);
-            }
             else
-            {
                 Log.Debug("Received first heartbeat rsp from [{0}]", from);
-            }
 
             if (WatcheeByNodes.ContainsKey(from) && !Unreachable.Contains(from))
             {
                 if (_addressUids.TryGetValue(from, out int addressUid))
-                {
                     if (addressUid == uid)
                         ReWatch(from);
-                }
                 else
-                {
                     ReWatch(from);
-                }
 
                 _addressUids[from] = uid;
                 _failureDetector.Heartbeat(from);
@@ -554,7 +546,8 @@ namespace Akka.Remote
 
             if (Watching.TryGetValue(watchee, out HashSet<IInternalActorRef> watching))
                 watching.Add(watcher);
-           else Watching.Add(watchee, new HashSet<IInternalActorRef> { watcher });
+            else
+                Watching.Add(watchee, new HashSet<IInternalActorRef> { watcher });
             WatchNode(watchee);
 
             // add watch from self, this will actually send a Watch to the target when necessary
@@ -577,7 +570,8 @@ namespace Akka.Remote
 
             if (WatcheeByNodes.TryGetValue(watcheeAddress, out HashSet<IInternalActorRef> watchees))
                 watchees.Add(watchee);
-            else WatcheeByNodes.Add(watcheeAddress, new HashSet<IInternalActorRef> { watchee });
+            else
+                WatcheeByNodes.Add(watcheeAddress, new HashSet<IInternalActorRef> { watchee });
         }
 
 

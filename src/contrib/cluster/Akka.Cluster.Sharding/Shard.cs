@@ -523,9 +523,7 @@ namespace Akka.Cluster.Sharding
                 SendMessageBuffer(new EntityStarted(id));
             }
             else
-            {
                 ProcessChange(new EntityStopped(id), PassivateCompleted);
-            }
 
             Passivating = Passivating.Remove(tref);
         }
@@ -638,7 +636,8 @@ namespace Akka.Cluster.Sharding
             var id = message.EntityId;
 
             // Get the buffered messages and remove the buffer
-            if (MessageBuffers.TryGetValue(id, out IImmutableList<Tuple<Msg, IActorRef>> buffer)) MessageBuffers = MessageBuffers.Remove(id);
+            if (MessageBuffers.TryGetValue(id, out IImmutableList<Tuple<Msg, IActorRef>> buffer))
+                MessageBuffers = MessageBuffers.Remove(id);
 
             if (buffer.Count != 0)
             {

@@ -726,9 +726,7 @@ namespace Akka.Remote.Transport
         public IHandleEventListener GetRemoteReadHandlerFor(TestAssociationHandle localHandle)
         {
             if (_listenersTable.TryGetValue(localHandle.Key, out Tuple<IHandleEventListener, IHandleEventListener> listeners))
-            {
                 return RemoteListenerRelativeTo(localHandle, listeners);
-            }
 
             return null;
         }

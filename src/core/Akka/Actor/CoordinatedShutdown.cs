@@ -217,18 +217,13 @@ namespace Akka.Actor
 
             if (!_tasks.TryGetValue(phase, out ImmutableList<Tuple<string, Func<Task<Done>>>> current))
             {
-                if (!_tasks.TryAdd(phase,
-                    ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
-                {
+                if (!_tasks.TryAdd(phase, ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
                     AddTask(phase, taskName, task); // CAS failed, retry
-                }
             }
             else
             {
                 if (!_tasks.TryUpdate(phase, current.Add(Tuple.Create(taskName, task)), current))
-                {
                     AddTask(phase, taskName, task); // CAS failed, retry
-                }
             }
         }
 
@@ -344,7 +339,6 @@ namespace Akka.Actor
                                     });
                                 }
 
-
                                 return r;
                             }
                             catch (Exception ex)
@@ -371,27 +365,21 @@ namespace Akka.Actor
                         {
                             timeoutFunction = After(timeout, System.Scheduler, () =>
                             {
-                                if (phase == CoordinatedShutdown.PhaseActorSystemTerminate &&
-                                    MonotonicClock.ElapsedHighRes < deadLine)
-                                {
-                                    // too early, i.e. triggered by system termination
-                                    return result;
-                                } else if (result.IsCompleted)
-                                {
+                                if (phase == CoordinatedShutdown.PhaseActorSystemTerminate && MonotonicClock.ElapsedHighRes < deadLine)
+                                    return result; // too early, i.e. triggered by system termination
+
+                                if (result.IsCompleted)
                                     return TaskEx.Completed;
-                                }
-                                else if (recoverEnabled)
+
+                                if (recoverEnabled)
                                 {
                                     Log.Warning("Coordinated shutdown phase [{0}] timed out after {1}", phase, timeout);
                                     return TaskEx.Completed;
                                 }
-                                else
-                                {
-                                    return
-                                    TaskEx.FromException<Done>(
-                                        new TimeoutException(
-                                            $"Coordinated shutdown phase[{phase}] timed out after {timeout}"));
-                                }
+
+                                return TaskEx.FromException<Done>(
+                                    new TimeoutException(
+                                        $"Coordinated shutdown phase[{phase}] timed out after {timeout}"));
                             });
                         }
                         catch (SchedulerException)
@@ -447,9 +435,7 @@ namespace Akka.Actor
         public TimeSpan Timeout(string phase)
         {
             if (Phases.TryGetValue(phase, out Phase p))
-            {
                 return p.Timeout;
-            }
             throw new ArgumentException($"Unknown phase [{phase}]. All phases must be defined in configuration.");
         }
 
@@ -507,9 +493,7 @@ namespace Akka.Actor
                 {
                     tempMark.Add(u);
                     if (phases.TryGetValue(u, out Phase p) && p.DependsOn.Any())
-                    {
                         p.DependsOn.ForEach(depthFirstSearch);
-                    }
                     unmarked.Remove(u); //permanent mark
                     tempMark.Remove(u);
                     result = new[] { u }.Concat(result).ToList();

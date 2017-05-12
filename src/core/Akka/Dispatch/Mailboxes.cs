@@ -118,9 +118,7 @@ namespace Akka.Dispatch
         private string LookupId(Type queueType)
         {
             if (!_mailboxBindings.TryGetValue(queueType, out string id))
-            {
                 throw new ConfigurationException($"Mailbox Mapping for [{queueType}] not configured");
-            }
             return id;
         }
 
@@ -157,17 +155,21 @@ namespace Akka.Dispatch
             if (!_mailboxTypeConfigurators.TryGetValue(id, out MailboxType configurator))
             {
                 // It doesn't matter if we create a mailbox type configurator that isn't used due to concurrent lookup.
-                if (id.Equals("unbounded")) configurator = new UnboundedMailbox();
-                else if (id.Equals("bounded")) configurator = new BoundedMailbox(Settings, Config(id));
+                if (id.Equals("unbounded"))
+                    configurator = new UnboundedMailbox();
+                else if (id.Equals("bounded"))
+                    configurator = new BoundedMailbox(Settings, Config(id));
                 else
                 {
                     if (!Settings.Config.HasPath(id)) throw new ConfigurationException($"Mailbox Type [{id}] not configured");
                     var conf = Config(id);
 
                     var mailboxTypeName = conf.GetString("mailbox-type");
-                    if (string.IsNullOrEmpty(mailboxTypeName)) throw new ConfigurationException($"The setting mailbox-type defined in [{id}] is empty");
+                    if (string.IsNullOrEmpty(mailboxTypeName))
+                        throw new ConfigurationException($"The setting mailbox-type defined in [{id}] is empty");
                     var type = Type.GetType(mailboxTypeName);
-                    if (type == null) throw new ConfigurationException($"Found mailbox-type [{mailboxTypeName}] in configuration for [{id}], but could not find that type in any loaded assemblies.");
+                    if (type == null)
+                        throw new ConfigurationException($"Found mailbox-type [{mailboxTypeName}] in configuration for [{id}], but could not find that type in any loaded assemblies.");
                     var args = new object[] {Settings, conf};
                     try
                     {

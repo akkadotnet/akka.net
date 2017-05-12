@@ -153,9 +153,7 @@ namespace Akka.Cluster.Sharding
                         Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.EntityRestartBackoff, Sender, new RestartEntity(id), Self);
                     }
                     else
-                    {
                         ProcessChange(new EntityStopped(id), PassivateCompleted);
-                    }
                 }
             }
 

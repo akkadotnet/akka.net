@@ -663,9 +663,8 @@ namespace Akka.Cluster.Sharding
         public IActorRef ShardRegion(string typeName)
         {
             if (_regions.TryGetValue(typeName, out IActorRef region))
-            {
                 return region;
-            }
+
             throw new ArgumentException($"Shard type [{typeName}] must be started first");
         }
 

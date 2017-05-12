@@ -52,9 +52,7 @@ namespace Akka.Remote
         public bool IsAvailable(T resource)
         {
             if (ResourceToFailureDetector.TryGetValue(resource, out FailureDetector failureDetector))
-            {
                 return failureDetector.IsAvailable;
-            }
             return true;
         }
 
@@ -66,9 +64,7 @@ namespace Akka.Remote
         public bool IsMonitoring(T resource)
         {
             if (ResourceToFailureDetector.TryGetValue(resource, out FailureDetector failureDetector))
-            {
                 return failureDetector.IsMonitoring;
-            }
             return false;
         }
 
@@ -79,9 +75,7 @@ namespace Akka.Remote
         public void Heartbeat(T resource)
         {
             if (ResourceToFailureDetector.TryGetValue(resource, out FailureDetector failureDetector))
-            {
                 failureDetector.HeartBeat();
-            }
             else
             {
                 //First one wins and creates the new FailureDetector
@@ -91,9 +85,7 @@ namespace Akka.Remote
                     // when this one acquired it, so the second check is needed (double-check locking pattern)
                     var oldTable = new Dictionary<T, FailureDetector>(ResourceToFailureDetector);
                     if (oldTable.TryGetValue(resource, out failureDetector))
-                    {
                         failureDetector.HeartBeat();
-                    }
                     else
                     {
                         var newDetector = _factory();

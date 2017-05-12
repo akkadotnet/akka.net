@@ -99,27 +99,17 @@ namespace Akka.Remote
                 if (payloadBytes > max)
                 {
                     if (_maxPayloadBytes.TryUpdate(type, newMax, max))
-                    {
-                        _log.Info("New maximum payload size for [{0}] is [{1}] bytes", type.FullName,
-                            payloadBytes);
-
-                    }
+                        _log.Info("New maximum payload size for [{0}] is [{1}] bytes", type.FullName, payloadBytes);
                     else
-                    {
                         Check(type, payloadBytes, newMax);
-                    }
                 }
             }
             else
             {
                 if (_maxPayloadBytes.TryAdd(type, newMax))
-                {
                     _log.Info("Payload size for [{0}] is [{1}] bytes", type.FullName, payloadBytes);
-                }
                 else
-                {
                     Check(type, payloadBytes, newMax);
-                }
             }
         }
     }

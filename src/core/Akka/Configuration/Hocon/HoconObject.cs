@@ -116,11 +116,8 @@ namespace Akka.Configuration.Hocon
         /// </returns>
         public HoconValue GetKey(string key)
         {
-            if (Items.TryGetValue(key, out HoconValue value))
-            {
-                return value;
-            }
-            return null;
+            Items.TryGetValue(key, out HoconValue value);
+            return value;
         }
 
         /// <summary>
@@ -133,9 +130,7 @@ namespace Akka.Configuration.Hocon
         public HoconValue GetOrCreateKey(string key)
         {
             if (Items.TryGetValue(key, out HoconValue value))
-            {
                 return value;
-            }
             var child = new HoconValue();
             Items.Add(key, child);
             return child;
@@ -194,9 +189,7 @@ namespace Akka.Configuration.Hocon
                 {
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
-                    {
                         thisItem.GetObject().Merge(otherItem.Value.GetObject());
-                    }
                 }
                 else
                 {

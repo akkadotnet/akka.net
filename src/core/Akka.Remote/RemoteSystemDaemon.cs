@@ -310,10 +310,8 @@ namespace Akka.Remote
                     return true; //child was successfully added
 
                 if (_parent2Children.TryGetValue(parent, out IImmutableSet<IActorRef> children))
-                {
                     if (_parent2Children.TryUpdate(parent, children.Add(child), children))
                         return false; //child successfully added
-                }
             }
         }
 

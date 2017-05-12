@@ -469,8 +469,7 @@ namespace Akka.DistributedData
 
         private ByteString GetDigest(string key)
         {
-            var contained = _dataEntries.TryGetValue(key, out Tuple<DataEnvelope, ByteString> value);
-            if (contained)
+            if(_dataEntries.TryGetValue(key, out Tuple<DataEnvelope, ByteString> value))
             {
                 if (Equals(value.Item2, LazyDigest))
                 {
@@ -478,15 +477,9 @@ namespace Akka.DistributedData
                     _dataEntries = _dataEntries.SetItem(key, Tuple.Create(value.Item1, digest));
                     return digest;
                 }
-                else
-                {
-                    return value.Item2;
-                }
+                return value.Item2;
             }
-            else
-            {
-                return NotFoundDigest;
-            }
+            return NotFoundDigest;
         }
 
         private ByteString Digest(DataEnvelope envelope)
@@ -506,9 +499,7 @@ namespace Akka.DistributedData
         private DataEnvelope GetData(string key)
         {
             if (!_dataEntries.TryGetValue(key, out Tuple<DataEnvelope, ByteString> value))
-            {
                 return null;
-            }
             return value.Item1;
         }
 
@@ -702,9 +693,7 @@ namespace Akka.DistributedData
         private void ReceiveSubscribe(IKey key, IActorRef subscriber)
         {
             if (!_newSubscribers.TryGetValue(key.Id, out HashSet<IActorRef> set))
-            {
                 _newSubscribers[key.Id] = set = new HashSet<IActorRef>();
-            }
             set.Add(subscriber);
 
             if (!_subscriptionKeys.ContainsKey(key.Id))
@@ -715,7 +704,8 @@ namespace Akka.DistributedData
 
         private void ReceiveUnsubscribe(IKey key, IActorRef subscriber)
         {
-            if (_subscribers.TryGetValue(key.Id, out HashSet<IActorRef> set) && set.Remove(subscriber) && set.Count == 0)
+            HashSet<IActorRef> set;
+            if (_subscribers.TryGetValue(key.Id, out set) && set.Remove(subscriber) && set.Count == 0)
                 _subscribers.Remove(key.Id);
 
             if (_newSubscribers.TryGetValue(key.Id, out set) && set.Remove(subscriber) && set.Count == 0)

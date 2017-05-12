@@ -154,9 +154,7 @@ namespace Akka.DistributedData
         {
             var newUnderlying = _underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, set => set.Remove(node, element));
             if (newUnderlying.TryGetValue(key, out ORSet<TValue> found) && found.IsEmpty)
-            {
                 newUnderlying = newUnderlying.Remove(node, key);
-            }
 
             return new ORMultiDictionary<TKey, TValue>(newUnderlying);
         }

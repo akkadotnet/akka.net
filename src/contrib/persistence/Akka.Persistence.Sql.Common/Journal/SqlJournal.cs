@@ -376,9 +376,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         private async Task<long> NextTagSequenceNr(string tag)
         {
             if (!_tagSequenceNr.TryGetValue(tag, out long value))
-            {
                 value = await ReadHighestSequenceNrAsync(TagId(tag), 0L);
-            }
+
             value++;
             _tagSequenceNr = _tagSequenceNr.SetItem(tag, value);
             return value;

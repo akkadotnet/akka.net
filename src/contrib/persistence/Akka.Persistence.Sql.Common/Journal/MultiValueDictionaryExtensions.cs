@@ -46,12 +46,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         public static void RemoveItem<TKey, TVal>(this Dictionary<TKey, HashSet<TVal>> dictionary, TKey key, TVal item)
         {
             if (dictionary.TryGetValue(key, out HashSet<TVal> bucket))
-            {
                 if (bucket.Remove(item) && bucket.Count == 0)
-                {
                     dictionary.Remove(key);
-                }
-            }
         }
 
         /// <summary>

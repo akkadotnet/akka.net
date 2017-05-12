@@ -206,10 +206,10 @@ namespace Akka.Cluster
 
                     foreach (var r in records)
                     {
-                        ImmutableDictionary<UniqueAddress, Record> m = mapBuilder.TryGetValue(r.Observer, out m) ? 
-                            m.SetItem(r.Subject, r) :
+                        ImmutableDictionary<UniqueAddress, Record> m = mapBuilder.TryGetValue(r.Observer, out m) 
+                            ? m.SetItem(r.Subject, r) 
                             //TODO: Other collections take items for Create. Create unnecessary array here
-                            ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, Record>(r.Subject, r) });
+                            : ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, Record>(r.Subject, r) });
                         
 
                         mapBuilder.AddOrSet(r.Observer, m);
@@ -235,7 +235,6 @@ namespace Akka.Cluster
         ImmutableDictionary<UniqueAddress, Record> ObserverRows(UniqueAddress observer)
         {
             _cache.Value.ObserverRowMap.TryGetValue(observer, out ImmutableDictionary<UniqueAddress, Record> observerRows);
-
             return observerRows;
         }
 
@@ -291,16 +290,14 @@ namespace Akka.Cluster
             if (oldObserverRows == null && status == ReachabilityStatus.Reachable) return this;
             if (oldObserverRows == null) return new Reachability(_records.Add(newRecord), newVersions);
 
-            oldObserverRows.TryGetValue(subject, out Record oldRecord);
-            if (oldRecord == null)
+            if(!oldObserverRows.TryGetValue(subject, out Record oldRecord))
             {
                 if (status == ReachabilityStatus.Reachable &&
                     oldObserverRows.Values.All(r => r.Status == ReachabilityStatus.Reachable))
-                {
                     return new Reachability(_records.FindAll(r => !r.Observer.Equals(observer)), newVersions);
-                }
                 return new Reachability(_records.Add(newRecord), newVersions);
             }
+
             if (oldRecord.Status == ReachabilityStatus.Terminated || oldRecord.Status == status)
                 return this;
 
@@ -401,8 +398,10 @@ namespace Akka.Cluster
         {
             var observerRows = ObserverRows(observer);
             if (observerRows == null) return ReachabilityStatus.Reachable;
-            observerRows.TryGetValue(subject, out Record record);
-            if (record == null) return ReachabilityStatus.Reachable;
+
+            if(!observerRows.TryGetValue(subject, out Record record))
+                return ReachabilityStatus.Reachable;
+
             return record.Status;
         }
 

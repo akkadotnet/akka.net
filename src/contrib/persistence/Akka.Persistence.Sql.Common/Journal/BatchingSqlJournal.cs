@@ -736,9 +736,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 var changed = new TaggedEventAppended(tag);
                 foreach (var subscriber in bucket)
-                {
                     subscriber.Tell(changed);
-                }
             }
         }
 
@@ -748,9 +746,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 var changed = new EventAppended(persitenceId);
                 foreach (var subscriber in bucket)
-                {
                     subscriber.Tell(changed);
-                }
             }
         }
 

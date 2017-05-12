@@ -147,7 +147,8 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public bool TryGetByName(string name, out IChildStats stats)
         {
-            if (InternalChildren.TryGetValue(name, out stats)) return true;
+            if (InternalChildren.TryGetValue(name, out stats))
+                return true;
             stats = null;
             return false;
         }

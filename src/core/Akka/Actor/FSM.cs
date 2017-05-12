@@ -841,14 +841,10 @@ namespace Akka.Actor
         public void SetTimer(string name, object msg, TimeSpan timeout, bool repeat = false)
         {
             if (DebugEvent)
-            {
                 _log.Debug($"setting {(repeat ? "repeating" : "")} timer {name}/{timeout}: {msg}");
-            }
 
             if (_timers.TryGetValue(name, out Timer timer))
-            { 
                 timer.Cancel();
-            }
 
             timer = new Timer(name, msg, repeat, _timerGen.Next(), Context);
             timer.Schedule(Self, timeout);
@@ -862,9 +858,7 @@ namespace Akka.Actor
         public void CancelTimer(string name)
         {
             if (DebugEvent)
-            {
                 _log.Debug($"Cancelling timer {name}");
-            }
 
             if (_timers.TryGetValue(name, out Timer timer))
             {
