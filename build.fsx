@@ -64,20 +64,34 @@ Target "Build" (fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "RunTests" (fun _ ->
-    let projects = !! "./**/core/**/*.Tests.csproj"
-                   ++ "./**/contrib/**/*.Tests.csproj"
-                   -- "./**/Akka.Streams.Tests.csproj"
-                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                   -- "./**/serializers/**/*Wire*.csproj"
-                   -- "./**/Akka.Persistence.Tests.csproj"
+    let projects =
+        match isWindows with
+        // Windows
+        | true -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/Akka.Streams.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.Persistence.Tests.csproj"                 
+        // Linux/Mono
+        | _ -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.Streams.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
+                  -- "./**/Akka.Persistence.Tests.csproj"
+                  -- "./**/Akka.API.Tests.csproj"
+                  -- "./**/Akka.Persistence.Sqlite.Tests.csproj"
 
     let runSingleProject project =
-        DotNetCli.Test
+        DotNetCli.RunCommand
             (fun p -> 
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    AdditionalArgs = [(sprintf "--logger trx;LogFileName=%s.trx" (outputTests @@ fileNameWithoutExt project) )]})
+                { p with 
+                    WorkingDir = (Directory.GetParent project).FullName
+                    TimeOut = TimeSpan.FromMinutes 10. })
+                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     projects |> Seq.iter (runSingleProject)
 )
@@ -265,7 +279,7 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
 
 // tests dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "RunTests"
+"Clean" ==> "RestorePackages" ==> "RunTests"
 
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"

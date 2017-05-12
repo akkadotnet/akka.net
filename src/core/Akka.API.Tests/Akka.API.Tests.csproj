@@ -16,12 +16,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
-    <PackageReference Include="xunit" Version="2.2.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+    <PackageReference Include="xunit" Version="2.3.0-beta2-build3683" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta2-build1317" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta2-build3683" />
     <PackageReference Include="ApiApprover" Version="3.0.1" />
     <PackageReference Include="ApprovalTests" Version="3.0.10" />
     <PackageReference Include="ApprovalUtilities" Version="3.0.10" />
     <PackageReference Include="Mono.Cecil" Version="0.9.6.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
