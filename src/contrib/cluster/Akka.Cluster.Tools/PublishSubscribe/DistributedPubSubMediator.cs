@@ -273,7 +273,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     var child = Context.Child(encodedTopic);
                     if (!child.IsNobody())
                         child.Forward(unsubscribe);
-                    else { } // no such topic here
+                    else
+                    {
+                        // no such topic here  
+                    }
                 });
             });
             Receive<Unsubscribed>(unsubscribed =>
@@ -478,10 +481,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var bucket = entry.Value;
 
                 if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out ValueHolder valueHolder))
+                {
                     if (valueHolder != null && !valueHolder.Ref.Equals(ActorRefs.Nobody))
                         valueHolder.Ref.Forward(message);
                     else
                         SendToDeadLetters(message);
+                }
             }
         }
 

@@ -391,12 +391,13 @@ namespace Akka.Cluster.Sharding
             {
                 var shardId = restart.ShardId;
                 if (RegionByShard.TryGetValue(shardId, out IActorRef regionRef))
+                {
                     if (Self.Equals(regionRef))
                         GetShard(shardId);
+                }
                 else
                 {
-                    if (!ShardBuffers.TryGetValue(shardId, out IImmutableList<KeyValuePair<Msg, IActorRef>> buffer))
-                    {
+                    if (!ShardBuffers.TryGetValue(shardId, out IImmutableList<KeyValuePair<Msg, IActorRef>> buffer)) {
                         buffer = ImmutableList<KeyValuePair<object, IActorRef>>.Empty;
                         Log.Debug("Request shard [{0}] home", shardId);
                         if (_coordinator != null)

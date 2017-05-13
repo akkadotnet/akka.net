@@ -112,18 +112,18 @@ namespace Akka.Event
                 var res = false;
 
                 if (_classifiers.TryGetValue(classifier, out List<Subscription<TSubscriber, TClassifier>> subscribers))
+                {
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
                         res = true;
+                }
                 else
                 {
-                    foreach (var kvp in _classifiers)
-                    {
-                        if (!IsSubClassification(kvp.Key, classifier)) 
+                    foreach (var kvp in _classifiers) {
+                        if (!IsSubClassification(kvp.Key, classifier))
                             continue;
 
                         var subscriptions = kvp.Value.Where(ss => ss.Subscriber.Equals(subscriber)).ToList();
-                        foreach (var existingSubscriber in subscriptions)
-                        {
+                        foreach (var existingSubscriber in subscriptions) {
                             existingSubscriber.Unsubscriptions.Add(classifier);
                             res = true;
                         }
