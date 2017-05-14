@@ -93,6 +93,7 @@ Target "RunTests" (fun _ ->
                     TimeOut = TimeSpan.FromMinutes 10. })
                 (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
+    CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
 )
 
