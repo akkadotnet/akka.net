@@ -368,14 +368,32 @@ namespace Akka.Streams.TestKit
                 return this;
             }
 
+            /// <summary>
+            /// Expect next element and test it with the <paramref name="predicate"/>
+            /// </summary>
+            /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
+            /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
+            /// <returns>The next element</returns>
             public TOther ExpectNext<TOther>(Predicate<TOther> predicate)
             {
                 return _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element)).Element;
             }
 
+            /// <summary>
+            /// Expect next element and test it with the <paramref name="predicate"/>
+            /// </summary>
+            /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
+            /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
+            /// <returns>this</returns>
+            public ManualProbe<T> ExpectNextChaining<TOther>(Predicate<TOther> predicate)
+            {
+                _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element));
+                return this;
+            }
+
             public TOther ExpectEvent<TOther>(Func<ISubscriberEvent, TOther> func)
             {
-                return func(_probe.ExpectMsg<ISubscriberEvent>());
+                return func(_probe.ExpectMsg<ISubscriberEvent>(hint: "message matching function"));
             }
 
             /// <summary>

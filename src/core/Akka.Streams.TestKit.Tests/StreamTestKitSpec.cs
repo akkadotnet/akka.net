@@ -151,6 +151,59 @@ namespace Akka.Streams.TestKit.Tests
         }
 
         [Fact]
+        public void TestSInk_Probe_ExpectNextPredicate_should_pass_with_right_element()
+        {
+            Source.Single(1)
+                .RunWith(this.SinkProbe<int>(), _materializer)
+                .Request(1)
+                .ExpectNext<int>(i => i == 1)
+                .ShouldBe(1);
+        }
+
+        [Fact]
+        public void TestSInk_Probe_ExpectNextPredicate_should_fail_with_wrong_element()
+        {
+            Record.Exception(() =>
+            {
+                Source.Single(1)
+                    .RunWith(this.SinkProbe<int>(), _materializer)
+                    .Request(1)
+                    .ExpectNext<int>(i => i == 2);
+            }).Message.ShouldStartWith("Got a message of the expected type");
+        }
+
+        [Fact]
+        public void TestSInk_Probe_ExpectNextChaining_should_pass_with_right_element()
+        {
+            Source.Single(1)
+                .RunWith(this.SinkProbe<int>(), _materializer)
+                .Request(1)
+                .ExpectNextChaining<int>(i => i == 1);
+        }
+
+        [Fact]
+        public void TestSInk_Probe_ExpectNextChaining_should_allow_to_chain_test_methods()
+        {
+            Source.From(Enumerable.Range(1, 2))
+                .RunWith(this.SinkProbe<int>(), _materializer)
+                .Request(2)
+                .ExpectNextChaining<int>(i => i == 1)
+                .ExpectNext(2);
+        }
+
+        [Fact]
+        public void TestSInk_Probe_ExpectNextChaining_should_fail_with_wrong_element()
+        {
+            Record.Exception(() =>
+            {
+                Source.Single(1)
+                    .RunWith(this.SinkProbe<int>(), _materializer)
+                    .Request(1)
+                    .ExpectNextChaining<int>(i => i == 2);
+            }).Message.ShouldStartWith("Got a message of the expected type");
+        }
+
+        [Fact]
         public void TestSink_Probe_ExpectNextN_given_a_number_of_elements()
         {
             Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), _materializer)
