@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
@@ -1870,6 +1871,28 @@ namespace Akka.Streams.Dsl.Internal
                 var r = builder.From(shape);
                 r.To(zip.In1);
                 return new FlowShape<T1, T3>(zip.In0, zip.Out);
+            });
+        }
+
+        /// <summary>
+        /// Combine the elements of current flow into a stream of tuples consisting
+        /// of all elements paired with their index. Indices start at 0.
+        /// 
+        /// <para/>
+        /// Emits when upstream emits an element and is paired with their index
+        /// <para/>
+        /// Backpressures when downstream backpressures
+        /// <para/>
+        /// Completes when upstream completes
+        /// <para/>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static IFlow<Tuple<T1, long>, TMat> ZipWithIndex<T1, TMat>(this IFlow<T1, TMat> flow)
+        {
+            return flow.StatefulSelectMany<T1, Tuple<T1, long>, TMat>(() =>
+            {
+                var index = 0L;
+                return element => new[] {Tuple.Create(element, index++)};
             });
         }
 

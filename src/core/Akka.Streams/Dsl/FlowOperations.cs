@@ -1379,6 +1379,24 @@ namespace Akka.Streams.Dsl
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.MergeMany(flow, breadth, flatten);
         }
+        
+        /// <summary>
+        /// Combine the elements of current flow into a stream of tuples consisting
+        /// of all elements paired with their index. Indices start at 0.
+        /// 
+        /// <para/>
+        /// Emits when upstream emits an element and is paired with their index
+        /// <para/>
+        /// Backpressures when downstream backpressures
+        /// <para/>
+        /// Completes when upstream completes
+        /// <para/>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static Flow<TIn, Tuple<TOut, long>, TMat> ZipWithIndex<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow)
+        {
+            return (Flow<TIn, Tuple<TOut, long>, TMat>)InternalFlowOperations.ZipWithIndex(flow);
+        }
 
         /// <summary>
         /// If the first element has not passed through this stage before the provided timeout, the stream is failed

@@ -3,12 +3,12 @@ layout: docs.hbs
 title: Overview of built-in stages and their semantics
 ---
 
-#Source stages
+# Source stages
 These built-in sources are available from ``akka.stream.scaladsl.Source``:
 
 
 
-####FromEnumerator
+#### FromEnumerator
 
 Stream the values from an ``Enumerator``, requesting the next value when there is demand. The enumerator will be created anew
 for each materialization, which is the reason the method takes a function rather than an enumerator directly.
@@ -19,7 +19,7 @@ If the enumerator perform blocking operations, make sure to run it on a separate
 
 **completes** when the enumerator reaches its end
 
-####From
+#### From
 
 Stream the values of an ``IEnumerable<T>``.
 
@@ -28,7 +28,7 @@ Stream the values of an ``IEnumerable<T>``.
 **completes** when the last element of the enumerable has been emitted
 
 
-####Single
+#### Single
 
 Stream a single object
 
@@ -36,7 +36,7 @@ Stream a single object
 
 **completes** when the single value has been emitted
 
-####Repeat
+#### Repeat
 
 Stream a single object repeatedly
 
@@ -44,7 +44,7 @@ Stream a single object repeatedly
 
 **completes** never
 
-####Cycle
+#### Cycle
 
 Stream iterator in cycled manner. Internally new iterator is being created to cycle the one provided via argument meaning
 when original iterator runs out of elements process will start all over again from the beginning of the iterator
@@ -55,7 +55,7 @@ exception.
 
 **completes** never
 
-####Tick
+#### Tick
 
 A periodical repetition of an arbitrary object. Delay of first tick is specified
 separately from interval of the following ticks.
@@ -64,7 +64,7 @@ separately from interval of the following ticks.
 
 **completes** never
 
-####FromTask
+#### FromTask
 
 Send the single value of the ``Task`` when it completes and there is demand.
 If the task fails the stream is failed with that exception.
@@ -73,7 +73,7 @@ If the task fails the stream is failed with that exception.
 
 **completes** after the task has completed
 
-####Unfold
+#### Unfold
 
 Stream the result of a function as long as it returns not ``null``, the value inside the option
 consists of a tuple where the first value is a state passed back into the next call to the function allowing
@@ -85,7 +85,7 @@ Can be used to implement many stateful sources without having to touch the more 
 
 **completes** when the unfold function returns an null value
 
-####UnfoldAsync
+#### UnfoldAsync
 
 Just like ``Unfold`` but the fold function returns a ``Task`` which will cause the source to
 complete or emit when it completes.
@@ -96,7 +96,7 @@ Can be used to implement many stateful sources without having to touch the more 
 
 **completes** when the task returned by the unfold function completes with an null value
 
-####Empty
+#### Empty
 
 Complete right away without ever emitting any elements. Useful when you have to provide a source to
 an API but there are no elements to emit.
@@ -105,7 +105,7 @@ an API but there are no elements to emit.
 
 **completes** directly
 
-####Maybe
+#### Maybe
 
 Materialize a ``TaskCompletionSource<T>`` that if completed with a ``T`` will emit that `T` and then complete
 the stream, or if completed with ``null`` complete the stream right away.
@@ -114,7 +114,7 @@ the stream, or if completed with ``null`` complete the stream right away.
 
 **completes** after emitting not null value, or directly if the promise is completed with null value
 
-####Failed
+#### Failed
 
 Fail directly with a user specified exception.
 
@@ -122,7 +122,7 @@ Fail directly with a user specified exception.
 
 **completes** fails the stream directly with the given exception
 
-####ActorPublisher
+#### ActorPublisher
 
 Wrap an actor extending ``ActorPublisher`` as a source.
 
@@ -130,7 +130,7 @@ Wrap an actor extending ``ActorPublisher`` as a source.
 
 **completes** when the actor stops
 
-####ActorRef
+#### ActorRef
 
 Materialize an ``IActorRef``, sending messages to it will emit them on the stream. The actor contain
 a buffer but since communication is one way, there is no back pressure. Handling overflow is done by either dropping
@@ -140,7 +140,7 @@ elements or failing the stream, the strategy is chosen by the user.
 
 **completes** when the actorref is sent ``Akka.Actor.Status.Success`` or ``PoisonPill``
 
-####Combine
+#### Combine
 
 Combine several sources, using a given strategy such as merge or concat, into one source.
 
@@ -148,7 +148,7 @@ Combine several sources, using a given strategy such as merge or concat, into on
 
 **completes** when all sources has completed
 
-####UnfoldResource
+#### UnfoldResource
 
 Wrap any resource that can be opened, queried for next element (in a blocking way) and closed using three distinct functions into a source.
 
@@ -156,7 +156,7 @@ Wrap any resource that can be opened, queried for next element (in a blocking wa
 
 **completes**  when read function returns ``None``
 
-####UnfoldResourceAsync
+#### UnfoldResourceAsync
 
 Wrap any resource that can be opened, queried for next element (in a blocking way) and closed using three distinct functions into a source.
 Functions return ``Task`` to achieve asynchronous processing
@@ -165,7 +165,7 @@ Functions return ``Task`` to achieve asynchronous processing
 
 **completes** when ``Task`` from read function returns ``None``
 
-####Queue
+#### Queue
 
 Materialize a ``SourceQueue`` onto which elements can be pushed for emitting from the source. The queue contains
 a buffer, if elements are pushed onto the queue faster than the source is consumed the overflow will be handled with
@@ -176,17 +176,17 @@ a strategy specified by the user. Functionality for tracking when an element has
 
 **completes** when downstream completes
 
-####AsSubscriber
+#### AsSubscriber
 
 Integration with Reactive Streams, materializes into a ``Reactive.Streams.ISubscriber``.
 
 
-####FromPublisher
+#### FromPublisher
 
 Integration with Reactive Streams, subscribes to a ``Reactive.Streams.IPublisher``.
 
 
-####ZipN
+#### ZipN
 
 Combine the elements of multiple streams into a stream of sequences.
 
@@ -195,7 +195,7 @@ Combine the elements of multiple streams into a stream of sequences.
 **completes** when any upstream completes
 
 
-####ZipWithN
+#### ZipWithN
 
 Combine the elements of multiple streams into a stream of sequences using a combiner function.
 
@@ -204,12 +204,12 @@ Combine the elements of multiple streams into a stream of sequences using a comb
 **completes** when any upstream completes
 
 
-#Sink stages
+# Sink stages
 
 These built-in sinks are available from ``Akka.Stream.DSL.Sink``:
 
 
-####First
+#### First
 
 Materializes into a ``Task`` which completes with the first value arriving,
 after this the stream is canceled. If no element is emitted, the task is be failed.
@@ -218,7 +218,7 @@ after this the stream is canceled. If no element is emitted, the task is be fail
 
 **backpressures** never
 
-####FirstOrDefault
+#### FirstOrDefault
 Materializes into a ``Task<T>`` which completes with the first value arriving,
 or a ``default(T)`` if the stream completes without any elements emitted.
 
@@ -226,7 +226,7 @@ or a ``default(T)`` if the stream completes without any elements emitted.
 
 **backpressures** never
 
-####Last
+#### Last
 
 Materializes into a ``Task`` which will complete with the last value emitted when the stream
 completes. If the stream completes with no elements the task is failed.
@@ -235,7 +235,7 @@ completes. If the stream completes with no elements the task is failed.
 
 **backpressures** never
 
-####LasrOrDefault
+#### LasrOrDefault
 
 Materialize a ``Task<T>`` which completes with the last value
 emitted when the stream completes. if the stream completes with no elements the task is
@@ -245,7 +245,7 @@ completed with default(T).
 
 **backpressures** never
 
-####Ignore
+#### Ignore
 
 Consume all elements but discards them. Useful when a stream has to be consumed but there is no use to actually
 do anything with the elements.
@@ -254,13 +254,13 @@ do anything with the elements.
 
 **backpressures** never
 
-####Cancelled
+#### Cancelled
 
 Immediately cancel the stream
 
 **cancels** immediately
 
-####Seq
+#### Seq
 
 Collect values emitted from the stream into a collection, the collection is available through a ``Task`` or
 which completes when the stream completes. Note that the collection is bounded to ``int.MaxValue``,
@@ -268,7 +268,7 @@ if more element are emitted the sink will cancel the stream
 
 **cancels** If too many values are collected
 
-####Foreach
+#### Foreach
 
 Invoke a given procedure for each element received. Note that it is not safe to mutate shared state from the procedure.
 
@@ -282,7 +282,7 @@ Note that it is not safe to mutate state from the procedure.
 **backpressures** when the previous procedure invocation has not yet completed
 
 
-####ForeachParallel
+#### ForeachParallel
 
 Like ``Foreach`` but allows up to ``parallellism`` procedure calls to happen in parallel.
 
@@ -291,7 +291,7 @@ Like ``Foreach`` but allows up to ``parallellism`` procedure calls to happen in 
 **backpressures** when the previous parallel procedure invocations has not yet completed
 
 
-####OnComplete
+#### OnComplete
 
 Invoke a callback when the stream has completed or failed.
 
@@ -300,7 +300,7 @@ Invoke a callback when the stream has completed or failed.
 **backpressures** never
 
 
-####Aggregate
+#### Aggregate
 
 Fold over emitted element with a function, where each invocation will get the new element and the result from the
 previous fold invocation. The first invocation will be provided the ``zero`` value.
@@ -314,7 +314,7 @@ between invocations.
 
 **backpressures** when the previous fold function invocation has not yet completed
 
-####Sum
+#### Sum
 
 Apply a reduction function on the incoming elements and pass the result to the next invocation. The first invocation
 receives the two first elements of the flow.
@@ -326,7 +326,7 @@ Materializes into a task that will be completed by the last result of the reduct
 **backpressures** when the previous reduction function invocation has not yet completed
 
 
-####Combine
+#### Combine
 
 Combine several sinks into one using a user specified strategy
 
@@ -335,7 +335,7 @@ Combine several sinks into one using a user specified strategy
 **backpressures** depends on the strategy
 
 
-####ActorRef
+#### ActorRef
 
 Send the elements from the stream to an ``IActorRef``. No backpressure so care must be taken to not overflow the inbox.
 
@@ -344,7 +344,7 @@ Send the elements from the stream to an ``IActorRef``. No backpressure so care m
 **backpressures** never
 
 
-####ActorRefWithAck
+#### ActorRefWithAck
 
 Send the elements from the stream to an ``IActorRef`` which must then acknowledge reception after completing a message,
 to provide back pressure onto the sink.
@@ -354,7 +354,7 @@ to provide back pressure onto the sink.
 **backpressures** when the actor acknowledgement has not arrived
 
 
-####ActorSubscriber
+#### ActorSubscriber
 
 Create an actor from a ``Props`` upon materialization, where the actor implements ``ActorSubscriber``, which will
 receive the elements from the stream.
@@ -366,25 +366,25 @@ Materializes into an ``IActorRef`` to the created actor.
 **backpressures** depends on the actor implementation
 
 
-####AsPublisher
+#### AsPublisher
 
 Integration with Reactive Streams, materializes into a ``Reactive.Streams.IPublisher``.
 
 
-####FromSubscriber
+#### FromSubscriber
 
 Integration with Reactive Streams, wraps a ``Reactive.Streams.ISubscriber`` as a sink
 
 
 
 
-#Additional Sink and Source converters
+# Additional Sink and Source converters
 
 Sources and sinks for integrating with ``System.IO.Stream`` can be found on
 ``StreamConverters``. As they are blocking APIs the implementations of these stages are run on a separate
 dispatcher configured through the ``akka.stream.blocking-io-dispatcher``.
 
-####FromOutputStream
+#### FromOutputStream
 
 Create a sink that wraps an ``Stream``. Takes a function that produces an ``Stream``, when the sink is
 materialized the function will be called and bytes sent to the sink will be written to the returned ``Stream``.
@@ -398,7 +398,7 @@ to handle multiple invocations.
 The ``Stream`` will be closed when the stream that flows into the ``Sink`` is completed, and the ``Sink``
 will cancel its inflow when the ``Stream`` is no longer writable.
 
-####AsInputStream
+#### AsInputStream
 
 Create a sink which materializes into an ``Stream`` that can be read to trigger demand through the sink.
 Bytes emitted through the stream will be available for reading through the ``Stream``
@@ -406,7 +406,7 @@ Bytes emitted through the stream will be available for reading through the ``Str
 The ``Stream`` will be ended when the stream flowing into this ``Sink`` completes, and the closing the
 ``Stream`` will cancel the inflow of this ``Sink``.
 
-####FromInputStream
+#### FromInputStream
 
 Create a source that wraps an ``Stream``. Takes a function that produces an ``Stream``, when the source is
 materialized the function will be called and bytes from the ``Stream`` will be emitted into the stream.
@@ -420,7 +420,7 @@ to handle multiple invocations.
 The ``Stream`` will be closed when the ``Source`` is canceled from its downstream, and reaching the end of the
 ``Stream`` will complete the ``Source``.
 
-####AsOutputStream
+#### AsOutputStream
 
 Create a source that materializes into an ``Stream``. When bytes are written to the ``Stream`` they
 are emitted from the source
@@ -432,12 +432,12 @@ File IO Sinks and Sources
 -------------------------
 Sources and sinks for reading and writing files can be found on ``FileIO``.
 
-####FromFile
+#### FromFile
 
 Emit the contents of a file, as ``ByteString`` s, materializes into a ``Task`` which will be completed with
 a ``IOResult`` upon reaching the end of the file or if there is a failure.
 
-####ToFile
+#### ToFile
 
 Create a sink which will write incoming ``ByteString`` s to a given file.
 
@@ -467,7 +467,7 @@ However, these rate transformations are data-driven, i.e. it is the incoming ele
 rate is affected. This is in contrast with [Backpressure aware stages](#backpressure-aware-stages) which can change their processing behavior
 depending on being backpressured by downstream or not.
 
-####Select
+#### Select
 
 Transform each element in the stream by calling a mapping function with it and passing the returned value downstream.
 
@@ -477,7 +477,7 @@ Transform each element in the stream by calling a mapping function with it and p
 
 **completes** when upstream completes
 
-####SelectMany
+#### SelectMany
 
 Transform each element into zero or more elements that are individually passed downstream.
 
@@ -487,7 +487,7 @@ Transform each element into zero or more elements that are individually passed d
 
 **completes** when upstream completes and all remaining elements has been emitted
 
-####StatefulSelectMany
+#### StatefulSelectMany
 
 Transform each element into zero or more elements that are individually passed downstream. The difference to ``SelectMany`` is that
 the transformation function is created from a factory for every materialization of the flow.
@@ -498,7 +498,7 @@ the transformation function is created from a factory for every materialization 
 
 **completes** when upstream completes and all remaining elements has been emitted
 
-####Where
+#### Where
 
 Filter the incoming elements using a predicate. If the predicate returns true the element is passed downstream, if
 it returns false the element is discarded.
@@ -509,7 +509,7 @@ it returns false the element is discarded.
 
 **completes** when upstream completes
 
-####Collect
+#### Collect
 
 Apply a partial function to each incoming element, if the partial function is defined for a value the returned
 value is passed downstream. Can often replace ``Where`` followed by ``Select`` to achieve the same in one single stage.
@@ -520,7 +520,7 @@ value is passed downstream. Can often replace ``Where`` followed by ``Select`` t
 
 **completes** when upstream completes
 
-####Grouped
+#### Grouped
 
 Accumulate incoming events until the specified number of elements have been accumulated and then pass the collection of
 elements downstream.
@@ -531,7 +531,7 @@ elements downstream.
 
 **completes** when upstream completes
 
-####Sliding
+#### Sliding
 
 Provide a sliding window over the incoming stream and pass the windows as groups of elements downstream.
 
@@ -544,7 +544,7 @@ Note: the last window might be smaller than the requested size due to end of str
 **completes** when upstream completes
 
 
-####Scan
+#### Scan
 
 Emit its current value which starts at ``zero`` and then applies the current and next value to the given function
 emitting the next current value.
@@ -558,7 +558,7 @@ the second element is required from downstream.
 
 **completes** when upstream completes
 
-####Aggregate
+#### Aggregate
 
 Start with current value ``zero`` and then apply the current and next value to the given function, when upstream
 complete the current value is emitted downstream.
@@ -569,7 +569,7 @@ complete the current value is emitted downstream.
 
 **completes** when upstream completes
 
-####Skip
+#### Skip
 
 Skip ``n`` elements and then pass any subsequent element downstream.
 
@@ -579,7 +579,7 @@ Skip ``n`` elements and then pass any subsequent element downstream.
 
 **completes** when upstream completes
 
-####Take
+#### Take
 
 Pass ``n`` incoming elements downstream and then complete
 
@@ -590,7 +590,7 @@ Pass ``n`` incoming elements downstream and then complete
 **completes** when the defined number of elements has been taken or upstream completes
 
 
-####TakeWhile
+#### TakeWhile
 
 Pass elements downstream as long as a predicate function return true for the element include the element
 when the predicate first return false and then complete.
@@ -601,7 +601,7 @@ when the predicate first return false and then complete.
 
 **completes** when predicate returned false or upstream completes
 
-####SkipWhile
+#### SkipWhile
 
 Skip elements as long as a predicate function return true for the element
 
@@ -611,7 +611,7 @@ Skip elements as long as a predicate function return true for the element
 
 **completes** when upstream completes
 
-####Recover
+#### Recover
 
 Allow sending of one last element downstream when a failure has happened upstream.
 
@@ -621,7 +621,7 @@ Allow sending of one last element downstream when a failure has happened upstrea
 
 **completes** when upstream completes or upstream failed with exception pf can handle
 
-####RecoverWith
+#### RecoverWith
 
 Allow switching to alternative Source when a failure has happened upstream.
 
@@ -631,7 +631,7 @@ Allow switching to alternative Source when a failure has happened upstream.
 
 **completes** upstream completes or upstream failed with exception pf can handle
 
-####Detach
+#### Detach
 
 Detach upstream demand from downstream demand without detaching the stream rates.
 
@@ -642,7 +642,7 @@ Detach upstream demand from downstream demand without detaching the stream rates
 **completes** when upstream completes
 
 
-####Throttle
+#### Throttle
 
 Limit the throughput to a specific number of elements per time unit, or a specific total cost per time unit, where
 a function has to be provided to calculate the individual cost of each element.
@@ -654,13 +654,13 @@ a function has to be provided to calculate the individual cost of each element.
 **completes** when upstream completes
 
 
-#Asynchronous processing stages
+# Asynchronous processing stages
 
 These stages encapsulate an asynchronous computation, properly handling backpressure while taking care of the asynchronous
 operation at the same time (usually handling the completion of a Task).
 
 
-####SelectAsync
+#### SelectAsync
 
 Pass incoming elements to a function that return a ``Task`` result. When the task arrives the result is passed
 downstream. Up to ``n`` elements can be processed concurrently, but regardless of their completion time the incoming
@@ -674,7 +674,7 @@ If a Task fails, the stream also fails (unless a different supervision strategy 
 
 **completes** when upstream completes and all tasks has been completed and all elements has been emitted
 
-####SelectAsyncUnordered
+#### SelectAsyncUnordered
 
 Like ``SelectAsync`` but ``Task`` results are passed downstream as they arrive regardless of the order of the elements
 that triggered them.
@@ -688,11 +688,11 @@ If a Task fails, the stream also fails (unless a different supervision strategy 
 **completes** upstream completes and all tasks has been completed  and all elements has been emitted
 
 
-#Timer driven stages
+# Timer driven stages
 
 These stages process elements using timers, delaying, dropping or grouping elements for certain time durations.
 
-####TakeWithin
+#### TakeWithin
 
 Pass elements downstream within a timeout and then complete.
 
@@ -703,7 +703,7 @@ Pass elements downstream within a timeout and then complete.
 **completes** upstream completes or timer fires
 
 
-####SkipWithin
+#### SkipWithin
 
 Skip elements until a timeout has fired
 
@@ -713,7 +713,7 @@ Skip elements until a timeout has fired
 
 **completes** upstream completes
 
-####GroupedWithin
+#### GroupedWithin
 
 Chunk up the stream into groups of elements received within a time window, or limited by the given number of elements,
 whichever happens first.
@@ -725,7 +725,7 @@ whichever happens first.
 **completes** when upstream completes
 
 
-####InitialDelay
+#### InitialDelay
 
 Delay the initial element by a user specified duration from stream materialization.
 
@@ -736,7 +736,7 @@ Delay the initial element by a user specified duration from stream materializati
 **completes** when upstream completes
 
 
-####Delay
+#### Delay
 
 Delay every element passed through with a specific duration.
 
@@ -747,11 +747,11 @@ Delay every element passed through with a specific duration.
 **completes** when upstream completes and buffered elements has been drained
 
 
-#Backpressure aware stages
+# Backpressure aware stages
 
 These stages are aware of the backpressure provided by their downstreams and able to adapt their behavior to that signal.
 
-####Conflate
+#### Conflate
 
 Allow for a slower downstream by passing incoming elements and a summary into an aggregate function as long as
 there is backpressure. The summary value must be of the same type as the incoming elements, for example the sum or
@@ -763,7 +763,7 @@ average of incoming numbers, if aggregation should lead to a different type ``Co
 
 **completes** when upstream completes
 
-####ConflateWithSeed
+#### ConflateWithSeed
 
 Allow for a slower downstream by passing incoming elements and a summary into an aggregate function as long as there
 is backpressure. When backpressure starts or there is no backpressure element is passed into a ``seed`` function to
@@ -775,7 +775,7 @@ transform it to the summary type.
 
 **completes** when upstream completes
 
-####Batch
+#### Batch
 
 Allow for a slower downstream by passing incoming elements and a summary into an aggregate function as long as there
 is backpressure and a maximum number of batched elements is not yet reached. When the maximum number is reached and
@@ -794,7 +794,7 @@ aggregated to the batched value.
 **completes** when upstream completes and a "possibly pending" element was drained
 
 
-####BatchWeighted
+#### BatchWeighted
 
 Allow for a slower downstream by passing incoming elements and a summary into an aggregate function as long as there
 is backpressure and a maximum weight batched elements is not yet reached. The weight of each element is determined by
@@ -810,7 +810,7 @@ aggregated to the batched value.
 
 **completes** upstream completes and a "possibly pending" element was drained
 
-####Expand
+#### Expand
 
 Allow for a faster downstream by expanding the last incoming element to an ``Enumerator``
 
@@ -820,7 +820,7 @@ Allow for a faster downstream by expanding the last incoming element to an ``Enu
 
 **completes** when upstream completes
 
-####Buffer (Backpressure)
+#### Buffer (Backpressure)
 
 Allow for a temporarily faster upstream events by buffering ``size`` elements. When the buffer is full backpressure
 is applied.
@@ -831,7 +831,7 @@ is applied.
 
 **completes** when upstream completes and buffered elements has been drained
 
-####Buffer (Drop)
+#### Buffer (Drop)
 
 Allow for a temporarily faster upstream events by buffering ``size`` elements. When the buffer is full elements are
 dropped according to the specified ``OverflowStrategy``:
@@ -847,7 +847,7 @@ dropped according to the specified ``OverflowStrategy``:
 
 **completes** upstream completes and buffered elements has been drained
 
-####Buffer (Fail)
+#### Buffer (Fail)
 
 Allow for a temporarily faster upstream events by buffering ``size`` elements. When the buffer is full the stage fails
 the flow with a ``BufferOverflowException``.
@@ -859,12 +859,12 @@ the flow with a ``BufferOverflowException``.
 **completes** when upstream completes and buffered elements has been drained
 
 
-#Nesting and flattening stages
+# Nesting and flattening stages
 
 These stages either take a stream and turn it into a stream of streams (nesting) or they take a stream that contains
 nested streams and turn them into a stream of elements instead (flattening).
 
-#PrefixAndTail
+# PrefixAndTail
 
 Take up to `n` elements from the stream (less than `n` only if the upstream completes before emitting `n` elements)
 and returns a pair containing a strict sequence of the taken element and a stream representing the remaining elements.
@@ -876,7 +876,7 @@ and returns a pair containing a strict sequence of the taken element and a strea
 **completes** when prefix elements has been consumed and substream has been consumed
 
 
-####GroupBy
+#### GroupBy
 
 Demultiplex the incoming stream into separate output streams.
 
@@ -885,7 +885,7 @@ there is an element pending for a group whose substream backpressures
 
 **completes** when upstream completes (Until the end of stream it is not possible to know whether new substreams will be needed or not)
 
-####SplitWhen
+#### SplitWhen
 
 Split off elements into a new substream whenever a predicate function return ``true``.
 
@@ -895,7 +895,7 @@ Split off elements into a new substream whenever a predicate function return ``t
 
 **completes** when upstream completes (Until the end of stream it is not possible to know whether new substreams will be needed or not)
 
-####SplitAfter
+#### SplitAfter
 
 End the current substream whenever a predicate returns ``true``, starting a new substream for the next element.
 
@@ -905,7 +905,7 @@ End the current substream whenever a predicate returns ``true``, starting a new 
 
 **completes** when upstream completes (Until the end of stream it is not possible to know whether new substreams will be needed or not)
 
-####ConcatMany
+#### ConcatMany
 
 Transform each input element into a ``Source`` whose elements are then flattened into the output stream through
 concatenation. This means each source is fully consumed before consumption of the next source starts.
@@ -917,7 +917,7 @@ concatenation. This means each source is fully consumed before consumption of th
 **completes** when upstream completes and all consumed substreams complete
 
 
-####MergeMany
+#### MergeMany
 
 Transform each input element into a ``Source`` whose elements are then flattened into the output stream through
 merging. The maximum number of merged sources has to be specified.
@@ -929,11 +929,11 @@ merging. The maximum number of merged sources has to be specified.
 **completes** when upstream completes and all consumed substreams complete
 
 
-#Time aware stages
+# Time aware stages
 
 Those stages operate taking time into consideration.
 
-####InitialTimeout
+#### InitialTimeout
 
 If the first element has not passed through this stage before the provided timeout, the stream is failed
 with a ``TimeoutException``.
@@ -946,7 +946,7 @@ with a ``TimeoutException``.
 
 **cancels** when downstream cancels
 
-####CompletionTimeout
+#### CompletionTimeout
 
 If the completion of the stream does not happen until the provided timeout, the stream is failed
 with a ``TimeoutException``.
@@ -959,7 +959,7 @@ with a ``TimeoutException``.
 
 **cancels** when downstream cancels
 
-####IdleTimeout
+#### IdleTimeout
 
 If the time between two processed elements exceeds the provided timeout, the stream is failed
 with a ``TimeoutException``. The timeout is checked periodically, so the resolution of the
@@ -973,7 +973,7 @@ check is one period (equals to timeout value).
 
 **cancels** when downstream cancels
 
-####BackpressureTimeout
+#### BackpressureTimeout
 
 If the time between the emission of an element and the following downstream demand exceeds the provided timeout,
 the stream is failed with a ``TimeoutException``. The timeout is checked periodically, so the resolution of the
@@ -987,7 +987,7 @@ check is one period (equals to timeout value).
 
 **cancels** when downstream cancels
 
-####KeepAlive
+#### KeepAlive
 
 Injects additional (configured) elements if upstream does not emit for a configured amount of time.
 
@@ -999,7 +999,7 @@ Injects additional (configured) elements if upstream does not emit for a configu
 
 **cancels** when downstream cancels
 
-####InitialDelay
+#### InitialDelay
 
 Delays the initial element by the specified duration.
 
@@ -1012,12 +1012,12 @@ Delays the initial element by the specified duration.
 **cancels** when downstream cancels
 
 
-#Fan-in stages
+# Fan-in stages
 
 These stages take multiple streams as their input and provide a single output combining the elements from all of
 the inputs in different ways.
 
-####Merge
+#### Merge
 
 Merge multiple sources. Picks elements randomly if all sources has elements ready.
 
@@ -1027,7 +1027,7 @@ Merge multiple sources. Picks elements randomly if all sources has elements read
 
 **completes** when all upstreams complete (This behavior is changeable to completing when any upstream completes by setting ``eagerComplete=true``.)
 
-####MergeSorted
+#### MergeSorted
 
 Merge multiple sources. Waits for one element to be ready from each input stream and emits the
 smallest element.
@@ -1038,7 +1038,7 @@ smallest element.
 
 **completes** when all upstreams complete
 
-####Zip
+#### Zip
 
 Combines elements from each of multiple sources into tuples and passes the tuples downstream.
 
@@ -1048,7 +1048,7 @@ Combines elements from each of multiple sources into tuples and passes the tuple
 
 **completes** when any upstream completes
 
-####ZipWith
+#### ZipWith
 
 Combines elements from multiple sources through a ``combine`` function and passes the
 returned value downstream.
@@ -1057,9 +1057,19 @@ returned value downstream.
 
 **backpressures** when downstream backpressures
 
+**completes** when any upstream completes  
+
+#### ZipWithIndex
+
+Zips elements of current flow with its indices.
+
+**emits** when upstream emits an element and is paired with their index
+
+**backpressures** when downstream backpressures
+
 **completes** when any upstream completes
 
-####Concat
+#### Concat
 
 After completion of the original upstream the elements of the given source will be emitted.
 
@@ -1069,7 +1079,7 @@ After completion of the original upstream the elements of the given source will 
 
 **completes** when all upstreams complete
 
-####Prepend
+#### Prepend
 
 Prepends the given source to the flow, consuming it until completion before the original source is consumed.
 
@@ -1081,7 +1091,7 @@ If materialized values needs to be collected ``prependMat`` is available.
 
 **completes** when all upstreams complete
 
-####OrElse
+#### OrElse
 
 If the primary source completes without emitting any elements, the elements from the secondary source
 are emitted. If the primary source emits any elements the secondary source is cancelled.
@@ -1099,7 +1109,7 @@ is available from the second stream
 **completes** the primary stream completes after emitting at least one element, when the primary stream completes
 without emitting and the secondary stream already has completed or when the secondary stream completes
 
-####Interleave
+#### Interleave
 
 Emits a specifiable number of elements from the original source, then from the provided source and repeats. If one
 source completes the rest of the other stream will be emitted.
@@ -1110,12 +1120,12 @@ source completes the rest of the other stream will be emitted.
 
 **completes** when both upstreams have completed
 
-#Fan-out stages
+# Fan-out stages
 
 These have one input and multiple outputs. They might route the elements between different outputs, or emit elements on
 multiple outputs at the same time.
 
-####Unzip
+#### Unzip
 
 Takes a stream of two element tuples and unzips the two elements into two different downstreams.
 
@@ -1125,7 +1135,7 @@ Takes a stream of two element tuples and unzips the two elements into two differ
 
 **completes** when upstream completes
 
-####UnzipWith
+#### UnzipWith
 
 Splits each element of input into multiple downstreams using a function
 
@@ -1135,7 +1145,7 @@ Splits each element of input into multiple downstreams using a function
 
 **completes** when upstream completes
 
-####broadcast
+#### broadcast
 
 Emit each incoming element each of ``n`` outputs.
 
@@ -1145,7 +1155,7 @@ Emit each incoming element each of ``n`` outputs.
 
 **completes** when upstream completes
 
-####Balance
+#### Balance
 
 Fan-out the stream to several streams. Each upstream element is emitted to the first available downstream consumer.
 
@@ -1156,9 +1166,9 @@ Fan-out the stream to several streams. Each upstream element is emitted to the f
 **completes** when upstream completes
 
 
-#Watching status stages
+# Watching status stages
 
-####WatchTermination
+#### WatchTermination
 
 Materializes to a ``Task`` that will be completed with Done or failed depending whether the upstream of the stage has been completed or failed.
 The stage otherwise passes through elements unchanged.
@@ -1170,7 +1180,7 @@ The stage otherwise passes through elements unchanged.
 **completes** when upstream completes
 
 
-####Monitor
+#### Monitor
 
 Materializes to a ``FlowMonitor`` that monitors messages flowing through or completion of the stage. The stage otherwise
 passes through elements unchanged. Note that the ``FlowMonitor`` inserts a memory barrier every time it processes an

@@ -274,6 +274,10 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes ZipWithN = Attributes.CreateName("zipWithN");
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly Attributes ZipWithIndex = Attributes.CreateName("zipWithIndex");
 
         /// <summary>
         /// TBD
