@@ -366,9 +366,9 @@ namespace Akka.Streams.Dsl.Internal
 
         /// <summary>
         /// Terminate processing (and cancel the upstream publisher) after <paramref name="predicate"/>
-        /// returns false for the first time. Due to input buffering some elements may have been
-        /// requested from upstream publishers that will then not be processed downstream
-        /// of this step.
+        /// returns false for the first time, including the first failed element iff inclusive is true
+        /// Due to input buffering some elements may have been requested from upstream publishers
+        /// that will then not be processed downstream of this step.
         /// 
         /// The stream will be completed without producing any elements if <paramref name="predicate"/> is false for
         /// the first stream element.
@@ -377,18 +377,20 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Backpressures when downstream backpressures
         /// <para>
-        /// Completes when <paramref name="predicate"/> returned false or upstream completes
+        /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
         /// </para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
+        /// </para>
+        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
+        public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate, bool inclusive)
         {
-            return flow.Via(new Fusing.TakeWhile<T>(predicate));
+            return flow.Via(new Fusing.TakeWhile<T>(predicate, inclusive));
         }
 
         /// <summary>

@@ -223,7 +223,12 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_stage._predicate(element))
                         Push(_stage.Outlet, element);
                     else
+                    {
+                        if (_stage._inclusive)
+                            Push(_stage.Outlet, element);
+
                         CompleteStage();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -242,13 +247,15 @@ namespace Akka.Streams.Implementation.Fusing
         #endregion
 
         private readonly Predicate<T> _predicate;
+        private readonly bool _inclusive;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="predicate">TBD</param>
-        public TakeWhile(Predicate<T> predicate)
+        public TakeWhile(Predicate<T> predicate, bool inclusive)
         {
+            _inclusive = inclusive;
             _predicate = predicate;
         }
 
@@ -266,10 +273,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "TakeWhile";
     }

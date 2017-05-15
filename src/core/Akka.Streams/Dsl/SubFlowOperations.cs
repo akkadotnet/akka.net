@@ -349,9 +349,9 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Terminate processing (and cancel the upstream publisher) after <paramref name="predicate"/>
-        /// returns false for the first time. Due to input buffering some elements may have been
-        /// requested from upstream publishers that will then not be processed downstream
-        /// of this step.
+        /// returns false for the first time, including the first failed element iff inclusive is true
+        /// Due to input buffering some elements may have been requested from upstream publishers
+        /// that will then not be processed downstream of this step.
         /// 
         /// The stream will be completed without producing any elements if <paramref name="predicate"/> is false for
         /// the first stream element.
@@ -360,19 +360,20 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Backpressures when downstream backpressures
         /// <para>
-        /// Completes when <paramref name="predicate"/> returned false or upstream completes
+        /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
         /// </para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
+        /// </para>
+        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
         /// <returns>TBD</returns>
-        public static SubFlow<TOut, TMat, TClosed> TakeWhile<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate)
+        public static SubFlow<TOut, TMat, TClosed> TakeWhile<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
-            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.TakeWhile(flow, predicate);
+            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.TakeWhile(flow, predicate, inclusive);
         }
 
         /// <summary>
