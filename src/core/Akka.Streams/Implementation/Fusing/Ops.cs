@@ -1141,12 +1141,7 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     _aggregating = _stage._aggregate(_aggregator, Grab(_stage.In));
-                    if (_aggregating.IsCompleted)
-                        _taskCallback(Result.FromTask(_aggregating));
-                    else
-                        _aggregating.ContinueWith(t => _taskCallback(Result.FromTask(t)),
-                            TaskContinuationOptions.ExecuteSynchronously);
-
+                    HandleAggregatingValue();
                 }
                 catch (Exception ex)
                 {
@@ -1166,8 +1161,15 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            public override void OnUpstreamFinish()
+            public override void OnUpstreamFinish() => HandleAggregatingValue();
+
+            private void HandleAggregatingValue()
             {
+                if (_aggregating.IsCompleted)
+                    _taskCallback(Result.FromTask(_aggregating));
+                else
+                    _aggregating.ContinueWith(t => _taskCallback(Result.FromTask(t)),
+                        TaskContinuationOptions.ExecuteSynchronously);
             }
 
             public override void OnPull()
