@@ -431,7 +431,7 @@ namespace Akka.Streams.Actors
         /// <returns>TBD</returns>
         public State Get(IActorRef actorRef)
         {
-            _state.TryGetValue(actorRef, out State state);
+            _state.TryGetValue(actorRef, out var state);
             return state;
         }
 

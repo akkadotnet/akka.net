@@ -489,7 +489,7 @@ namespace Akka.DistributedData.Internal
                 var mergedRemovedNodePruning = other.Pruning;
                 foreach (var kvp in Pruning)
                 {
-                    var contains = mergedRemovedNodePruning.TryGetValue(kvp.Key, out PruningState value);
+                    var contains = mergedRemovedNodePruning.TryGetValue(kvp.Key, out var value);
                     mergedRemovedNodePruning = mergedRemovedNodePruning.SetItem(kvp.Key, !contains ? kvp.Value : value.Merge(kvp.Value));
                 }
                 var envelope = new DataEnvelope(Cleaned(Data, mergedRemovedNodePruning), mergedRemovedNodePruning);

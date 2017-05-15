@@ -51,7 +51,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public bool IsAvailable(T resource)
         {
-            if (ResourceToFailureDetector.TryGetValue(resource, out FailureDetector failureDetector))
+            if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
                 return failureDetector.IsAvailable;
             return true;
         }
@@ -63,7 +63,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public bool IsMonitoring(T resource)
         {
-            if (ResourceToFailureDetector.TryGetValue(resource, out FailureDetector failureDetector))
+            if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
                 return failureDetector.IsMonitoring;
             return false;
         }
@@ -74,7 +74,7 @@ namespace Akka.Remote
         /// <param name="resource">TBD</param>
         public void Heartbeat(T resource)
         {
-            if (ResourceToFailureDetector.TryGetValue(resource, out FailureDetector failureDetector))
+            if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
                 failureDetector.HeartBeat();
             else
             {
@@ -141,7 +141,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         internal FailureDetector GetFailureDetector(T resource)
         {
-            ResourceToFailureDetector.TryGetValue(resource, out FailureDetector f);
+            ResourceToFailureDetector.TryGetValue(resource, out var f);
             return f;
         }
 

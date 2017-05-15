@@ -469,7 +469,7 @@ namespace Akka.DistributedData
 
         private ByteString GetDigest(string key)
         {
-            if(_dataEntries.TryGetValue(key, out Tuple<DataEnvelope, ByteString> value))
+            if(_dataEntries.TryGetValue(key, out var value))
             {
                 if (Equals(value.Item2, LazyDigest))
                 {
@@ -498,7 +498,7 @@ namespace Akka.DistributedData
 
         private DataEnvelope GetData(string key)
         {
-            if (!_dataEntries.TryGetValue(key, out Tuple<DataEnvelope, ByteString> value))
+            if (!_dataEntries.TryGetValue(key, out var value))
                 return null;
             return value.Item1;
         }
@@ -523,7 +523,7 @@ namespace Akka.DistributedData
             {
                 foreach (var key in _changed)
                 {
-                    if (_subscribers.TryGetValue(key, out HashSet<IActorRef> subs))
+                    if (_subscribers.TryGetValue(key, out var subs))
                         Notify(key, subs);
                 }
             }
@@ -535,7 +535,7 @@ namespace Akka.DistributedData
                 foreach (var kvp in _newSubscribers)
                 {
                     Notify(kvp.Key, kvp.Value);
-                    if (!_subscribers.TryGetValue(kvp.Key, out HashSet<IActorRef> set))
+                    if (!_subscribers.TryGetValue(kvp.Key, out var set))
                     {
                         set = new HashSet<IActorRef>();
                         _subscribers.Add(kvp.Key, set);
@@ -692,7 +692,7 @@ namespace Akka.DistributedData
 
         private void ReceiveSubscribe(IKey key, IActorRef subscriber)
         {
-            if (!_newSubscribers.TryGetValue(key.Id, out HashSet<IActorRef> set))
+            if (!_newSubscribers.TryGetValue(key.Id, out var set))
                 _newSubscribers[key.Id] = set = new HashSet<IActorRef>();
             set.Add(subscriber);
 
@@ -739,7 +739,7 @@ namespace Akka.DistributedData
 
                 foreach (var k in keys1)
                 {
-                    if (_subscribers.TryGetValue(k, out HashSet<IActorRef> set) && set.Remove(terminated) && set.Count == 0)
+                    if (_subscribers.TryGetValue(k, out var set) && set.Remove(terminated) && set.Count == 0)
                         _subscribers.Remove(k);
                 }
 
@@ -749,7 +749,7 @@ namespace Akka.DistributedData
 
                 foreach (var k in keys2)
                 {
-                    if (_newSubscribers.TryGetValue(k, out HashSet<IActorRef> set) && set.Remove(terminated) && set.Count == 0)
+                    if (_newSubscribers.TryGetValue(k, out var set) && set.Remove(terminated) && set.Count == 0)
                         _newSubscribers.Remove(k);
                 }
 

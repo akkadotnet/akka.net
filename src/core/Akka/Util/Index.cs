@@ -49,7 +49,7 @@ namespace Akka.Util
             // iterative spin-locking put
             do
             {
-                if (_container.TryGetValue(key, out ConcurrentSet<TValue> set))
+                if (_container.TryGetValue(key, out var set))
                 {
                     if (set.IsEmpty)
                         retry = true; //IF the set is empty then it has been removed, so signal retry
@@ -92,7 +92,7 @@ namespace Akka.Util
         /// <returns>The first <typeparamref name="TValue"/> matching <paramref name="predicate"/>. <c>default(TValue)</c> otherwise.</returns>
         public TValue FindValue(TKey key, Func<TValue, bool> predicate)
         {
-            if (_container.TryGetValue(key, out ConcurrentSet<TValue> set))
+            if (_container.TryGetValue(key, out var set))
                 return set.FirstOrDefault(predicate);
             return default(TValue);
         }
@@ -105,7 +105,7 @@ namespace Akka.Util
         {
             get
             {
-                if (_container.TryGetValue(index, out ConcurrentSet<TValue> set))
+                if (_container.TryGetValue(index, out var set))
                     return set;
                 return _emptySet;
             }
@@ -146,7 +146,7 @@ namespace Akka.Util
         /// <returns><c>true</c> if <paramref name="value"/> was removed. <c>false</c> otherwise.</returns>
         public bool Remove(TKey key, TValue value)
         {
-            if (_container.TryGetValue(key, out ConcurrentSet<TValue> set))
+            if (_container.TryGetValue(key, out var set))
             {
                 if (set.TryRemove(value)) // If we can remove the value
                 {

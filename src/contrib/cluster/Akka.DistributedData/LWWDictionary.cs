@@ -177,7 +177,7 @@ namespace Akka.DistributedData
         public LWWDictionary<TKey, TValue> SetItem(UniqueAddress node, TKey key, TValue value,
             Clock<TValue> clock = null)
         {
-            var newRegister = _underlying.TryGetValue(key, out LWWRegister<TValue> register)
+            var newRegister = _underlying.TryGetValue(key, out var register)
                 ? register.WithValue(node, value, clock ?? LWWRegister<TValue>.DefaultClock)
                 : new LWWRegister<TValue>(node, value, clock ?? LWWRegister<TValue>.DefaultClock);
 
@@ -207,7 +207,7 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public bool TryGetValue(TKey key, out TValue value)
         {
-            if (_underlying.TryGetValue(key, out LWWRegister<TValue> register))
+            if (_underlying.TryGetValue(key, out var register))
             {
                 value = register.Value;
                 return true;

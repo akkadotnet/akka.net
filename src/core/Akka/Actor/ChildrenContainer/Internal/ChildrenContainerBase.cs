@@ -161,7 +161,7 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
-            if (InternalChildren.TryGetValue(actor.Path.Name, out IChildStats stats))
+            if (InternalChildren.TryGetValue(actor.Path.Name, out var stats))
             {
                 //Since the actor exists, ChildRestartStats is the only valid ChildStats.
                 var crStats = stats as ChildRestartStats;

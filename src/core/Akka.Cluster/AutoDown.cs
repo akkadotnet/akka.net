@@ -279,7 +279,7 @@ namespace Akka.Cluster
 
         private void Remove(UniqueAddress node)
         {
-            if(_scheduledUnreachable.TryGetValue(node, out ICancelable source))
+            if(_scheduledUnreachable.TryGetValue(node, out var source))
                 source.Cancel();
             _scheduledUnreachable = _scheduledUnreachable.Remove(node);
             _pendingUnreachable = _pendingUnreachable.Remove(node);

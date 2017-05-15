@@ -843,7 +843,7 @@ namespace Akka.Actor
             if (DebugEvent)
                 _log.Debug($"setting {(repeat ? "repeating" : "")} timer {name}/{timeout}: {msg}");
 
-            if (_timers.TryGetValue(name, out Timer timer))
+            if (_timers.TryGetValue(name, out var timer))
                 timer.Cancel();
 
             timer = new Timer(name, msg, repeat, _timerGen.Next(), Context);
@@ -860,7 +860,7 @@ namespace Akka.Actor
             if (DebugEvent)
                 _log.Debug($"Cancelling timer {name}");
 
-            if (_timers.TryGetValue(name, out Timer timer))
+            if (_timers.TryGetValue(name, out var timer))
             {
                 timer.Cancel();
                 _timers.Remove(name);
@@ -1023,7 +1023,7 @@ namespace Akka.Actor
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
-            if (_stateFunctions.TryGetValue(name, out StateFunction stateFunction))
+            if (_stateFunctions.TryGetValue(name, out var stateFunction))
             {
                 _stateFunctions[name] = OrElse(stateFunction, function);
                 _stateTimeouts[name] = _stateTimeouts[name] ?? timeout;
@@ -1117,7 +1117,7 @@ namespace Akka.Actor
             var timer = message as Timer;
             if (timer != null)
             {
-                if (_timers.TryGetValue(timer.Name, out Timer oldTimer) && oldTimer.Generation == timer.Generation)
+                if (_timers.TryGetValue(timer.Name, out var oldTimer) && oldTimer.Generation == timer.Generation)
                 {
                     if (_timeoutFuture != null)
                     {

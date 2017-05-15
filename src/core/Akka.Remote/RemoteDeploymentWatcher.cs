@@ -35,7 +35,7 @@ namespace Akka.Remote
 
             Receive<Terminated>(t =>
             {
-                if (_supervisors.TryGetValue(t.ActorRef, out IInternalActorRef supervisor))
+                if (_supervisors.TryGetValue(t.ActorRef, out var supervisor))
                 {
                     // send extra DeathWatchNotification to the supervisor so that it will remove the child
                     supervisor.SendSystemMessage(new DeathWatchNotification(t.ActorRef, t.ExistenceConfirmed,

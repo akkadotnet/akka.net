@@ -259,7 +259,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private IActorRef ChatUser(string name)
         {
-            return _chatUsers.TryGetValue(name, out IActorRef a) ? a : ActorRefs.Nobody;
+            return _chatUsers.TryGetValue(name, out var a) ? a : ActorRefs.Nobody;
         }
 
         private void Join(RoleName from, RoleName to)

@@ -82,7 +82,7 @@ namespace Akka.DistributedData
         /// </summary>
         public bool TryGetValue(TKey key, out BigInteger value)
         {
-            if (_underlying.TryGetValue(key, out PNCounter counter))
+            if (_underlying.TryGetValue(key, out var counter))
             {
                 value = counter.Value;
                 return true;

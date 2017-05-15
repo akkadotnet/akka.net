@@ -56,7 +56,7 @@ namespace Akka.Event
         {
             lock (_classifiers)
             {
-                if (!_classifiers.TryGetValue(classifier, out List<Subscription<TSubscriber, TClassifier>> subscribers))
+                if (!_classifiers.TryGetValue(classifier, out var subscribers))
                 {
                     subscribers = new List<Subscription<TSubscriber, TClassifier>>();
                     _classifiers.Add(classifier, subscribers);
@@ -87,7 +87,7 @@ namespace Akka.Event
 
                 foreach (var classifier in _classifiers.Keys)
                 {
-                    if (!_classifiers.TryGetValue(classifier, out List<Subscription<TSubscriber, TClassifier>> subscribers)) 
+                    if (!_classifiers.TryGetValue(classifier, out var subscribers)) 
                         continue;
                     
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
@@ -111,7 +111,7 @@ namespace Akka.Event
             {
                 var res = false;
 
-                if (_classifiers.TryGetValue(classifier, out List<Subscription<TSubscriber, TClassifier>> subscribers))
+                if (_classifiers.TryGetValue(classifier, out var subscribers))
                 {
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
                         res = true;
@@ -178,7 +178,7 @@ namespace Akka.Event
         {
             var eventClass = GetClassifier(@event);
 
-            if (_cache.TryGetValue(eventClass, out List<TSubscriber> cachedSubscribers))
+            if (_cache.TryGetValue(eventClass, out var cachedSubscribers))
                 PublishToSubscribers(@event, cachedSubscribers);
             else
             {

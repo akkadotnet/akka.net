@@ -152,7 +152,7 @@ namespace Akka.Dispatch
 
         private MailboxType LookupConfigurator(string id)
         {
-            if (!_mailboxTypeConfigurators.TryGetValue(id, out MailboxType configurator))
+            if (!_mailboxTypeConfigurators.TryGetValue(id, out var configurator))
             {
                 // It doesn't matter if we create a mailbox type configurator that isn't used due to concurrent lookup.
                 if (id.Equals("unbounded"))

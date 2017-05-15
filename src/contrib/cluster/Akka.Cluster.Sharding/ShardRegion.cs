@@ -390,14 +390,14 @@ namespace Akka.Cluster.Sharding
             if (restart != null)
             {
                 var shardId = restart.ShardId;
-                if (RegionByShard.TryGetValue(shardId, out IActorRef regionRef))
+                if (RegionByShard.TryGetValue(shardId, out var regionRef))
                 {
                     if (Self.Equals(regionRef))
                         GetShard(shardId);
                 }
                 else
                 {
-                    if (!ShardBuffers.TryGetValue(shardId, out IImmutableList<KeyValuePair<Msg, IActorRef>> buffer)) {
+                    if (!ShardBuffers.TryGetValue(shardId, out var buffer)) {
                         buffer = ImmutableList<KeyValuePair<object, IActorRef>>.Empty;
                         Log.Debug("Request shard [{0}] home", shardId);
                         if (_coordinator != null)
@@ -411,7 +411,7 @@ namespace Akka.Cluster.Sharding
             else
             {
                 var shardId = ShardResolver(message);
-                if (RegionByShard.TryGetValue(shardId, out IActorRef region))
+                if (RegionByShard.TryGetValue(shardId, out var region))
                 {
                     if (region.Equals(Self))
                     {
@@ -420,7 +420,7 @@ namespace Akka.Cluster.Sharding
                             BufferMessage(shardId, message, sender);
                         else
                         {
-                            if (ShardBuffers.TryGetValue(shardId, out IImmutableList<KeyValuePair<Msg, IActorRef>> buffer))
+                            if (ShardBuffers.TryGetValue(shardId, out var buffer))
                             {
                                 // Since now messages to a shard is buffered then those messages must be in right order
                                 BufferMessage(shardId, message, sender);
@@ -475,7 +475,7 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                if (!ShardBuffers.TryGetValue(shardId, out IImmutableList<KeyValuePair<Msg, IActorRef>> buffer))
+                if (!ShardBuffers.TryGetValue(shardId, out var buffer))
                     buffer = ImmutableList<KeyValuePair<Msg, IActorRef>>.Empty;
                 ShardBuffers = ShardBuffers.SetItem(shardId, buffer.Add(new KeyValuePair<object, IActorRef>(message, sender)));
 
@@ -599,7 +599,7 @@ namespace Akka.Cluster.Sharding
                 var home = (PersistentShardCoordinator.ShardHome)message;
                 Log.Debug("Shard [{0}] located at [{1}]", home.Shard, home.Ref);
 
-                if (RegionByShard.TryGetValue(home.Shard, out IActorRef region))
+                if (RegionByShard.TryGetValue(home.Shard, out var region))
                 {
                     if (region.Equals(Self) && !home.Ref.Equals(Self))
                     {
@@ -633,9 +633,9 @@ namespace Akka.Cluster.Sharding
             {
                 var shard = ((PersistentShardCoordinator.BeginHandOff)message).Shard;
                 Log.Debug("Begin hand off shard [{0}]", shard);
-                if (RegionByShard.TryGetValue(shard, out IActorRef regionRef))
+                if (RegionByShard.TryGetValue(shard, out var regionRef))
                 {
-                    if (!Regions.TryGetValue(regionRef, out IImmutableSet<ShardId> updatedShards))
+                    if (!Regions.TryGetValue(regionRef, out var updatedShards))
                         updatedShards = ImmutableHashSet<ShardId>.Empty;
 
                     updatedShards = updatedShards.Remove(shard);
@@ -663,7 +663,7 @@ namespace Akka.Cluster.Sharding
                     _loggedFullBufferWarning = false;
                 }
 
-                if (Shards.TryGetValue(shard, out IActorRef actorRef))
+                if (Shards.TryGetValue(shard, out var actorRef))
                 {
                     HandingOff = HandingOff.Add(actorRef);
                     actorRef.Forward(message);
@@ -676,7 +676,7 @@ namespace Akka.Cluster.Sharding
 
         private void UpdateRegionShards(IActorRef regionRef, string shard)
         {
-            if (!Regions.TryGetValue(regionRef, out IImmutableSet<ShardId> shards))
+            if (!Regions.TryGetValue(regionRef, out var shards))
                 shards = ImmutableSortedSet<ShardId>.Empty;
             Regions = Regions.SetItem(regionRef, shards.Add(shard));
         }
@@ -700,7 +700,7 @@ namespace Akka.Cluster.Sharding
 
         private void DeliverBufferedMessage(ShardId shardId, IActorRef receiver)
         {
-            if (ShardBuffers.TryGetValue(shardId, out IImmutableList<KeyValuePair<Msg, IActorRef>> buffer))
+            if (ShardBuffers.TryGetValue(shardId, out var buffer))
             {
                 Log.Debug("Deliver [{0}] buffered messages for shard [{1}]", buffer.Count, shardId);
 
@@ -717,7 +717,7 @@ namespace Akka.Cluster.Sharding
         private IActorRef GetShard(ShardId id)
         {
             //TODO: change on ConcurrentDictionary.GetOrAdd?
-            if (!Shards.TryGetValue(id, out IActorRef region))
+            if (!Shards.TryGetValue(id, out var region))
             {
                 if (EntityProps == null || EntityProps.Equals(Actor.Props.Empty))
                     throw new IllegalStateException("Shard must not be allocated to a proxy only ShardRegion");
@@ -777,7 +777,7 @@ namespace Akka.Cluster.Sharding
         {
             if (_coordinator != null && _coordinator.Equals(terminated.ActorRef))
                 _coordinator = null;
-            else if (Regions.TryGetValue(terminated.ActorRef, out IImmutableSet<ShardId> shards))
+            else if (Regions.TryGetValue(terminated.ActorRef, out var shards))
             {
                 RegionByShard = RegionByShard.RemoveRange(shards);
                 Regions = Regions.Remove(terminated.ActorRef);
@@ -785,7 +785,7 @@ namespace Akka.Cluster.Sharding
                 if (Log.IsDebugEnabled)
                     Log.Debug("Region [{0}] with shards [{1}] terminated", terminated.ActorRef, string.Join(", ", shards));
             }
-            else if (ShardsByRef.TryGetValue(terminated.ActorRef, out ShardId shard))
+            else if (ShardsByRef.TryGetValue(terminated.ActorRef, out var shard))
             {
                 ShardsByRef = ShardsByRef.Remove(terminated.ActorRef);
                 Shards = Shards.Remove(shard);

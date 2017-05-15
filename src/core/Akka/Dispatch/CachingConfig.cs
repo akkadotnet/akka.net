@@ -146,7 +146,7 @@ namespace Akka.Dispatch
 
         private IPathEntry GetPathEntry(string path)
         {
-            if (!_entryMap.TryGetValue(path, out IPathEntry pathEntry)) //cache miss
+            if (!_entryMap.TryGetValue(path, out var pathEntry)) //cache miss
             {
                 try
                 {

@@ -373,7 +373,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 foreach (var inPort in atomic.InPorts)
                 {
-                    if (inToSubscriber.TryGetValue(inPort, out TestSubscriber subscriber))
+                    if (inToSubscriber.TryGetValue(inPort, out var subscriber))
                     {
                         subscriber.Owner.Should().Be(atomic);
                         subscriber.UpstreamPort.Should().Be(topLevel.Upstreams[inPort]);
@@ -383,7 +383,7 @@ namespace Akka.Streams.Tests.Implementation
 
                 foreach (var outPort in atomic.OutPorts)
                 {
-                    if (outToPublisher.TryGetValue(outPort, out TestPublisher publisher))
+                    if (outToPublisher.TryGetValue(outPort, out var publisher))
                     {
                         publisher.Owner.Should().Be(atomic);
                         publisher.DownstreamPort.Should().Be(topLevel.Downstreams[outPort]);
@@ -402,9 +402,9 @@ namespace Akka.Streams.Tests.Implementation
         {
             var group = module.SubModules.GroupBy(x => x.IsAtomic).ToDictionary(x => x.Key, x => x.ToImmutableHashSet());
 
-            if (!group.TryGetValue(true, out ImmutableHashSet<IModule> atomics))
+            if (!group.TryGetValue(true, out var atomics))
                 atomics = ImmutableHashSet<IModule>.Empty;
-            if (!group.TryGetValue(false, out ImmutableHashSet<IModule> composites))
+            if (!group.TryGetValue(false, out var composites))
                 composites = ImmutableHashSet<IModule>.Empty;
 
             return atomics.Union(composites.SelectMany(GetAllAtomic));

@@ -118,7 +118,7 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public ITransportAdapterProvider GetAdapterProvider(string name)
         {
-            if (AdaptersTable().TryGetValue(name, out ITransportAdapterProvider provider))
+            if (AdaptersTable().TryGetValue(name, out var provider))
                 return provider;
 
             throw new ArgumentException($"There is no registered transport adapter provider with name {name}");

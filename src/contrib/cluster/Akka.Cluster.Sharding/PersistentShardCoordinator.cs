@@ -108,7 +108,7 @@ namespace Akka.Cluster.Sharding
                 if (e is ShardRegionTerminated)
                 {
                     var message = e as ShardRegionTerminated;
-                    if (!Regions.TryGetValue(message.Region, out IImmutableList<ShardId> shardRegions))
+                    if (!Regions.TryGetValue(message.Region, out var shardRegions))
                         throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
 
                     return Copy(
@@ -129,7 +129,7 @@ namespace Akka.Cluster.Sharding
                 if (e is ShardHomeAllocated)
                 {
                     var message = e as ShardHomeAllocated;
-                    if (!Regions.TryGetValue(message.Region, out IImmutableList<ShardId> shardRegions))
+                    if (!Regions.TryGetValue(message.Region, out var shardRegions))
                         throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
                     if (Shards.ContainsKey(message.Shard))
                         throw new ArgumentException($"Shard {message.Shard} is already allocated", nameof(e));
@@ -143,9 +143,9 @@ namespace Akka.Cluster.Sharding
                 if (e is ShardHomeDeallocated)
                 {
                     var message = e as ShardHomeDeallocated;
-                    if (!Shards.TryGetValue(message.Shard, out IActorRef region))
+                    if (!Shards.TryGetValue(message.Shard, out var region))
                         throw new ArgumentException($"Shard {message.Shard} not allocated", nameof(e));
-                    if (!Regions.TryGetValue(region, out IImmutableList<ShardId> shardRegions))
+                    if (!Regions.TryGetValue(region, out var shardRegions))
                         throw new ArgumentException($"Region {region} for shard {message.Shard} not registered", nameof(e));
 
                     return Copy(
@@ -461,7 +461,7 @@ namespace Akka.Cluster.Sharding
         {
             if (!_gracefullShutdownInProgress.Contains(request.ShardRegion))
             {
-                if (_currentState.Regions.TryGetValue(request.ShardRegion, out IImmutableList<ShardId> shards))
+                if (_currentState.Regions.TryGetValue(request.ShardRegion, out var shards))
                 {
                     Log.Debug("Graceful shutdown of region [{0}] with shards [{1}]", request.ShardRegion, string.Join(", ", shards));
                     _gracefullShutdownInProgress = _gracefullShutdownInProgress.Add(request.ShardRegion);
@@ -476,7 +476,7 @@ namespace Akka.Cluster.Sharding
             Log.Debug("Rebalance shard [{0}] done [{1}]", done.Shard, done.Ok);
 
             // The shard could have been removed by ShardRegionTerminated
-            if (_currentState.Shards.TryGetValue(done.Shard, out IActorRef region))
+            if (_currentState.Shards.TryGetValue(done.Shard, out var region))
             {
                 if (done.Ok)
                     Update(new ShardHomeDeallocated(done.Shard), e =>
@@ -508,14 +508,14 @@ namespace Akka.Cluster.Sharding
 
         private void HandleResendShardHost(ResendShardHost resend)
         {
-            if (_currentState.Shards.TryGetValue(resend.Shard, out IActorRef region) && region.Equals(resend.Region))
+            if (_currentState.Shards.TryGetValue(resend.Shard, out var region) && region.Equals(resend.Region))
                 SendHostShardMessage(resend.Shard, region);
         }
 
         private void HandleShardStated(ShardStarted message)
         {
             var shard = message.Shard;
-            if (_unAckedHostShards.TryGetValue(shard, out ICancelable cancel))
+            if (_unAckedHostShards.TryGetValue(shard, out var cancel))
             {
                 cancel.Cancel();
                 _unAckedHostShards = _unAckedHostShards.Remove(shard);
@@ -535,7 +535,7 @@ namespace Akka.Cluster.Sharding
             var shard = getShardHome.Shard;
             if (!_rebalanceInProgress.Contains(shard))
             {
-                if (_currentState.Shards.TryGetValue(shard, out IActorRef region))
+                if (_currentState.Shards.TryGetValue(shard, out var region))
                 {
                     if (_regionTerminationInProgress.Contains(region))
                         Log.Debug("GetShardHome [{0}] request ignored, due to region [{1}] termination in progress.", shard, region);
@@ -565,7 +565,7 @@ namespace Akka.Cluster.Sharding
 
         private void RegionTerminated(IActorRef terminatedRef)
         {
-            if (_currentState.Regions.TryGetValue(terminatedRef, out IImmutableList<ShardId> shards))
+            if (_currentState.Regions.TryGetValue(terminatedRef, out var shards))
             {
                 Log.Debug("Shard region terminated: [{0}]", terminatedRef);
                 foreach (var shard in shards)
@@ -661,7 +661,7 @@ namespace Akka.Cluster.Sharding
             {
                 if (!_rebalanceInProgress.Contains(shard))
                 {
-                    if (_currentState.Shards.TryGetValue(shard, out IActorRef rebalanceFromRegion))
+                    if (_currentState.Shards.TryGetValue(shard, out var rebalanceFromRegion))
                     {
                         _rebalanceInProgress = _rebalanceInProgress.Add(shard);
                         Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
@@ -680,7 +680,7 @@ namespace Akka.Cluster.Sharding
         {
             if (!_rebalanceInProgress.Contains(shard))
             {
-                if (_currentState.Shards.TryGetValue(shard, out IActorRef aref))
+                if (_currentState.Shards.TryGetValue(shard, out var aref))
                     getShardHomeSender.Tell(new ShardHome(shard, aref));
                 else
                 {

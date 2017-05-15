@@ -343,7 +343,7 @@ namespace Akka.Actor.Internal
         /// <returns><c>true</c> if the retrieval was successful; otherwise <c>false</c>.</returns>
         public override bool TryGetExtension(Type extensionType, out object extension)
         {
-            var wasFound = _extensions.TryGetValue(extensionType, out Lazy<object> lazyExtension);
+            var wasFound = _extensions.TryGetValue(extensionType, out var lazyExtension);
             extension = wasFound ? lazyExtension.Value : null;
             return wasFound;
         }
@@ -356,7 +356,7 @@ namespace Akka.Actor.Internal
         /// <returns><c>true</c> if the retrieval was successful; otherwise <c>false</c>.</returns>
         public override bool TryGetExtension<T>(out T extension)
         {
-            var wasFound = _extensions.TryGetValue(typeof(T), out Lazy<object> lazyExtension);
+            var wasFound = _extensions.TryGetValue(typeof(T), out var lazyExtension);
             extension = wasFound ? lazyExtension.Value as T : null;
             return wasFound;
         }

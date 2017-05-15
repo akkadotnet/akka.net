@@ -145,7 +145,7 @@ namespace Akka.Persistence.Tests.Journal
 
         public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
         {
-            if (_messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (_messages.TryGetValue(pid, out var persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -162,7 +162,7 @@ namespace Akka.Persistence.Tests.Journal
 
         public Messages Delete(string pid, long seqNr)
         {
-            if (_messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (_messages.TryGetValue(pid, out var persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -179,7 +179,7 @@ namespace Akka.Persistence.Tests.Journal
 
         public IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max)
         {
-            if (_messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (_messages.TryGetValue(pid, out var persistents))
             {
                 return persistents
                     .Where(x => x.SequenceNr >= fromSeqNr && x.SequenceNr <= toSeqNr)
@@ -191,7 +191,7 @@ namespace Akka.Persistence.Tests.Journal
 
         public long HighestSequenceNr(string pid)
         {
-            if (_messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (_messages.TryGetValue(pid, out var persistents))
             {
                 var last = persistents.LastOrDefault();
                 return last?.SequenceNr ?? 0L;

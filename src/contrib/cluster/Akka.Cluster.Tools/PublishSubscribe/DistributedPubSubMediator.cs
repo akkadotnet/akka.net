@@ -167,7 +167,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var routees = new List<Routee>();
                 ValueHolder valueHolder;
-                if (_registry.TryGetValue(_cluster.SelfAddress, out Bucket bucket) && 
+                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) && 
                     bucket.Content.TryGetValue(send.Path, out valueHolder) && 
                     send.LocalAffinity)
                 {
@@ -218,9 +218,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Remove>(remove =>
             {
-                if (_registry.TryGetValue(_cluster.SelfAddress, out Bucket bucket))
+                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 {
-                    if (bucket.Content.TryGetValue(remove.Path, out ValueHolder valueHolder) && valueHolder.Ref != null)
+                    if (bucket.Content.TryGetValue(remove.Path, out var valueHolder) && valueHolder.Ref != null)
                     {
                         Context.Unwatch(valueHolder.Ref);
                         PutToRegistry(remove.Path, null);
@@ -312,7 +312,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     {
                         if (_nodes.Contains(bucket.Owner))
                         {
-                            if (!_registry.TryGetValue(bucket.Owner, out Bucket myBucket))
+                            if (!_registry.TryGetValue(bucket.Owner, out var myBucket))
                                 myBucket = new Bucket(bucket.Owner);
 
                             if (bucket.Version > myBucket.Version)
@@ -327,8 +327,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var key = Internal.Utils.MakeKey(terminated.ActorRef);
 
-                if (_registry.TryGetValue(_cluster.SelfAddress, out Bucket bucket))
-                    if (bucket.Content.TryGetValue(key, out ValueHolder holder) && terminated.ActorRef.Equals(holder.Ref))
+                if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
+                    if (bucket.Content.TryGetValue(key, out var holder) && terminated.ActorRef.Equals(holder.Ref))
                         PutToRegistry(key, null); // remove
 
                 _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewTopicActor(terminated.ActorRef.Path.Name));
@@ -380,7 +380,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             return versions.Any(entry =>
             {
-                if (_registry.TryGetValue(entry.Key, out Bucket bucket))
+                if (_registry.TryGetValue(entry.Key, out var bucket))
                     return entry.Value > bucket.Version;
 
                 return entry.Value > 0L;
@@ -402,7 +402,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var owner = entry.Key;
                 var v = entry.Value;
 
-                if (!_registry.TryGetValue(owner, out Bucket bucket))
+                if (!_registry.TryGetValue(owner, out var bucket))
                     bucket = new Bucket(owner);
 
                 if (bucket.Version > v && count < _settings.MaxDeltaElements)
@@ -461,7 +461,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private void PutToRegistry(string key, IActorRef value)
         {
             var v = NextVersion();
-            if (!_registry.TryGetValue(_cluster.SelfAddress, out Bucket bucket))
+            if (!_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 _registry.Add(_cluster.SelfAddress,
                     new Bucket(_cluster.SelfAddress, v, ImmutableDictionary<string, ValueHolder>.Empty.Add(key, new ValueHolder(v, value))));
             else
@@ -480,7 +480,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var address = entry.Key;
                 var bucket = entry.Value;
 
-                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out ValueHolder valueHolder))
+                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out var valueHolder))
                 {
                     if (valueHolder != null && !valueHolder.Ref.Equals(ActorRefs.Nobody))
                         valueHolder.Ref.Forward(message);

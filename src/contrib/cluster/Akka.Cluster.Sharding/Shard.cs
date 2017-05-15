@@ -517,7 +517,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="tref">TBD</param>
         protected virtual void EntityTerminated(IActorRef tref)
         {
-            if (IdByRef.TryGetValue(tref, out ShardId id) && MessageBuffers.TryGetValue(id, out IImmutableList<Tuple<Msg, IActorRef>> buffer) && buffer.Count != 0)
+            if (IdByRef.TryGetValue(tref, out var id) && MessageBuffers.TryGetValue(id, out var buffer) && buffer.Count != 0)
             {
                 Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
                 SendMessageBuffer(new EntityStarted(id));
@@ -599,7 +599,7 @@ namespace Akka.Cluster.Sharding
 
         private void Passivate(IActorRef entity, object stopMessage)
         {
-            if (IdByRef.TryGetValue(entity, out ShardId id) && !MessageBuffers.ContainsKey(id))
+            if (IdByRef.TryGetValue(entity, out var id) && !MessageBuffers.ContainsKey(id))
             {
                 Log.Debug("Passivating started on entity {0}", id);
 
@@ -636,7 +636,7 @@ namespace Akka.Cluster.Sharding
             var id = message.EntityId;
 
             // Get the buffered messages and remove the buffer
-            if (MessageBuffers.TryGetValue(id, out IImmutableList<Tuple<Msg, IActorRef>> buffer))
+            if (MessageBuffers.TryGetValue(id, out var buffer))
                 MessageBuffers = MessageBuffers.Remove(id);
 
             if (buffer.Count != 0)
@@ -665,7 +665,7 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                if (MessageBuffers.TryGetValue(id, out IImmutableList<Tuple<Msg, IActorRef>> buffer))
+                if (MessageBuffers.TryGetValue(id, out var buffer))
                 {
                     if (TotalBufferSize >= Settings.TunningParameters.BufferSize)
                     {

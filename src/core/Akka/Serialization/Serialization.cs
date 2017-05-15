@@ -108,7 +108,7 @@ namespace Akka.Serialization
                 }
 
                 
-                if (!namedSerializers.TryGetValue(serializerName, out Serializer serializer))
+                if (!namedSerializers.TryGetValue(serializerName, out var serializer))
                 {
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
@@ -158,7 +158,7 @@ namespace Akka.Serialization
         /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
-            if (!_serializers.TryGetValue(serializerId, out Serializer serializer))
+            if (!_serializers.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
                     $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
@@ -179,7 +179,7 @@ namespace Akka.Serialization
         /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, string manifest)
         {
-            if (!_serializers.TryGetValue(serializerId, out Serializer serializer))
+            if (!_serializers.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
                     $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
                     " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
@@ -227,7 +227,7 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public Serializer FindSerializerForType(Type objectType)
         {
-            if (_serializerMap.TryGetValue(objectType, out Serializer fullMatchSerializer))
+            if (_serializerMap.TryGetValue(objectType, out var fullMatchSerializer))
                 return fullMatchSerializer;
 
             Serializer serializer = null;

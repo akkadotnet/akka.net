@@ -136,9 +136,9 @@ namespace Akka.Cluster.Sharding
         protected override void EntityTerminated(IActorRef tref)
         {
 
-            if (IdByRef.TryGetValue(tref, out ShardId id))
+            if (IdByRef.TryGetValue(tref, out var id))
             {
-                if (MessageBuffers.TryGetValue(id, out IImmutableList<Tuple<Msg, IActorRef>> buffer) && buffer.Count != 0)
+                if (MessageBuffers.TryGetValue(id, out var buffer) && buffer.Count != 0)
                 {
                     // Note; because we're not persisting the EntityStopped, we don't need
                     // to persist the EntityStarted either.

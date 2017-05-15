@@ -164,8 +164,8 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         var copyInlet = copyInlets.Current;
                         var originalInlet = originalInlets.Current;
-                        var isInternal = ups.TryGetValue(copyInlet, out OutPort outport) 
-                            && outGroup.TryGetValue(outport, out ISet<IModule> g) 
+                        var isInternal = ups.TryGetValue(copyInlet, out var outport) 
+                            && outGroup.TryGetValue(outport, out var g) 
                             && g == group;
                         if (isInternal)
                         {
@@ -703,7 +703,7 @@ namespace Akka.Streams.Implementation.Fusing
             while (enumerator.MoveNext())
             {
                 var outport = enumerator.Current;
-                if (Downstreams.TryGetValue(outport, out InPort inport))
+                if (Downstreams.TryGetValue(outport, out var inport))
                 {
                     Downstreams.Remove(outport);
                     Upstreams.Remove(inport);
@@ -870,7 +870,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private void AddMapping<T>(T orig, T mapd, IDictionary<T, LinkedList<T>> map)
         {
-            if (map.TryGetValue(orig, out LinkedList<T> values))
+            if (map.TryGetValue(orig, out var values))
                 values.AddLast(mapd);
             else
                 map.Add(orig, new LinkedList<T>(new[] { mapd }));
@@ -878,7 +878,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private Option<T> RemoveMapping<T>(T orig, IDictionary<T, LinkedList<T>> map)
         {
-            if (map.TryGetValue(orig, out LinkedList<T> values))
+            if (map.TryGetValue(orig, out var values))
             {
                 if (values.Count == 0)
                     map.Remove(orig);

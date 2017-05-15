@@ -376,7 +376,7 @@ namespace Akka.Remote
         internal static Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
-            if (transportMapping.TryGetValue(remote.Protocol, out HashSet<ProtocolTransportAddressPair> transports))
+            if (transportMapping.TryGetValue(remote.Protocol, out var transports))
             {
                 ProtocolTransportAddressPair[] responsibleTransports =
                     transports.Where(t => t.ProtocolTransport.IsResponsibleFor(remote)).ToArray();

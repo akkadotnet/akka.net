@@ -215,7 +215,7 @@ namespace Akka.Actor
                 throw new ConfigurationException($"Unknown phase [{phase}], known phases [{string.Join(",", _knownPhases)}]. " +
                     "All phases (along with their optional dependencies) must be defined in configuration.");
 
-            if (!_tasks.TryGetValue(phase, out ImmutableList<Tuple<string, Func<Task<Done>>>> current))
+            if (!_tasks.TryGetValue(phase, out var current))
             {
                 if (!_tasks.TryAdd(phase, ImmutableList<Tuple<string, Func<Task<Done>>>>.Empty.Add(Tuple.Create(taskName, task))))
                     AddTask(phase, taskName, task); // CAS failed, retry
@@ -305,7 +305,7 @@ namespace Akka.Actor
                         return TaskEx.Completed;
                     var remaining = remainingPhases.Skip(1).ToList();
                     Task<Done> phaseResult = null;
-                    if (!_tasks.TryGetValue(phase, out ImmutableList<Tuple<string, Func<Task<Done>>>> phaseTasks))
+                    if (!_tasks.TryGetValue(phase, out var phaseTasks))
                     {
                         if (debugEnabled)
                             Log.Debug("Performing phase [{0}] with [0] tasks.", phase);
@@ -434,7 +434,7 @@ namespace Akka.Actor
         /// <exception cref="ArgumentException">Thrown if <see cref="phase"/> doesn't exist in the set of registered phases.</exception>
         public TimeSpan Timeout(string phase)
         {
-            if (Phases.TryGetValue(phase, out Phase p))
+            if (Phases.TryGetValue(phase, out var p))
                 return p.Timeout;
             throw new ArgumentException($"Unknown phase [{phase}]. All phases must be defined in configuration.");
         }
@@ -492,7 +492,7 @@ namespace Akka.Actor
                 if (unmarked.Contains(u))
                 {
                     tempMark.Add(u);
-                    if (phases.TryGetValue(u, out Phase p) && p.DependsOn.Any())
+                    if (phases.TryGetValue(u, out var p) && p.DependsOn.Any())
                         p.DependsOn.ForEach(depthFirstSearch);
                     unmarked.Remove(u); //permanent mark
                     tempMark.Remove(u);

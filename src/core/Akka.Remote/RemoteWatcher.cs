@@ -546,7 +546,7 @@ namespace Akka.Remote
             if(watcher.Equals(Self)) throw new InvalidOperationException("Watcher cannot be the RemoteWatcher!");
             Log.Debug("Watching: [{0} -> {1}]", watcher.Path, watchee.Path);
 
-            if (Watching.TryGetValue(watchee, out HashSet<IInternalActorRef> watching))
+            if (Watching.TryGetValue(watchee, out var watching))
                 watching.Add(watcher);
             else
                 Watching.Add(watchee, new HashSet<IInternalActorRef> { watcher });
@@ -570,7 +570,7 @@ namespace Akka.Remote
                 _failureDetector.Remove(watcheeAddress);
             }
 
-            if (WatcheeByNodes.TryGetValue(watcheeAddress, out HashSet<IInternalActorRef> watchees))
+            if (WatcheeByNodes.TryGetValue(watcheeAddress, out var watchees))
                 watchees.Add(watchee);
             else
                 WatcheeByNodes.Add(watcheeAddress, new HashSet<IInternalActorRef> { watchee });
@@ -587,7 +587,7 @@ namespace Akka.Remote
         {
             if (watcher.Equals(Self)) throw new InvalidOperationException("Watcher cannot be the RemoteWatcher!");
             Log.Debug($"Unwatching: [{watcher.Path} -> {watchee.Path}]");
-            if (Watching.TryGetValue(watchee, out HashSet<IInternalActorRef> watchers))
+            if (Watching.TryGetValue(watchee, out var watchers))
             {
                 watchers.Remove(watcher);
                 if (!watchers.Any())
@@ -608,7 +608,7 @@ namespace Akka.Remote
         {
             var watcheeAddress = watchee.Path.Address;
             Watching.Remove(watchee);
-            if (WatcheeByNodes.TryGetValue(watcheeAddress, out HashSet<IInternalActorRef> watchees))
+            if (WatcheeByNodes.TryGetValue(watcheeAddress, out var watchees))
             {
                 watchees.Remove(watchee);
                 if (!watchees.Any())

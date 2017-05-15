@@ -234,7 +234,7 @@ namespace Akka.Cluster
 
         ImmutableDictionary<UniqueAddress, Record> ObserverRows(UniqueAddress observer)
         {
-            _cache.Value.ObserverRowMap.TryGetValue(observer, out ImmutableDictionary<UniqueAddress, Record> observerRows);
+            _cache.Value.ObserverRowMap.TryGetValue(observer, out var observerRows);
             return observerRows;
         }
 
@@ -290,7 +290,7 @@ namespace Akka.Cluster
             if (oldObserverRows == null && status == ReachabilityStatus.Reachable) return this;
             if (oldObserverRows == null) return new Reachability(_records.Add(newRecord), newVersions);
 
-            if(!oldObserverRows.TryGetValue(subject, out Record oldRecord))
+            if(!oldObserverRows.TryGetValue(subject, out var oldRecord))
             {
                 if (status == ReachabilityStatus.Reachable &&
                     oldObserverRows.Values.All(r => r.Status == ReachabilityStatus.Reachable))
@@ -399,7 +399,7 @@ namespace Akka.Cluster
             var observerRows = ObserverRows(observer);
             if (observerRows == null) return ReachabilityStatus.Reachable;
 
-            if(!observerRows.TryGetValue(subject, out Record record))
+            if(!observerRows.TryGetValue(subject, out var record))
                 return ReachabilityStatus.Reachable;
 
             return record.Status;

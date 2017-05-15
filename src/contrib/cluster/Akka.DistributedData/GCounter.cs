@@ -115,7 +115,7 @@ namespace Akka.DistributedData
             if (delta < 0) throw new ArgumentException("Can't decrement a GCounter");
             if (delta == 0) return this;
 
-            if (State.TryGetValue(node, out BigInteger v))
+            if (State.TryGetValue(node, out var v))
             {
                 var total = v + delta;
                 return AssignAncestor(new GCounter(State.SetItem(node, total)));
@@ -164,7 +164,7 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public GCounter Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
-            return State.TryGetValue(removedNode, out BigInteger prunedNodeValue) 
+            return State.TryGetValue(removedNode, out var prunedNodeValue) 
                 ? new GCounter(State.Remove(removedNode)).Increment(collapseInto, prunedNodeValue) 
                 : this;
         }

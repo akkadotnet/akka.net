@@ -725,7 +725,7 @@ namespace Akka.Remote.Transport
         /// <returns>The option that contains the listener if it exists.</returns>
         public IHandleEventListener GetRemoteReadHandlerFor(TestAssociationHandle localHandle)
         {
-            if (_listenersTable.TryGetValue(localHandle.Key, out Tuple<IHandleEventListener, IHandleEventListener> listeners))
+            if (_listenersTable.TryGetValue(localHandle.Key, out var listeners))
                 return RemoteListenerRelativeTo(localHandle, listeners);
 
             return null;
@@ -738,7 +738,7 @@ namespace Akka.Remote.Transport
         /// <returns>The transport, if it exists.</returns>
         public Tuple<TestTransport, Task<IAssociationEventListener>> TransportFor(Address address)
         {
-            _transportTable.TryGetValue(address, out Tuple<TestTransport, Task<IAssociationEventListener>> transport);
+            _transportTable.TryGetValue(address, out var transport);
             return transport;
         }
 

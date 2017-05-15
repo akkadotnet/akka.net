@@ -2229,7 +2229,7 @@ namespace Akka.Streams.Implementation
         {
             if (IsDebug) Console.WriteLine($"Registering source {materializedSource}");
 
-            if (MaterializedValueSource.TryGetValue(materializedSource.Computation, out LinkedList<IMaterializedValueSource> list))
+            if (MaterializedValueSource.TryGetValue(materializedSource.Computation, out var list))
                 list.AddFirst(materializedSource);
             else
                 MaterializedValueSource.Add(materializedSource.Computation,
@@ -2337,7 +2337,7 @@ namespace Akka.Streams.Implementation
             if (IsDebug)
                 Console.WriteLine($"{indent}result = {result}");
 
-            if (MaterializedValueSource.TryGetValue(node, out LinkedList<IMaterializedValueSource> sources))
+            if (MaterializedValueSource.TryGetValue(node, out var sources))
             {
                 if (IsDebug)
                     Console.WriteLine($"{indent}triggering sources {sources}");
@@ -2359,8 +2359,8 @@ namespace Akka.Streams.Implementation
             Subscribers[inPort] = subscriberOrVirtual;
             
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (CurrentLayout.Upstreams.TryGetValue(inPort, out OutPort outPort))
-                if (Publishers.TryGetValue(outPort, out IUntypedPublisher publisher))
+            if (CurrentLayout.Upstreams.TryGetValue(inPort, out var outPort))
+                if (Publishers.TryGetValue(outPort, out var publisher))
                     DoSubscribe(publisher, subscriberOrVirtual);
         }
 
@@ -2374,8 +2374,8 @@ namespace Akka.Streams.Implementation
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (CurrentLayout.Downstreams.TryGetValue(outPort, out InPort inPort))
-                if (Subscribers.TryGetValue(inPort, out object subscriber))
+            if (CurrentLayout.Downstreams.TryGetValue(outPort, out var inPort))
+                if (Subscribers.TryGetValue(inPort, out var subscriber))
                     DoSubscribe(publisher, subscriber);
         }
 

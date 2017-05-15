@@ -86,7 +86,7 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public override IChildrenContainer Unreserve(string name)
         {
-            if (InternalChildren.TryGetValue(name, out IChildStats stats) && (stats is ChildNameReserved))
+            if (InternalChildren.TryGetValue(name, out var stats) && (stats is ChildNameReserved))
                 return Create(InternalChildren.Remove(name));
             return this;
         }

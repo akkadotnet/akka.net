@@ -100,7 +100,7 @@ namespace Akka.IO
 
             public Dns.Resolved Get(string name)
             {
-                if (_cache.TryGetValue(name, out CacheEntry e) && e.IsValid(_clock()))
+                if (_cache.TryGetValue(name, out var e) && e.IsValid(_clock()))
                     return e.Answer;
                 return null;
             }
@@ -128,7 +128,7 @@ namespace Akka.IO
                     var name = minEntry.Name;
                     _queue.Remove(minEntry);
 
-                    if (_cache.TryGetValue(name, out CacheEntry cacheEntry) && !cacheEntry.IsValid(now))
+                    if (_cache.TryGetValue(name, out var cacheEntry) && !cacheEntry.IsValid(now))
                         _cache.Remove(name);
                 }
                 return new Cache(new SortedSet<ExpiryEntry>(), new Dictionary<string, CacheEntry>(_cache), _clock);
