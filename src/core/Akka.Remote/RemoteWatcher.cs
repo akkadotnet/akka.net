@@ -487,7 +487,7 @@ namespace Akka.Remote
             {
                 if (_addressUids.TryGetValue(from, out int addressUid))
                 {
-                    if (addressUid == uid)
+                    if (addressUid != uid)
                         ReWatch(from);
                 }
                 else
