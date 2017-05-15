@@ -20,11 +20,6 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         protected virtual List<SnapshotEntry> Snapshots { get { return _snapshotCollection; } }
 
-        protected override void PreStart()
-        {
-            base.PreStart();
-        }
-
         protected override Task DeleteAsync(SnapshotMetadata metadata)
         {
             Func<SnapshotEntry, bool> pred = x => x.PersistenceId == metadata.PersistenceId &&

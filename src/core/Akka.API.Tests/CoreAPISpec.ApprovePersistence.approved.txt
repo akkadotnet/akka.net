@@ -1151,6 +1151,15 @@ namespace Akka.Persistence.Snapshot
         protected void Serialize(System.IO.Stream stream, Akka.Persistence.Serialization.Snapshot snapshot) { }
         protected System.IO.FileInfo WithOutputStream(Akka.Persistence.SnapshotMetadata metadata, System.Action<System.IO.Stream> p) { }
     }
+    public class MemorySnapshotStore : Akka.Persistence.Snapshot.SnapshotStore
+    {
+        public MemorySnapshotStore() { }
+        protected virtual System.Collections.Generic.List<Akka.Persistence.Snapshot.SnapshotEntry> Snapshots { get; }
+        protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata) { }
+        protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override async System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+    }
     public sealed class NoSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore
     {
         public NoSnapshotStore() { }
@@ -1165,6 +1174,15 @@ namespace Akka.Persistence.Snapshot
             public NoSnapshotStoreException(string message, System.Exception innerException) { }
             protected NoSnapshotStoreException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         }
+    }
+    public class SnapshotEntry
+    {
+        public SnapshotEntry() { }
+        public string Id { get; set; }
+        public string PersistenceId { get; set; }
+        public long SequenceNr { get; set; }
+        public object Snapshot { get; set; }
+        public long Timestamp { get; set; }
     }
     public abstract class SnapshotStore : Akka.Actor.ActorBase
     {
