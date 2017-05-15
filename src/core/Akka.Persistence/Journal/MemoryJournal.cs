@@ -175,7 +175,7 @@ namespace Akka.Persistence.Journal
                 }
             }
 
-            return _messages;
+            return Messages;
         }
 
         /// <summary>
