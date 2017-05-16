@@ -385,7 +385,7 @@ namespace Akka.Streams.TestKit
             /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
             /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
             /// <returns>this</returns>
-            public ManualProbe<T> ExpectNextChaining<TOther>(Predicate<TOther> predicate)
+            public ManualProbe<T> MatchNext<TOther>(Predicate<TOther> predicate)
             {
                 _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element));
                 return this;
