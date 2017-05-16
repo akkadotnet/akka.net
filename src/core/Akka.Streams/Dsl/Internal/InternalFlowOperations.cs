@@ -591,6 +591,41 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
+        /// Similar to <see cref="Scan{TIn,TOut,TMat}"/> but with a asynchronous function,
+        /// emits its current value which starts at <paramref name="zero"/> and then
+        /// applies the current and next value to the given function <paramref name="scan"/>
+        /// emitting a <see cref="Task{TOut}"/> that resolves to the next current value.
+        /// 
+        /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
+        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// the stream will continue.
+        /// 
+        /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
+        /// <see cref="Directive.Resume"/> current value starts at the previous
+        /// current value, or zero when it doesn't have one, and the stream will continue.
+        /// <para>
+        /// Emits the <see cref="Task{TOut}"/> returned by <paramref name="scan"/> completes
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes upstream completes and the last task returned by <paramref name="scan"/> completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="zero">TBD</param>
+        /// <param name="scan">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<TOut, TMat> ScanAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
+            Func<TOut, TIn, Task<TOut>> scan)
+        {
+            return flow.Via(new Fusing.ScanAsync<TIn, TOut>(zero, scan));
+        }
+
+        /// <summary>
         /// Similar to <see cref="Scan{TIn,TOut,TMat}"/> but only emits its result when the upstream completes,
         /// after which it also completes. Applies the given function <paramref name="fold"/> towards its current and next value,
         /// yielding the next current value.

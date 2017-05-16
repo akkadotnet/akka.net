@@ -143,8 +143,10 @@ namespace Akka.Streams.TestKit
             {
                 var t = _probe.RemainingOrDilated(null);
                 var message = _probe.ReceiveOne(t);
-                if (message is OnNext<T>) return ((OnNext<T>) message).Element;
-                else throw new Exception("expected OnNext, found " + message);
+                if (message is OnNext<T>)
+                    return ((OnNext<T>) message).Element;
+
+                throw new Exception("expected OnNext, found " + message);
             }
 
             /// <summary>
@@ -153,6 +155,15 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNext(T element)
             {
                 _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element));
+                return this;
+            }
+
+            /// <summary>
+            /// Fluent DSL. Expect a stream element during specified time or timeout.
+            /// </summary>
+            public ManualProbe<T> ExpectNext(TimeSpan timeout, T element)
+            {
+                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
                 return this;
             }
 

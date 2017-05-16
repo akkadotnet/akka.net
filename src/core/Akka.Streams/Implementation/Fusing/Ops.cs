@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -19,6 +20,8 @@ using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
+using Decider = Akka.Streams.Supervision.Decider;
+using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -108,10 +111,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Select";
     }
@@ -184,10 +187,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Where";
     }
@@ -375,10 +378,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "SkipWhile";
     }
@@ -550,10 +553,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Collect";
     }
@@ -656,10 +659,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Recover";
     }
@@ -734,10 +737,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Take";
     }
@@ -804,10 +807,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Drop";
     }
@@ -825,7 +828,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private readonly Scan<TIn, TOut> _stage;
             private readonly Action _rest;
-            private  TOut _stageAggregate;
+            private TOut _stageAggregate;
 
             public Logic(Scan<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
@@ -861,7 +864,7 @@ namespace Akka.Streams.Implementation.Fusing
                         }
                     }
                 };
-                
+
                 SetHandler(stage.In, this);
                 SetHandler(stage.Out, this);
             }
@@ -935,13 +938,197 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Scan";
     }
+
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
+    public sealed class ScanAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    {
+        #region Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private TOut _current;
+            private Task<TOut> _evemtualCurrent;
+            private readonly ScanAsync<TIn, TOut> _stage;
+            private readonly Decider _decider;
+            private readonly Action<Result<TOut>> _callback;
+
+            public Logic(ScanAsync<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                _current = stage._zero;
+                _evemtualCurrent = Task.FromResult(_current);
+
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+
+                _callback = GetAsyncCallback<Result<TOut>>(result =>
+                {
+                    if (result.IsSuccess && result.Value != null)
+                    {
+                        _current = result.Value;
+                        PushAndPullOrFinish(_current);
+                        return;
+                    }
+
+                    DoSupervision(result.IsSuccess
+                        ? ReactiveStreamsCompliance.ElementMustNotBeNullException
+                        : result.Exception);
+                });
+
+                SetHandler(_stage.Out, () =>
+                {
+                    Push(_stage.Out, _current);
+                    SetHandler(_stage.In, this);
+                    SetHandler(_stage.Out, this);
+                });
+
+                SetHandler(_stage.In, () => { }, onUpstreamFinish: () => SetHandler(_stage.Out, onPull: () =>
+                {
+                    Push(_stage.Out, _current);
+                    CompleteStage();
+                }));
+            }
+
+            private void OnRestart() => _current = _stage._zero;
+
+            private void SafePull()
+            {
+                if (!HasBeenPulled(_stage.In))
+                    TryPull(_stage.In);
+            }
+
+            private void PushAndPullOrFinish(TOut update)
+            {
+                Push(_stage.Out, update);
+
+                if (IsClosed(_stage.In))
+                    CompleteStage();
+                else if (IsAvailable(_stage.Out))
+                    SafePull();
+            }
+
+            private void DoSupervision(Exception ex)
+            {
+                switch (_decider(ex))
+                {
+                    case Directive.Stop:
+                        FailStage(ex);
+                        break;
+                    case Directive.Resume:
+                        SafePull();
+                        break;
+                    case Directive.Restart:
+                        OnRestart();
+                        SafePull();
+                        break;
+                }
+            }
+
+            public override void OnPush()
+            {
+                try
+                {
+                    _evemtualCurrent = _stage._aggregate(_current, Grab(_stage.In));
+
+                    if (_evemtualCurrent.IsCompleted)
+                        _callback(Result.FromTask(_evemtualCurrent));
+                    else
+                        _evemtualCurrent.ContinueWith(t => _callback(Result.FromTask(t)),
+                            TaskContinuationOptions.ExecuteSynchronously);
+                }
+                catch (Exception ex)
+                {
+                    switch (_decider(ex))
+                    {
+                        case Directive.Stop: 
+                            FailStage(ex);
+                            break;
+                        case Directive.Restart:
+                            OnRestart();
+                            break;
+                        case Directive.Resume:
+                            break;
+                    }
+
+                    TryPull(_stage.In);
+                }
+            }
+
+            public override void OnPull() => SafePull();
+
+            public override void OnUpstreamFinish() { }
+
+            public override string ToString() => $"ScanAsync.Logic(completed={_evemtualCurrent.IsCompleted}";
+        }
+
+        #endregion
+
+        private readonly Func<TOut, TIn, Task<TOut>> _aggregate;
+        private readonly TOut _zero;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="zero">TBD</param>
+        /// <param name="aggregate">TBD</param>
+        public ScanAsync(TOut zero, Func<TOut, TIn, Task<TOut>> aggregate)
+        {
+            _zero = zero;
+            _aggregate = aggregate;
+
+            Shape = new FlowShape<TIn, TOut>(In, Out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.ScanAsync;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Inlet<TIn> In { get; } = new Inlet<TIn>("ScanAsync.in");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("ScanAsync.out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override FlowShape<TIn, TOut> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            => new Logic(this, inheritedAttributes);
+
+        /// <summary>
+        /// Returns a <see cref="string" /> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="string" /> that represents this instance.
+        /// </returns>
+        public override string ToString() => "ScanAsync";
+
+    }
+
 
     /// <summary>
     /// INTERNAL API
@@ -1057,10 +1244,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Aggregate";
     }
@@ -1081,7 +1268,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Action<Result<TOut>> _taskCallback;
             private TOut _aggregator;
             private Task<TOut> _aggregating;
-            
+
 
             public Logic(AggregateAsync<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
@@ -1118,7 +1305,7 @@ namespace Akka.Streams.Implementation.Fusing
                             FailStage(ex);
                         else
                         {
-                            if(supervision == Directive.Restart)
+                            if (supervision == Directive.Restart)
                                 OnRestart();
 
                             if (IsClosed(stage.In))
@@ -1174,7 +1361,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull()
             {
-                if(!HasBeenPulled(_stage.In))
+                if (!HasBeenPulled(_stage.In))
                     TryPull(_stage.In);
             }
 
@@ -1230,10 +1417,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "AggregateAsync";
     }
@@ -1261,14 +1448,14 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 // if else (to avoid using Iterator[T].flatten in hot code)
                 if (_stage.InjectStartEnd)
-                    _logic.EmitMultiple(_stage.Out, new[] {_stage._start, _logic.Grab(_stage.In)});
+                    _logic.EmitMultiple(_stage.Out, new[] { _stage._start, _logic.Grab(_stage.In) });
                 else _logic.Emit(_stage.Out, _logic.Grab(_stage.In));
                 _logic.SetHandler(_stage.In, new RestInHandler(_stage, _logic));
             }
 
             public override void OnUpstreamFinish()
             {
-                _logic.EmitMultiple(_stage.Out, new[] {_stage._start, _stage._end});
+                _logic.EmitMultiple(_stage.Out, new[] { _stage._start, _stage._end });
                 _logic.CompleteStage();
             }
         }
@@ -1285,7 +1472,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             public override void OnPush()
-                => _logic.EmitMultiple(_stage.Out, new[] {_stage._inject, _logic.Grab(_stage.In)});
+                => _logic.EmitMultiple(_stage.Out, new[] { _stage._inject, _logic.Grab(_stage.In) });
 
             public override void OnUpstreamFinish()
             {
@@ -1475,10 +1662,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Grouped";
     }
@@ -1588,10 +1775,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "LimitWeighted";
     }
@@ -1712,10 +1899,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Sliding";
     }
@@ -2243,10 +2430,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Expand";
     }
@@ -2382,12 +2569,12 @@ namespace Akka.Streams.Implementation.Fusing
             private void HolderCompleted(Holder<TOut> holder)
             {
                 var element = holder.Element;
-                if(!element.IsSuccess && _decider(element.Exception) == Directive.Stop)
+                if (!element.IsSuccess && _decider(element.Exception) == Directive.Stop)
                     FailStage(element.Exception);
                 else if (IsAvailable(_stage.Out))
                     PushOne();
             }
-            
+
             public override string ToString() => $"SelectAsync.Logic(buffer={_buffer})";
         }
 
@@ -2722,10 +2909,10 @@ namespace Akka.Streams.Implementation.Fusing
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Log";
     }
@@ -2958,7 +3145,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnDownstreamFinish() => CompleteStage();
 
-            private long NextElementWaitTime => (long) _stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1)*1000*10;
+            private long NextElementWaitTime => (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1) * 1000 * 10;
 
             public override void PreStart() => _buffer = Buffer.Create<Tuple<long, T>>(_size, Materializer);
 
@@ -2970,7 +3157,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
-                if(IsAvailable(_stage.Outlet))
+                if (IsAvailable(_stage.Outlet))
                     Push(_stage.Outlet, _buffer.Dequeue().Item2);
 
                 if (!_buffer.IsEmpty)
@@ -3070,10 +3257,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Delay";
     }
@@ -3269,10 +3456,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "Sum";
     }
@@ -3391,10 +3578,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "RecoverWith";
     }
@@ -3522,10 +3709,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "StatefulSelectMany";
     }

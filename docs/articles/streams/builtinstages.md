@@ -543,7 +543,6 @@ Note: the last window might be smaller than the requested size due to end of str
 
 **completes** when upstream completes
 
-
 #### Scan
 
 Emit its current value which starts at ``zero`` and then applies the current and next value to the given function
@@ -558,6 +557,16 @@ the second element is required from downstream.
 
 **completes** when upstream completes
 
+#### ScanAsync
+
+Just like `Scan` but receiving a function that results in a `Task` to the next value.
+
+**emits** when the `Task` resulting from the function scanning the element resolves to the next value
+
+**backpressures** when downstream backpressures
+
+**completes** when upstream completes and the last `Task` is resolved
+
 #### Aggregate
 
 Start with current value ``zero`` and then apply the current and next value to the given function, when upstream
@@ -568,6 +577,16 @@ complete the current value is emitted downstream.
 **backpressures** when downstream backpressures
 
 **completes** when upstream completes
+
+#### AggregateAsync
+
+Just like `Aggregate` but receiving a function that results in a `Task` to the next value.
+
+**emits** when upstream completes and the last `Task` is resolved
+
+**backpressures** when downstream backpressures
+
+**completes** when upstream completes and the last `Task` is resolved
 
 #### Skip
 

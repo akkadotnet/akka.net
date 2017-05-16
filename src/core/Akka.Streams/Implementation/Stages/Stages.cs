@@ -107,6 +107,10 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
+        public static readonly Attributes ScanAsync = Attributes.CreateName("scanAsync");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Attributes Aggregate = Attributes.CreateName("aggregate");
         /// <summary>
         /// TBD
