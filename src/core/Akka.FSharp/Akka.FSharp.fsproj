@@ -11,6 +11,7 @@
     <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
