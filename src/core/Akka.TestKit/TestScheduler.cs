@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,21 +10,34 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.TestKit
 {
-    public class TestScheduler : IScheduler,
-                                 IAdvancedScheduler
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public class TestScheduler : IScheduler, IAdvancedScheduler
     {
         private DateTimeOffset _now;
-        private readonly ConcurrentDictionary<long, Queue<ScheduledItem>>  _scheduledWork; 
+        private readonly ConcurrentDictionary<long, ConcurrentQueue<ScheduledItem>>  _scheduledWork; 
 
-        public TestScheduler(ActorSystem system)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="schedulerConfig">TBD</param>
+        /// <param name="log">TBD</param>
+        public TestScheduler(Config schedulerConfig, ILoggingAdapter log)
         {
             _now = DateTimeOffset.UtcNow;
-            _scheduledWork = new ConcurrentDictionary<long, Queue<ScheduledItem>>();
+            _scheduledWork = new ConcurrentDictionary<long, ConcurrentQueue<ScheduledItem>>();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="offset">TBD</param>
         public void Advance(TimeSpan offset)
         {
             _now = _now.Add(offset);
@@ -43,7 +56,7 @@ namespace Akka.TestKit
                     si.DeliveryCount++;
                 }
 
-                Queue<ScheduledItem> removed;
+                ConcurrentQueue<ScheduledItem> removed;
                 _scheduledWork.TryRemove(t.Key, out removed);
 
                 foreach (var i in removed.Where(r => r.Repeating && (r.Cancelable == null || !r.Cancelable.IsCancellationRequested)))
@@ -54,6 +67,13 @@ namespace Akka.TestKit
             
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="when">TBD</param>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown when the specified <paramref name="when"/> offset is less than the currently tracked time.
+        /// </exception>
         public void AdvanceTo(DateTimeOffset when)
         {
             if (when < _now)
@@ -67,10 +87,10 @@ namespace Akka.TestKit
         {
             var scheduledTime = _now.Add(initialDelay ?? delay).UtcTicks;
 
-            Queue<ScheduledItem> tickItems = null;
+            ConcurrentQueue<ScheduledItem> tickItems = null;
             if (!_scheduledWork.TryGetValue(scheduledTime, out tickItems))
             {
-                tickItems = new Queue<ScheduledItem>();
+                tickItems = new ConcurrentQueue<ScheduledItem>();
                 _scheduledWork.TryAdd(scheduledTime, tickItems);
             }
             
@@ -80,79 +100,202 @@ namespace Akka.TestKit
                 initialDelay.HasValue || deliveryCount > 0, receiver, sender, cancelable));
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         public void ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender)
         {
             InternalSchedule(null, delay, receiver, message, null, sender, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="cancelable">TBD</param>
         public void ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
             InternalSchedule(null, delay, receiver, message, null, sender, cancelable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         public void ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message,
             IActorRef sender)
         {
             InternalSchedule(initialDelay, interval, receiver, message, null, sender, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <param name="cancelable">TBD</param>
         public void ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message,
             IActorRef sender, ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, receiver, message, null, sender, cancelable);
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
         public void ScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
             InternalSchedule(null, delay, null, null, action, null, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
         public void ScheduleOnce(TimeSpan delay, Action action)
         {
             InternalSchedule(null, delay, null, null, action, null, null);
-
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
         public void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, null, null, action, null, cancelable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialDelay">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="action">TBD</param>
         public void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
         {
             InternalSchedule(initialDelay, interval, null, null, action, null, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected DateTimeOffset TimeNow { get { return _now; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public DateTimeOffset Now { get { return _now; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan HighResMonotonicClock { get { return Util.MonotonicClock.ElapsedHighRes; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IAdvancedScheduler Advanced
         {
             get { return this; }
         }
 
-        internal class ScheduledItem
+         /// <summary>
+        /// TBD
+        /// </summary>
+       internal class ScheduledItem
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TimeSpan InitialDelay { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TimeSpan Delay { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ScheduledItemType Type { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object Message { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Action Action { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public bool Repeating { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ICanTell Receiver { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IActorRef Sender { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ICancelable Cancelable { get; set; }
+            /// <summary>
+            /// TBD
+            /// </summary>
             public int DeliveryCount { get; set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public enum ScheduledItemType
             {
-                Message, Action
+                /// <summary>
+                /// TBD
+                /// </summary>
+                Message,
+                /// <summary>
+                /// TBD
+                /// </summary>
+                Action
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="initialDelay">TBD</param>
+            /// <param name="delay">TBD</param>
+            /// <param name="type">TBD</param>
+            /// <param name="message">TBD</param>
+            /// <param name="action">TBD</param>
+            /// <param name="repeating">TBD</param>
+            /// <param name="receiver">TBD</param>
+            /// <param name="sender">TBD</param>
+            /// <param name="cancelable">TBD</param>
             public ScheduledItem(TimeSpan initialDelay, TimeSpan delay, ScheduledItemType type, object message, Action action, bool repeating, ICanTell receiver, 
                 IActorRef sender, ICancelable cancelable)
             {
@@ -168,6 +311,5 @@ namespace Akka.TestKit
                 DeliveryCount = 0;
             }
         }
-
     }
 }

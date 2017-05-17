@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefFactoryShared.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,6 +26,9 @@ namespace Akka.Actor
         ///     the supplied path, it is recommended to send a message and gather the
         ///     replies in order to resolve the matching set of actors.
         /// </summary>
+        /// <param name="actorPath">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public static ActorSelection ActorSelection(ActorPath actorPath, ActorSystem system)
         {
             return new ActorSelection(((ActorSystemImpl)system).Provider.RootGuardianAt(actorPath.Address), actorPath.Elements);
@@ -38,6 +41,10 @@ namespace Akka.Actor
         ///     the supplied path, it is recommended to send a message and gather the
         ///     replies in order to resolve the matching set of actors.
         /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <param name="lookupRoot">TBD</param>
+        /// <returns>TBD</returns>
         public static ActorSelection ActorSelection(string path, ActorSystem system, IActorRef lookupRoot)
         {
             var provider = ((ActorSystemImpl)system).Provider;
@@ -74,6 +81,9 @@ namespace Akka.Actor
         ///     matching magic, so it is preferable to cache its result if the
         ///     intention is to send messages frequently.
         /// </summary>
+        /// <param name="anchorActorRef">TBD</param>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
         public static ActorSelection ActorSelection(IActorRef anchorActorRef, string path)
         {
             return new ActorSelection(anchorActorRef, path);

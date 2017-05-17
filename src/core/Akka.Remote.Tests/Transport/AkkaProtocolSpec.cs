@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,8 +13,9 @@ using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using Xunit;
+using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -32,7 +33,7 @@ namespace Akka.Remote.Tests.Transport
         AkkaPduCodec codec = new AkkaPduProtobuffCodec();
 
         SerializedMessage testMsg =
-            SerializedMessage.CreateBuilder().SetSerializerId(0).SetMessage(ByteString.CopyFromUtf8("foo")).Build();
+            new SerializedMessage { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
 
         private ByteString testEnvelope;
         private ByteString testMsgPdu;

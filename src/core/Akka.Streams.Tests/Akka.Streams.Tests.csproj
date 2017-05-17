@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Akka.Streams.Tests</AssemblyName>
+    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
+  </PropertyGroup>
+ 
+  <ItemGroup>
+    <Content Include="App.config" />
+    <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
+    <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Streams.TestKit.Tests\Akka.Streams.TestKit.Tests.csproj" />
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
+    <PackageReference Include="xunit" Version="2.3.0-beta2-build3683" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta2-build1317" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta2-build3683" />
+    <PackageReference Include="FluentAssertions" Version="4.14.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="Microsoft.CSharp" />
+    <PackageReference Include="FsCheck" Version="2.6.2" />
+    <PackageReference Include="FsCheck.Xunit" Version="2.6.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
+    <PackageReference Include="System.Net.Sockets" version="4.3.0" />
+    <PackageReference Include="System.Runtime.Extensions" version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
+    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+</Project>

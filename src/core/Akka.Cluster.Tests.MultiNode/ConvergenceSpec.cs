@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConvergenceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
@@ -42,61 +43,16 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
     
-    public class ConvergenceWithFailureDetectorPuppetMultiNode1 : ConvergenceSpec
+    public class ConvergenceWithFailureDetectorPuppetMultiNode : ConvergenceSpec
     {
-        public ConvergenceWithFailureDetectorPuppetMultiNode1() : base(true)
+        public ConvergenceWithFailureDetectorPuppetMultiNode() : base(true)
         {
         }
     }
 
-    public class ConvergenceWithFailureDetectorPuppetMultiNode2 : ConvergenceSpec
+    public class ConvergenceWithAccrualFailureDetectorMultiNode : ConvergenceSpec
     {
-        public ConvergenceWithFailureDetectorPuppetMultiNode2() : base(true)
-        {
-        }
-    }
-    
-    public class ConvergenceWithFailureDetectorPuppetMultiNode3 : ConvergenceSpec
-    {
-        public ConvergenceWithFailureDetectorPuppetMultiNode3() : base(true)
-        {
-        }
-    }
-    
-    public class ConvergenceWithFailureDetectorPuppetMultiNode4 : ConvergenceSpec
-    {
-        public ConvergenceWithFailureDetectorPuppetMultiNode4() : base(true)
-        {
-        }
-    }
-
-    public class ConvergenceWithAccrualFailureDetectorMultiNode1 : ConvergenceSpec
-    {
-        public ConvergenceWithAccrualFailureDetectorMultiNode1()
-            : base(false)
-        {
-        }
-    }
-
-    public class ConvergenceWithAccrualFailureDetectorMultiNode2 : ConvergenceSpec
-    {
-        public ConvergenceWithAccrualFailureDetectorMultiNode2()
-            : base(false)
-        {
-        }
-    }
-
-    public class ConvergenceWithAccrualFailureDetectorMultiNode3 : ConvergenceSpec
-    {
-        public ConvergenceWithAccrualFailureDetectorMultiNode3()
-            : base(false)
-        {
-        }
-    }
-
-    public class ConvergenceWithAccrualFailureDetectorMultiNode4 : ConvergenceSpec
-    {
-        public ConvergenceWithAccrualFailureDetectorMultiNode4()
+        public ConvergenceWithAccrualFailureDetectorMultiNode()
             : base(false)
         {
         }
@@ -121,12 +77,12 @@ namespace Akka.Cluster.Tests.MultiNode
         public void ConvergenceSpecTests()
         {
             //TODO: This better
-            AClusterOf3MembersMustReachInitialConvergence();
-            AClusterOf3MembersMustNotReachConvergenceWhileAnyNodesAreUnreachable();
-            AClusterOf3MembersMustNotMoveANewJoiningNodeToUpWhileThereIsNoConvergence();
+            A_cluster_of_3_members_must_reach_initial_convergence();
+            A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable();
+            A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence();
         }
 
-        public void AClusterOf3MembersMustReachInitialConvergence()
+        public void A_cluster_of_3_members_must_reach_initial_convergence()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
 
@@ -135,7 +91,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-1");
         }
 
-        public void AClusterOf3MembersMustNotReachConvergenceWhileAnyNodesAreUnreachable()
+        public void A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable()
         {
             var thirdAddress = GetAddress(_config.Third);
             EnterBarrier("before-shutdown");
@@ -161,7 +117,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-2");
         }
 
-        public void AClusterOf3MembersMustNotMoveANewJoiningNodeToUpWhileThereIsNoConvergence()
+        public void A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence()
         {
             RunOn(() => Cluster.Join(GetAddress(_config.First)), _config.Fourth);
 
@@ -171,14 +127,13 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    AwaitAssert(() => ClusterView.Members.Count.ShouldBe(3));
+                    AwaitAssert(() => ClusterView.Members.Count.ShouldBe(4));
                     AwaitSeenSameState(GetAddress(_config.First), GetAddress(_config.Second), GetAddress(_config.Fourth));
                     MemberStatus(GetAddress(_config.First)).ShouldBe(Akka.Cluster.MemberStatus.Up);
                     MemberStatus(GetAddress(_config.Second)).ShouldBe(Akka.Cluster.MemberStatus.Up);
-                    Assert.True(MemberStatus(GetAddress(_config.Fourth)) == null);
+                    MemberStatus(GetAddress(_config.Fourth)).ShouldBe(Akka.Cluster.MemberStatus.Joining);
                     // wait and then check again
-                    //TODO: Dilation?
-                    Thread.Sleep(TimeSpan.FromSeconds(1));
+                    Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)));
                 }
             }, _config.First, _config.Second, _config.Fourth);
 

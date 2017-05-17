@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,12 +23,10 @@ akka {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
     }
     remote {
-        helios.tcp {
-            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-            applied-adapters = []
-            transport-protocol = tcp
+        dot-netty.tcp {
             port = 8081
-            hostname = localhost
+            hostname = 0.0.0.0
+            public-hostname = localhost
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Listeners.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ namespace Akka.Routing
     /// The class represents a <see cref="ListenerMessage"/> sent by an <see cref="IActorRef"/> to another <see cref="IActorRef"/>
     /// instructing the second actor to start listening for messages sent by the first actor.
     /// </summary>
-    public class Listen : ListenerMessage
+    public sealed class Listen : ListenerMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Listen"/> class.
@@ -54,14 +54,14 @@ namespace Akka.Routing
         /// <summary>
         /// The actor that receives the message.
         /// </summary>
-        public IActorRef Listener { get; private set; }
+        public IActorRef Listener { get; }
     }
 
     /// <summary>
     /// The class represents a <see cref="ListenerMessage"/> sent by an <see cref="IActorRef"/> to another <see cref="IActorRef"/>
     /// instructing the second actor to stop listening for messages sent by the first actor.
     /// </summary>
-    public class Deafen : ListenerMessage
+    public sealed class Deafen : ListenerMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Deafen"/> class.
@@ -75,14 +75,14 @@ namespace Akka.Routing
         /// <summary>
         /// The actor that no longer receives the message.
         /// </summary>
-        public IActorRef Listener { get; private set; }
+        public IActorRef Listener { get; }
     }
 
     /// <summary>
     /// This class represents a <see cref="ListenerMessage"/> instructing an <see cref="IActorRef"/>
     /// to perform a supplied <see cref="Action{IActorRef}"/> for all of its listeners.
     /// </summary>
-    public class WithListeners : ListenerMessage
+    public sealed class WithListeners : ListenerMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="WithListeners"/> class.
@@ -96,7 +96,7 @@ namespace Akka.Routing
         /// <summary>
         /// The action to perform for all of an actor's listeners.
         /// </summary>
-        public Action<IActorRef> ListenerFunction { get; private set; }
+        public Action<IActorRef> ListenerFunction { get; }
     }
 
     /// <summary>

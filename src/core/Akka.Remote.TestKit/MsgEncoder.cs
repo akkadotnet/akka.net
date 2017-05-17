@@ -1,22 +1,27 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MsgEncoder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport;
-using Helios.Buffers;
-using Helios.Net;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
+using Microsoft.Extensions.Logging;
 using TCP;
 using Address = Akka.Actor.Address;
 
 namespace Akka.Remote.TestKit
 {
-    internal class MsgEncoder
+    internal class MsgEncoder : MessageToMessageEncoder<object>
     {
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<MsgEncoder>();
+
         public static TCP.Address Address2Proto(Address addr)
         {
             return TCP.Address.CreateBuilder()
@@ -39,92 +44,88 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        public void Encode(IConnection connection, object message, out List<IByteBuf> encoded)
+        protected override void Encode(IChannelHandlerContext context, object message, List<object> output)
         {
-            encoded = new List<IByteBuf>();
-            var x = message as INetworkOp;
-            if (x != null)
-            {
-                var w = Wrapper.CreateBuilder();
-                x.Match()
-                    .With<Hello>(
-                        hello =>
-                            w.SetHello(
-                                TCP.Hello.CreateBuilder()
-                                    .SetName(hello.Name)
-                                    .SetAddress(Address2Proto(hello.Address))))
-                    .With<EnterBarrier>(barrier =>
+            _logger.LogDebug("Encoding {0}", message);
+            var w = Wrapper.CreateBuilder();
+            message.Match()
+                .With<Hello>(
+                    hello =>
+                        w.SetHello(
+                            TCP.Hello.CreateBuilder()
+                                .SetName(hello.Name)
+                                .SetAddress(Address2Proto(hello.Address))))
+                .With<EnterBarrier>(barrier =>
+                {
+                    var protoBarrier = TCP.EnterBarrier.CreateBuilder().SetName(barrier.Name);
+                    if (barrier.Timeout.HasValue)
+                        protoBarrier.SetTimeout(barrier.Timeout.Value.Ticks);
+                    protoBarrier.SetOp(BarrierOp.Enter);
+                    w.SetBarrier(protoBarrier);
+                })
+                .With<BarrierResult>(result =>
+                {
+                    var res = result.Success ? BarrierOp.Succeeded : BarrierOp.Failed;
+                    w.SetBarrier(
+                        TCP.EnterBarrier.CreateBuilder().SetName(result.Name).SetOp(res));
+                })
+                .With<FailBarrier>(
+                    barrier =>
+                        w.SetBarrier(TCP.EnterBarrier.CreateBuilder()
+                            .SetName(barrier.Name)
+                            .SetOp(BarrierOp.Fail)))
+                .With<ThrottleMsg>(
+                    throttle =>
                     {
-                        var protoBarrier = TCP.EnterBarrier.CreateBuilder().SetName(barrier.Name);
-                        if (barrier.Timeout.HasValue)
-                            protoBarrier.SetTimeout(barrier.Timeout.Value.Ticks);
-                        protoBarrier.SetOp(BarrierOp.Enter);
-                        w.SetBarrier(protoBarrier);
+                        w.SetFailure(
+                            InjectFailure.CreateBuilder()
+                                .SetFailure(TCP.FailType.Throttle)
+                                .SetAddress(Address2Proto(throttle.Target))
+                                .SetFailure(TCP.FailType.Throttle)
+                                .SetDirection(Direction2Proto(throttle.Direction))
+                                .SetRateMBit(throttle.RateMBit));
                     })
-                    .With<BarrierResult>(result =>
+                .With<DisconnectMsg>(
+                    disconnect =>
+                        w.SetFailure(
+                            InjectFailure.CreateBuilder()
+                                .SetAddress(Address2Proto(disconnect.Target))
+                                .SetFailure(disconnect.Abort ? TCP.FailType.Abort : TCP.FailType.Disconnect)))
+                .With<TerminateMsg>(terminate =>
+                {
+                    if (terminate.ShutdownOrExit.IsRight)
                     {
-                        var res = result.Success ? BarrierOp.Succeeded : BarrierOp.Failed;
-                        w.SetBarrier(
-                            TCP.EnterBarrier.CreateBuilder().SetName(result.Name).SetOp(res));
-                    })
-                    .With<FailBarrier>(
-                        barrier =>
-                            w.SetBarrier(TCP.EnterBarrier.CreateBuilder()
-                                .SetName(barrier.Name)
-                                .SetOp(BarrierOp.Fail)))
-                    .With<ThrottleMsg>(
-                        throttle =>
-                            w.SetFailure(
-                                InjectFailure.CreateBuilder()
-                                    .SetAddress(Address2Proto(throttle.Target))
-                                    .SetDirection(Direction2Proto(throttle.Direction))
-                                    .SetRateMBit(throttle.RateMBit)))
-                    .With<DisconnectMsg>(
-                        disconnect =>
-                            w.SetFailure(
-                                InjectFailure.CreateBuilder()
-                                    .SetAddress(Address2Proto(disconnect.Target))
-                                    .SetFailure(disconnect.Abort ? TCP.FailType.Abort : TCP.FailType.Disconnect)))
-                    .With<TerminateMsg>(terminate =>
+                        w.SetFailure(
+                            InjectFailure.CreateBuilder()
+                                .SetFailure(TCP.FailType.Exit)
+                                .SetExitValue(terminate.ShutdownOrExit.ToRight().Value));
+                    }
+                    else if (terminate.ShutdownOrExit.IsLeft && !terminate.ShutdownOrExit.ToLeft().Value)
                     {
-                        if (terminate.ShutdownOrExit.IsRight)
-                        {
-                            w.SetFailure(
-                                InjectFailure.CreateBuilder()
-                                    .SetFailure(TCP.FailType.Exit)
-                                    .SetExitValue(terminate.ShutdownOrExit.ToRight().Value));
-                        }
-                        else if (terminate.ShutdownOrExit.IsLeft && !terminate.ShutdownOrExit.ToLeft().Value)
-                        {
-                            w.SetFailure(
-                                InjectFailure.CreateBuilder()
-                                    .SetFailure(TCP.FailType.Shutdown));
-                        }
-                        else
-                        {
-                            w.SetFailure(
-                                InjectFailure.CreateBuilder()
-                                    .SetFailure(TCP.FailType.ShutdownAbrupt));
-                        }
+                        w.SetFailure(
+                            InjectFailure.CreateBuilder()
+                                .SetFailure(TCP.FailType.Shutdown));
+                    }
+                    else
+                    {
+                        w.SetFailure(
+                            InjectFailure.CreateBuilder()
+                                .SetFailure(TCP.FailType.ShutdownAbrupt));
+                    }
 
-                    })
-                    .With<GetAddress>(
-                        address => w.SetAddr(AddressRequest.CreateBuilder().SetNode(address.Node.Name)))
-                    .With<AddressReply>(
-                        reply =>
-                            w.SetAddr(
-                                AddressRequest.CreateBuilder()
-                                    .SetNode(reply.Node.Name)
-                                    .SetAddr(Address2Proto(reply.Addr))))
-                    .With<Done>(done => w.SetDone(string.Empty))
-                    .Default(obj => w.SetDone(string.Empty));
+                })
+                .With<GetAddress>(
+                    address => w.SetAddr(AddressRequest.CreateBuilder().SetNode(address.Node.Name)))
+                .With<AddressReply>(
+                    reply =>
+                        w.SetAddr(
+                            AddressRequest.CreateBuilder()
+                                .SetNode(reply.Node.Name)
+                                .SetAddr(Address2Proto(reply.Addr))))
+                .With<Done>(done => w.SetDone(string.Empty))
+                .Default(obj => w.SetDone(string.Empty));
 
-                encoded.Add(connection.Allocator.Buffer().WriteBytes(w.Build().ToByteArray()));
-            }
-            else
-            {
-                throw new ArgumentException(string.Format("wrong message {0}", message));
-            }
+            output.Add(w.Build());
         }
     }
 }

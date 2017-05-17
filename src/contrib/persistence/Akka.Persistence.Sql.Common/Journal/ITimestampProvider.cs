@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ITimestampProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Generates timestamp for provided <see cref="IPersistentRepresentation"/> message.
         /// </summary>
-        DateTime GenerateTimestamp(IPersistentRepresentation message);
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
+        long GenerateTimestamp(IPersistentRepresentation message);
     }
     
     /// <summary>
@@ -25,9 +27,11 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public sealed class DefaultTimestampProvider : ITimestampProvider
     {
-        public DateTime GenerateTimestamp(IPersistentRepresentation message)
-        {
-            return DateTime.UtcNow;
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
+        public long GenerateTimestamp(IPersistentRepresentation message) => DateTime.UtcNow.Ticks;
     }
 }

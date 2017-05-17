@@ -1,20 +1,27 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MsgDecoder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Remote.Transport;
 using Akka.Util;
+using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
+using DotNetty.Transport.Channels;
+using Microsoft.Extensions.Logging;
 using TCP;
 using Address = Akka.Actor.Address;
 
 namespace Akka.Remote.TestKit
 {
-    internal class MsgDecoder
+    internal class MsgDecoder : MessageToMessageDecoder<object>
     {
+        private readonly ILogger _logger = InternalLoggerFactory.DefaultFactory.CreateLogger<MsgDecoder>();
+
         public static Address Proto2Address(TCP.Address addr)
         {
             return new Address(addr.Protocol, addr.System, addr.Host, addr.Port);
@@ -34,8 +41,9 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        public object Decode(object message)
+        protected object Decode(object message)
         {
+            _logger.LogDebug("Decoding {0}", message);
             var w = message as TCP.Wrapper;
             if (w != null && w.AllFields.Count == 1)
             {
@@ -90,11 +98,18 @@ namespace Akka.Remote.TestKit
                 }
                 else
                 {
-                    throw new ArgumentException(string.Format("wrong message {0}", message));
+                    throw new ArgumentException($"wrong message {message}");
                 }
             }
 
-            throw new ArgumentException(string.Format("wrong message {0}", message));
+            throw new ArgumentException($"wrong message {message}");
+        }
+
+        protected override void Decode(IChannelHandlerContext context, object message, List<object> output)
+        {
+            var o = Decode(message);
+            _logger.LogDebug("Decoded {0}", o);
+            output.Add(o);
         }
     }
 }

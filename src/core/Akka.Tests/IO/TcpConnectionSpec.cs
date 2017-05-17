@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpConnectionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -164,9 +164,9 @@ namespace Akka.Tests.IO
                 serverSideChannel.Write(ByteBuffer.Wrap(Encoding.ASCII.GetBytes("immediatedata")));
 
 
-                // JVM Akka always excpect CONNECT, which seems incorrect
+                // JVM Akka always expects CONNECT, which seems incorrect
                 // We will not receive a CONNECT if Socket.BeginConnect completed synchronously
-                // We therfore just igenore the CONNECT if it is in the queue
+                // We therefore just ignore the CONNECT if it is in the queue
                 //What JVM Akka does:  InterestCallReceiver.ExpectMsg((int)SocketAsyncOperation.Connect); 
                 if (x.InterestCallReceiver.ReceiveWhile<object>(m => m is int && (int)m == (int)SocketAsyncOperation.Connect, TimeSpan.Zero, TimeSpan.Zero, 1).Any())
                     x.Selector.Send(x.ConnectionActor, SelectionHandler.ChannelConnectable.Instance);   // Only send ChannelConnectable if we did not complete synchronously 
@@ -711,7 +711,7 @@ namespace Akka.Tests.IO
             connectionProbe.Send(Sys.Tcp(), new Tcp.Connect(bindAddress));
 
             Sys.Tcp().Tell(new Tcp.Connect(bindAddress));
-            ExpectMsg<Tcp.Connected>();     //TODO: Investigate why this is not reuired in JVM Akka
+            ExpectMsg<Tcp.Connected>();     //TODO: Investigate why this is not required in JVM Akka
 
             var socket = serverSocket.Accept();
             connectionProbe.ExpectMsg<Tcp.Connected>();
@@ -919,9 +919,9 @@ namespace Akka.Tests.IO
                 {
                     ServerSideChannel.Socket.Blocking = false;
 
-                    // JVM Akka always excpect CONNECT, which seems incorrect
+                    // JVM Akka always expects CONNECT, which seems incorrect
                     // We will not receive a CONNECT if Socket.BeginConnect completed synchronously
-                    // We therfore just igenore the CONNECT if it is in the queue
+                    // We therefore just ignore the CONNECT if it is in the queue
                     //What JVM Akka does:  InterestCallReceiver.ExpectMsg((int)SocketAsyncOperation.Connect); 
                     if (InterestCallReceiver.ReceiveWhile<object>(m => m is int && (int)m == (int)SocketAsyncOperation.Connect, TimeSpan.Zero, TimeSpan.Zero, 1).Any())
                         Selector.Send(ConnectionActor, SelectionHandler.ChannelConnectable.Instance);   // Only send ChannelConnectable if we did not complete synchronously 
@@ -1007,7 +1007,7 @@ namespace Akka.Tests.IO
 
         public void AbortClose(SocketChannel channel)
         {
-            // TODO: Do we need to handle expection like JVM?
+            // TODO: Do we need to handle exception like JVM?
 
             channel.Socket.LingerState = new LingerOption(true, 0);
             channel.Close();
@@ -1037,3 +1037,4 @@ namespace Akka.Tests.IO
 
     
 }
+#endif

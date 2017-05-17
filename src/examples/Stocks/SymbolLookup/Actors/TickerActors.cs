@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TickerActors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ namespace SymbolLookup.Actors
                 var quoteStrTask = _client.GetStringAsync(StockUriHelper.CreateStockQuoteUri(symboldata.Symbol));
                 quoteStrTask.Wait();
                 var quoteStr = quoteStrTask.Result;
-                var quoteData = fastJSON.JSON.Instance.ToObject<RootObject>(quoteStr);
+                var quoteData = Newtonsoft.Json.JsonConvert.DeserializeObject<RootObject>(quoteStr);
                 if (quoteData == null || quoteData.query == null || quoteData.query.results == null)
                 {
                     //request failed for whatever reason, 

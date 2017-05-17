@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InitialHeartbeatSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
@@ -56,23 +57,11 @@ namespace Akka.Cluster.Tests.MultiNode
             TestTransport = true;
         }
         
-        public class InitialHeartbeatMultiNode1 : InitialHeartbeatSpec
-        {
-        }
-
-        public class InitialHeartbeatMultiNode2 : InitialHeartbeatSpec
-        {
-        }
-
-        public class InitialHeartbeatMultiNode3 : InitialHeartbeatSpec
-        {
-        }
-        
-        public abstract class InitialHeartbeatSpec : MultiNodeClusterSpec
+        public class InitialHeartbeatSpec : MultiNodeClusterSpec
         {
             private readonly InitialHeartbeatMultiNodeConfig _config;
 
-            protected InitialHeartbeatSpec() : this(new InitialHeartbeatMultiNodeConfig())
+            public InitialHeartbeatSpec() : this(new InitialHeartbeatMultiNodeConfig())
             {
             }
 
@@ -84,7 +73,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
 
             //[MultiNodeFact] //currently bugged, due to issues with TestKit
-            public void AMemberMustDetectFailureEvenThoughNoHeartbeatsHaveBeenReceived()
+            public void A_member_must_detect_failure_even_though_no_heartbeats_have_been_received()
             {
                 var firstAddress = GetAddress(_config.First);
                 var secondAddress = GetAddress(_config.Second);

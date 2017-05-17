@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PublicApiGenerator.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
@@ -10,6 +17,7 @@ using Microsoft.CSharp;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
 using TypeAttributes = System.Reflection.TypeAttributes;
+using System.Globalization;
 
 // ReSharper disable CheckNamespace
 // ReSharper disable BitwiseOperatorOnEnumWithoutFlags
@@ -371,6 +379,7 @@ namespace ApiApprover
             "System.CodeDom.Compiler.GeneratedCodeAttribute",
             "System.ComponentModel.EditorBrowsableAttribute",
             "System.Runtime.CompilerServices.AsyncStateMachineAttribute",
+            "System.Runtime.CompilerServices.IteratorStateMachineAttribute",
             "System.Runtime.CompilerServices.CompilerGeneratedAttribute",
             "System.Runtime.CompilerServices.CompilationRelaxationsAttribute",
             "System.Runtime.CompilerServices.ExtensionAttribute",
@@ -530,7 +539,7 @@ namespace ApiApprover
                 }
 
                 var name = parameter.HasConstant
-                    ? string.Format("{0} = {1}", parameter.Name, FormatParameterConstant(parameter))
+                    ? string.Format(CultureInfo.InvariantCulture, "{0} = {1}", parameter.Name, FormatParameterConstant(parameter))
                     : parameter.Name;
                 var expression = new CodeParameterDeclarationExpression(type, name)
                 {

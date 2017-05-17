@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThrottleTransportAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Util;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 
 namespace Akka.Remote.Transport
 {
@@ -21,39 +21,77 @@ namespace Akka.Remote.Transport
     /// </summary>
     public class ThrottlerProvider : ITransportAdapterProvider
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
         public Transport Create(Transport wrappedTransport, ExtendedActorSystem system)
         {
             return new ThrottleTransportAdapter(wrappedTransport, system);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ThrottleTransportAdapter : ActorTransportAdapter
     {
         #region Static methods and self-contained data types
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public const string Scheme = "trttl";
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly AtomicCounter UniqueId = new AtomicCounter(0);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public enum Direction
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             Send,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Receive,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Both
         }
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="system">TBD</param>
         public ThrottleTransportAdapter(Transport wrappedTransport, ActorSystem system) : base(wrappedTransport, system)
         {
         }
 
 // ReSharper disable once InconsistentNaming
         private static readonly SchemeAugmenter _schemeAugmenter = new SchemeAugmenter(Scheme);
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override SchemeAugmenter SchemeAugmenter
         {
             get { return _schemeAugmenter; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override string ManagerName
         {
             get
@@ -62,6 +100,9 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override Props ManagerProps
         {
             get
@@ -71,6 +112,11 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public override Task<bool> ManagementCommand(object message)
         {
             if (message is SetThrottle)
@@ -79,17 +125,13 @@ namespace Akka.Remote.Transport
                 {
                     return r.Result is SetThrottleAck;
                 }, 
-                    TaskContinuationOptions.AttachedToParent | 
-                    TaskContinuationOptions.ExecuteSynchronously |
-                    TaskContinuationOptions.OnlyOnRanToCompletion);
+                    TaskContinuationOptions.ExecuteSynchronously);
             }
 
             if (message is ForceDisassociate || message is ForceDisassociateExplicitly)
             {
                 return manager.Ask(message, AskTimeout).ContinueWith(r => r.Result is ForceDisassociateAck,
-                    TaskContinuationOptions.AttachedToParent |
-                    TaskContinuationOptions.ExecuteSynchronously |
-                    TaskContinuationOptions.OnlyOnRanToCompletion);
+                    TaskContinuationOptions.ExecuteSynchronously);
             }
 
             return WrappedTransport.ManagementCommand(message);
@@ -101,11 +143,18 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class ForceDisassociate
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
         public ForceDisassociate(Address address)
         {
             Address = address;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address Address { get; private set; }
     }
 
@@ -114,14 +163,25 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class ForceDisassociateExplicitly
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <param name="reason">TBD</param>
         public ForceDisassociateExplicitly(Address address, DisassociateInfo reason)
         {
             Reason = reason;
             Address = address;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address Address { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public DisassociateInfo Reason { get; private set; }
     }
 
@@ -134,6 +194,9 @@ namespace Akka.Remote.Transport
 // ReSharper disable once InconsistentNaming
         private static readonly ForceDisassociateAck _instance = new ForceDisassociateAck();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static ForceDisassociateAck Instance
         {
             get
@@ -150,78 +213,151 @@ namespace Akka.Remote.Transport
     {
         #region Internal message classes
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Checkin : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="origin">TBD</param>
+            /// <param name="handle">TBD</param>
             public Checkin(Address origin, ThrottlerHandle handle)
             {
                 ThrottlerHandle = handle;
                 Origin = origin;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public Address Origin { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ThrottlerHandle ThrottlerHandle { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class AssociateResult : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="associationHandle">TBD</param>
+            /// <param name="statusPromise">TBD</param>
             public AssociateResult(AssociationHandle associationHandle, TaskCompletionSource<AssociationHandle> statusPromise)
             {
                 StatusPromise = statusPromise;
                 AssociationHandle = associationHandle;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public AssociationHandle AssociationHandle { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public TaskCompletionSource<AssociationHandle> StatusPromise { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class ListenerAndMode : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="handleEventListener">TBD</param>
+            /// <param name="mode">TBD</param>
             public ListenerAndMode(IHandleEventListener handleEventListener, ThrottleMode mode)
             {
                 Mode = mode;
                 HandleEventListener = handleEventListener;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IHandleEventListener HandleEventListener { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ThrottleMode Mode { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Handle : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="throttlerHandle">TBD</param>
             public Handle(ThrottlerHandle throttlerHandle)
             {
                 ThrottlerHandle = throttlerHandle;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ThrottlerHandle ThrottlerHandle { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class Listener : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="handleEventListener">TBD</param>
             public Listener(IHandleEventListener handleEventListener)
             {
                 HandleEventListener = handleEventListener;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public IHandleEventListener HandleEventListener { get; private set; }
         }
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly Transport WrappedTransport;
         private Dictionary<Address, Tuple<ThrottleMode, ThrottleTransportAdapter.Direction>> _throttlingModes 
             = new Dictionary<Address, Tuple<ThrottleMode, ThrottleTransportAdapter.Direction>>();
         
         private List<Tuple<Address, ThrottlerHandle>> _handleTable = new List<Tuple<Address, ThrottlerHandle>>();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedTransport">TBD</param>
         public ThrottlerManager(Transport wrappedTransport)
         {
             WrappedTransport = wrappedTransport;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void Ready(object message)
         {
             if (message is InboundAssociation)
@@ -437,7 +573,7 @@ namespace Akka.Remote.Transport
                 //        internalTarget.Tell(new Unwatch(target, promiseRef));
                 //       return SetThrottleAck.Instance;
                 //    }
-                //}, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+                //}, TaskContinuationOptions.ExecuteSynchronously);
 
             }
         }
@@ -455,18 +591,39 @@ namespace Akka.Remote.Transport
         #endregion
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract class ThrottleMode : INoSerializationVerificationNeeded
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nanoTimeOfSend">TBD</param>
+        /// <param name="tokens">TBD</param>
+        /// <returns>TBD</returns>
         public abstract Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens);
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="currentNanoTime">TBD</param>
+        /// <param name="tokens">TBD</param>
+        /// <returns>TBD</returns>
         public abstract TimeSpan TimeToAvailable(long currentNanoTime, int tokens);
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class Blackhole : ThrottleMode
     {
         private Blackhole() { }
 // ReSharper disable once InconsistentNaming
         private static readonly Blackhole _instance = new Blackhole();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Blackhole Instance
         {
             get
@@ -475,22 +632,40 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nanoTimeOfSend">TBD</param>
+        /// <param name="tokens">TBD</param>
+        /// <returns>TBD</returns>
         public override Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens)
         {
             return Tuple.Create<ThrottleMode, bool>(this, false);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="currentNanoTime">TBD</param>
+        /// <param name="tokens">TBD</param>
+        /// <returns>TBD</returns>
         public override TimeSpan TimeToAvailable(long currentNanoTime, int tokens)
         {
             return TimeSpan.Zero;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class Unthrottled : ThrottleMode
     {
         private Unthrottled() { }
         private static readonly Unthrottled _instance = new Unthrottled();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static Unthrottled Instance
         {
             get
@@ -499,17 +674,32 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nanoTimeOfSend">TBD</param>
+        /// <param name="tokens">TBD</param>
+        /// <returns>TBD</returns>
         public override Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens)
         {
             return Tuple.Create<ThrottleMode, bool>(this, true);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="currentNanoTime">TBD</param>
+        /// <param name="tokens">TBD</param>
+        /// <returns>TBD</returns>
         public override TimeSpan TimeToAvailable(long currentNanoTime, int tokens)
         {
             return TimeSpan.Zero;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     sealed class TokenBucket : ThrottleMode
     {
         readonly int _capacity;
@@ -517,6 +707,13 @@ namespace Akka.Remote.Transport
         readonly long _nanoTimeOfLastSend;
         readonly int _availableTokens;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="capacity">TBD</param>
+        /// <param name="tokensPerSecond">TBD</param>
+        /// <param name="nanoTimeOfLastSend">TBD</param>
+        /// <param name="availableTokens">TBD</param>
         public TokenBucket(int capacity, double tokensPerSecond, long nanoTimeOfLastSend, int availableTokens)
         {
             _capacity = capacity;
@@ -532,6 +729,12 @@ namespace Akka.Remote.Transport
             return Math.Min(_availableTokens + TokensGenerated(nanoTimeOfSend), _capacity) >= tokens;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nanoTimeOfSend">TBD</param>
+        /// <param name="tokens">TBD</param>
+        /// <returns>TBD</returns>
         public override Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens)
         {
             if (IsAvailable(nanoTimeOfSend, tokens))
@@ -544,6 +747,12 @@ namespace Akka.Remote.Transport
             return Tuple.Create<ThrottleMode, bool>(this, false);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="currentNanoTime">TBD</param>
+        /// <param name="tokens">TBD</param>
+        /// <returns>TBD</returns>
         public override TimeSpan TimeToAvailable(long currentNanoTime, int tokens)
         {
             var needed = (tokens > _capacity ? 1 : tokens) - TokensGenerated(currentNanoTime);
@@ -574,6 +783,13 @@ namespace Akka.Remote.Transport
                 && _availableTokens == other._availableTokens;
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -581,6 +797,12 @@ namespace Akka.Remote.Transport
             return obj is TokenBucket && Equals((TokenBucket)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -593,26 +815,57 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="TokenBucket"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="TokenBucket"/> used for comparison</param>
+        /// <param name="right">The second <see cref="TokenBucket"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="TokenBucket">TokenBuckets</see> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(TokenBucket left, TokenBucket right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="TokenBucket"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="TokenBucket"/> used for comparison</param>
+        /// <param name="right">The second <see cref="TokenBucket"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="TokenBucket">TokenBuckets</see> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(TokenBucket left, TokenBucket right)
         {
             return !Equals(left, right);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class SetThrottle
     {
         readonly Address _address;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Address Address { get { return _address; } }
         readonly ThrottleTransportAdapter.Direction _direction;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ThrottleTransportAdapter.Direction Direction { get { return _direction; } }
         readonly ThrottleMode _mode;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ThrottleMode Mode { get { return _mode; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="address">TBD</param>
+        /// <param name="direction">TBD</param>
+        /// <param name="mode">TBD</param>
+        /// <returns>TBD</returns>
         public SetThrottle(Address address, ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
         {
             _address = address;
@@ -625,6 +878,13 @@ namespace Akka.Remote.Transport
             return Equals(_address, other._address) && _direction == other._direction && Equals(_mode, other._mode);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -632,6 +892,12 @@ namespace Akka.Remote.Transport
             return obj is SetThrottle && Equals((SetThrottle)obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -643,23 +909,41 @@ namespace Akka.Remote.Transport
             }
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="SetThrottle"/> for equality.
+        /// </summary>
+        /// <param name="left">The first <see cref="SetThrottle"/> used for comparison</param>
+        /// <param name="right">The second <see cref="SetThrottle"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="SetThrottle">SetThrottles</see> are equal; otherwise <c>false</c></returns>
         public static bool operator ==(SetThrottle left, SetThrottle right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Compares two specified <see cref="SetThrottle"/> for inequality.
+        /// </summary>
+        /// <param name="left">The first <see cref="SetThrottle"/> used for comparison</param>
+        /// <param name="right">The second <see cref="SetThrottle"/> used for comparison</param>
+        /// <returns><c>true</c> if both <see cref="SetThrottle">SetThrottles</see> are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(SetThrottle left, SetThrottle right)
         {
             return !Equals(left, right);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal sealed class SetThrottleAck
     {
         private SetThrottleAck() { }
 // ReSharper disable once InconsistentNaming
         private static readonly SetThrottleAck _instance = new SetThrottleAck();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static SetThrottleAck Instance
         {
             get { return _instance; }
@@ -670,16 +954,30 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class ThrottlerHandle : AbstractTransportAdapterHandle
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal readonly IActorRef ThrottlerActor;
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal AtomicReference<ThrottleMode> OutboundThrottleMode = new AtomicReference<ThrottleMode>(Unthrottled.Instance);
 
-        
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="wrappedHandle">TBD</param>
+        /// <param name="throttlerActor">TBD</param>
         public ThrottlerHandle(AssociationHandle wrappedHandle, IActorRef throttlerActor) : base(wrappedHandle, ThrottleTransportAdapter.Scheme)
         {
             ThrottlerActor = throttlerActor;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Write(ByteString payload)
         {
             var tokens = payload.Length;
@@ -706,11 +1004,18 @@ namespace Akka.Remote.Transport
             return success && WrappedHandle.Write(payload);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Disassociate()
         {
             ThrottlerActor.Tell(PoisonPill.Instance);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
         public void DisassociateWithFailure(DisassociateInfo reason)
         {
             ThrottlerActor.Tell(new ThrottledAssociation.FailWith(reason));
@@ -726,8 +1031,14 @@ namespace Akka.Remote.Transport
 
         private const string DequeueTimerName = "dequeue";
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         sealed class Dequeue { }
-        
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         public enum ThrottlerState
         {
             /*
@@ -765,45 +1076,95 @@ namespace Akka.Remote.Transport
             Throttling
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal interface IThrottlerData { }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal class Uninitialized : IThrottlerData
         {
             private Uninitialized() { }
 // ReSharper disable once InconsistentNaming
             private static readonly Uninitialized _instance = new Uninitialized();
+            /// <summary>
+            /// TBD
+            /// </summary>
             public static Uninitialized Instance { get { return _instance; } }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class ExposedHandle : IThrottlerData
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="handle">TBD</param>
             public ExposedHandle(ThrottlerHandle handle)
             {
                 Handle = handle;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ThrottlerHandle Handle { get; private set; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         internal sealed class FailWith
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="failReason">TBD</param>
             public FailWith(DisassociateInfo failReason)
             {
                 FailReason = failReason;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public DisassociateInfo FailReason { get; private set; }
         }
 
         #endregion
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IActorRef Manager;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IAssociationEventListener AssociationHandler;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected AssociationHandle OriginalHandle;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected bool Inbound;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected ThrottleMode InboundThrottleMode;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected Queue<ByteString> ThrottledMessages = new Queue<ByteString>();
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected IHandleEventListener UpstreamListener;
 
         /// <summary>
@@ -811,6 +1172,13 @@ namespace Akka.Remote.Transport
         /// </summary>
         private static readonly AkkaPduProtobuffCodec Codec = new AkkaPduProtobuffCodec();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="manager">TBD</param>
+        /// <param name="associationHandler">TBD</param>
+        /// <param name="originalHandle">TBD</param>
+        /// <param name="inbound">TBD</param>
         public ThrottledAssociation(IActorRef manager, IAssociationEventListener associationHandler, AssociationHandle originalHandle, bool inbound)
         {
             Manager = manager;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="FSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="PersistentFSM.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,8 +17,16 @@ namespace Akka.Persistence.Fsm
     /// <typeparam name="TEvent">The event data type</typeparam>
     public abstract class PersistentFSM<TState, TData, TEvent> : PersistentFSMBase<TState, TData, TEvent>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected abstract void OnRecoveryCompleted();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool ReceiveRecover(object message)
         {
             var match = message.Match()
@@ -33,9 +41,19 @@ namespace Akka.Persistence.Fsm
             return match.WasHandled;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="e">TBD</param>
+        /// <param name="data">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract TData ApplyEvent(TEvent e, TData data);
 
-        protected override void ApplyState(State<TState, TData, TEvent> upcomingState)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="upcomingState">TBD</param>
+        protected override void ApplyState(State upcomingState)
         {
             var eventsToPersist = new List<object>();
             if (upcomingState.DomainEvents != null)
@@ -59,7 +77,7 @@ namespace Akka.Persistence.Fsm
                 var handlersExecutedCounter = 0;
 
 
-                Persist(eventsToPersist, @event =>
+                PersistAll(eventsToPersist, @event =>
                 {
                     handlersExecutedCounter++;
                     if (@event is TEvent)

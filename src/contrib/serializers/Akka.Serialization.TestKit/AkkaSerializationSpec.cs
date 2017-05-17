@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="SerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="AkkaSerializationSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,10 +11,33 @@ using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.TestKit.TestActors;
+using Akka.Util;
 using Xunit;
 
 namespace Akka.Tests.Serialization
 {
+    public class Poco : ISurrogated
+    {
+        public class Surrogate : ISurrogate
+        {
+            public string TheName { get; set; }
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new Poco()
+                {
+                    Name = TheName
+                };
+            }
+        }
+        public string Name { get; set; }
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new Surrogate
+            {
+                TheName = Name
+            };
+        }
+    }
     public abstract class AkkaSerializationSpec : TestKit.Xunit2.TestKit
     {
         protected AkkaSerializationSpec(Type serializerType):base(GetConfig(serializerType))
@@ -37,6 +60,28 @@ akka.actor {
 ";
         }
 
+        [Fact]
+        public void CanSerializeArrayOfTypes()
+        {
+            var message = new[] {typeof(NullReferenceException), typeof(ArgumentException)};
+            var serializer = Sys.Serialization.FindSerializerFor(message);
+            var bytes = serializer.ToBinary(message);
+            var res = (Type[])serializer.FromBinary(bytes, typeof(Type[]));
+        }
+
+        [Fact]
+        public void CanSerializeSurrogate()
+        {
+            var message = new Poco
+            {
+                Name = "Foo"
+            };
+            var serializer = Sys.Serialization.FindSerializerFor(message);
+            var bytes = serializer.ToBinary(message);
+            var res = (Poco)serializer.FromBinary(bytes, typeof(Poco));
+
+            Assert.Equal(message.Name,res.Name);
+        }
         [Fact]
         public void CanSerializeAddressMessage()
         {
@@ -145,7 +190,7 @@ akka.actor {
         [Fact]
         public void CanSerializeDeploy()
         {
-            var message = new Deploy(RouterConfig.NoRouter).WithMailbox("abc");
+            var message = new Deploy(NoRouter.Instance).WithMailbox("abc");
             AssertEqual(message);
         }
 
@@ -244,7 +289,7 @@ akka.actor {
 
             var supervisor = new OneForOneStrategy(decider);
 
-            var message = new ScatterGatherFirstCompletedPool(10, null, supervisor, "abc", TimeSpan.MaxValue);
+            var message = new ScatterGatherFirstCompletedPool(10, null, TimeSpan.MaxValue, supervisor, "abc");
             AssertEqual(message);
         }
 
@@ -336,11 +381,11 @@ akka.actor {
         [Fact]
         public void CanSerializeSingletonMessages()
         {
-            var message = Terminate.Instance;
+            var message = PoisonPill.Instance;
 
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
-            var deserialized = (Terminate)serializer.FromBinary(serialized, typeof(Terminate));
+            var deserialized = (PoisonPill)serializer.FromBinary(serialized, typeof(PoisonPill));
 
             Assert.NotNull(deserialized);
         }
@@ -350,6 +395,31 @@ akka.actor {
         {
             var aref = ActorOf<BlackHoleActor>();
             AssertEqual(aref);
+        }
+
+        [Fact]
+        public void CanSerializeActorRefWithUID()
+        {
+            var aref = ActorOf<BlackHoleActor>();
+            var surrogate = aref.ToSurrogate(Sys) as ActorRefBase.Surrogate;
+            var uid = aref.Path.Uid;
+            Assert.True(surrogate.Path.Contains("#" + uid));
+        }
+
+        [Fact]
+        public void CanSerializeEmptyDecider()
+        {
+            var decider = Decider.From(
+                Directive.Restart,
+                Directive.Stop.When<NullReferenceException>(),
+                Directive.Escalate.When<Exception>()
+                );
+
+            var serializer = Sys.Serialization.FindSerializerFor(decider);
+            var bytes = serializer.ToBinary(decider);
+            var sref = (DeployableDecider)serializer.FromBinary(bytes, typeof(DeployableDecider));
+            Assert.NotNull(sref);
+            Assert.Equal(decider.DefaultDirective, sref.DefaultDirective);
         }
 
         [Fact]

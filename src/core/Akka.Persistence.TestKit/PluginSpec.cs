@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PluginSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ namespace Akka.Persistence.TestKit
         private static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly PersistenceExtension _extension;
         private string _pid;
+        private string _writerGuid;
 
         protected int ActorInstanceId = 1;
 
@@ -26,6 +27,7 @@ namespace Akka.Persistence.TestKit
         {
             _extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
             _pid = "p-" + Counter.IncrementAndGet();
+            _writerGuid = Guid.NewGuid().ToString();
         }
 
         protected static Config FromConfig(Config config = null)
@@ -35,20 +37,27 @@ namespace Akka.Persistence.TestKit
                 : config.WithFallback(Persistence.DefaultConfig());
         }
 
-        public string Pid { get { return _pid; } }
         public PersistenceExtension Extension { get { return _extension; } }
+        public string Pid { get { return _pid; } }
+        public string WriterGuid { get { return _writerGuid; } }
 
         public void Subscribe<T>(IActorRef subscriber)
         {
             Sys.EventStream.Subscribe(subscriber, typeof (T));
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a
+        /// user's code. Managed and unmanaged resources will be disposed.<br />
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only
+        /// unmanaged resources can be disposed.</param>
         protected virtual void Dispose(bool disposing)
         {
             //if (disposing) FSMBase.Shutdown();

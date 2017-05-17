@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDeathWatchSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote;
 using Akka.Remote.TestKit;
@@ -38,38 +39,19 @@ namespace Akka.Cluster.Tests.MultiNode
             _fourth = Role("fourth");
             _fifth = Role("fifth");
             DeployOn(_fourth, @"/hello.remote = ""@first@""");
-            CommonConfig = ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s")
+            CommonConfig = ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s
+                akka.actor.debug.lifecycle = true")
                 .WithFallback(MultiNodeLoggingConfig.LoggingConfig)
                 .WithFallback(DebugConfig(true))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
         }
     }
 
-    public class ClusterDeathWatchMultiNode1 : ClusterDeathWatchSpec
-    {
-    }
-
-    public class ClusterDeathWatchMultiNode2 : ClusterDeathWatchSpec
-    {
-    }
-
-    public class ClusterDeathWatchMultiNode3 : ClusterDeathWatchSpec
-    {
-    }
-
-    public class ClusterDeathWatchMultiNode4 : ClusterDeathWatchSpec
-    {
-    }
-
-    public class ClusterDeathWatchMultiNode5 : ClusterDeathWatchSpec
-    {
-    }
-
-    public abstract class ClusterDeathWatchSpec : MultiNodeClusterSpec
+    public class ClusterDeathWatchSpec : MultiNodeClusterSpec
     {
         readonly ClusterDeathWatchSpecConfig _config;
 
-        protected ClusterDeathWatchSpec()
+        public ClusterDeathWatchSpec()
             : this(new ClusterDeathWatchSpecConfig())
         {
         }
@@ -109,15 +91,15 @@ namespace Akka.Cluster.Tests.MultiNode
         [MultiNodeFact]
         public void ClusterDeathWatchSpecTests()
         {
-            AnActorWatchingARemoteActorInTheClusterMustReceiveTerminatedWhenWatchedNodeBecomesDownRemoved();
+            An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed();
             //AnActorWatchingARemoteActorInTheClusterMustReceiveTerminatedWhenWatchedPathDoesNotExist();
-            AnActorWatchingARemoteActorInTheClusterMustBeAbleToWatchActorBeforeNodeJoinsClusterAndClusterRemoteWatcherTakesOverFromRemoteWatcher();
-            AnActorWatchingARemoteActorInTheClusterMustBeAbleToShutdownSystemWhenUsingRemoteDeployedActorOnNodeThatCrashed();
+            An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher();
+            An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed();
         }
 
-        public void AnActorWatchingARemoteActorInTheClusterMustReceiveTerminatedWhenWatchedNodeBecomesDownRemoved()
+        public void An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            Within(TimeSpan.FromSeconds(30), () =>
             {
                 AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
                 EnterBarrier("cluster-up");
@@ -197,7 +179,7 @@ namespace Akka.Cluster.Tests.MultiNode
         //    EnterBarrier("after-2");
         //}
 
-        public void AnActorWatchingARemoteActorInTheClusterMustBeAbleToWatchActorBeforeNodeJoinsClusterAndClusterRemoteWatcherTakesOverFromRemoteWatcher()
+        public void An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher()
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
@@ -214,7 +196,9 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         RemoteWatcher.Tell(Remote.RemoteWatcher.Stats.Empty);
-                        ExpectMsg<Remote.RemoteWatcher.Stats>().WatchingRefs.Contains(new Tuple<IActorRef, IActorRef>(subject5, TestActor)).ShouldBeTrue();
+                        var stats = ExpectMsg<Remote.RemoteWatcher.Stats>();
+                        stats.WatchingRefs.Contains(new Tuple<IActorRef, IActorRef>(subject5, TestActor)).ShouldBeTrue();
+                        stats.WatchingAddresses.Contains(GetAddress(_config.Fifth)).ShouldBeTrue();
                     });
                 }, _config.First);
                 EnterBarrier("remote-watch");
@@ -229,7 +213,9 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         RemoteWatcher.Tell(Remote.RemoteWatcher.Stats.Empty);
-                        ExpectMsg<Remote.RemoteWatcher.Stats>().WatchingRefs.Select(x => x.Item1.Path.Name).Contains("subject5").ShouldBeFalse();
+                        var stats = ExpectMsg<Remote.RemoteWatcher.Stats>();
+                        stats.WatchingRefs.Select(x => x.Item1.Path.Name).Contains("subject5").ShouldBeTrue();
+                        stats.WatchingAddresses.Contains(GetAddress(_config.Fifth)).ShouldBeFalse();
                     });
                 }, _config.First);
 
@@ -256,7 +242,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         }
 
-        public void AnActorWatchingARemoteActorInTheClusterMustBeAbleToShutdownSystemWhenUsingRemoteDeployedActorOnNodeThatCrashed()
+        public void An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed()
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
@@ -289,7 +275,10 @@ namespace Akka.Cluster.Tests.MultiNode
                     var timeout = RemainingOrDefault;
                     try
                     {
-                        Sys.WhenTerminated.Wait(timeout);
+                        if (!Sys.WhenTerminated.Wait(timeout)) // TestConductor.Shutdown called by First MUST terminate this actor system
+                        {
+                            Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
+                        }
                     }
                     catch (TimeoutException)
                     {
@@ -328,6 +317,8 @@ namespace Akka.Cluster.Tests.MultiNode
                         TestConductor.Shutdown(_config.Fourth).Wait();
                         ExpectMsg<EndActor.End>();
                     }, _config.First);
+
+                    EnterBarrier("after-4");
                 }, _config.First, _config.Second, _config.Third, _config.Fifth);
 
             });

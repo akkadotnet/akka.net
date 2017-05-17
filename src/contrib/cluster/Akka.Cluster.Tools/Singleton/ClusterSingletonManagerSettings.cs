@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,33 +11,70 @@ using Akka.Configuration;
 
 namespace Akka.Cluster.Tools.Singleton
 {
+    /// <summary>
+    /// The settings used for the <see cref="ClusterSingletonManager"/>
+    /// </summary>
     [Serializable]
     public sealed class ClusterSingletonManagerSettings : INoSerializationVerificationNeeded
     {
+        /// <summary>
+        /// Creates a new <see cref="ClusterSingletonManagerSettings"/> instance.
+        /// </summary>
+        /// <param name="system">The <see cref="ActorSystem"/> to which this singleton manager belongs.</param>
+        /// <exception cref="ConfigurationException">Thrown if no "akka.cluster.singleton" section is defined.</exception>
+        /// <returns>The requested settings.</returns>
         public static ClusterSingletonManagerSettings Create(ActorSystem system)
         {
+            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
             if (config == null)
-                throw new ConfigurationException(string.Format("Cannot initialize {0}: akka.cluster.singleton configuration node was not provided", typeof(ClusterSingletonManagerSettings)));
+                throw new ConfigurationException(
+                    $"Cannot initialize {typeof(ClusterSingletonManagerSettings)}: akka.cluster.singleton configuration node was not provided");
 
-            return Create(config).WithRemovalMargin(Cluster.Get(system).Settings.DownRemovalMargin);
+            return Create(config).WithRemovalMargin(Cluster.Get(system).DowningProvider.DownRemovalMargin);
         }
 
+        /// <summary>
+        /// Creates a new <see cref="ClusterSingletonManagerSettings"/> instance.
+        /// </summary>
+        /// <param name="config">The HOCON configuration used to create the settings.</param>
+        /// <returns>The requested settings.</returns>
         public static ClusterSingletonManagerSettings Create(Config config)
         {
-            var role = config.GetString("role");
-            if (role == string.Empty) role = null;
             return new ClusterSingletonManagerSettings(
                 singletonName: config.GetString("singleton-name"),
-                role: role,
-                removalMargin: TimeSpan.MinValue,
+                role: RoleOption(config.GetString("role")),
+                removalMargin: TimeSpan.Zero, // defaults to ClusterSettings.DownRemovalMargin
                 handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval"));
         }
 
-        public readonly string SingletonName;
-        public readonly string Role;
-        public readonly TimeSpan RemovalMargin;
-        public readonly TimeSpan HandOverRetryInterval;
+        private static string RoleOption(string role)
+        {
+            if (string.IsNullOrEmpty(role))
+                return null;
+            return role;
+        }
+
+        /// <summary>
+        /// The actor name of the child singleton actor.
+        /// </summary>
+        public string SingletonName { get; }
+
+        /// <summary>
+        /// Singleton among the nodes tagged with specified role.
+        /// </summary>
+        public string Role { get; }
+
+        /// <summary>
+        /// Margin until the singleton instance that belonged to a downed/removed partition is created in surviving partition.
+        /// </summary>
+        public TimeSpan RemovalMargin { get; }
+
+        /// <summary>
+        /// When a node is becoming oldest it sends hand-over request to previous oldest, that might be leaving the cluster.
+        /// </summary>
+        public TimeSpan HandOverRetryInterval { get; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="ClusterSingletonManagerSettings"/>.
@@ -61,14 +98,15 @@ namespace Akka.Cluster.Tools.Singleton
         /// over has started or the previous oldest member is removed from the cluster
         /// (+ <paramref name="removalMargin"/>).
         /// </param>
+        /// <exception cref="ArgumentException">TBD</exception>
         public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval)
         {
             if (string.IsNullOrWhiteSpace(singletonName))
-                throw new ArgumentNullException("singletonName");
-            if (removalMargin == TimeSpan.Zero)
-                throw new ArgumentException("ClusterSingletonManagerSettings.RemovalMargin must be positive", "removalMargin");
-            if (handOverRetryInterval == TimeSpan.Zero)
-                throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", "handOverRetryInterval");
+                throw new ArgumentNullException(nameof(singletonName));
+            if (removalMargin < TimeSpan.Zero)
+                throw new ArgumentException("ClusterSingletonManagerSettings.RemovalMargin must be positive", nameof(removalMargin));
+            if (handOverRetryInterval <= TimeSpan.Zero)
+                throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", nameof(handOverRetryInterval));
 
             SingletonName = singletonName;
             Role = role;
@@ -76,25 +114,41 @@ namespace Akka.Cluster.Tools.Singleton
             HandOverRetryInterval = handOverRetryInterval;
         }
 
+        /// <summary>
+        /// Create a singleton manager with specified singleton name.
+        /// </summary>
+        /// <param name="singletonName">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonManagerSettings WithSingletonName(string singletonName)
         {
             return Copy(singletonName: singletonName);
         }
 
+        /// <summary>
+        /// Create a singleton manager with specified singleton role.
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonManagerSettings WithRole(string role)
         {
-            return new ClusterSingletonManagerSettings(
-                singletonName: SingletonName,
-                role: role,
-                removalMargin: RemovalMargin,
-                handOverRetryInterval: HandOverRetryInterval);
+            return Copy(role: RoleOption(role));
         }
 
+        /// <summary>
+        /// Create a singleton manager with specified singleton removal margin.
+        /// </summary>
+        /// <param name="removalMargin">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonManagerSettings WithRemovalMargin(TimeSpan removalMargin)
         {
             return Copy(removalMargin: removalMargin);
         }
 
+        /// <summary>
+        /// Create a singleton manager with specified singleton removal margin hand-over retry interval.
+        /// </summary>
+        /// <param name="handOverRetryInterval">TBD</param>
+        /// <returns>TBD</returns>
         public ClusterSingletonManagerSettings WithHandOverRetryInterval(TimeSpan handOverRetryInterval)
         {
             return Copy(handOverRetryInterval: handOverRetryInterval);

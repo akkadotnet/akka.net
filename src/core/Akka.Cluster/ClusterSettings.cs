@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,233 +14,215 @@ using Akka.Dispatch;
 
 namespace Akka.Cluster
 {
+    /// <summary>
+    /// This class represents configuration information used when setting up a cluster.
+    /// </summary>
     public sealed class ClusterSettings
     {
-        readonly bool _logInfo;
         readonly Config _failureDetectorConfig;
-        readonly string _failureDetectorImplementationClass;
-        readonly TimeSpan _heartbeatInterval;
-        readonly TimeSpan _heartbeatExpectedResponseAfter;
-        readonly int _monitoredByNrOfMembers;
-        readonly ImmutableList<Address> _seedNodes;
-        readonly TimeSpan _seedNodeTimeout;
-        readonly TimeSpan? _retryUnsuccessfulJoinAfter;
-        readonly TimeSpan _periodicTasksInitialDelay;
-        readonly TimeSpan _gossipInterval;
-        readonly TimeSpan _gossipTimeToLive;
-        readonly TimeSpan _leaderActionsInterval;
-        readonly TimeSpan _unreachableNodesReaperInterval;
-        readonly TimeSpan? _publishStatsInterval;
-        readonly TimeSpan? _autoDownUnreachableAfter;
-        readonly ImmutableHashSet<string> _roles;
         readonly string _useDispatcher;
-        readonly double _gossipDifferentViewProbability;
-        readonly int _reduceGossipDifferentViewProbability;
-        readonly TimeSpan _schedulerTickDuration;
-        readonly int _schedulerTicksPerWheel;
-        readonly bool _metricsEnabled;
-        readonly string _metricsCollectorClass;
-        readonly TimeSpan _metricsInterval;
-        readonly TimeSpan _metricsGossipInterval;
-        readonly TimeSpan _metricsMovingAverageHalfLife;
-        readonly int _minNrOfMembers;
-        readonly ImmutableDictionary<string, int> _minNrOfMembersOfRole;
-        readonly TimeSpan _downRemovalMargin;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClusterSettings"/> class.
+        /// </summary>
+        /// <param name="config">The configuration to use when setting up the cluster.</param>
+        /// <param name="systemName">The name of the actor system hosting the cluster.</param>
         public ClusterSettings(Config config, string systemName)
         {
             //TODO: Requiring!
             var cc = config.GetConfig("akka.cluster");
-            _logInfo = cc.GetBoolean("log-info");
+            LogInfo = cc.GetBoolean("log-info");
             _failureDetectorConfig = cc.GetConfig("failure-detector");
-            _failureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class");
-            _heartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval");
-            _heartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after");
-            _monitoredByNrOfMembers = _failureDetectorConfig.GetInt("monitored-by-nr-of-members");
+            FailureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class");
+            HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval");
+            HeartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after");
+            MonitoredByNrOfMembers = _failureDetectorConfig.GetInt("monitored-by-nr-of-members");
 
-            _seedNodes = cc.GetStringList("seed-nodes").Select(Address.Parse).ToImmutableList();
-            _seedNodeTimeout = cc.GetTimeSpan("seed-node-timeout");
-            _retryUnsuccessfulJoinAfter = cc.GetTimeSpanWithOffSwitch("retry-unsuccessful-join-after");
-            _periodicTasksInitialDelay = cc.GetTimeSpan("periodic-tasks-initial-delay");
-            _gossipInterval = cc.GetTimeSpan("gossip-interval");
-            _gossipTimeToLive = cc.GetTimeSpan("gossip-time-to-live");
-            _leaderActionsInterval = cc.GetTimeSpan("leader-actions-interval");
-            _unreachableNodesReaperInterval = cc.GetTimeSpan("unreachable-nodes-reaper-interval");
-            _publishStatsInterval = cc.GetTimeSpanWithOffSwitch("publish-stats-interval");
-            _downRemovalMargin = cc.GetTimeSpan("down-removal-margin");
+            SeedNodes = cc.GetStringList("seed-nodes").Select(Address.Parse).ToImmutableList();
+            SeedNodeTimeout = cc.GetTimeSpan("seed-node-timeout");
+            RetryUnsuccessfulJoinAfter = cc.GetTimeSpanWithOffSwitch("retry-unsuccessful-join-after");
+            PeriodicTasksInitialDelay = cc.GetTimeSpan("periodic-tasks-initial-delay");
+            GossipInterval = cc.GetTimeSpan("gossip-interval");
+            GossipTimeToLive = cc.GetTimeSpan("gossip-time-to-live");
+            LeaderActionsInterval = cc.GetTimeSpan("leader-actions-interval");
+            UnreachableNodesReaperInterval = cc.GetTimeSpan("unreachable-nodes-reaper-interval");
+            PublishStatsInterval = cc.GetTimeSpanWithOffSwitch("publish-stats-interval");
 
-            _autoDownUnreachableAfter = cc.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
+            var key = "down-removal-margin";
+            DownRemovalMargin = cc.GetString(key).ToLowerInvariant().Equals("off") 
+                ? TimeSpan.Zero
+                : cc.GetTimeSpan("down-removal-margin");
 
-            _roles = cc.GetStringList("roles").ToImmutableHashSet();
-            _minNrOfMembers = cc.GetInt("min-nr-of-members");
+            AutoDownUnreachableAfter = cc.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
+
+            Roles = cc.GetStringList("roles").ToImmutableHashSet();
+            MinNrOfMembers = cc.GetInt("min-nr-of-members");
             //TODO:
             //_minNrOfMembersOfRole = cc.GetConfig("role").Root.GetArray().ToImmutableDictionary(o => o. )
-            //TODO: Ignored jmx
             _useDispatcher = cc.GetString("use-dispatcher");
             if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
-            _gossipDifferentViewProbability = cc.GetDouble("gossip-different-view-probability");
-            _reduceGossipDifferentViewProbability = cc.GetInt("reduce-gossip-different-view-probability");
-            _schedulerTickDuration = cc.GetTimeSpan("scheduler.tick-duration");
-            _schedulerTicksPerWheel = cc.GetInt("scheduler.ticks-per-wheel");
-            _metricsEnabled = cc.GetBoolean("metrics.enabled");
-            _metricsCollectorClass = cc.GetString("metrics.collector-class");
-            _metricsInterval = cc.GetTimeSpan("metrics.collect-interval");
-            _metricsGossipInterval = cc.GetTimeSpan("metrics.gossip-interval");
-            _metricsMovingAverageHalfLife = cc.GetTimeSpan("metrics.moving-average-half-life");
+            GossipDifferentViewProbability = cc.GetDouble("gossip-different-view-probability");
+            ReduceGossipDifferentViewProbability = cc.GetInt("reduce-gossip-different-view-probability");
+            SchedulerTickDuration = cc.GetTimeSpan("scheduler.tick-duration");
+            SchedulerTicksPerWheel = cc.GetInt("scheduler.ticks-per-wheel");
 
-            _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().Items
+            MinNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().Items
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
+
+            VerboseHeartbeatLogging = cc.GetBoolean("debug.verbose-heartbeat-logging");
+
+            var downingProviderClassName = cc.GetString("downing-provider-class");
+            if (!string.IsNullOrEmpty(downingProviderClassName))
+                DowningProviderType = Type.GetType(downingProviderClassName, true);
+            else if (AutoDownUnreachableAfter.HasValue)
+                DowningProviderType = typeof(AutoDowning);
+            else
+                DowningProviderType = typeof(NoDowning);
+
+            RunCoordinatedShutdownWhenDown = cc.GetBoolean("run-coordinated-shutdown-when-down");
         }
 
-        public bool LogInfo
-        {
-            get { return _logInfo; }
-        }
+        /// <summary>
+        /// Determine whether to log <see cref="Akka.Event.LogLevel.InfoLevel"/> messages.
+        /// </summary>
+        public bool LogInfo { get; }
 
-        public Config FailureDetectorConfig
-        {
-            get { return _failureDetectorConfig; }
-        }
+        /// <summary>
+        /// The configuration for the underlying failure detector used by Akka.Cluster.
+        /// </summary>
+        public Config FailureDetectorConfig => _failureDetectorConfig;
 
-        public string FailureDetectorImplementationClass
-        {
-            get { return _failureDetectorImplementationClass; }
-        }
+        /// <summary>
+        /// The fully qualified type name of the failure detector class that will be used.
+        /// </summary>
+        public string FailureDetectorImplementationClass { get; }
 
-        public TimeSpan HeartbeatInterval
-        {
-            get { return _heartbeatInterval; }
-        }
+        /// <summary>
+        /// The amount of time between when heartbeat messages are sent.
+        /// </summary>
+        public TimeSpan HeartbeatInterval { get; }
 
-        public TimeSpan HeartbeatExpectedResponseAfter
-        {
-            get { return _heartbeatExpectedResponseAfter; }
-        }
+        /// <summary>
+        /// The amount of time we expect a heartbeat response after first contact with a new node.
+        /// </summary>
+        public TimeSpan HeartbeatExpectedResponseAfter { get; }
 
-        public int MonitoredByNrOfMembers
-        {
-            get { return _monitoredByNrOfMembers; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public int MonitoredByNrOfMembers { get; }
 
-        public ImmutableList<Address> SeedNodes
-        {
-            get { return _seedNodes; }
-        }
+        /// <summary>
+        /// A list of designated seed nodes for the cluster.
+        /// </summary>
+        public ImmutableList<Address> SeedNodes { get; }
 
-        public TimeSpan SeedNodeTimeout
-        {
-            get { return _seedNodeTimeout; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan SeedNodeTimeout { get; }
 
-        public TimeSpan? RetryUnsuccessfulJoinAfter
-        {
-            get { return _retryUnsuccessfulJoinAfter; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan? RetryUnsuccessfulJoinAfter { get; }
 
-        public TimeSpan PeriodicTasksInitialDelay
-        {
-            get { return _periodicTasksInitialDelay; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan PeriodicTasksInitialDelay { get; }
 
-        public TimeSpan GossipInterval
-        {
-            get { return _gossipInterval; }
-        }
+        /// <summary>
+        /// The amount of time between when gossip messages are sent.
+        /// </summary>
+        public TimeSpan GossipInterval { get; }
 
-        public TimeSpan GossipTimeToLive
-        {
-            get { return _gossipTimeToLive; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan GossipTimeToLive { get; }
 
-        public TimeSpan LeaderActionsInterval
-        {
-            get { return _leaderActionsInterval; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan LeaderActionsInterval { get; }
 
-        public TimeSpan UnreachableNodesReaperInterval
-        {
-            get { return _unreachableNodesReaperInterval; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan UnreachableNodesReaperInterval { get; }
 
-        public TimeSpan? PublishStatsInterval
-        {
-            get { return _publishStatsInterval; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan? PublishStatsInterval { get; }
 
-        public TimeSpan? AutoDownUnreachableAfter
-        {
-            get { return _autoDownUnreachableAfter; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan? AutoDownUnreachableAfter { get; }
 
-        public ImmutableHashSet<string> Roles
-        {
-            get { return _roles; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public ImmutableHashSet<string> Roles { get; }
 
-        public double GossipDifferentViewProbability
-        {
-            get { return _gossipDifferentViewProbability; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public double GossipDifferentViewProbability { get; }
 
-        public int ReduceGossipDifferentViewProbability
-        {
-            get { return _reduceGossipDifferentViewProbability; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public int ReduceGossipDifferentViewProbability { get; }
 
-        public string UseDispatcher
-        {
-            get { return _useDispatcher; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public string UseDispatcher => _useDispatcher;
 
-        public TimeSpan SchedulerTickDuration
-        {
-            get { return _schedulerTickDuration; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan SchedulerTickDuration { get; }
 
-        public int SchedulerTicksPerWheel
-        {
-            get { return _schedulerTicksPerWheel; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public int SchedulerTicksPerWheel { get; }
 
-        public bool MetricsEnabled
-        {
-            get { return _metricsEnabled; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public int MinNrOfMembers { get; }
 
-        public string MetricsCollectorClass
-        {
-            get { return _metricsCollectorClass; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
 
-        public TimeSpan MetricsInterval
-        {
-            get { return _metricsInterval; }
-        }
+        /// <summary>
+        /// Obsolete. Use <see cref="P:Cluster.DowningProvider.DownRemovalMargin"/>.
+        /// </summary>
+        [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
+        public TimeSpan DownRemovalMargin { get; }
 
-        public TimeSpan MetricsGossipInterval
-        {
-            get { return _metricsGossipInterval; }
-        }
+        /// <summary>
+        /// Determine whether or not to log heartbeat message in verbose mode.
+        /// </summary>
+        public bool VerboseHeartbeatLogging { get; }
 
-        public TimeSpan MetricsMovingAverageHalfLife
-        {
-            get { return _metricsMovingAverageHalfLife; }
-        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Type DowningProviderType { get; }
 
-        public int MinNrOfMembers
-        {
-            get { return _minNrOfMembers; }
-        }
-
-        public ImmutableDictionary<string, int> MinNrOfMembersOfRole
-        {
-            get { return _minNrOfMembersOfRole; }
-        }
-
-        public TimeSpan DownRemovalMargin
-        {
-            get { return _downRemovalMargin; }
-        }
+        /// <summary>
+        /// Trigger the <see cref="CoordinatedShutdown"/> even if this node was removed by non-graceful
+        /// means, such as being downed.
+        /// </summary>
+        public bool RunCoordinatedShutdownWhenDown { get; }
     }
 }
 

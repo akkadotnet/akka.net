@@ -1,7 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistentShard.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Persistence;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
 {
@@ -15,11 +23,27 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     public class PersistentShard : Shard
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected int PersistCount = 0;
 
         private readonly string _persistenceId;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override string PersistenceId { get { return _persistenceId; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeName">TBD</param>
+        /// <param name="shardId">TBD</param>
+        /// <param name="entityProps">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="extractEntityId">TBD</param>
+        /// <param name="extractShardId">TBD</param>
+        /// <param name="handOffStopMessage">TBD</param>
         public PersistentShard(
             string typeName,
             string shardId,
@@ -36,11 +60,23 @@ namespace Akka.Cluster.Sharding
 
         }
 
+        private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy => Settings.TunningParameters.EntityRecoveryStrategy == "constant"
+            ? EntityRecoveryStrategy.ConstantStrategy(
+                Context.System,
+                Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
+                Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
+            : EntityRecoveryStrategy.AllStrategy;
+
         protected override bool ReceiveCommand(object message)
         {
             return HandleCommand(message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool ReceiveRecover(object message)
         {
             SnapshotOffer offer;
@@ -60,32 +96,43 @@ namespace Akka.Cluster.Sharding
             }
             else if (message is RecoveryCompleted)
             {
-                foreach (var entry in State.Entries)
-                    GetEntity(entry);
-
+                RestartRememberedEntities();
                 base.Initialized();
-                Log.Debug("Shard recovery completed [{0}]", ShardId);
+                Log.Debug("PersistentShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
             }
             else return false;
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="evt">TBD</param>
+        /// <param name="handler">TBD</param>
         protected override void ProcessChange<T>(T evt, Action<T> handler)
         {
             SaveSnapshotIfNeeded();
             Persist(evt, handler);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected void SaveSnapshotIfNeeded()
         {
             PersistCount++;
-            if ((PersistCount & Settings.TunningParameters.SnapshotAfter) == 0)
+            if ((PersistCount % Settings.TunningParameters.SnapshotAfter) == 0)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
                 SaveSnapshot(State);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tref">TBD</param>
         protected override void EntityTerminated(IActorRef tref)
         {
             ShardId id;
@@ -117,6 +164,14 @@ namespace Akka.Cluster.Sharding
             Passivating = Passivating.Remove(tref);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="id">TBD</param>
+        /// <param name="message">TBD</param>
+        /// <param name="payload">TBD</param>
+        /// <param name="sender">TBD</param>
+        /// <returns>TBD</returns>
         protected override void DeliverTo(string id, object message, object payload, IActorRef sender)
         {
             var name = Uri.EscapeDataString(id);
@@ -131,7 +186,25 @@ namespace Akka.Cluster.Sharding
             else
                 child.Tell(payload, sender);
         }
+        
+        private void RestartRememberedEntities()
+        {
+            RememberedEntitiesRecoveryStrategy.RecoverEntities(State.Entries).ForEach(scheduledRecovery =>
+                scheduledRecovery.ContinueWith(t => new RestartEntities(t.Result)).PipeTo(Self));
+        }
 
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeName">TBD</param>
+        /// <param name="shardId">TBD</param>
+        /// <param name="entryProps">TBD</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="idExtractor">TBD</param>
+        /// <param name="shardResolver">TBD</param>
+        /// <param name="handOffStopMessage">TBD</param>
+        /// <returns>TBD</returns>
         public static Actor.Props Props(string typeName, ShardId shardId, Props entryProps, ClusterShardingSettings settings, IdExtractor idExtractor, ShardResolver shardResolver, object handOffStopMessage)
         {
             return Actor.Props.Create(() => new PersistentShard(typeName, shardId, entryProps, settings, idExtractor, shardResolver, handOffStopMessage)).WithDeploy(Deploy.Local);

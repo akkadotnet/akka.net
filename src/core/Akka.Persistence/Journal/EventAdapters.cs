@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -18,20 +19,34 @@ using Akka.Pattern;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// <para>Facility to convert from and to specialised data models, as may be required by specialized persistence Journals.</para>
+    /// <para>An <see cref="IEventAdapter"/> is both a <see cref="IWriteEventAdapter"/> and a <see cref="IReadEventAdapter"/>.
+    /// Facility to convert from and to specialised data models, as may be required by specialized persistence Journals.</para>
     ///
-    /// <para>Typical use cases include(but are not limited to):</para>
+    /// <para>Typical use cases include (but are not limited to):</para>
     /// <para>- adding metadata, a.k.a. "tagging" - by wrapping objects into tagged counterparts</para>
     /// <para>- manually converting to the Journals storage format, such as JSON, BSON or any specialised binary format</para>
     /// <para>- adapting incoming events in any way before persisting them by the journal</para>
     /// </summary>
-    public interface IEventAdapter
+    public interface IEventAdapter : IWriteEventAdapter, IReadEventAdapter
+    {
+    }
+
+    /// <summary>
+    /// <para>Facility to convert to specialised data models, as may be required by specialized persistence Journals.</para>
+    ///
+    /// <para>Typical use cases include (but are not limited to):</para>
+    /// <para>- adding metadata, a.k.a. "tagging" - by wrapping objects into tagged counterparts</para>
+    /// <para>- manually converting to the Journals storage format, such as JSON, BSON or any specialised binary format</para>
+    /// <para>- splitting up large events into sequences of smaller ones</para>
+    /// </summary>
+    public interface IWriteEventAdapter
     {
         /// <summary>
-        /// Return the manifest (type hint) that will be provided in the <see cref="FromJournal"/> method. Use empty string if not needed.
+        /// Return the manifest (type hint) that will be provided in the <see cref="IReadEventAdapter.FromJournal"/> method.
+        /// Use empty string if not needed.
         /// </summary>
-        /// <param name="evt"></param>
-        /// <returns></returns>
+        /// <param name="evt">TBD</param>
+        /// <returns>TBD</returns>
         string Manifest(object evt);
 
         /// <summary>
@@ -47,9 +62,20 @@ namespace Akka.Persistence.Journal
         /// <param name="evt">the application-side domain event to be adapted to the journal model</param>
         /// <returns>the adapted event object, possibly the same object if no adaptation was performed</returns>
         object ToJournal(object evt);
+    }
 
+    /// <summary>
+    /// <para>Facility to convert from specialised data models, as may be required by specialized persistence Journals.</para>
+    ///
+    /// <para>Typical use cases include (but are not limited to):</para>
+    /// <para>- extracting events from "envelopes"</para>
+    /// <para>- manually converting to the Journals storage format, such as JSON, BSON or any specialised binary format</para>
+    /// <para>- adapting incoming events from a "data model" to the "domain model"</para>
+    /// </summary>
+    public interface IReadEventAdapter
+    {
         /// <summary>
-        /// <para>Convert a event from its journal model to the applications domain model.</para>
+        /// <para>Convert an event from its journal model to the application's domain model.</para>
         ///
         /// <para>One event may be adapter into multiple(or none) events which should be delivered to the <see cref="PersistentActor"/>.
         /// Use the specialised <see cref="EventSequence.Single"/> method to emit exactly one event,
@@ -63,12 +89,47 @@ namespace Akka.Persistence.Journal
         IEventSequence FromJournal(object evt, string manifest);
     }
 
+    /// <summary>
+    /// No-op model adapter which passes through the incoming events as-is.
+    /// </summary>
     [Serializable]
-    public class IdentityEventAdapter : IEventAdapter
+    public sealed class IdentityEventAdapter : IEventAdapter
     {
-        public static readonly IdentityEventAdapter Instance = new IdentityEventAdapter();
+        /// <summary>
+        /// The singleton instance of <see cref="IdentityEventAdapter"/>.
+        /// </summary>
+        public static IdentityEventAdapter Instance { get; } = new IdentityEventAdapter();
 
         private IdentityEventAdapter() { }
+
+        /// <inheritdoc/>
+        public string Manifest(object evt)
+        {
+            return string.Empty;
+        }
+
+        /// <inheritdoc/>
+        public object ToJournal(object evt)
+        {
+            return evt;
+        }
+
+        /// <inheritdoc/>
+        public IEventSequence FromJournal(object evt, string manifest)
+        {
+            return EventSequence.Single(evt);
+        }
+    }
+
+    [Serializable]
+    internal class NoopWriteEventAdapter : IEventAdapter
+    {
+        private readonly IReadEventAdapter _readEventAdapter;
+
+        public NoopWriteEventAdapter(IReadEventAdapter readEventAdapter)
+        {
+            _readEventAdapter = readEventAdapter;
+        }
 
         public string Manifest(object evt)
         {
@@ -82,61 +143,133 @@ namespace Akka.Persistence.Journal
 
         public IEventSequence FromJournal(object evt, string manifest)
         {
+            return _readEventAdapter.FromJournal(evt, manifest);
+        }
+    }
+
+    [Serializable]
+    internal class NoopReadEventAdapter : IEventAdapter
+    {
+        private readonly IWriteEventAdapter _writeEventAdapter;
+
+        public NoopReadEventAdapter(IWriteEventAdapter writeEventAdapter)
+        {
+            _writeEventAdapter = writeEventAdapter;
+        }
+
+        public string Manifest(object evt)
+        {
+            return _writeEventAdapter.Manifest(evt);
+        }
+
+        public object ToJournal(object evt)
+        {
+            return _writeEventAdapter.ToJournal(evt);
+        }
+
+        public IEventSequence FromJournal(object evt, string manifest)
+        {
             return EventSequence.Single(evt);
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     [Serializable]
     public sealed class CombinedReadEventAdapter : IEventAdapter
     {
         private static readonly Exception OnlyReadSideException = new IllegalStateException(
                 "CombinedReadEventAdapter must not be used when writing (creating manifests) events!");
 
-        private readonly IEventAdapter[] _adapters;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IEnumerable<IEventAdapter> Adapters { get; }
 
-        public IEnumerable<IEventAdapter> Adapters { get { return _adapters; } }
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="adapters">TBD</param>
         public CombinedReadEventAdapter(IEnumerable<IEventAdapter> adapters)
         {
-            _adapters = adapters.ToArray();
+            Adapters = adapters.ToArray();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         public string Manifest(object evt)
         {
             throw OnlyReadSideException;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <returns>TBD</returns>
         public object ToJournal(object evt)
         {
             throw OnlyReadSideException;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="evt">TBD</param>
+        /// <param name="manifest">TBD</param>
+        /// <returns>TBD</returns>
         public IEventSequence FromJournal(object evt, string manifest)
         {
-            return EventSequence.Create(_adapters.SelectMany(adapter => adapter.FromJournal(evt, manifest).Events));
+            return EventSequence.Create(Adapters.SelectMany(adapter => adapter.FromJournal(evt, manifest).Events));
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class IdentityEventAdapters : EventAdapters
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly EventAdapters Instance = new IdentityEventAdapters();
 
         private IdentityEventAdapters() : base(null, null, null)
         {
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="type">TBD</param>
+        /// <returns>TBD</returns>
         public override IEventAdapter Get(Type type)
         {
             return IdentityEventAdapter.Instance;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class EventAdapters
     {
         private readonly ConcurrentDictionary<Type, IEventAdapter> _map;
         private readonly IEnumerable<KeyValuePair<Type, IEventAdapter>> _bindings;
         private readonly ILoggingAdapter _log;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventAdapters"/> class.
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="config">TBD</param>
+        /// <returns>TBD</returns>
         public static EventAdapters Create(ExtendedActorSystem system, Config config)
         {
             var adapters = ConfigToMap(config, "event-adapters");
@@ -160,7 +293,7 @@ namespace Akka.Persistence.Journal
 
             // A Map of handler from alias to implementation (i.e. class implementing Akka.Serialization.ISerializer)
             // For example this defines a handler named 'country': `"country" -> com.example.comain.CountryTagsAdapter`
-            var handlers = adapters.ToDictionary(kv => kv.Key, kv => Instantiate<IEventAdapter>(kv.Value, system));
+            var handlers = adapters.ToDictionary(kv => kv.Key, kv => InstantiateAdapter(kv.Value, system));
 
             // bindings is a enumerable of key-val representing the mapping from Type to handler.
             // It is primarily ordered by the most specific classes first, and secondly in the configured order.
@@ -169,7 +302,7 @@ namespace Akka.Persistence.Journal
                 var type = Type.GetType(kv.Key);
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
-                    : new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h]));
+                    : new NoopWriteEventAdapter(new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h])));
                 return new KeyValuePair<Type, IEventAdapter>(type, adapter);
             }).ToList());
 
@@ -207,6 +340,12 @@ namespace Akka.Persistence.Journal
             return -1;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventAdapters"/> class.
+        /// </summary>
+        /// <param name="map">TBD</param>
+        /// <param name="bindings">TBD</param>
+        /// <param name="log">TBD</param>
         protected EventAdapters(ConcurrentDictionary<Type, IEventAdapter> map, IEnumerable<KeyValuePair<Type, IEventAdapter>> bindings, ILoggingAdapter log)
         {
             _map = map;
@@ -214,11 +353,21 @@ namespace Akka.Persistence.Journal
             _log = log;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
         public IEventAdapter Get<T>()
         {
             return Get(typeof(T));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="type">TBD</param>
+        /// <returns>TBD</returns>
         public virtual IEventAdapter Get(Type type)
         {
             IEventAdapter adapter;
@@ -233,20 +382,32 @@ namespace Akka.Persistence.Journal
             return adapter;
         }
 
+        private static IEventAdapter InstantiateAdapter(string qualifiedName, ExtendedActorSystem system)
+        {
+            var type = Type.GetType(qualifiedName, true);
+            if (typeof(IEventAdapter).IsAssignableFrom(type))
+                return Instantiate<IEventAdapter>(qualifiedName, system);
+            if (typeof (IWriteEventAdapter).IsAssignableFrom(type))
+                return new NoopReadEventAdapter(Instantiate<IWriteEventAdapter>(qualifiedName, system));
+            if (typeof (IReadEventAdapter).IsAssignableFrom(type))
+                return new NoopWriteEventAdapter(Instantiate<IReadEventAdapter>(qualifiedName, system));
+            throw new ArgumentException("Configured " + qualifiedName + " does not implement any EventAdapter interface!");
+        }
+
         private static T Instantiate<T>(string qualifiedName, ExtendedActorSystem system)
         {
-            var instanceType = Type.GetType(qualifiedName);
-            if (!typeof(T).IsAssignableFrom(instanceType))
+            var type = Type.GetType(qualifiedName);
+            if (!typeof(T).IsAssignableFrom(type))
                 throw new ArgumentException(string.Format("Couldn't create instance of [{0}] from provided qualified type name [{1}], because it's not assignable from it",
                     typeof(T), qualifiedName));
 
             try
             {
-                return (T)Activator.CreateInstance(instanceType, system);
+                return (T)Activator.CreateInstance(type, system);
             }
             catch (MissingMethodException)
             {
-                return (T)Activator.CreateInstance(instanceType);
+                return (T)Activator.CreateInstance(type);
             }
         }
 

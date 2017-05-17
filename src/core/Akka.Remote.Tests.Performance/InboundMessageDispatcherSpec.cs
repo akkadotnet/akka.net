@@ -1,8 +1,16 @@
-﻿using System.Threading;
+﻿//-----------------------------------------------------------------------
+// <copyright file="InboundMessageDispatcherSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 using Akka.Util.Internal;
-using Google.ProtocolBuffers;
+using Google.Protobuf;
 using NBench;
 
 namespace Akka.Remote.Tests.Performance
@@ -77,7 +85,7 @@ namespace Akka.Remote.Tests.Performance
             _actorSystem = ActorSystem.Create("MessageDispatcher" + Counter.GetAndIncrement(), RemoteHocon);
             _systemAddress = RARP.For(_actorSystem).Provider.DefaultAddress;
             _inboundMessageDispatcherCounter = context.GetCounter(MessageDispatcherThroughputCounterName);
-            _message = SerializedMessage.CreateBuilder().SetSerializerId(0).SetMessage(ByteString.CopyFromUtf8("foo")).Build();
+            _message = new SerializedMessage { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
             _dispatcher = new DefaultMessageDispatcher(_actorSystem, RARP.For(_actorSystem).Provider, _actorSystem.Log);
             _targetActorRef = new BenchmarkActorRef(_inboundMessageDispatcherCounter, RARP.For(_actorSystem).Provider);
         }

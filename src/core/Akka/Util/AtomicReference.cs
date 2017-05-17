@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtomicReference.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,15 +12,18 @@ namespace Akka.Util
     /// <summary>
     /// Implementation of the java.concurrent.util AtomicReference type.
     /// 
-    /// Uses <see cref="Interlocked.MemoryBarrier"/> internally to enforce ordering of writes
+    /// Uses <see cref="Volatile"/> internally to enforce ordering of writes
     /// without any explicit locking. .NET's strong memory on write guarantees might already enforce
-    /// this ordering, but the addition of the MemoryBarrier guarantees it.
+    /// this ordering, but the addition of the Volatile guarantees it.
     /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public class AtomicReference<T>
+        where T : class
     {
         /// <summary>
         /// Sets the initial value of this <see cref="AtomicReference{T}"/> to <paramref name="originalValue"/>.
         /// </summary>
+        /// <param name="originalValue">TBD</param>
         public AtomicReference(T originalValue)
         {
             atomicValue = originalValue;
@@ -35,6 +38,9 @@ namespace Akka.Util
         }
 
         // ReSharper disable once InconsistentNaming
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected T atomicValue;
 
         /// <summary>
@@ -42,63 +48,53 @@ namespace Akka.Util
         /// </summary>
         public T Value
         {
-            get
-            {
-                Interlocked.MemoryBarrier();
-                return atomicValue;
-            }
-            set
-            {
-                Interlocked.MemoryBarrier();
-                atomicValue = value;
-                Interlocked.MemoryBarrier();
-            }
+            get { return Volatile.Read(ref atomicValue); }
+            set { Volatile.Write(ref atomicValue, value); }
         }
 
         /// <summary>
         /// If <see cref="Value"/> equals <paramref name="expected"/>, then set the Value to
         /// <paramref name="newValue"/>.
         /// </summary>
+        /// <param name="expected">TBD</param>
+        /// <param name="newValue">TBD</param>
         /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
         public bool CompareAndSet(T expected, T newValue)
         {
-            //special handling for null values
-            if (Value == null)
-            {
-                if (expected == null)
-                {
-                    Value = newValue;
-                    return true;
-                }
-                return false;
-            }
+            var previous = Interlocked.CompareExchange(ref atomicValue, newValue, expected);
+            return ReferenceEquals(previous, expected);
+        }
 
-            if (Value.Equals(expected))
-            {
-                Value = newValue;
-                return true;
-            }
-            return false;
+        /// <summary>
+        /// Atomically sets the <see cref="Value"/> to <paramref name="newValue"/> and returns the old <see cref="Value"/>.
+        /// </summary>
+        /// <param name="newValue">The new value</param>
+        /// <returns>The old value</returns>
+        public T GetAndSet(T newValue)
+        {
+            return Interlocked.Exchange(ref atomicValue, newValue);
         }
 
         #region Conversion operators
 
         /// <summary>
-        /// Implicit conversion operator = automatically casts the <see cref="AtomicReference{T}"/> to an instance of <typeparamref name="T"/>.
+        /// Performs an implicit conversion from <see cref="AtomicReference{T}"/> to <see cref="T"/>.
         /// </summary>
-        public static implicit operator T(AtomicReference<T> aRef)
+        /// <param name="atomicReference">The reference to convert</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator T(AtomicReference<T> atomicReference)
         {
-            return aRef.Value;
+            return atomicReference.Value;
         }
 
         /// <summary>
-        /// Implicit conversion operator = allows us to cast any type directly into a <see cref="AtomicReference{T}"/> instance.
+        /// Performs an implicit conversion from <see cref="T"/> to <see cref="AtomicReference{T}"/>.
         /// </summary>
-        /// <param name="newValue"></param>
-        /// <returns></returns>
-        public static implicit operator AtomicReference<T>(T newValue)
+        /// <param name="value">The reference to convert</param>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator AtomicReference<T>(T value)
         {
-            return new AtomicReference<T>(newValue);
+            return new AtomicReference<T>(value);
         }
 
         #endregion

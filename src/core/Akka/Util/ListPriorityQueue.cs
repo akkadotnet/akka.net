@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ListPriorityQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,21 +17,53 @@ namespace Akka.Util
     /// See http://visualstudiomagazine.com/articles/2012/11/01/priority-queues-with-c.aspx for original implementation
     /// This specific version is adapted for Envelopes only and calculates a priority of envelope.Message
     /// </summary>
-    public class ListPriorityQueue
+    public sealed class ListPriorityQueue
     {
         private readonly List<Envelope> _data;
-        private Func<object, int> _priorityCalculator = message => 1;
+        /// <summary>
+        /// The default priority generator.
+        /// </summary>
+        internal static readonly Func<object, int> DefaultPriorityCalculator = message => 1;
+        private Func<object, int> _priorityCalculator;
 
-        public ListPriorityQueue()
+        /// <summary>
+        /// DEPRECATED. Should always specify priority calculator instead.
+        /// </summary>
+        /// <param name="initialCapacity">The current capacity of the priority queue.</param>
+        [Obsolete("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead [1.1.3]")]
+        public ListPriorityQueue(int initialCapacity) : this (initialCapacity, DefaultPriorityCalculator)
         {
-            _data = new List<Envelope>();
+            
         }
 
+        /// <summary>
+        /// Creates a new priority queue.
+        /// </summary>
+        /// <param name="initialCapacity">The initial capacity of the queue.</param>
+        /// <param name="priorityCalculator">The calculator function for assigning message priorities.</param>
+        public ListPriorityQueue(int initialCapacity, Func<object, int> priorityCalculator)
+        {
+            _data = new List<Envelope>(initialCapacity);
+            _priorityCalculator = priorityCalculator;
+        }
+
+        /// <summary>
+        /// DEPRECATED. Sets a new priority calculator.
+        /// </summary>
+        /// <param name="priorityCalculator">The calculator function for assigning message priorities.</param>
+        /// <remarks>
+        /// WARNING: SHOULD NOT BE USED. Use the constructor to set priority instead.
+        /// </remarks>
+        [Obsolete("Use the constructor to set the priority calculator instead. [1.1.3]")]
         public void SetPriorityCalculator(Func<object, int> priorityCalculator)
         {
             _priorityCalculator = priorityCalculator;
         }
 
+        /// <summary>
+        /// Enqueues a message into the priority queue.
+        /// </summary>
+        /// <param name="item">The item to enqueue.</param>
         public void Enqueue(Envelope item)
         {
 
@@ -46,6 +78,10 @@ namespace Akka.Util
             }
         }
 
+        /// <summary>
+        /// Dequeues the highest priority message at the front of the priority queue.
+        /// </summary>
+        /// <returns>The highest priority message <see cref="Envelope"/>.</returns>
         public Envelope Dequeue()
         {
             // assumes pq is not empty; up to calling code
@@ -70,17 +106,29 @@ namespace Akka.Util
             return frontItem;
         }
 
+        /// <summary>
+        /// Peek at the message at the front of the priority queue.
+        /// </summary>
+        /// <returns>The highest priority message <see cref="Envelope"/>.</returns>
         public Envelope Peek()
         {
             var frontItem = _data[0];
             return frontItem;
         }
 
+        /// <summary>
+        /// Counts the number of items in the priority queue.
+        /// </summary>
+        /// <returns>The total number of items in the queue.</returns>
         public int Count()
         {
             return _data.Count;
         }
 
+        /// <summary>
+        /// Converts the queue to a string representation.
+        /// </summary>
+        /// <returns>A string representation of the queue.</returns>
         public override string ToString()
         {
             var s = "";
@@ -90,6 +138,10 @@ namespace Akka.Util
             return s;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public bool IsConsistent()
         {
             // is the heap property true for all data?

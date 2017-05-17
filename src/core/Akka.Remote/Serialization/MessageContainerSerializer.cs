@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageContainerSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,8 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Serialization;
-using Google.ProtocolBuffers;
+using Akka.Util;
+using Google.Protobuf;
 
 namespace Akka.Remote.Serialization
 {
@@ -18,120 +19,84 @@ namespace Akka.Remote.Serialization
     /// </summary>
     public class MessageContainerSerializer : Serializer
     {
+        private readonly WrappedPayloadSupport _payloadSupport;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageContainerSerializer"/> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer. </param>
         public MessageContainerSerializer(ExtendedActorSystem system) : base(system)
         {
+            _payloadSupport = new WrappedPayloadSupport(system);
         }
 
-        /// <summary>
-        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
-        /// </summary>
-        public override int Identifier
-        {
-            get { return 6; }
-        }
+        /// <inheritdoc />
+        public override bool IncludeManifest => false;
 
-        /// <summary>
-        /// Returns whether this serializer needs a manifest in the fromBinary method
-        /// </summary>
-        public override bool IncludeManifest
-        {
-            get { return false; }
-        }
-
-        /// <summary>
-        /// Serializes the given object into a byte array
-        /// </summary>
-        /// <param name="obj">The object to serialize </param>
-        /// <returns>A byte array containing the serialized object</returns>
-        /// <exception cref="ArgumentException">Object must be of type <see cref="ActorSelectionMessage"/></exception>
+        /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            if (!(obj is ActorSelectionMessage))
+            var sel = obj as ActorSelectionMessage;
+            if (sel != null)
             {
-                throw new ArgumentException("Object must be of type ActorSelectionMessage");
+                var envelope = new Proto.Msg.SelectionEnvelope();
+                envelope.Payload = _payloadSupport.PayloadToProto(sel.Message);
+
+                foreach (var element in sel.Elements)
+                {
+                    Proto.Msg.Selection selection = null;
+                    if (element is SelectChildName)
+                    {
+                        var m = (SelectChildName)element;
+                        selection = BuildPattern(m.Name, Proto.Msg.Selection.Types.PatternType.ChildName);
+                    }
+                    else if (element is SelectChildPattern)
+                    {
+                        var m = (SelectChildPattern)element;
+                        selection = BuildPattern(m.PatternStr, Proto.Msg.Selection.Types.PatternType.ChildPattern);
+                    }
+                    else if (element is SelectParent)
+                    {
+                        selection = BuildPattern(null, Proto.Msg.Selection.Types.PatternType.Parent);
+                    }
+
+                    envelope.Pattern.Add(selection);
+                }
+
+                return envelope.ToByteArray();
             }
 
-            return SerializeActorSelectionMessage((ActorSelectionMessage) obj);
+            throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
         }
 
-        private ByteString Serialize(object obj)
-        {
-            Serializer serializer = system.Serialization.FindSerializerFor(obj);
-            byte[] bytes = serializer.ToBinary(obj);
-            return ByteString.CopyFrom(bytes);
-        }
-
-        private object Deserialize(ByteString bytes, Type type, int serializerId)
-        {
-            Serializer serializer = system.Serialization.GetSerializerById(serializerId);
-            object o = serializer.FromBinary(bytes.ToByteArray(), type);
-            return o;
-        }
-
-        private Selection.Builder BuildPattern(string matcher, PatternType tpe)
-        {
-            Selection.Builder builder = Selection.CreateBuilder().SetType(tpe);
-            if (matcher != null)
-                builder.SetMatcher(matcher);
-
-            return builder;
-        }
-
-        private byte[] SerializeActorSelectionMessage(ActorSelectionMessage sel)
-        {
-            SelectionEnvelope.Builder builder = SelectionEnvelope.CreateBuilder();
-            Serializer serializer = system.Serialization.FindSerializerFor(sel.Message);
-            builder.SetEnclosedMessage(ByteString.CopyFrom(serializer.ToBinary(sel.Message)));
-            builder.SetSerializerId(serializer.Identifier);
-            if (serializer.IncludeManifest)
-            {
-                builder.SetMessageManifest(ByteString.CopyFromUtf8(sel.Message.GetType().AssemblyQualifiedName));
-            }
-            foreach (SelectionPathElement element in sel.Elements)
-            {
-                element.Match()
-                    .With<SelectChildName>(m => builder.AddPattern(BuildPattern(m.Name, PatternType.CHILD_NAME)))
-                    .With<SelectChildPattern>(
-                        m => builder.AddPattern(BuildPattern(m.PatternStr, PatternType.CHILD_PATTERN)))
-                    .With<SelectParent>(m => builder.AddPattern(BuildPattern(null, PatternType.PARENT)));
-            }
-
-            return builder.Build().ToByteArray();
-        }
-
-        /// <summary>
-        /// Deserializes a byte array into an object of type <paramref name="type"/>.
-        /// </summary>
-        /// <param name="bytes">The array containing the serialized object</param>
-        /// <param name="type">The type of object contained in the array</param>
-        /// <returns>The object contained in the array</returns>
-        /// <exception cref="NotSupportedException">Unknown SelectionEnvelope.Elements.Type</exception>
+        /// <inheritdoc />
         public override object FromBinary(byte[] bytes, Type type)
         {
-            SelectionEnvelope selectionEnvelope = SelectionEnvelope.ParseFrom(bytes);
-            Type msgType = null;
-            if (selectionEnvelope.HasMessageManifest)
+            var selectionEnvelope = Proto.Msg.SelectionEnvelope.Parser.ParseFrom(bytes);
+            var message = _payloadSupport.PayloadFrom(selectionEnvelope.Payload);
+
+            var elements = new SelectionPathElement[selectionEnvelope.Pattern.Count];
+            for (var i = 0; i < selectionEnvelope.Pattern.Count; i++)
             {
-                msgType = Type.GetType(selectionEnvelope.MessageManifest.ToStringUtf8());
+                var p = selectionEnvelope.Pattern[i];
+                if (p.Type == Proto.Msg.Selection.Types.PatternType.ChildName)
+                    elements[i] = new SelectChildName(p.Matcher);
+                if (p.Type == Proto.Msg.Selection.Types.PatternType.ChildPattern)
+                    elements[i] = new SelectChildPattern(p.Matcher);
+                if (p.Type == Proto.Msg.Selection.Types.PatternType.Parent)
+                    elements[i] = new SelectParent();
             }
-            int serializerId = selectionEnvelope.SerializerId;
-            object msg = Deserialize(selectionEnvelope.EnclosedMessage, msgType, serializerId);
-            SelectionPathElement[] elements = selectionEnvelope.PatternList.Select<Selection, SelectionPathElement>(p =>
-            {
-                if (p.Type == PatternType.PARENT)
-                    return new SelectParent();
-                if (p.Type == PatternType.CHILD_NAME)
-                    return new SelectChildName(p.Matcher);
-                if (p.Type == PatternType.CHILD_PATTERN)
-                    return new SelectChildPattern(p.Matcher);
-                throw new NotSupportedException("Unknown SelectionEnvelope.Elements.Type");
-            }).ToArray();
-            return new ActorSelectionMessage(msg, elements);
+
+            return new ActorSelectionMessage(message, elements);
+        }
+
+        private Proto.Msg.Selection BuildPattern(string matcher, Proto.Msg.Selection.Types.PatternType tpe)
+        {
+            var selection = new Proto.Msg.Selection { Type = tpe };
+            if (matcher != null)
+                selection.Matcher = matcher;
+
+            return selection;
         }
     }
 }

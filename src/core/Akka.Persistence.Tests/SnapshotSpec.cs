@@ -1,15 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Persistence.Internal;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -29,7 +32,8 @@ namespace Akka.Persistence.Tests
         internal class SaveSnapshotTestActor : NamedPersistentActor
         {
             private readonly IActorRef _probe;
-            protected LinkedList<string> _state = new LinkedList<string>();
+
+            protected ImmutableArray<string> State = ImmutableArray<string>.Empty;
 
             public SaveSnapshotTestActor(string name, IActorRef probe)
                 : base(name)
@@ -40,30 +44,38 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveRecover(object message)
             {
                 return message.Match()
-                    .With<SnapshotOffer>(offer => _state = offer.Snapshot as LinkedList<string>)
-                    .With<string>(m => _state.AddFirst(m + "-" + LastSequenceNr))
+                    .With<SnapshotOffer>(offer =>
+                    {
+                        State = offer.Snapshot.AsInstanceOf<ImmutableArray<string>>();
+                    })
+                    .With<string>(m => State = State.AddFirst(m + "-" + LastSequenceNr))
                     .WasHandled;
             }
 
             protected override bool ReceiveCommand(object message)
             {
                 return message.Match()
-                    .With<string>(payload => Persist(payload, _ => _state.AddFirst(payload + "-" + LastSequenceNr)))
-                    .With<TakeSnapshot>(_ => SaveSnapshot(_state))
+                    .With<string>(payload => Persist(payload, _ =>
+                    {
+                        State = State.AddFirst(payload + "-" + LastSequenceNr);
+                    }))
+                    .With<TakeSnapshot>(_ => SaveSnapshot(State))
                     .With<SaveSnapshotSuccess>(s => _probe.Tell(s.Metadata.SequenceNr))
-                    .With<GetState>(_ => _probe.Tell(_state.Reverse().ToArray()))
+                    .With<GetState>(_ => _probe.Tell(State.Reverse().ToArray()))
                     .WasHandled;
             }
         }
 
         internal class LoadSnapshotTestActor : NamedPersistentActor
         {
+            private readonly Recovery _recovery;
             private readonly IActorRef _probe;
 
-            public LoadSnapshotTestActor(string name, IActorRef probe)
+            public LoadSnapshotTestActor(string name, Recovery recovery, IActorRef probe)
                 : base(name)
             {
                 _probe = probe;
+                _recovery = recovery;
             }
 
             protected override bool ReceiveRecover(object message)
@@ -91,6 +103,12 @@ namespace Akka.Persistence.Tests
             }
 
             protected override void PreStart() { }
+
+
+            public override Recovery Recovery
+            {
+                get { return _recovery; }
+            }
         }
 
         public sealed class DeleteOne
@@ -115,8 +133,8 @@ namespace Akka.Persistence.Tests
 
         internal class DeleteSnapshotTestActor : LoadSnapshotTestActor
         {
-            public DeleteSnapshotTestActor(string name, IActorRef probe)
-                : base(name, probe)
+            public DeleteSnapshotTestActor(string name, Recovery recovery, IActorRef probe)
+                : base(name, recovery, probe)
             {
             }
 
@@ -128,7 +146,7 @@ namespace Akka.Persistence.Tests
             protected bool ReceiveDelete(object message)
             {
                 return message.Match()
-                    .With<DeleteOne>(d => DeleteSnapshot(d.Metadata.SequenceNr, d.Metadata.Timestamp))
+                    .With<DeleteOne>(d => DeleteSnapshot(d.Metadata.SequenceNr))
                     .With<DeleteMany>(d => DeleteSnapshots(d.Criteria))
                     .WasHandled;
             }
@@ -137,7 +155,7 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public SnapshotSpec()
-            : base(Configuration("inmem", "SnapshotSpec"))
+            : base(Configuration("SnapshotSpec"))
         {
             var pref = ActorOf(() => new SaveSnapshotTestActor(Name, TestActor));
             pref.Tell("a");
@@ -155,10 +173,8 @@ namespace Akka.Persistence.Tests
         [Fact]
         public void PersistentActor_should_recover_state_starting_from_the_most_recent_snapshot()
         {
-            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
+            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, new Recovery(), TestActor));
             var persistenceId = Name;
-
-            pref.Tell(Recover.Default);
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
             (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
@@ -172,10 +188,9 @@ namespace Akka.Persistence.Tests
         [Fact]
         public void PersistentActor_should_recover_state_starting_from_the_most_recent_snapshot_matching_an_upper_sequence_number_bound()
         {
-            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
+            ActorOf(() => new LoadSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.Latest, 3), TestActor));
             var persistenceId = Name;
 
-            pref.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 3));
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
             (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
@@ -187,10 +202,9 @@ namespace Akka.Persistence.Tests
         [Fact]
         public void PersistentActor_should_recover_state_starting_from_the_most_recent_snapshot_matching_an_upper_sequence_number_bound_without_further_replay()
         {
-            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
+            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.Latest, 4), TestActor));
             var persistenceId = Name;
 
-            pref.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 4));
             pref.Tell("done");
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
@@ -204,10 +218,8 @@ namespace Akka.Persistence.Tests
         [Fact]
         public void PersistentActor_should_recover_state_starting_from_the_most_recent_snapshot_matching_criteria()
         {
-            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
+            ActorOf(() => new LoadSnapshotTestActor(Name, new Recovery(new SnapshotSelectionCriteria(2)), TestActor));
             var persistenceId = Name;
-
-            pref.Tell(new Recover(new SnapshotSelectionCriteria(maxSequenceNr: 2)));
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
             (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
@@ -223,10 +235,8 @@ namespace Akka.Persistence.Tests
         [Fact]
         public void PersistentActor_should_recover_state_starting_from_the_most_recent_snapshot_matching_criteria_and_an_upper_sequence_number_bound()
         {
-            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
+            ActorOf(() => new LoadSnapshotTestActor(Name, new Recovery(new SnapshotSelectionCriteria(2), 3), TestActor));
             var persistenceId = Name;
-
-            pref.Tell(new Recover(new SnapshotSelectionCriteria(maxSequenceNr: 2), toSequenceNr: 3));
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
             (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
@@ -239,9 +249,7 @@ namespace Akka.Persistence.Tests
         [Fact]
         public void PersistentActor_should_recover_state_from_scratch_if_snapshot_based_recovery_was_disabled()
         {
-            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
-
-            pref.Tell(new Recover(SnapshotSelectionCriteria.None, toSequenceNr: 3));
+            ActorOf(() => new LoadSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.None, 3), TestActor));
 
             ExpectMsg("a-1");
             ExpectMsg("b-2");
@@ -250,15 +258,14 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_support_single_message_deletions()
+        public void PersistentActor_should_support_single_snapshot_deletions()
         {
             var delProbe = CreateTestProbe();
-            var pref = ActorOf(() => new DeleteSnapshotTestActor(Name, TestActor));
+            var pref = ActorOf(() => new DeleteSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.Latest, 4), TestActor));
             var persistenceId = Name;
 
             Sys.EventStream.Subscribe(delProbe.Ref, typeof(DeleteSnapshot));
 
-            pref.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 4));
             pref.Tell("done");
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
@@ -269,9 +276,9 @@ namespace Akka.Persistence.Tests
 
             pref.Tell(new DeleteOne(offer.Metadata));
             delProbe.ExpectMsg<DeleteSnapshot>();
+            ExpectMsg<DeleteSnapshotSuccess>(m => m.Metadata.PersistenceId == persistenceId && m.Metadata.SequenceNr == 4);
 
-            var pref2 = ActorOf(() => new DeleteSnapshotTestActor(Name, TestActor));
-            pref2.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 4));
+            ActorOf(() => new DeleteSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.Latest, 4), TestActor));
 
             var offer2 = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
             (offer2.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
@@ -282,16 +289,15 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_support_bulk_message_deletions()
+        public void PersistentActor_should_support_bulk_snapshot_deletions()
         {
             var delProbe = CreateTestProbe();
-            var pref = ActorOf(() => new DeleteSnapshotTestActor(Name, TestActor));
+            var pref = ActorOf(() => new DeleteSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.Latest, 4), TestActor));
             var persistenceId = Name;
 
             Sys.EventStream.Subscribe(delProbe.Ref, typeof(DeleteSnapshots));
 
             // recover persistentActor and the delete first three (= all) snapshots
-            pref.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 4));
             pref.Tell(new DeleteMany(new SnapshotSelectionCriteria(4, DateTime.MaxValue)));
 
             ExpectMsgPf("offer", o =>
@@ -312,10 +318,10 @@ namespace Akka.Persistence.Tests
 
             ExpectMsg<RecoveryCompleted>();
             delProbe.ExpectMsg<DeleteSnapshots>();
+            ExpectMsg<DeleteSnapshotsSuccess>();
 
             // recover persistentActor from replayed messages (all snapshots deleted)
-            var pref2 = ActorOf(() => new DeleteSnapshotTestActor(Name, TestActor));
-            pref2.Tell(new Recover(SnapshotSelectionCriteria.None, toSequenceNr: 4));
+            ActorOf(() => new DeleteSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.None, 4), TestActor));
             ExpectMsg("a-1");
             ExpectMsg("b-2");
             ExpectMsg("c-3");

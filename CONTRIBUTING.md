@@ -130,6 +130,28 @@ git cherry-pick rev           #repeat until you have picked all commits
 git branch -m dev old-dev     #rename dev
 git branch dev upstream/dev   #create a new dev
 ```
+### What to do with feature branch after the pull request is merged and closed ? ###
+After a pull request has been merged and closed you can delete the feature branch.
+
+Get latest changes from the upstream
+
+```
+git checkout dev
+git fetch upstream
+git merge --ff-only upstream/dev
+git push origin dev
+```
+
+Remove the branch locally
+
+```
+git branch -d my-new-branch-123
+```
+Remove the branch on remote
+
+```
+git push origin --delete my-new-branch-123
+```
 
 ## Code guidelines
 

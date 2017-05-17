@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Messages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,13 +42,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class NodeCompletedSpecWithSuccess
     {
-        public NodeCompletedSpecWithSuccess(int nodeIndex, string message)
+        public NodeCompletedSpecWithSuccess(int nodeIndex, string nodeRole, string message)
         {
             Message = message;
             NodeIndex = nodeIndex;
+            NodeRole = nodeRole;
         }
 
         public int NodeIndex { get; private set; }
+
+        public string NodeRole { get; private set; }
 
         public string Message { get; private set; }
     }
@@ -58,13 +61,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class NodeCompletedSpecWithFail
     {
-        public NodeCompletedSpecWithFail(int nodeIndex, string message)
+        public NodeCompletedSpecWithFail(int nodeIndex, string nodeRole, string message)
         {
             Message = message;
             NodeIndex = nodeIndex;
+            NodeRole = nodeRole;
         }
 
         public int NodeIndex { get; private set; }
+
+        public string NodeRole { get; private set; }
 
         public string Message { get; private set; }
     }
@@ -74,14 +80,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class LogMessageFragmentForNode
     {
-        public LogMessageFragmentForNode(int nodeIndex, string message, DateTime when)
+        public LogMessageFragmentForNode(int nodeIndex, string nodeRole, string message, DateTime when)
         {
             NodeIndex = nodeIndex;
+            NodeRole = nodeRole;
             Message = message;
             When = when;
         }
 
         public int NodeIndex { get; private set; }
+        public string NodeRole { get; private set; }
 
         public DateTime When { get; private set; }
 
@@ -89,39 +97,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         public override string ToString()
         {
-            return string.Format("[NODE{1}][{0}]: {2}", When, NodeIndex, Message);
-        }
-    }
-
-    /// <summary>
-    /// Message for an individual node participating in a spec
-    /// </summary>
-    public class LogMessageForNode
-    {
-        public LogMessageForNode(int nodeIndex, string message, LogLevel level, DateTime when, string logSource)
-        {
-            LogSource = logSource;
-            When = when;
-            Level = level;
-            Message = message;
-            NodeIndex = nodeIndex;
-        }
-
-        public int NodeIndex { get; private set; }
-
-        public DateTime When { get; private set; }
-
-        public string Message { get; private set; }
-
-        public string LogSource { get; private set; }
-
-        public LogLevel Level { get; private set; }
-
-        public override string ToString()
-        {
-            return string.Format("[NODE{1}][{0}][{2}][{3}]: {4}", When, NodeIndex,
-                Level.ToString().Replace("Level", "").ToUpperInvariant(), LogSource,
-                Message);
+            return string.Format("[NODE{1}:{2}][{0}]: {3}", When, NodeIndex, NodeRole, Message);
         }
     }
 

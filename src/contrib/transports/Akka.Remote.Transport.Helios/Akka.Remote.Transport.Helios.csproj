@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Remote.Transport.Helios</AssemblyTitle>
+    <Description>(Legacy) Akka.NET remote transport layer based on Helios.</Description>
+    <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
+    <VersionPrefix>1.3.0</VersionPrefix>
+    <Authors>Akka.NET Team</Authors>
+    <TargetFrameworks>net45</TargetFrameworks>
+    <PackageTags>akka;actors;actor model;Akka;concurrency;transport;helios</PackageTags>
+    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="remote.conf" />
+    <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Helios" Version="2.1.3" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
+</Project>

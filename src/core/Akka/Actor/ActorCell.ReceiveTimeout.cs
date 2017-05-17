@@ -1,24 +1,38 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.ReceiveTimeout.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 
 namespace Akka.Actor
-{	
+{
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public interface INotInfluenceReceiveTimeout
+    {
+    }
+
     public partial class ActorCell
     {
         private TimeSpan? _receiveTimeoutDuration = null;
         private ICancelable _pendingReceiveTimeout = null;
 
-		public void SetReceiveTimeout(TimeSpan? timeout=null)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timeout">TBD</param>
+        public void SetReceiveTimeout(TimeSpan? timeout=null)
         {
             _receiveTimeoutDuration = timeout;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan? ReceiveTimeout
         {
             get
@@ -27,6 +41,9 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void CheckReceiveTimeout()
         {
             CancelReceiveTimeout();

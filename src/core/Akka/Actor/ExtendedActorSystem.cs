@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ExtendedActorSystem.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,6 +27,10 @@ namespace Akka.Actor
         /// </summary>
         public abstract IInternalActorRef Guardian { get; }
 
+        /// <summary>
+        /// The <see cref="RootGuardianActorRef"/>, used as the lookup for <see cref="IActorRef"/> resolutions.
+        /// </summary>
+        public abstract IInternalActorRef LookupRoot { get; }
 
         /// <summary>
         /// Gets the top-level supervisor of all system-internal services like logging.
@@ -39,22 +43,37 @@ namespace Akka.Actor
         /// </summary>
         public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
 
-        /// <summary>Creates a new system actor in the "/system" namespace. This actor 
+        /// <summary>
+        /// Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
-        /// terminated.</summary>
+        /// terminated.
+        /// </summary>
+        /// <param name="props">The <see cref="Props"/> used to create the actor</param>
+        /// <param name="name">The name of the actor to create. The default value is <see langword="null"/>.</param>
+        /// <returns>A reference to the newly created actor</returns>
         public abstract IActorRef SystemActorOf(Props props, string name = null);
 
-        /// <summary>Creates a new system actor in the "/system" namespace. This actor 
+        /// <summary>
+        /// Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
-        /// terminated.</summary>
+        /// terminated.
+        /// </summary>
+        /// <typeparam name="TActor">The type of actor to create</typeparam>
+        /// <param name="name">The name of the actor to create. The default value is <see langword="null"/>.</param>
+        /// <returns>A reference to the newly created actor</returns>
         public abstract IActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
+
+        /// <summary>
+        /// Aggressively terminates an <see cref="ActorSystem"/> without waiting for the normal shutdown process to run as-is.
+        /// </summary>
+        public abstract void Abort();
 
         //TODO: Missing threadFactory, dynamicAccess, printTree
         //  /**
         //  * A ThreadFactory that can be used if the transport needs to create any Threads
         //  */
         //  def threadFactory: ThreadFactory
-  
+
         //  /**
         //  * ClassLoader wrapper which is used for reflective accesses internally. This is set
         //  * to use the context class loader, if one is set, or the class loader which
@@ -63,7 +82,7 @@ namespace Akka.Actor
         //  * creation.
         //  */
         //  def dynamicAccess: DynamicAccess
-  
+
         //  /**
         //  * For debugging: traverse actor hierarchy and make string representation.
         //  * Careful, this may OOM on large actor systems, and it is only meant for
@@ -72,4 +91,3 @@ namespace Akka.Actor
         //  private[akka] def printTree: String
     }
 }
-

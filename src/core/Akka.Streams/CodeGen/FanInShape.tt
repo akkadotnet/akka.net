@@ -1,0 +1,156 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+// --- auto generated: <#= System.DateTime.UtcNow.ToString() #> --- //
+//-----------------------------------------------------------------------
+// <copyright file="FanInShape.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
+using System.Linq;
+using System.Collections.Immutable;
+<# var count = 10; #>
+
+namespace Akka.Streams
+{
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T0">TBD</typeparam>
+    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
+    public class FanInShapeN<T0, T1, TOut> : FanInShape<TOut>
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly int N;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Inlet<T0> In0;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly ImmutableArray<Inlet<T1>> In1s;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
+        /// <param name="init">TBD</param>
+        public FanInShapeN(int n, IInit init) : base(init)
+        {
+            N = n;
+            In0 = NewInlet<T0>("in0");
+            var builder = ImmutableArray.CreateBuilder<Inlet<T1>>(n);
+            for (int i = 0; i < n; i++) builder.Add(new Inlet<T1>("in" + i));
+            In1s = builder.ToImmutable();
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
+        public FanInShapeN(int n) : this(n, new InitName("FanInShape1N")) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
+        /// <param name="name">TBD</param>
+        public FanInShapeN(int n, string name) : this(n, new InitName(name)) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outlet">TBD</param>
+        /// <param name="in0">TBD</param>
+        /// <param name="inlets">TBD</param>
+        public FanInShapeN(Outlet<TOut> outlet, Inlet<T0> in0, params Inlet<T1>[] inlets) : this(inlets.Length, new InitPorts(outlet, new Inlet[]{in0}.Concat(inlets))) { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="n">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="n" /> is less than or equal to zero.
+        /// </exception>
+        /// <returns>TBD</returns>
+        public Inlet<T1> In(int n)
+        {
+            if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
+            return In1s[n-1];
+        }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="init">TBD</param>
+        /// <returns>TBD</returns>
+        protected override FanInShape<TOut> Construct(IInit init)
+        {
+            return new FanInShapeN<T0, T1, TOut>(N, init);
+        }
+    }
+
+<# for (int i = 2; i < count; i++) { 
+    var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "T" + x));
+#>
+    /// <summary>
+    /// TBD
+    /// </summary>
+<# for (int t = 0; t < i; t++) {  #>
+    /// <typeparam name="T<#= t #>">TBD</typeparam>
+<# } #>
+    /// <typeparam name="TOut">TBD</typeparam>
+    public class FanInShape<<#= typeParams #>, TOut> : FanInShape<TOut>
+    {
+<# for (int t = 0; t < i; t++) {  #>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Inlet<T<#= t #>> In<#= t #>;
+<# } #>
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="init">TBD</param>
+        public FanInShape(IInit init) : base(init)
+        {
+<# for (int t = 0; t < i; t++) {  #>
+            In<#= t #> = NewInlet<T<#= t #>>("in<#= t #>");
+<# } #>
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        public FanInShape(string name) : this(new InitName(name)) { }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="outlet">TBD</param>
+<# for (int t = 0; t < i; t++) {  #>
+        /// <param name="in<#= t #>">TBD</param>
+<# } #>
+        /// <returns>TBD</returns>
+        public FanInShape(Outlet<TOut> outlet, <#= string.Join(", ", Enumerable.Range(0, i).Select(x => string.Format("Inlet<T{0}> in{0}", x))) #>) 
+            : this(new InitPorts(outlet, new Inlet[] { <#= string.Join(", ", Enumerable.Range(0, i).Select(x => "in"+x)) #> })) { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="init">TBD</param>
+        /// <returns>TBD</returns>
+        protected override FanInShape<TOut> Construct(IInit init)
+        {
+            return new FanInShape<<#= typeParams #>, TOut>(init);
+        }
+    }
+<# } #>
+}

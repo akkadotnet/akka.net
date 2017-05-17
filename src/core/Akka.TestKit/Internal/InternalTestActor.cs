@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,11 +21,20 @@ namespace Akka.TestKit.Internal
         private TestKit.TestActor.Ignore _ignore;
         private AutoPilot _autoPilot;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="queue">TBD</param>
         public InternalTestActor(ITestActorQueue<MessageEnvelope> queue)
         {
             _queue = queue;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             global::System.Diagnostics.Debug.WriteLine("TestActor received " + message);
@@ -66,6 +75,9 @@ namespace Akka.TestKit.Internal
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             var self = Self;
@@ -74,10 +86,7 @@ namespace Akka.TestKit.Internal
                 var messageSender = messageEnvelope.Sender;
                 var message = messageEnvelope.Message;
                 Context.System.DeadLetters.Tell(new DeadLetter(message, messageSender, self), messageSender);
-            }          
+            }
         }
-
-
     }
 }
-

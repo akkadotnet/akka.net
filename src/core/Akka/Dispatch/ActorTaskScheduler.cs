@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorTaskScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,29 +11,51 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
+using Akka.Util.Internal;
 
 namespace Akka.Dispatch
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class ActorTaskScheduler : TaskScheduler
     {
         private readonly ActorCell _actorCell;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public object CurrentMessage { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorCell">TBD</param>
         internal ActorTaskScheduler(ActorCell actorCell)
         {
             _actorCell = actorCell;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override int MaximumConcurrencyLevel
         {
             get { return 1; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected override IEnumerable<Task> GetScheduledTasks()
         {
             return null;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="task">TBD</param>
         protected override void QueueTask(Task task)
         {
             if ((task.CreationOptions & TaskCreationOptions.LongRunning) == TaskCreationOptions.LongRunning)
@@ -60,14 +82,24 @@ namespace Akka.Dispatch
         private void ScheduleTask(Task task)
         {            
             //we are in a max concurrency level 1 scheduler. reading CurrentMessage should be OK
-            _actorCell.Self.Tell(new ActorTaskSchedulerMessage(this, task, CurrentMessage), ActorRefs.NoSender);
+            _actorCell.SendSystemMessage(new ActorTaskSchedulerMessage(this, task, CurrentMessage));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="task">TBD</param>
         internal void ExecuteTask(Task task)
         {
             TryExecuteTask(task);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="task">TBD</param>
+        /// <param name="taskWasPreviouslyQueued">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
         {
             // Prevent inline execution, it will execute inline anyway in QueueTask if we
@@ -75,6 +107,10 @@ namespace Akka.Dispatch
             return false;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
         public static void RunTask(Action action)
         {
             RunTask(() =>
@@ -84,22 +120,29 @@ namespace Akka.Dispatch
             });
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="asyncAction">TBD</param>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if this method is called outside an actor context.
+        /// </exception>
         public static void RunTask(Func<Task> asyncAction)
         {
             var context = ActorCell.Current;
 
             if (context == null)
-                throw new InvalidOperationException("RunTask must be call from an actor context.");
+                throw new InvalidOperationException("RunTask must be called from an actor context.");
 
-            var mailbox = context.Mailbox;
+            var dispatcher = context.Dispatcher;
 
             //suspend the mailbox
-            mailbox.Suspend(MailboxSuspendStatus.AwaitingTask);
+            dispatcher.Suspend(context);
 
             ActorTaskScheduler actorScheduler = context.TaskScheduler;
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
-            Task<Task>.Factory.StartNew(() => asyncAction(), CancellationToken.None, TaskCreationOptions.None, actorScheduler)
+            Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
                               .ContinueWith(parent =>
                               {
@@ -107,12 +150,13 @@ namespace Akka.Dispatch
 
                                   if (exception == null)
                                   {
-                                      mailbox.Resume(MailboxSuspendStatus.AwaitingTask);
+                                      dispatcher.Resume(context);
+
                                       context.CheckReceiveTimeout();
                                   }
                                   else
                                   {
-                                      context.Self.Tell(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage), ActorRefs.NoSender);
+                                      context.Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage));
                                   }
                                   //clear the current message field of the scheduler
                                   actorScheduler.CurrentMessage = null;

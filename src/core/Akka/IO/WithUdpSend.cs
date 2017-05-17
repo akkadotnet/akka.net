@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="WithUdpSend.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -13,6 +13,9 @@ using Akka.Event;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     abstract class WithUdpSend : ActorBase
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -26,9 +29,20 @@ namespace Akka.IO
             get { return _pendingSend != null; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected abstract DatagramChannel Channel { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected abstract UdpExt Udp { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="registration">TBD</param>
+        /// <returns>TBD</returns>
         public Receive SendHandlers(ChannelRegistration registration)
         {
             return message =>
@@ -129,3 +143,4 @@ namespace Akka.IO
         }
     }
 }
+#endif

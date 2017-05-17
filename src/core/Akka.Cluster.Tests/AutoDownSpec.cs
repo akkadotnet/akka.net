@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AutoDownSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Tests
@@ -36,9 +37,9 @@ namespace Akka.Cluster.Tests
             }
         }
 
-        readonly static Member MemberA = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Up);
-        readonly static Member MemberB = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up);
-        readonly static Member MemberC = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552), MemberStatus.Up);
+        static readonly Member MemberA = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Up);
+        static readonly Member MemberB = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up);
+        static readonly Member MemberC = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552), MemberStatus.Up);
 
         class AutoDownTestActor : AutoDownBase
         {
@@ -80,7 +81,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustDownUnreachableWhenLeader()
+        public void AutoDown_must_down_unreachable_when_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
@@ -89,7 +90,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustNotDownUnreachableWhenNotLeader()
+        public void AutoDown_must_not_down_unreachable_when_not_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
@@ -98,7 +99,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustDownUnreachableWhenBecomingLeader()
+        public void AutoDown_must_down_unreachable_when_becoming_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
@@ -108,66 +109,63 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustDownUnreachableAfterSpecifiedDuration()
+        public void AutoDown_must_down_unreachable_after_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(1.Seconds());
             ExpectMsg(new DownCalled(MemberB.Address));
         }
 
         [Fact]
-        public void AutoDownMustDownUnreachableWhenBecomingLeaderInbetweenDetectionAndSpecifiedDuration()
+        public void AutoDown_must_down_unreachable_when_becoming_leader_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberC));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(1.Seconds());
             ExpectMsg(new DownCalled(MemberC.Address));
         }
 
         [Fact]
-        public void AutoDownMustNotDownUnreachableWhenLoosingLeadershipInbetweenDetectionAndSpecifiedDuration()
+        public void AutoDown_must_not_down_unreachable_when_loosing_leadership_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberC));
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
-            ExpectNoMsg(TimeSpan.FromSeconds(3));
+            ExpectNoMsg(3.Seconds());
         }
 
         [Fact]
-        public void AutoDownMustNotDownWhenUnreachableBecomeReachableInbetweenDetectionAndSpecifiedDuration()
+        public void AutoDown_must_not_down_when_unreachable_become_reachable_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
             a.Tell(new ClusterEvent.ReachableMember(MemberB));
-            ExpectNoMsg(TimeSpan.FromSeconds(3));
+            ExpectNoMsg(3.Seconds());
         }
 
-
         [Fact]
-        public void AutoDownMustNotDownUnreachableIsRemovedInbetweenDetectionAndSpecifiedDuration()
+        public void AutoDown_must_not_down_unreachable_is_removed_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
             a.Tell(new ClusterEvent.MemberRemoved(MemberB.Copy(MemberStatus.Removed), MemberStatus.Exiting));
-            ExpectNoMsg(TimeSpan.FromSeconds(3));
+            ExpectNoMsg(3.Seconds());
         }
 
         [Fact]
-        public void AutoDownMustNotDownWhenUnreachableIsAlreadyDown()
+        public void AutoDown_must_not_down_when_unreachable_is_already_down()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB.Copy(MemberStatus.Down)));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(1.Seconds());
         }
-
     }
 }
-

@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -15,30 +15,56 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     partial class TcpListener
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public class RegisterIncoming : SelectionHandler.IHasFailureMessage, INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="channel">TBD</param>
             public RegisterIncoming(SocketChannel channel)
             {
                 Channel = channel;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public SocketChannel Channel { get; private set; }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public object FailureMessage
             {
                 get { return new FailedRegisterIncoming(Channel); }
             }
         }
 
-        public class FailedRegisterIncoming
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public class FailedRegisterIncoming : INoSerializationVerificationNeeded
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="channel">TBD</param>
             public FailedRegisterIncoming(SocketChannel channel)
             {
                 Channel = channel;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
             public SocketChannel Channel { get; private set; }
         }
     }
@@ -54,6 +80,14 @@ namespace Akka.IO
 
         private int acceptLimit;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="selectorRouter">TBD</param>
+        /// <param name="tcp">TBD</param>
+        /// <param name="channelRegistry">TBD</param>
+        /// <param name="bindCommander">TBD</param>
+        /// <param name="bind">TBD</param>
         public TcpListener(IActorRef selectorRouter, TcpExt tcp, IChannelRegistry channelRegistry, IActorRef bindCommander,
             Tcp.Bind bind)
         {
@@ -67,26 +101,45 @@ namespace Akka.IO
             _channel = SocketChannel.Open().ConfigureBlocking(false);
 
             acceptLimit = bind.PullMode ? 0 : _tcp.Settings.BatchAcceptLimit;
-
+            
             var localAddress = new Func<EndPoint>(() =>
             {
-                var socket = _channel.Socket;
-                bind.Options.ForEach(x => x.BeforeServerSocketBind(_channel.Socket));
+                try
+                {
+                    var socket = _channel.Socket;
+                    bind.Options.ForEach(x => x.BeforeServerSocketBind(socket));
 
-                socket.Bind(bind.LocalAddress);
-                socket.Listen(bind.Backlog);
+                    socket.Bind(bind.LocalAddress);
+                    socket.Listen(bind.Backlog);
 
-                channelRegistry.Register(_channel,
-                    bind.PullMode ? SocketAsyncOperation.None : SocketAsyncOperation.Accept, Self);
-                return socket.LocalEndPoint;
+                    channelRegistry.Register(_channel,
+                        bind.PullMode ? SocketAsyncOperation.None : SocketAsyncOperation.Accept, Self);
+                    return socket.LocalEndPoint;
+                }
+                catch (Exception e)
+                {
+                    _bindCommander.Tell(bind.FailureMessage);
+                    _log.Error(e, "Bind failed for TCP channel on endpoint [{0}]", bind.LocalAddress);
+                    Context.Stop(Self);
+                }
+
+                return bind.LocalAddress;
             })();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return SelectionHandler.ConnectionSupervisorStrategy;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var registration = message as ChannelRegistration;
@@ -170,6 +223,9 @@ namespace Akka.IO
             return _tcp.Settings.BatchAcceptLimit; 
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             if (_channel.IsOpen())
@@ -179,3 +235,4 @@ namespace Akka.IO
         }
     }
 }
+#endif

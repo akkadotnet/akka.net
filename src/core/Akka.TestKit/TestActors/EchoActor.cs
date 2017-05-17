@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EchoActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,11 @@ namespace Akka.TestKit.TestActors
     /// </summary>
     public class EchoActor : ReceiveActor
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="testkit">TBD</param>
+        /// <param name="echoBackToSenderAsWell">TBD</param>
         public EchoActor(TestKitBase testkit, bool echoBackToSenderAsWell=true)
         {
             ReceiveAny(msg =>
@@ -37,10 +42,12 @@ namespace Akka.TestKit.TestActors
         /// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message) or unless 
         /// <paramref name="echoBackToSenderAsWell"/> has been set to <c>false</c>.
         /// </summary>
+        /// <param name="testkit">TBD</param>
+        /// <param name="echoBackToSenderAsWell">TBD</param>
+        /// <returns>TBD</returns>
         public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
         {
             return Actor.Props.Create(()=>new EchoActor(testkit, echoBackToSenderAsWell));
         }
     }
 }
-

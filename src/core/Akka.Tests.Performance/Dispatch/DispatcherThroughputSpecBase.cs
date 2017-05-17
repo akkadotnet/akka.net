@@ -1,5 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DispatcherThroughputSpecBase.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
+using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 using NBench;
 
@@ -10,6 +19,9 @@ namespace Akka.Tests.Performance.Dispatch
     /// </summary>
     public abstract class ColdDispatcherThroughputSpecBase
     {
+        protected ActorSystem Sys;
+        protected DefaultDispatcherPrerequisites Prereqs;
+
         protected abstract MessageDispatcherConfigurator Configurator();
 
         private const string DispatcherCounterName = "ScheduledActionCompleted";
@@ -43,6 +55,8 @@ namespace Akka.Tests.Performance.Dispatch
         [PerfSetup]
         public void Setup(BenchmarkContext context)
         {
+            Sys = ActorSystem.Create("Sys");
+            Prereqs = new DefaultDispatcherPrerequisites(Sys.EventStream, Sys.Scheduler, Sys.Settings, Sys.Mailboxes);
             _configurator = Configurator();
             _dispatcher = _configurator.Dispatcher();
             _dispatcherCounter = context.GetCounter(DispatcherCounterName);
@@ -59,7 +73,7 @@ namespace Akka.Tests.Performance.Dispatch
 
         [PerfBenchmark(Description = "Tests how long it takes to schedule items onto the dispatcher", RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
         [CounterMeasurement(DispatcherCounterName)]
-        public void ScheduleThroughput(BenchmarkContext context)
+        public void Schedule_throughput(BenchmarkContext context)
         {
             for (var i = 0L; i < ScheduleCount;)
             {
@@ -73,8 +87,9 @@ namespace Akka.Tests.Performance.Dispatch
         [PerfCleanup]
         public void Teardown()
         {
-            _dispatcher.Detach(null); //forces disposal of per-actor dispatchers
+            // TODO: add safe way to dispose dispatchers (need to use an ActorSystem)
             EventBlock.Dispose();
+            Sys.Terminate().Wait();
         }
     }
 

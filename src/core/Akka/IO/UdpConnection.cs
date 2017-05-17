@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Linq;
 using System.Net;
@@ -16,6 +16,9 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class UdpConnection : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly UdpConnectedExt _udpConn;
@@ -27,6 +30,13 @@ namespace Akka.IO
 
         private DatagramChannel _channel;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="udpConn">TBD</param>
+        /// <param name="channelRegistry">TBD</param>
+        /// <param name="commander">TBD</param>
+        /// <param name="connect">TBD</param>
         public UdpConnection(UdpConnectedExt udpConn, 
                              IChannelRegistry channelRegistry, 
                              IActorRef commander, 
@@ -90,6 +100,11 @@ namespace Akka.IO
             _log.Debug("Successfully connected to [{0}]", _connect.RemoteAddress);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var registration = message as ChannelRegistration;
@@ -214,6 +229,9 @@ namespace Akka.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             if (_channel.IsOpen())
@@ -245,3 +263,4 @@ namespace Akka.IO
         }
     }
 }
+#endif

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestActorRefSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         private static Config GetConfig()
         {
-            return (@"test-dispatcher1.type=""" + typeof(TaskDispatcherConfigurator).FullName);
+            return (@"test-dispatcher1.type=""" + typeof(PinnedDispatcherConfigurator).FullName);
             //return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName) + FullDebugConfig;
         }
 
@@ -163,7 +163,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>().WithDispatcher("test-dispatcher1"));
             var actorRef = (InternalTestActorRef)a.Ref;
-            Assert.IsType<TaskDispatcher>(actorRef.Cell.Dispatcher);
+            Assert.IsType<PinnedDispatcher>(actorRef.Cell.Dispatcher);
         }
 
         [Fact]
@@ -183,6 +183,32 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             var actorRef = (InternalTestActorRef)a.Ref;
             Assert.True(actorRef.IsTerminated);
             ExpectMsg("workDone");
+        }
+
+        [Fact]
+        public void TestFsmActorRef_must_proxy_receive_for_underlying_actor_with_sender()
+        {
+            var a = new TestFSMRef<FsmActor, TestFsmState, string>(Sys, Props.Create(() => new FsmActor(TestActor)));
+            a.Receive("check");
+            ExpectMsg("first");
+
+            // verify that we can change state
+            a.SetState(TestFsmState.Last);
+            a.Receive("check");
+            ExpectMsg("last");
+        }
+
+        [Fact]
+        public void BugFix1709_TestFsmActorRef_must_work_with_Fsms_with_constructor_arguments()
+        {
+            var a = ActorOfAsTestFSMRef<FsmActor, TestFsmState, string>(Props.Create(() => new FsmActor(TestActor)));
+            a.Receive("check");
+            ExpectMsg("first");
+
+            // verify that we can change state
+            a.SetState(TestFsmState.Last);
+            a.Receive("check");
+            ExpectMsg("last");
         }
 
         private class SaveStringActor : TActorBase

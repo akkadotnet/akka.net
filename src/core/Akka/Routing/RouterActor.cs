@@ -1,14 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RouterActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -17,24 +16,35 @@ namespace Akka.Routing
     /// </summary>
     internal class RouterActor : UntypedActor
     {
-        public RouterActor()
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="ActorInitializationException">TBD</exception>
+        protected RoutedActorCell Cell
         {
-            if (!(Context is RoutedActorCell))
+            get
             {
-                throw new NotSupportedException("Current Context must be of type RouterActorContext");
+                var routedActorCell = Context as RoutedActorCell;
+                if (routedActorCell != null)
+                    return routedActorCell;
+                else
+                    throw new ActorInitializationException($"Router actor can only be used in RoutedActorRef, not in {Context.GetType()}");
             }
         }
 
-        protected RoutedActorCell Cell
+        private IActorRef RoutingLogicController
         {
-            get { return Context.AsInstanceOf<RoutedActorCell>(); }
+            get
+            {
+                return Context.ActorOf(Cell.RouterConfig.RoutingLogicController(Cell.Router.RoutingLogic).
+                    WithDispatcher(Context.Props.Dispatcher), "routingLogicController");
+            }
         }
 
-        protected override void PreRestart(Exception cause, object message)
-        {
-            //do not scrap children
-        }
-
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
             if (message is GetRoutees)
@@ -49,17 +59,40 @@ namespace Akka.Routing
             else if (message is RemoveRoutee)
             {
                 var removeRoutee = message as RemoveRoutee;
-                Cell.RemoveRoutee(removeRoutee.Routee, true);
+                Cell.RemoveRoutee(removeRoutee.Routee, stopChild: true);
                 StopIfAllRouteesRemoved();
+            }
+            else if (message is Terminated)
+            {
+                var terminated = message as Terminated;
+                Cell.RemoveRoutee(new ActorRefRoutee(terminated.ActorRef), stopChild: false);
+                StopIfAllRouteesRemoved();
+            }
+            else
+            {
+                RoutingLogicController?.Forward(message);
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual void StopIfAllRouteesRemoved()
         {
-            if (!Cell.Router.Routees.Any())
+            if (!Cell.Router.Routees.Any() && Cell.RouterConfig.StopRouterWhenAllRouteesRemoved)
             {
                 Context.Stop(Self);
             }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
+        /// <param name="message">TBD</param>
+        protected override void PreRestart(Exception cause, object message)
+        {
+            //do not scrap children
         }
     }
 }

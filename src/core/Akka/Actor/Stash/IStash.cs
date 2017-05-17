@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IStash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,14 +36,20 @@ namespace Akka.Actor
         /// Unstashes all messages selected by the predicate function. Other messages are discarded.
         /// The stash is guaranteed to be empty afterwards.
         /// </summary>
+        /// <param name="predicate">TBD</param>
         void UnstashAll(Func<Envelope, bool> predicate);
 
         /// <summary>
         /// Returns all messages and clears the stash.
         /// The stash is guaranteed to be empty afterwards.
         /// </summary>
+        /// <returns>TBD</returns>
         IEnumerable<Envelope> ClearStash();
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelopes">TBD</param>
         void Prepend(IEnumerable<Envelope> envelopes);
     }
 }

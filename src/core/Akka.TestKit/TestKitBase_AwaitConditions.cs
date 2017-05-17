@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase_AwaitConditions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,9 @@ using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public abstract partial class TestKitBase
     {
         /// <summary>
@@ -139,6 +142,7 @@ namespace Akka.TestKit
         /// <param name="interval">Optional. The time between calls to <paramref name="conditionIsFulfilled"/> to check
         /// if the condition is fulfilled. Between calls the thread sleeps. If undefined, 100 ms is used
         /// </param>
+        /// <returns>TBD</returns>
         public bool AwaitConditionNoThrow(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval = null)
         {
             var intervalDur = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
@@ -172,6 +176,7 @@ namespace Akka.TestKit
         /// </param>
         /// <param name="fail">Action that is called when the timeout expired. 
         /// The parameters conforms to <see cref="string.Format(string,object[])"/></param>
+        /// <returns>TBD</returns>
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail)
         {
             return InternalAwaitCondition(conditionIsFulfilled, max, interval, fail, null);
@@ -204,6 +209,7 @@ namespace Akka.TestKit
         /// <param name="fail">Action that is called when the timeout expired. 
         /// The parameters conforms to <see cref="string.Format(string,object[])"/></param>
         /// <param name="logger">If a <see cref="ILoggingAdapter"/> is specified, debug messages will be logged using it. If <c>null</c> nothing will be logged</param>
+        /// <returns>TBD</returns>
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail, ILoggingAdapter logger)
         {
             max.EnsureIsPositiveFinite("max");
@@ -236,4 +242,3 @@ namespace Akka.TestKit
         }
     }
 }
-

@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeployerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Configuration;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -70,6 +71,9 @@ namespace Akka.Tests.Actor
         ""/*/some"" {
           router = round-robin-pool
         }
+        ""/*/so.me"" {
+          router = round-robin-pool
+        }
       }
             ";
         }
@@ -131,6 +135,36 @@ namespace Akka.Tests.Actor
             Assert.Equal(Deploy.NoDispatcherGiven, deployment.Dispatcher);
         }
 
+
+        [Fact(DisplayName=@"If a fallaback config is declared with a deployment an actor should be able to be created for the main configuration and the fallback configuration")]
+        public void ActorSystem_fallback_deployment_is_not_null_when_config_has_value()
+        {
+            var config1 = ConfigurationFactory.ParseString(@"
+            akka.actor.deployment {
+                /worker1 {
+                    router = round-robin-group
+                    routees.paths = [""/user/testroutes/1""]
+                }
+            }");
+            var config2 = ConfigurationFactory.ParseString(@"
+            akka.actor.deployment {
+                /worker2 {
+                    router = round-robin-group
+                    routees.paths = [""/user/testroutes/2""]
+                }
+            }");
+            var configWithFallback = config1.WithFallback(config2);
+
+            //act
+            var actorSystem = ActorSystem.Create("actors", configWithFallback);
+            var worker1 = actorSystem.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "worker1");
+            var worker2 = actorSystem.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "worker2");
+
+            //assert
+            Assert.NotNull(worker1.Path);
+            Assert.NotNull(worker2.Path);
+            Assert.NotEqual(worker1.Path, worker2.Path);
+        }
 
         #endregion
     }

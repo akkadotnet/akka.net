@@ -10,7 +10,6 @@
     <AssemblyName>FSharp.Deploy.Remote</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
     <Name>FSharp.Deploy.Remote</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -36,33 +35,6 @@
     <DocumentationFile>bin\Release\FSharp.Deploy.Remote.XML</DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="mscorlib" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="FSharp.Core, Version=4.3.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-      <Private>True</Private>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Program.fs" />
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\core\Akka.FSharp\Akka.FSharp.fsproj">
-      <Name>Akka.FSharp</Name>
-      <Project>{81574240-BC31-4BE4-B447-ADF0D32F4246}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\core\Akka.Remote\Akka.Remote.csproj">
-      <Name>Akka.Remote</Name>
-      <Project>{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\core\Akka\Akka.csproj">
-      <Name>Akka</Name>
-      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
   </PropertyGroup>
@@ -79,6 +51,37 @@
     </Otherwise>
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+    <None Include="App.config" />
+    <Content Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="FSharp.Core">
+      <HintPath>..\..\packages\FSharp.Core.4.1.17\lib\net45\FSharp.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="mscorlib" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+    <ProjectReference Include="..\..\core\Akka.FSharp\Akka.FSharp.fsproj">
+      <Name>Akka.FSharp</Name>
+      <Project>{81574240-BC31-4BE4-B447-ADF0D32F4246}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\core\Akka.Remote\Akka.Remote.csproj">
+      <Name>Akka.Remote</Name>
+      <Project>{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\core\Akka\Akka.csproj">
+      <Name>Akka</Name>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
+    </ProjectReference>
+    <Reference Include="System.ValueTuple">
+      <HintPath>..\..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

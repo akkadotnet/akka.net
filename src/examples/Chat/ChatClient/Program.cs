@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,10 +23,7 @@ akka {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
     }
     remote {
-        helios.tcp {
-            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-		    applied-adapters = []
-		    transport-protocol = tcp
+        dot-netty.tcp {
 		    port = 0
 		    hostname = localhost
         }
@@ -37,7 +34,6 @@ akka {
             using (var system = ActorSystem.Create("MyClient", config)) 
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
-                system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
                 chatClient.Tell(new ConnectRequest()
                 {
                     Username = "Roggan",
@@ -117,7 +113,12 @@ akka {
         {
             message.Username = this._nick;
             _server.Tell(message);
-        }     
+        }
+
+        public void Handle(Terminated message)
+        {
+            Console.Write("Server died");
+        }
     }
 }
 

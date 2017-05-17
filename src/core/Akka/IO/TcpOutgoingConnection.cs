@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpOutgoingConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -14,12 +14,22 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class TcpOutgoingConnection : TcpConnection
     {
         private readonly IChannelRegistry _channelRegistry;
         private readonly IActorRef _commander;
         private readonly Tcp.Connect _connect;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="tcp">TBD</param>
+        /// <param name="channelRegistry">TBD</param>
+        /// <param name="commander">TBD</param>
+        /// <param name="connect">TBD</param>
         public TcpOutgoingConnection(TcpExt tcp, IChannelRegistry channelRegistry, IActorRef commander, Tcp.Connect connect)
             : base(tcp, SocketChannel.Open().ConfigureBlocking(false), connect.PullMode)
         {
@@ -55,6 +65,11 @@ namespace Akka.IO
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             var registration = message as ChannelRegistration;
@@ -157,3 +172,4 @@ namespace Akka.IO
         }
     }
 }
+#endif

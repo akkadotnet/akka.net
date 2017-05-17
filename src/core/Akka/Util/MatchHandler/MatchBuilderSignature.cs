@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchBuilderSignature.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,15 +17,24 @@ namespace Akka.Tools.MatchHandler
     /// Two signatures are equal if they contain the same <see cref="Type">Types</see> and <see cref="HandlerKind">HandlerKinds</see>
     /// in the same order.
     /// </summary>
-    public class MatchBuilderSignature : IEquatable<MatchBuilderSignature>
+    internal class MatchBuilderSignature : IEquatable<MatchBuilderSignature>
     {
         private readonly IReadOnlyList<object> _list;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="signature">TBD</param>
         public MatchBuilderSignature(IReadOnlyList<object> signature)
         {
             _list = signature;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(MatchBuilderSignature other)
         {
             if(ReferenceEquals(null, other)) return false;
@@ -33,6 +42,11 @@ namespace Akka.Tools.MatchHandler
             return ListsEqual(_list, other._list);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             if(ReferenceEquals(null, obj)) return false;
@@ -56,6 +70,10 @@ namespace Akka.Tools.MatchHandler
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             if(_list == null) return 0;
@@ -69,6 +87,10 @@ namespace Akka.Tools.MatchHandler
             return hashCode;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "[" + String.Join(", ", _list.Select(o => o as Type != null ? ((Type)o).Name : o)) + "]";

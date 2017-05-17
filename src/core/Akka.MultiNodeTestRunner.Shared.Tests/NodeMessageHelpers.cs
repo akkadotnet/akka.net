@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NodeMessageHelpers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,13 +19,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
     /// </summary>
     public static class NodeMessageHelpers
     {
+        internal const string DummyRoleFor = "Dummy_role_for_";
+
         public static IList<NodeTest> BuildNodeTests(IEnumerable<int> nodeIndicies)
         {
             var methodName = Faker.Generators.Strings.GenerateAlphaNumericString();
             var className = Faker.Generators.Strings.GenerateAlphaNumericString();
             var testName = Faker.Generators.Strings.GenerateAlphaNumericString();
 
-            return nodeIndicies.Select(i => new NodeTest() {MethodName = methodName, Node = i, TestName = testName, TypeName = className}).ToList();
+            return nodeIndicies.Select(i => new NodeTest() {MethodName = methodName, Node = i, Role = DummyRoleFor+i, TestName = testName, TypeName = className}).ToList();
         }
 
         /// <summary>
@@ -89,7 +91,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             var startTime = DateTime.UtcNow;
             foreach (var i in Enumerable.Range(0, count))
             {
-                messages.Add(new MultiNodeLogMessage(Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), String.Format("Message {0}", i), nodeIndex,
+                messages.Add(new MultiNodeLogMessage(
+                    Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), 
+                    String.Format("Message {0}", i), nodeIndex, DummyRoleFor + nodeIndex,
                     "/foo", LogLevel.InfoLevel));
             }
             return messages;
@@ -106,7 +110,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             var startTime = DateTime.UtcNow;
             foreach (var i in Enumerable.Range(0, count))
             {
-                messages.Add(new MultiNodeLogMessageFragment(Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), String.Format("Message {0}", i), nodeIndex));
+                messages.Add(new MultiNodeLogMessageFragment(
+                    Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)),
+                    String.Format("Message {0}", i), nodeIndex, DummyRoleFor + nodeIndex));
             }
             return messages;
         }
@@ -138,7 +144,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             messages.Add(
                 new MultiNodeResultMessage(
                     Faker.Generators.DateTimes.GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(30)),
-                    String.Format("Test passed? {0}", pass), nodeIndex, pass));
+                    String.Format("Test passed? {0}", pass), nodeIndex, DummyRoleFor + nodeIndex, pass));
             return messages;
         }
     }

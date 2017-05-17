@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaAssertEqualityComparer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -55,10 +55,6 @@ namespace Akka.TestKit.Xunit.Internals
                     return false;
             }
 
-            // Same type?
-            if(!skipTypeCheck && x.GetType() != y.GetType())
-                return false;
-
             // Implements IEquatable<T>?
             var equatable = x as IEquatable<T>;
             if(equatable != null)
@@ -96,6 +92,10 @@ namespace Akka.TestKit.Xunit.Internals
                         return false;
                 }
             }
+
+            // Same type?
+            if (!skipTypeCheck && x.GetType() != y.GetType())
+                return false;
 
             // Last case, rely on Object.Equals
             return Object.Equals(x, y);

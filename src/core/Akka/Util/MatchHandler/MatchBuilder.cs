@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,11 @@ using System.Reflection.Emit;
 
 namespace Akka.Tools.MatchHandler
 {
-    public class MatchBuilder<TItem>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="TItem">TBD</typeparam>
+    internal class MatchBuilder<TItem>
     {
         //This class works by collecting all handlers.
         //By creating a signature, made up of all types [Type], and types-of-handlers [HandlerKind], we can use the same code
@@ -41,9 +45,16 @@ namespace Akka.Tools.MatchHandler
         private State _state;
 
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MatchBuilder{TItem}"/> class.
+        /// </summary>
+        /// <param name="compiler">TBD</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="compiler"/> is undefined.
+        /// </exception>
         public MatchBuilder(IMatchCompiler<TItem> compiler)
         {
-            if(compiler == null) throw new ArgumentNullException("compiler");
+            if(compiler == null) throw new ArgumentNullException(nameof(compiler), "Compiler cannot be null");
             _compiler = compiler;
         }
 
@@ -55,6 +66,12 @@ namespace Akka.Tools.MatchHandler
         /// <typeparam name="T">The type that it must match in order for <paramref name="handler"/> to be called.</typeparam>
         /// <param name="handler">The handler that is invoked when everything matches.</param>
         /// <param name="shouldHandle">An optional predicate to test if the item matches. If it returns <c>true</c> the <paramref name="handler"/> is invoked.</param>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built. 
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown if the current state is unknown.
+        /// </exception>
         public void Match<T>(Action<T> handler, Predicate<T> shouldHandle = null) where T : TItem
         {
             EnsureCanAdd();
@@ -64,7 +81,6 @@ namespace Akka.Tools.MatchHandler
                 _state = State.MatchAnyAdded;
         }
 
-
         /// <summary>
         /// Adds a handler that is called if the item being matched is of type <paramref name="handlesType"/>
         /// and <paramref name="shouldHandle"/>, if it has been specified, returns <c>true</c>.
@@ -73,6 +89,15 @@ namespace Akka.Tools.MatchHandler
         /// <param name="handlesType">The type that it must match in order for <paramref name="handler"/> to be called.</param>
         /// <param name="handler">The handler that is invoked when everything matches.</param>
         /// <param name="shouldHandle">An optional predicate to test if the item matches. If it returns <c>true</c> the <paramref name="handler"/> is invoked.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="handler"/> cannot handle the given <paramref name="handlesType"/>.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown if the current state is unknown.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built. 
+        /// </exception>
         public void Match(Type handlesType, Action<TItem> handler, Predicate<TItem> shouldHandle = null)
         {
             EnsureCanAdd();
@@ -82,7 +107,6 @@ namespace Akka.Tools.MatchHandler
                 _state = State.MatchAnyAdded;
         }
 
-
         /// <summary>
         /// Adds a handler that is called if the item being matched is of type <typeparamref name="T"/>.
         /// The handler should return <c>true</c> if the item sent in matched and was handled.
@@ -90,14 +114,18 @@ namespace Akka.Tools.MatchHandler
         /// </summary>
         /// <typeparam name="T">The type that it must match in order for <paramref name="handler"/> to be called.</typeparam>
         /// <param name="handler">The handler that is invoked. It should return <c>true</c> if the item sent in matched and was handled.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown if the current state is unknown.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built. 
+        /// </exception>
         public void Match<T>(Func<T, bool> handler) where T : TItem
         {
             EnsureCanAdd();
             var handlesType = typeof(T);
             AddHandler(handlesType, PredicateAndHandler.CreateFunc(handler));
         }
-
-
 
         /// <summary>
         /// Adds a handler that is called if the item being matched is of type <paramref name="handlesType"/>.
@@ -106,6 +134,15 @@ namespace Akka.Tools.MatchHandler
         /// </summary>
         /// <param name="handlesType">The type that it must match in order for <paramref name="handler"/> to be called.</param>
         /// <param name="handler">The handler that is invoked. It should return <c>true</c> if the item sent in matched and was handled.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="handler"/> cannot handle the given <paramref name="handlesType"/>.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown if the current state is unknown.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built. 
+        /// </exception>
         public void Match(Type handlesType, Func<TItem, bool> handler)
         {
             EnsureCanAdd();
@@ -123,7 +160,6 @@ namespace Akka.Tools.MatchHandler
             Match(handler);
         }
 
-
         /// <summary>
         /// Builds all added handlers and returns a <see cref="PartialAction{TItem}"/>.
         /// </summary>
@@ -135,17 +171,25 @@ namespace Akka.Tools.MatchHandler
             return partialAction;
         }
 
+#if !CORECLR
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeBuilder">TBD</param>
+        /// <param name="methodName">TBD</param>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
         public void BuildToMethod(TypeBuilder typeBuilder, string methodName, MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.Static)
         {
             _compiler.CompileToMethod(_typeHandlers, _arguments, new MatchBuilderSignature(_signature), typeBuilder, methodName, methodAttributes: attributes);
             _state = State.Built;
-
         }
+#endif
 
         private static void EnsureCanHandleType(Type handlesType)
         {
             if(!_itemType.IsAssignableFrom(handlesType))
-                throw new ArgumentException("The specified type (" + handlesType + ") must implement " + _itemType, "handlesType");
+                throw new ArgumentException($"The specified type ({handlesType}) must implement {_itemType}", nameof(handlesType));
         }
 
         //Throws an exception if a MatchAny handler has been added or the partial handler has been created.
@@ -160,7 +204,7 @@ namespace Akka.Tools.MatchHandler
                 case State.Built:
                     throw new InvalidOperationException("The partial action has been built. No handler can be added after that.");
                 default:
-                    throw new ArgumentOutOfRangeException("Whoa, this should not happen! Unknown state value=" + _state);
+                    throw new ArgumentOutOfRangeException($"Whoa, this should not happen! Unknown state value={_state}");
             }
         }
 
@@ -182,7 +226,7 @@ namespace Akka.Tools.MatchHandler
                 _signature.Add(handlesType);
             }
 
-            //Store the handler (action or func), the predicate the the type of handler
+            //Store the handler (action or func), the predicate the type of handler
             typeHandler.Handlers.Add(predicateAndHandler);
 
             //The kind of handler (action, action+predicate or fun) is part of the signature
@@ -215,8 +259,15 @@ namespace Akka.Tools.MatchHandler
         }
     }
 
-    public class MatchBuilder : MatchBuilder<object>
+    /// <summary>
+    /// TBD
+    /// </summary>
+    internal class MatchBuilder : MatchBuilder<object>
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="compiler">TBD</param>
         public MatchBuilder(IMatchCompiler<object> compiler)
             : base(compiler)
         {

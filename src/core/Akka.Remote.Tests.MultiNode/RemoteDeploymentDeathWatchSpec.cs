@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="RemoteWatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="RemoteDeploymentDeathWatchSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,7 +14,7 @@ using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Xunit;
 
-namespace Akka.Remote.Tests.MultiNode
+namespace Akka.Remote.Tests.MultiNode 
 {
     public abstract class RemoteDeploymentDeathWatchSpec : MultiNodeSpec
     {
@@ -26,6 +26,8 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
+        // A test class may only define a single public constructor.
+        // https://github.com/xunit/xunit/blob/master/src/xunit.execution/Sdk/Frameworks/Runners/XunitTestClassRunner.cs#L178
         protected RemoteDeploymentDeathWatchSpec(RemoteDeploymentDeathWatchSpecConfig specConfig)
             : base(specConfig)
         {
@@ -50,7 +52,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void AnActorSystemThatDeploysActorsOnAnotherNodeMustBeAbleToShutdownWhenRemoteNodeCrash()
+        public void An_actor_system_that_deploys_actors_on_another_node_must_be_able_to_shutdown_when_remote_node_crash()
         {
             RunOn(() =>
             {
@@ -103,18 +105,7 @@ namespace Akka.Remote.Tests.MultiNode
     }
 
     #region Several different variations of the test
-    public class RemoteDeploymentDeathWatchMultiNode1 : RemoteDeploymentDeathWatchSpec
-    {
-    }
-
-    public class RemoteDeploymentDeathWatchMultiNode2 : RemoteDeploymentDeathWatchSpec
-    {
-    }
-
-    public class RemoteDeploymentDeathWatchMultiNode3 : RemoteDeploymentDeathWatchSpec
-    {
-    }
-
+    
     public class RemoteDeploymentNodeDeathWatchSlowSpec : RemoteDeploymentDeathWatchSpec
     {
         protected override void Sleep()
@@ -135,11 +126,12 @@ namespace Akka.Remote.Tests.MultiNode
             get { return "fast"; }
         }
     }
+    
     #endregion
 
     public class RemoteDeploymentDeathWatchSpecConfig : MultiNodeConfig
     {
-        public RemoteDeploymentDeathWatchSpecConfig() : base()
+        public RemoteDeploymentDeathWatchSpecConfig()
         {
             First = Role("first");
             Second = Role("second");
@@ -148,13 +140,13 @@ namespace Akka.Remote.Tests.MultiNode
             CommonConfig = new Config(DebugConfig(false), ConfigurationFactory.ParseString(
                 @"akka.loglevel = INFO
                   akka.remote.log-remote-lifecycle-events = off"
-                ));
+            ));
 
             DeployOn(Second, @"/hello.remote = ""@third@""");
         }
 
-        public RoleName First { get; private set; }
-        public RoleName Second { get; private set; }
-        public RoleName Third { get; private set; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
     }
 }

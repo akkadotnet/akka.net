@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RepointableActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,37 +17,79 @@ using Akka.Pattern;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class RepointableActorRef : ActorRefWithCell, IRepointableRef
     {
         private volatile ICell _underlying_DoNotCallMeDirectly;
         private volatile ICell _lookup_DoNotCallMeDirectly;
-        private readonly ActorSystemImpl _system;
-        private readonly Props _props;
-        private readonly MessageDispatcher _dispatcher;
-        private readonly Func<Mailbox> _createMailbox;
-        private readonly IInternalActorRef _supervisor;
-        private readonly ActorPath _path;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected readonly ActorSystemImpl System;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected readonly Props Props;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected readonly MessageDispatcher Dispatcher;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal readonly MailboxType MailboxType; // used in unit tests, hence why it's internal
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected readonly IInternalActorRef Supervisor;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected readonly ActorPath _path;
 
-        public RepointableActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, IInternalActorRef supervisor, ActorPath path)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="dispatcher">TBD</param>
+        /// <param name="mailboxType">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        /// <param name="path">TBD</param>
+        public RepointableActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType, IInternalActorRef supervisor, ActorPath path)
         {
-            _system = system;
-            _props = props;
-            _dispatcher = dispatcher;
-            _createMailbox = createMailbox;
-            _supervisor = supervisor;
+            System = system;
+            Props = props;
+            Dispatcher = dispatcher;
+            MailboxType = mailboxType;
+            Supervisor = supervisor;
             _path = path;
         }
 
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ICell Underlying { get { return _underlying_DoNotCallMeDirectly; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ICell Lookup { get { return _lookup_DoNotCallMeDirectly; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsTerminated
         {
             get { return Underlying.IsTerminated; }
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cell">TBD</param>
         public void SwapUnderlying(ICell cell)
         {
 #pragma warning disable 0420
@@ -64,22 +106,23 @@ namespace Akka.Actor
 #pragma warning restore 0420
         }
 
-        ///<summary>
-        ///Initialize: make a dummy cell which holds just a mailbox, then tell our
-        ///supervisor that we exist so that he can create the real Cell in
-        ///handleSupervise().
-        ///Call twice on your own peril!
-        ///This is protected so that others can have different initialization.
+        /// <summary>
+        /// Initialize: make a dummy cell which holds just a mailbox, then tell our
+        /// supervisor that we exist so that he can create the real Cell in
+        /// handleSupervise().
         /// </summary>
+        /// <param name="async">TBD</param>
+        /// <exception cref="IllegalStateException">This exception is thrown if this function is called more than once.</exception>
+        /// <returns>TBD</returns>
         public RepointableActorRef Initialize(bool async)
         {
             var underlying = Underlying;
             if (underlying == null)
             {
-                var newCell = new UnstartedCell(_system, this, _props, _supervisor);
+                var newCell = new UnstartedCell(System, this, Props, Supervisor);
                 SwapUnderlying(newCell);
                 SwapLookup(newCell);
-                _supervisor.Tell(new Supervise(this, async));
+                Supervisor.SendSystemMessage(new Supervise(this, async));
                 if (!async)
                     Point();
 
@@ -91,12 +134,13 @@ namespace Akka.Actor
             }
         }
 
-        ///<summary>
-        ///This method is supposed to be called by the supervisor in HandleSupervise()
-        ///to replace the UnstartedCell with the real one. It assumes no concurrent
-        ///modification of the `underlying` field, though it is safe to send messages
-        ///at any time.
+        /// <summary>
+        /// This method is supposed to be called by the supervisor in HandleSupervise()
+        /// to replace the UnstartedCell with the real one. It assumes no concurrent
+        /// modification of the `underlying` field, though it is safe to send messages
+        /// at any time.
         /// </summary>
+        /// <exception cref="IllegalStateException">This exception is thrown if the underlying cell is undefined.</exception>
         public void Point()
         {
             var underlying = Underlying;
@@ -119,49 +163,95 @@ namespace Akka.Actor
             // underlying not being UnstartedCell happens routinely for things which were created async=false
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         protected virtual ActorCell NewCell()
         {
-            var actorCell = new ActorCell(_system, this, _props, _dispatcher, _supervisor);
-            actorCell.Init(sendSupervise: false, createMailbox: _createMailbox);
+            var actorCell = new ActorCell(System, this, Props, Dispatcher, Supervisor);
+            actorCell.Init(false, MailboxType);
             return actorCell;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override ActorPath Path { get { return _path; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IInternalActorRef Parent { get { return Underlying.Parent; } }
 
-        public override IActorRefProvider Provider { get { return _system.Provider; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IActorRefProvider Provider { get { return System.Provider; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override bool IsLocal { get { return Underlying.IsLocal; } }
 
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Start()
         {
             //Intentionally left blank
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Suspend()
         {
             Underlying.Suspend();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            Underlying.SendSystemMessage(message);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="causedByFailure">TBD</param>
         public override void Resume(Exception causedByFailure = null)
         {
             Underlying.Resume(causedByFailure);
         }
 
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override void Stop()
         {
             Underlying.Stop();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         public override void Restart(Exception cause)
         {
             Underlying.Restart(cause);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <exception cref="IllegalStateException">This exception is thrown if this property is called before actor is initialized (<see cref="Initialize(bool)"/>).</exception>
         public bool IsStarted
         {
             get
@@ -172,11 +262,21 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            Underlying.Post(sender, message);
+            Underlying.SendMessage(sender, message);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
             var current = (IActorRef)this;
@@ -209,11 +309,19 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public override IInternalActorRef GetSingleChild(string name)
         {
             return Lookup.GetSingleChild(name);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override IEnumerable<IActorRef> Children
         {
             get { return Lookup.GetChildren(); }
@@ -221,6 +329,9 @@ namespace Akka.Actor
 
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     public class UnstartedCell : ICell
     {
         private readonly ActorSystemImpl _system;
@@ -228,9 +339,20 @@ namespace Akka.Actor
         private readonly Props _props;
         private readonly IInternalActorRef _supervisor;
         private readonly object _lock = new object();
-        private readonly List<Envelope> _messageQueue = new List<Envelope>();
+
+       /* Both queues must be accessed via lock */
+        private readonly LinkedList<Envelope> _messageQueue = new LinkedList<Envelope>();
+        private LatestFirstSystemMessageList _sysMsgQueue = SystemMessageList.LNil;
+
         private readonly TimeSpan _timeout;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <param name="self">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="supervisor">TBD</param>
         public UnstartedCell(ActorSystemImpl system, RepointableActorRef self, Props props, IInternalActorRef supervisor)
         {
             _system = system;
@@ -240,15 +362,43 @@ namespace Akka.Actor
             _timeout = _system.Settings.UnstartedPushTimeout;
         }
 
+        private void DrainSysMsgQueue(ICell cell)
+        {
+            while (_sysMsgQueue.NonEmpty)
+            {
+                var sysQ = _sysMsgQueue.Reverse;
+                _sysMsgQueue = SystemMessageList.LNil;
+                while (sysQ.NonEmpty)
+                {
+                    var msg = sysQ.Head;
+                    sysQ = sysQ.Tail;
+                    msg.Unlink();
+                    cell.SendSystemMessage(msg);
+                }
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cell">TBD</param>
         public void ReplaceWith(ICell cell)
         {
             lock (_lock)
             {
                 try
                 {
-                    foreach (var envelope in _messageQueue)
+                    DrainSysMsgQueue(cell);
+
+                    while (_messageQueue.Count > 0)
                     {
-                        cell.Post(envelope.Sender, envelope.Message);
+                        // roughly equal to what "poll" does
+                        var e = _messageQueue.First.Value;
+                        _messageQueue.RemoveFirst();
+                        cell.SendMessage(e.Sender, e.Message);
+
+                        // drain sysmsgQueue in case a msg enqueues a sys msg
+                        DrainSysMsgQueue(cell);
                     }
                 }
                 finally
@@ -258,61 +408,118 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorSystem System { get { return _system; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ActorSystemImpl SystemImpl { get { return _system; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Start()
         {
             //Akka does this. Not sure what it means. /HCanber
             //   this.type = this
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Suspend()
         {
-            SendSystemMessage(Akka.Dispatch.SysMsg.Suspend.Instance, ActorCell.GetCurrentSelfOrNoSender());
+            SendSystemMessage(new Akka.Dispatch.SysMsg.Suspend());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="causedByFailure">TBD</param>
         public void Resume(Exception causedByFailure)
         {
-            SendSystemMessage(new Resume(causedByFailure), ActorCell.GetCurrentSelfOrNoSender());
+            SendSystemMessage(new Resume(causedByFailure));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="cause">TBD</param>
         public void Restart(Exception cause)
         {
-            SendSystemMessage(new Recreate(cause), ActorCell.GetCurrentSelfOrNoSender());
+            SendSystemMessage(new Recreate(cause));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public void Stop()
         {
-            SendSystemMessage(Terminate.Instance, ActorCell.GetCurrentSelfOrNoSender());
+            SendSystemMessage(new Terminate());
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IInternalActorRef Parent { get { return _supervisor; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IEnumerable<IInternalActorRef> GetChildren()
         {
             return Enumerable.Empty<IInternalActorRef>();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IChildrenContainer ChildrenContainer => EmptyChildrenContainer.Instance;
+
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public IInternalActorRef GetSingleChild(string name)
         {
             return Nobody.Instance;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
         public IInternalActorRef GetChildByName(string name)
         {
             return Nobody.Instance;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="child">TBD</param>
+        /// <returns>TBD</returns>
         public bool TryGetChildStatsByName(string name, out IChildStats child)
         {
             child = null;
             return false;
         }
 
-        public void Post(IActorRef sender, object message)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="sender">TBD</param>
+        /// <param name="message">TBD</param>
+        public void SendMessage(IActorRef sender, object message)
         {
             if (message is ISystemMessage)
-                SendSystemMessage(message, sender);
+                SendSystemMessage((ISystemMessage)message);
             else
                 SendMessage(message, sender);
         }
@@ -326,11 +533,11 @@ namespace Akka.Actor
                     var cell = _self.Underlying;
                     if (CellIsReady(cell))
                     {
-                        cell.Post(sender, message);
+                        cell.SendMessage(sender, message);
                     }
                     else
                     {
-                        _messageQueue.Add(new Envelope { Message = message, Sender = sender });
+                        _messageQueue.AddLast(new Envelope(message, sender));
                         Mailbox.DebugPrint("{0} temp queueing {1} from {2}", Self, message, sender);
                     }
                 }
@@ -346,65 +553,30 @@ namespace Akka.Actor
             }
         }
 
-        private void SendSystemMessage(object message, IActorRef sender)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        public void SendSystemMessage(ISystemMessage message)
         {
             lock (_lock)
             {
                 var cell = _self.Underlying;
                 if (CellIsReady(cell))
                 {
-                    cell.Post(sender, message);
+                    cell.SendSystemMessage(message);
                 }
                 else
                 {
-                    var envelope = new Envelope { Message = message, Sender = sender };
-                    try
-                    {
-                        // systemMessages that are sent during replace need to jump to just after the last system message in the queue, so it's processed before other messages
-                        if (!ReferenceEquals(_self.Lookup, this) && ReferenceEquals(_self.Underlying, this) &&
-                           _messageQueue.Count != 0)
-                            TryEnqueue(envelope);
-                        else
-                            _messageQueue.Add(envelope);
-                        Mailbox.DebugPrint("{0} temp queueing system msg {1} from {2}", Self, message, sender);
-                    }
-                    catch (Exception e)
-                    {
-                        _system.EventStream.Publish(new Warning(_self.Path.ToString(), GetType(),
-                            "Dropping message of type" + message.GetType() + " due to  enqueue failure: " + e.ToString()));
-                        _system.DeadLetters.Tell(new DeadLetter(message, _self, _self), sender);
-                    }
+                    _sysMsgQueue = _sysMsgQueue + (SystemMessage)message;
+                    Mailbox.DebugPrint("{0} temp queueing system message {1}", Self, message);
                 }
             }
         }
 
-        private void TryEnqueue(Envelope envelope)
-        {
-            var queueIndex = 0;
-            var insertIntoIndex = -1;
-            while (true)
-            {
-                var hasMoreMessagesInTheQueue = queueIndex < _messageQueue.Count;
-                if (hasMoreMessagesInTheQueue)
-                {
-                    var queuedMessage = _messageQueue[queueIndex];
-                    queueIndex++;
-                    if (queuedMessage.Message is ISystemMessage)
-                        insertIntoIndex = queueIndex;
-                }
-                else if (insertIntoIndex == -1)
-                {
-                    _messageQueue.Add(envelope);
-                    return;
-                }
-                else
-                {
-                    _messageQueue.Insert(insertIntoIndex, envelope);
-                    return;
-                }
-            }
-        }
-
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsLocal { get { return true; } }
 
         private bool CellIsReady(ICell cell)
@@ -412,15 +584,24 @@ namespace Akka.Actor
             return !ReferenceEquals(cell, this) && !ReferenceEquals(cell, null);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsTerminated
         {
             get
             {
-                var cell = _self.Underlying;
-                return CellIsReady(cell) && cell.IsTerminated;
+                lock (_lock)
+                {
+                    var cell = _self.Underlying;
+                    return CellIsReady(cell) && cell.IsTerminated;
+                }
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool HasMessages
         {
             get
@@ -435,6 +616,9 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public int NumberOfMessages
         {
             get
@@ -449,7 +633,13 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public IActorRef Self { get { return _self; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public Props Props { get { return _props; } }
     }
 }

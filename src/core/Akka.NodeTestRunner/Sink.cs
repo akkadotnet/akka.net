@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sink.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,12 +20,14 @@ namespace Akka.NodeTestRunner
         public bool Passed { get; private set; }
         public ManualResetEvent Finished { get; private set; }
         readonly int _nodeIndex;
+        readonly string _nodeRole;
 
         private IActorRef _logger;
 
-        public Sink(int nodeIndex, IActorRef logger)
+        public Sink(int nodeIndex, string nodeRole, IActorRef logger) 
         {
             _nodeIndex = nodeIndex;
+            _nodeRole = nodeRole;
             Finished = new ManualResetEvent(false);
             _logger = logger;
         }
@@ -42,7 +44,7 @@ namespace Akka.NodeTestRunner
             if (testPassed != null)
             {
                 //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
-                var specPass = new SpecPass(_nodeIndex + 1, testPassed.TestCase.DisplayName);
+                var specPass = new SpecPass(_nodeIndex + 1, _nodeRole, testPassed.TestCase.DisplayName);
                 _logger.Tell(specPass.ToString());
                 Console.WriteLine(specPass.ToString()); //so the message also shows up in the individual per-node build log
                 Passed = true;
@@ -52,7 +54,7 @@ namespace Akka.NodeTestRunner
             if (testFailed != null)
             {
                 //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
-                var specFail = new SpecFail(_nodeIndex + 1, testFailed.TestCase.DisplayName);
+                var specFail = new SpecFail(_nodeIndex + 1, _nodeRole, testFailed.TestCase.DisplayName);
                 foreach (var failedMessage in testFailed.Messages) specFail.FailureMessages.Add(failedMessage);
                 foreach (var stackTrace in testFailed.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
                 foreach(var exceptionType in testFailed.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
@@ -63,7 +65,7 @@ namespace Akka.NodeTestRunner
             var errorMessage = message as ErrorMessage;
             if (errorMessage != null)
             {
-                var specFail = new SpecFail(_nodeIndex + 1, "ERRORED");
+                var specFail = new SpecFail(_nodeIndex + 1, _nodeRole, "ERRORED");
                 foreach (var failedMessage in errorMessage.Messages) specFail.FailureMessages.Add(failedMessage);
                 foreach (var stackTrace in errorMessage.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
                 foreach (var exceptionType in errorMessage.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
@@ -94,19 +96,21 @@ namespace Akka.NodeTestRunner
     /// </summary>
     public class SpecPass
     {
-        public SpecPass(int nodeIndex, string testDisplayName)
+        public SpecPass(int nodeIndex, string nodeRole, string testDisplayName)
         {
             TestDisplayName = testDisplayName;
             NodeIndex = nodeIndex;
+            NodeRole = nodeRole;
         }
 
         public int NodeIndex { get; private set; }
+        public string NodeRole { get; private set; }
 
         public string TestDisplayName { get; private set; }
 
         public override string ToString()
         {
-            return string.Format("[Node{0}][PASS] {1}", NodeIndex, TestDisplayName);
+            return string.Format("[Node{0}:{1}][PASS] {2}", NodeIndex, NodeRole, TestDisplayName);
         }
     }
 
@@ -120,7 +124,7 @@ namespace Akka.NodeTestRunner
     /// </summary>
     public class SpecFail : SpecPass
     {
-        public SpecFail(int nodeIndex, string testDisplayName) : base(nodeIndex, testDisplayName)
+        public SpecFail(int nodeIndex, string nodeRole, string testDisplayName) : base(nodeIndex, nodeRole, testDisplayName)
         {
             FailureMessages = new List<string>();
             FailureStackTraces = new List<string>();
@@ -134,20 +138,20 @@ namespace Akka.NodeTestRunner
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendLine(string.Format("[Node{0}][FAIL] {1}", NodeIndex, TestDisplayName));
+            sb.AppendLine(string.Format("[Node{0}:{1}][FAIL] {2}", NodeIndex, NodeRole, TestDisplayName));
             foreach (var exception in FailureExceptionTypes)
             {
-                sb.AppendFormat("[Node{0}][FAIL-EXCEPTION] Type: {1}", NodeIndex, exception);
+                sb.AppendFormat("[Node{0}:{1}][FAIL-EXCEPTION] Type: {2}", NodeIndex, NodeRole, exception);
                 sb.AppendLine();
             }
             foreach (var exception in FailureMessages)
             {
-                sb.AppendFormat("--> [Node{0}][FAIL-EXCEPTION] Message: {1}", NodeIndex, exception);
+                sb.AppendFormat("--> [Node{0}:{1}][FAIL-EXCEPTION] Message: {2}", NodeIndex, NodeRole, exception);
                 sb.AppendLine();
             }
             foreach (var exception in FailureStackTraces)
             {
-                sb.AppendFormat("--> [Node{0}][FAIL-EXCEPTION] StackTrace: {1}", NodeIndex, exception);
+                sb.AppendFormat("--> [Node{0}:{1}][FAIL-EXCEPTION] StackTrace: {2}", NodeIndex, NodeRole, exception);
                 sb.AppendLine();
             }
             return sb.ToString();

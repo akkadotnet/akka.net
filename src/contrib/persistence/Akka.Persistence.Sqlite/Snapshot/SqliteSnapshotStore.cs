@@ -1,34 +1,154 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
-using Akka.Persistence.Sql.Common;
+using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Snapshot;
 
 namespace Akka.Persistence.Sqlite.Snapshot
 {
-    public class SqliteSnapshotStore : SqlSnapshotStore
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public class SqliteSnapshotQueryExecutor : AbstractQueryExecutor
     {
-        private readonly SqlitePersistence _extension;
-
-        public SqliteSnapshotStore()
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="configuration">TBD</param>
+        /// <param name="serialization">TBD</param>
+        public SqliteSnapshotQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization) : base(configuration, serialization)
         {
-            _extension = SqlitePersistence.Get(Context.System);
-            QueryBuilder = new QueryBuilder(_extension.SnapshotSettings);
-            QueryMapper = new SqliteQueryMapper(Context.System.Serialization);
+            CreateSnapshotTableSql = $@"
+                CREATE TABLE IF NOT EXISTS {configuration.FullSnapshotTableName} (
+                    {configuration.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
+                    {configuration.SequenceNrColumnName} INTEGER(8) NOT NULL,
+                    {configuration.TimestampColumnName} INTEGER(8) NOT NULL,
+                    {configuration.ManifestColumnName} VARCHAR(255) NOT NULL,
+                    {configuration.PayloadColumnName} BLOB NOT NULL,
+                    PRIMARY KEY ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
+                );";
+
+            InsertSnapshotSql = $@"
+                UPDATE {configuration.FullSnapshotTableName}
+                SET {configuration.TimestampColumnName} = @Timestamp, {configuration.ManifestColumnName} = @Manifest, {configuration.PayloadColumnName} = @Payload
+                WHERE {configuration.PersistenceIdColumnName} = @PersistenceId AND {configuration.SequenceNrColumnName} = @SequenceNr;
+                INSERT OR IGNORE INTO {configuration.FullSnapshotTableName} ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName}, {configuration.TimestampColumnName}, {configuration.ManifestColumnName}, {configuration.PayloadColumnName})
+                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload)";
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override string InsertSnapshotSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override string CreateSnapshotTableSql { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <returns>TBD</returns>
+        protected override DbCommand CreateCommand(DbConnection connection)
+        {
+            return new SQLiteCommand((SQLiteConnection)connection);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="timestamp">TBD</param>
+        /// <param name="command">TBD</param>
+        /// <returns>TBD</returns>
+        protected override void SetTimestampParameter(DateTime timestamp, DbCommand command) => AddParameter(command, "@Timestamp", DbType.Int64, timestamp.Ticks);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reader">TBD</param>
+        /// <returns>TBD</returns>
+        protected override SelectedSnapshot ReadSnapshot(DbDataReader reader)
+        {
+            var persistenceId = reader.GetString(0);
+            var sequenceNr = reader.GetInt64(1);
+            var timestamp = new DateTime(reader.GetInt64(2));
+
+            var metadata = new SnapshotMetadata(persistenceId, sequenceNr, timestamp);
+            var snapshot = GetSnapshot(reader);
+
+            return new SelectedSnapshot(metadata, snapshot);
+        }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public class SqliteSnapshotStore : SqlSnapshotStore
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="snapshotConfig">TBD</param>
+        public SqliteSnapshotStore(Config snapshotConfig) : base(snapshotConfig)
+        {
+            var config = snapshotConfig.WithFallback(Extension.DefaultSnapshotConfig);
+            QueryExecutor = new SqliteSnapshotQueryExecutor(new QueryConfiguration(
+                schemaName: null,
+                snapshotTableName: "snapshot",
+                persistenceIdColumnName: "persistence_id",
+                sequenceNrColumnName: "sequence_nr",
+                payloadColumnName: "payload",
+                manifestColumnName: "manifest",
+                timestampColumnName: "created_at",
+                timeout: config.GetTimeSpan("connection-timeout")), 
+                Context.System.Serialization);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override ISnapshotQueryExecutor QueryExecutor { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="connectionString">TBD</param>
+        /// <returns>TBD</returns>
         protected override DbConnection CreateDbConnection(string connectionString)
         {
             return new SQLiteConnection(connectionString);
         }
 
-        protected override SnapshotStoreSettings Settings { get { return _extension.SnapshotSettings; } }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override void PreStart()
+        {
+            ConnectionContext.Remember(GetConnectionString());
+            base.PreStart();
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override void PostStop()
+        {
+            base.PostStop();
+            ConnectionContext.Forget(GetConnectionString());
+        }
     }
 }

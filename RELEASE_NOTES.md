@@ -1,4 +1,469 @@
-#### 1.0.6 December 3 2015 ####
+#### 1.2.0 April 11 2017 ####
+**Feature Release for Akka.NET**
+Akka.NET 1.2 is a major feature release that introduces the following major changes:
+
+**Akka.Remote now uses [DotNetty](https://github.com/azure/dotnetty) for its transport layer**
+The biggest change for 1.2 is the removal of Helios 2.0 as the default transport and the introduction of DotNetty. The new DotNetty transport is fully backwards compatible with the Helios 1.4 and 2.* transports, so you should be able to upgrade from any Akka.NET 1.* application to 1.2 without any downtime. All of the `helios.tcp` HOCON is also supported by the DotNetty transport, so none of that needs to updated for the DotNetty transport to work out of the box.
+
+In addition, the DotNetty transport supports TLS, which can be enabled via the following HOCON:
+
+```
+akka {
+  loglevel = DEBUG
+  actor {
+    provider = Akka.Remote.RemoteActorRefProvider,Akka.Remote
+  }
+  remote {
+    dot-netty.tcp {
+      port = 0
+      hostname = 127.0.0.1
+      enable-ssl = true
+      log-transport = true
+      ssl {
+        suppress-validation = true
+        certificate {
+          # valid ssl certificate must be installed on both hosts
+          path = "<valid certificate path>" 
+          password = "<certificate password>"
+          # flags is optional: defaults to "default-flag-set" key storage flag
+          # other available storage flags:
+          #   exportable | machine-key-set | persist-key-set | user-key-set | user-protected
+          flags = [ "default-flag-set" ] 
+        }
+      }
+    }
+  }
+}
+```
+
+You can [read more about Akka.Remote's TLS support here](http://getakka.net/docs/remoting/security#akka-remote-with-tls-transport-layer-security-).
+
+See [the complete DotNetty transport HOCON here](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote/Configuration/Remote.conf#L318).
+
+**Akka.Streams and Akka.Cluster.Tools RTMed**
+Akka.Streams and Akka.Cluster.Tools have graduated from beta status to stable modules and their interfaces are now considered to be stable.
+
+**CoordinatedShutdown**
+One of the major improvements in Akka.NET 1.2 is the addition of the new `CoordinatedShutdown` plugin, which is designed to make it easier for nodes that are running Akka.Cluster to automatically exit a cluster gracefully whenever `ActorSystem.Terminate` is called or when the process the node is running in attempts to exit. `CoordinatedShutdown` is fully extensible and can be used to schedule custom shutdown operations as part of `ActorSystem` termination.
+
+You can [read more about how to use `CoordinatedShutdown` here](http://getakka.net/docs/working-with-actors/coordinated-shutdown).
+
+**Additional Changes**
+In addition to the above changes, there have been a large number of performance improvements, bug fixes, and documentation improvements made to Akka.NET in 1.2. [Read the full list of changes in Akka.NET 1.2 here](https://github.com/akkadotnet/akka.net/milestone/13).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 17 | 4840 | 4460 | Alex Valuyskiy |
+| 16 | 4046 | 1144 | Aaron Stannard |
+| 12 | 8591 | 2984 | Sean Gilliam |
+| 6 | 971 | 1300 | Sergey |
+| 5 | 6787 | 2073 | Bartosz Sypytkowski |
+| 4 | 6461 | 8403 | Arjen Smits |
+| 4 | 333 | 125 | ravengerUA |
+| 3 | 71 | 65 | Marc Piechura |
+| 3 | 300 | 24 | Nick Chamberlain |
+| 2 | 79 | 40 | Maxim Salamatko |
+| 2 | 305 | 20 | Ismael Hamed |
+| 1 | 136 | 12 | Sergey Kostrukov |
+| 1 | 1015 | 45 | Lukas Rieger |
+| 1 | 1 | 0 | siudeks |
+
+#### 1.1.3 January 22 2017 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET v1.1.3 features some new libraries and an enormous number of bug fixes.
+
+**Akka.DistributedData Beta**
+First, we've introduced an alpha of a new module intended for use with Akka.Cluster: Akka.DistributedData. The goal of this library is to make it possible to concurrently read and write replicated copies of the same entity across different nodes in the cluster using conflict-free replicated data types, often referred to as "CRDTs." These replicas can eventually be merged together in a fully consistent manner and are excellent choices for applications that require a high level of availability and partition tolerance.
+
+The library is still a bit of a work in progress at the moment, but you are free to use it via the following command:
+
+```
+PS> Install-Package Akka.DistributedData -pre
+```
+
+**Akka.Serialization.Wire Deprecated; Replaced with Akka.Serialization.Hyperion**
+Wire recently changed its license to GPLv3, which is a poor fit for a technology like Akka.NET. Therefore, our default serializer beginning in Akka.NET 1.5 will be [Hyperion](https://github.com/akkadotnet/Hyperion) instead. You can see how to set it up here: http://getakka.net/docs/Serialization#how-to-setup-hyperion-as-default-serializer
+
+**Other bug fixes, performance improvements, and changes**
+You can [see the full list of changes in Akka.NET 1.1.3 here](https://github.com/akkadotnet/akka.net/milestone/12).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 19 | 878 | 228 | Aaron Stannard |
+| 10 | 41654 | 3428 | Sean Gilliam |
+| 5 | 11983 | 4543 | Marc Piechura |
+| 4 | 37 | 33 | Arjen Smits |
+| 4 | 12742 | 300 | Bartosz Sypytkowski |
+| 3 | 144 | 74 | Max |
+| 2 | 99 | 8 | ZigMeowNyan |
+| 2 | 7 | 7 | zbynek001 |
+| 2 | 4 | 2 | Andrey Leskov |
+| 2 | 225 | 767 | Alex Valuyskiy |
+| 2 | 212 | 8 | Gordey Doronin |
+| 1 | 8 | 499 | Sean Farrow |
+| 1 | 5 | 5 | tomanekt |
+| 1 | 4 | 2 | Andrew Young |
+| 1 | 3 | 2 | boriskreminskimoldev |
+| 1 | 28 | 3 | Roman Eisendle |
+| 1 | 24 | 36 | Maxim Salamatko |
+| 1 | 2 | 2 | Jeff |
+| 1 | 190 | 38 | Sergey |
+| 1 | 15 | 9 | voltcode |
+| 1 | 12 | 2 | Alexander Pantyukhin |
+| 1 | 107 | 0 | Mikhail Kantarovskiy |
+| 1 | 101 | 0 | derrickcrowne |
+
+#### 1.1.2 September 21 2016 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET 1.1.2 introduces some exciting developments for Akka.NET users.
+
+**Mono Support and Improved IPV4/6 Configuration**
+First, Akka.NET 1.1.2 is the first release of Akka.NET to be production-certified for Mono. We've made some changes to Akka.Remote, in particular, to design it to work within some of the confines of Mono 4.4.2. For instance, we now support the following HOCON configuration value for the default Helios TCP transport:
+
+```
+ helios.tcp {
+	  # Omitted for brevity
+      transport-protocol = tcp
+
+      port = 2552
+
+      hostname = ""
+
+	  public-hostname = ""
+
+	  dns-use-ipv6 = false
+	  enforce-ip-family = false
+}
+```
+
+`helios.tcp.enforce-ip-family` is a new setting added to the `helios.tcp` transport designed to allow Akka.Remote to function in environments that don't support IPV6. This includes Mono 4.4.2, Windows Azure WebApps, and possibly others. When this setting is turned on and `dns-use-ipv6 = false`, all sockets will be forced to use IPV4 only instead of dual mode. If this setting is turned on and `dns-use-ipv6 = true`, all sockets opened by the Helios transport will be forced to use IPV6 instead of dual-mode.
+
+Currently, as of Mono 4.4.2, this setting is turned on by default. Mono 4.6, when it's released, will allow dual-mode to work consistently again in the future.
+
+We run the entire Akka.NET test suite on Mono and all modules pass.
+
+**Akka.Cluster Downing Providers**
+We've added a new feature to Akka.Cluster known as a "downing provider" - this is a pluggable strategy that you can configure via HOCON to specify how nodes in your Akka.NET cluster may automatically mark unreachable nodes as down.
+
+Out of the box Akka.Cluster only provides the default "auto-down" strategy that's been included as part of Akka.Cluster in the past. However, you can now subclass the `Akka.Cluster.IDowningProvider` interface to implement your own strategies, which you can then load through HOCON:
+
+```
+# i.e.: akka.cluster.downing-provider-class = "Akka.Cluster.Tests.FailingDowningProvider, Akka.Cluster.Tests"
+akka.cluster.downing-provider-class = "Fully-qualified-type-name, Assembly"
+```
+
+**Other Fixes**
+We've also made significant improvements to the Akka.NET scheduler, more than doubling its performance and an significantly decreasing its memory allocation and garbage collection; updated Akka.Streams; fixed bugs in Akka.Cluster routers; and more. You [can read the full list of changes in 1.1.2 here](https://github.com/akkadotnet/akka.net/milestone/11).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 16 | 3913 | 1440 | ravengerUA |
+| 9 | 2323 | 467 | Aaron Stannard |
+| 9 | 12568 | 2865 | Marc Piechura |
+| 4 | 12 | 5 | Michael Kantarovsky |
+| 3 | 381 | 196 | Bartosz Sypytkowski |
+| 2 | 99 | 0 | rogeralsing |
+| 2 | 359 | 17 | Chris Constantin |
+| 2 | 29 | 6 | Denys Zhuravel |
+| 2 | 11 | 11 | Ismael Hamed |
+| 1 | 74 | 25 | mrrd |
+| 1 | 5 | 2 | Szymon Kulec |
+| 1 | 48 | 65 | alexpantyukhin |
+| 1 | 3 | 2 | Tamas Vajk |
+| 1 | 2 | 0 | Julien Adam |
+| 1 | 121 | 26 | andrey.leskov |
+| 1 | 1020 | 458 | Sean Gilliam |
+| 1 | 1 | 1 | Maciej Misztal |
+
+#### 1.1.1 July 15 2016 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET 1.1.1 addresses a number of bugs and issues reported by end users who made the upgrade from Akka.NET 1.0.* to Akka.NET 1.1. 
+
+**DNS improvements**
+The biggest set of fixes included in Akka.NET 1.1.1 deal with how the Helios transport treats IPV6 addresses and performs DNS resolution. In Akka.NET 1.0.* Helios only supported IPV4 addresses and would use that as the default for DNS. In Akka.NET 1.1 we upgraded to using Helios 2.1, which supports both IPV6 and IPV4, but *changed the default DNS resolution strategy to use IPV6.* This caused some breakages for users who were using the `public-hostname` setting inside Helios in combination with a `hostname` value that used an IPV4 address.
+
+This is now fixed - Akka.NET 1.1.1 uses Helios 2.1.2 which defaults back to an IPV4 DNS resolution strategy for both inbound and outbound connections. We've also fixed the way we encode and format IPV6 addresses into `ActorPath` and `Address` string representations (although we [still have an issue with parsing IPV6 from HOCON](https://github.com/akkadotnet/akka.net/issues/2187).)
+
+If you need to use IPV6 for DNS resolution, you can enable it by changing the following setting:
+
+`akka.remote.helios.tcp.dns-use-ipv6 = true`
+
+You can [see the full list of Akka.NET 1.1.1 changes here](https://github.com/akkadotnet/akka.net/milestone/9).
+
+#### 1.1.0 July 05 2016 ####
+**Feature Release for Akka.NET**
+
+In Akka.NET 1.1 we introduce the following major changes:
+
+* Akka.Cluster is no longer in beta; it is released as a fully stable module with a frozen API that is ready for production use.
+* Akka.Remote now has a new Helios 2.1 transport that is up to 5x faster than the previous implementation and with tremendously lower memory consumption.
+* The actor mailbox system has been replaced with the `MailboxType` system, which standardizes all mailbox implementations on a common core and instead allows for pluggable `IMessageQueue` implementations. This will make it easier to develop user-defined mailboxes and also has the added benefit of reducing all actor memory footprints by 34%.
+* The entire router system has been updated, including support for new "controller" actors that can be used to adjust a router's routing table in accordance to external events (i.e. a router that adjusts whom it routes to based on CPU utilization, which will be implemented in Akka.Cluster.Metrics).
+
+[Full list of Akka.NET 1.1 fixes and changes](https://github.com/akkadotnet/akka.net/milestone/6)
+
+**API Changes**
+There have been a couple of important API changes which will affect end-users upgrading from Akka.NET versions 1.0.*.
+
+First breaking change deals with the `PriorityMailbox` base class, used by developers who need to prioritize specific message types ahead of others.
+
+All user-defined instances of this type must now include the following constructor in order to work (using an example from Akka.NET itself:)
+
+```csharp
+public class IntPriorityMailbox : UnboundedPriorityMailbox
+{
+    protected override int PriorityGenerator(object message)
+    {
+        return message as int? ?? Int32.MaxValue;
+    }
+
+    public IntPriorityMailbox(Settings settings, Config config) : base(settings, config)
+    {
+    }
+}
+```
+
+There must be a `MyMailboxType(Settings settings, Config config)` constructor on all custom mailbox types going forward, or a `ConfigurationException` will be thrown when trying to instantiate an actor who uses the mailbox type.
+
+Second breaking change deals with Akka.Cluster itself. In the past you could access all manner of data from the `ClusterReadView` class (accessed via the `Cluster.ReadView` property) - such as the addresses of all other members, who the current leader was, and so forth.
+
+Going forward `ClusterReadView` is now marked as `internal`, but if you need access to any of this data you can access the `Cluster.State` property, which will return a [`CurrentClusterState`](http://api.getakka.net/docs/stable/html/CFFD0D89.htm) object. This contains most of the same information that was previously available on `ClusterReadView`.
+
+**Akka.Streams**
+Another major part of Akka.NET 1.1 is the introduction of [Akka.Streams](http://getakka.net/docs/streams/introduction), a powerful library with a Domain-Specific Language (DSL) that allows you to compose Akka.NET actors and workflows into streams of events and messages. 
+
+As of 1.1 Akka.Streams is now available as a beta module on NuGet.
+
+We highly recommend that you read the [Akka.Streams Quick Start Guide for Akka.NET](http://getakka.net/docs/streams/quickstart) as a place to get started.
+
+**Akka.Persistence.Query**
+A second beta module is also now available as part of Akka.NET 1.1, Akka.Persistence.Query - this module is built on top of Akka.Streams and Akka.Persistence and allows users to query ranges of information directly from their underlying Akka.Persistence stores for more powerful types of reads, aggregations, and more.
+
+Akka.Persistence.Query is available for all SQL implementations of Akka.Persistence and will be added to our other Akka.Persistence plugins shortly thereafter.
+
+**Thank you!**
+Thanks for all of your patience and support as we worked to deliver this to you - it's been a tremendous amount of work but we really appreciate the help of all of the bug reports, Gitter questions, StackOverflow questions, and testing that our users have done on Akka.NET and specifically, Akka.Cluster over the past two years. We couldn't have done this without you.
+
+23 contributors since release v1.0.8
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 133 | 38124 | 7835 | Silv3rcircl3 |
+| 112 | 25826 | 10493 | Chris Constantin |
+| 70 | 45449 | 11556 | Bartosz Sypytkowski |
+| 44 | 22804 | 13971 | ravengerUA |
+| 40 | 9811 | 6396 | Aaron Stannard |
+| 12 | 9539 | 6619 | Marc Piechura |
+| 6 | 1692 | 959 | Sean Gilliam |
+| 4 | 448 | 0 | alexpantyukhin |
+| 3 | 772 | 4 | maxim.salamatko |
+| 3 | 3 | 382 | Danthar |
+| 2 | 40 | 46 | Vagif Abilov |
+| 1 | 91 | 103 | rogeralsing |
+| 1 | 3 | 3 | Jeff Cyr |
+| 1 | 219 | 44 | Michael Kantarovsky |
+| 1 | 2 | 1 | Juergen Hoetzel |
+| 1 | 19 | 8 | tstojecki |
+| 1 | 187 | 2 | Bart de Boer |
+| 1 | 178 | 0 | Willem Meints |
+| 1 | 17 | 1 | Kamil Wojciechowski |
+| 1 | 120 | 7 | JeffCyr |
+| 1 | 11 | 7 | corneliutusnea |
+| 1 | 1 | 1 | Tamas Vajk |
+| 1 | 0 | 64 | annymsMthd |
+
+
+#### 1.0.8 April 26 2016 ####
+**Maintenance release for Akka.NET v1.0.7**
+
+Fixes an issue with the 1.0.7 release where the default settings for Akka.Persistence changed and caused potential breaking changes for Akka.Persistence users. Those changes have been reverted back to the same values as previous versions.
+
+General fixes:
+* [Recovered default journal & snapshot store to default config](https://github.com/akkadotnet/akka.net/pull/1864)
+* [EndpointRegistry fixes](https://github.com/akkadotnet/akka.net/pull/1862)
+* [eliminated allocations with StandardOutWriter](https://github.com/akkadotnet/akka.net/pull/1881)
+* [ClusterSingletonManager - settings update](https://github.com/akkadotnet/akka.net/pull/1878)
+* [Implement spec for standard mailbox combinations in Akka.NET](https://github.com/akkadotnet/akka.net/pull/1897)
+
+**Commit Stats for v1.0.8**
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 240 | 59 | Aaron Stannard |
+| 3 | 268 | 1 | Danthar |
+| 3 | 189 | 2810 | Silv3rcircl3 |
+| 2 | 204 | 4 | Willem Meints |
+| 2 | 161 | 108 | Bartosz Sypytkowski |
+| 2 | 101 | 24 | Sean Gilliam |
+| 1 | 25 | 16 | zbynek001 |
+
+#### 1.0.7 April 4 2016 ####
+**Maintenance release for Akka.NET v1.0.6**
+The biggest changes in Akka.NET 1.0.7 have been made to Akka.Persistence, which is now designed to match the final stable release version in JVM Akka 2.4. Akka.Persistence is on-target to exit beta and become a fully mature module as of Akka.NET 1.5, due in May/June timeframe.
+
+A quick note about 1.5 - JSON.NET will be replaced by Wire as the default serializer going forward, so if you want to be forward-compatible with 1.5 you will need to switch to using Wire today. [Learn how to switch to using Wire as the default Akka.NET serializer](http://getakka.net/docs/Serialization#how-to-setup-wire-as-default-serializer).
+
+If you install 1.0.7 you may see the following warning appear:
+
+> NewtonSoftJsonSerializer has been detected as a default serializer. 
+> It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Wire
+for more info visit: http://getakka.net/docs/Serialization#how-to-setup-wire-as-default-serializer
+> If you want to suppress this message set HOCON `{configPath}` config flag to on.
+
+This release also fixes some issues with the Cluster.Tools and Cluster.Sharding NuGet packages, which weren't versioned correctly in previous releases.
+
+**Fixes & Changes - Akka.NET Core**
+* [https://github.com/akkadotnet/akka.net/pull/1667](https://github.com/akkadotnet/akka.net/pull/1667)
+* [Akka IO: ByteIterator and ByteStringbuilder bug fixes](https://github.com/akkadotnet/akka.net/pull/1682)
+* [Hocon Tripple quoted text - Fixes #1687](https://github.com/akkadotnet/akka.net/pull/1689)
+* [Downgrade System.Collections.Immutable to 1.1.36](https://github.com/akkadotnet/akka.net/issues/1698)
+* [Unify immutable collections](https://github.com/akkadotnet/akka.net/issues/1676) - Akka.NET core now depends on System.Collections.Immutable.
+* [#1694 Added safe check in InboxActor when receive timeout is already expired](https://github.com/akkadotnet/akka.net/pull/1702)
+* [Bugfix: DeadLetter filter with Type parameter should call IsInstanceOfType with the correct argument](https://github.com/akkadotnet/akka.net/pull/1707)
+* [Akka.IO bind failed must notify bindCommander of failure](https://github.com/akkadotnet/akka.net/pull/1729)
+* [ReceiveActor: Replaced Receive(Func<T, Task> handler) by ReceiveAsync(...) ](https://github.com/akkadotnet/akka.net/pull/1747)
+* [External ActorSystem for Testkit event filters. ](https://github.com/akkadotnet/akka.net/pull/1753)
+* [Fixed the ScatterGatherFirstCompleted router logic](https://github.com/akkadotnet/akka.net/pull/1769)
+* [Issue #1766 - Lazy evaluation of ChildrenContainer.Children and ChildrenContainer.Stats](https://github.com/akkadotnet/akka.net/pull/1772)
+* [[Dispatch] Support for 'mailbox-requirement' and 'mailbox-type' in dispatcher config](https://github.com/akkadotnet/akka.net/pull/1773)
+* [Fixed within timeout for routers in default configuration](https://github.com/akkadotnet/akka.net/pull/1787)
+* [Default MailboxType optimization](https://github.com/akkadotnet/akka.net/pull/1789)
+* [Warning about JSON.NET obsolete in v1.5](https://github.com/akkadotnet/akka.net/pull/1811)
+* [Issue #1828 Implemented NobodySurrogate](https://github.com/akkadotnet/akka.net/pull/1829)
+
+**Fixes & Changes - Akka.Remote, Akka.Cluster, Et al**
+* [Add the default cluster singleton config as a top-level fallback.](https://github.com/akkadotnet/akka.net/pull/1665)
+* [Change ShardState to a class](https://github.com/akkadotnet/akka.net/pull/1677)
+* [Cluster.Sharding: Take snapshots when configured](https://github.com/akkadotnet/akka.net/pull/1678)
+* [added remote metrics](https://github.com/akkadotnet/akka.net/pull/1722)
+* [Added a new argument to the MultiNodeTestRunner to filter specs](https://github.com/akkadotnet/akka.net/pull/1737)
+* [close #1758 made Akka.Cluster.Tools and Akka.Cluster.Sharding use correct assembly version info and nuget dependencies](https://github.com/akkadotnet/akka.net/pull/1767)
+* [Akka.Remote EndpointWriter backoff bugfix](https://github.com/akkadotnet/akka.net/pull/1777)
+* [Akka.Cluster.TestKit (internal use only)](https://github.com/akkadotnet/akka.net/pull/1782)
+* [Cluster.Tools.Singleton: Member.UpNumber fix](https://github.com/akkadotnet/akka.net/pull/1799)
+
+**Fixes & Changes - Akka.Persistence**
+* [Made JournalEntry.Payload an object and AtLeastOnceDeliverySemantic public](https://github.com/akkadotnet/akka.net/pull/1684)
+* [Akka.Persistence - update code base to akka JVM v2.4](https://github.com/akkadotnet/akka.net/pull/1717)
+* [Ensure internal stash is unstashed on writes after recovery](https://github.com/akkadotnet/akka.net/pull/1756)
+* [Wrap user stash to avoid confusion between PersistentActor.UnstashAll and PersistentActor.Stash.UnstashAll](https://github.com/akkadotnet/akka.net/pull/1757)
+* [Fixes initialization of LocalSnapshotStore directory](https://github.com/akkadotnet/akka.net/pull/1761)
+* [Fixed global ActorContext in SqlJournal](https://github.com/akkadotnet/akka.net/pull/1760)
+
+**Commit Stats for v1.0.7**
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 12 | 1718 | 2213 | Aaron Stannard |
+| 11 | 2187 | 2167 | Silv3rcircl3 |
+| 7 | 433 | 75 | JeffCyr |
+| 6 | 2 | 1127 | Danthar |
+| 6 | 10383 | 3054 | Chris Constantin |
+| 3 | 510 | 25 | maxim.salamatko |
+| 3 | 5 | 3 | Christopher Martin |
+| 2 | 53 | 65 | rogeralsing |
+| 2 | 50 | 1 | mukulsinghsaini |
+| 2 | 2738 | 2035 | Sean Gilliam |
+| 2 | 25 | 4 | Bartosz Sypytkowski |
+| 2 | 2 | 2 | utcnow |
+| 2 | 14 | 13 | zbynek001 |
+| 2 | 130 | 126 | annymsMthd |
+| 1 | 58 | 0 | Denis Kostikov |
+| 1 | 48 | 43 | voltcode |
+| 1 | 213 | 66 | Alex Koshelev |
+| 1 | 2 | 2 | Tamas Vajk |
+| 1 | 2 | 2 | Marc Piechura |
+| 1 | 2 | 1 | Juergen Hoetzel |
+| 1 | 19 | 8 | tstojecki |
+| 1 | 13 | 13 | Willie Ferguson |
+| 1 | 1 | 1 | ravengerUA |
+
+#### 1.0.6 January 18 2016 ####
+**Maintenance release for Akka.NET v1.0.5**
+This patch consists of many bug fixes, performance improvements, as well as the addition of two brand new alpha modules for Akka.Cluster users.
+
+**Akka.Cluster.Tools** and **Akka.Cluster.Sharding**
+The biggest part of this release is the addition of [Akka.Cluster.Tools](http://getakka.net/docs/clustering/cluster-tools) and [Akka.Cluster.Sharding](http://getakka.net/docs/clustering/cluster-sharding), both of which are available now as pre-release packages on NuGet.
+
+```
+PM> Install-Package Akka.Cluster.Tools -pre
+```
+and
+
+```
+PM> Install-Package Akka.Cluster.Sharding -pre
+```
+
+Respectively, these two packages extend Akka.Cluster to do the following:
+
+1. Distributed pub/sub (Akka.Cluster.Tools)
+2. `ClusterClient` - subscribe to changes in cluster availability without actually being part of the cluster itself. (Akka.Cluster.Tools)
+3. `ClusterSingleton` - guarantee a single instance of a specific actor throughout the cluster. (Akka.Cluster.Tools)
+4. Sharding - partition data into durable stores (built on top of Akka.Persistence) in a manner that is fault-tolerant and recoverable across thecluster. (Akka.Cluster.Sharding)
+
+Check out the documentation for more details!
+* http://getakka.net/docs/clustering/cluster-tools
+* http://getakka.net/docs/clustering/cluster-sharding
+
+**Fixes & Changes - Akka.NET Core**
+* [Fix incorrect serialization of Unicode characters in NewtonSoftJsonSerializer](https://github.com/akkadotnet/akka.net/pull/1508)
+* [Fixed: Supervisorstrategy does not preserve stacktrace](https://github.com/akkadotnet/akka.net/issues/1499)
+* [added initial performance specs using NBench](https://github.com/akkadotnet/akka.net/pull/1520)
+* [Add wire back as contrib package + Serialization TestKit](https://github.com/akkadotnet/akka.net/pull/1503)
+* [Implemented the RegisterOnTermination feature.](https://github.com/akkadotnet/akka.net/pull/1523)
+* [Increased performance of DedicatedThreadPool](https://github.com/akkadotnet/akka.net/pull/1569)
+* [#1605 updated Google.ProtocolBuffers to 2.4.1.555](https://github.com/akkadotnet/akka.net/pull/1634)
+* [Clear current message - fixes #1609](https://github.com/akkadotnet/akka.net/pull/1613)
+* [Rewrite of the AtomicReference ](https://github.com/akkadotnet/akka.net/pull/1615)
+* [Implemented WhenTerminated and Terminate](https://github.com/akkadotnet/akka.net/pull/1614)
+* [Implemented StartTime and Uptime](https://github.com/akkadotnet/akka.net/pull/1617)
+* [API Diff with fixed Approval file](https://github.com/akkadotnet/akka.net/pull/1639)
+* [Fixed: NullReferenceException in Akka.Util.Internal.Collections.ImmutableAvlTreeBase`2.RotateLeft](https://github.com/akkadotnet/akka.net/issues/1202)
+
+
+
+**Fixes & Changes - Akka.Remote & Akka.Cluster**
+It should be noted that we've improved the throughput from Akka.NET v1.0.5 to 1.0.6 by a factor of 8
+
+* [Akka.Cluster.Tools & Akka.Cluster.Sharding with tests and examples](https://github.com/akkadotnet/akka.net/pull/1530)
+* [Added UntrustedSpec](https://github.com/akkadotnet/akka.net/pull/1535)
+* [Akka.Remote Performance - String.Format logging perf fix](https://github.com/akkadotnet/akka.net/pull/1540)
+* [Remoting system upgrade](https://github.com/akkadotnet/akka.net/pull/1596)
+* [PublicHostname defaults to IPAddress.Any when hostname is blank](https://github.com/akkadotnet/akka.net/pull/1621)
+* [Removes code that overrides OFF log level with WARNING.](https://github.com/akkadotnet/akka.net/pull/1644)
+* [fixes issue with Helios message ordering](https://github.com/akkadotnet/akka.net/pull/1638)
+* [Fixed: Actor does not receive "Terminated" message if remoting is used and it is not monitored actor's parent](https://github.com/akkadotnet/akka.net/issues/1646)
+
+**Fixes & Changes - Akka.Persistence**
+* [Fixed racing conditions on sql-based snapshot stores](https://github.com/akkadotnet/akka.net/pull/1507)
+* [Fix for race conditions in presistence plugins](https://github.com/akkadotnet/akka.net/pull/1543)
+* [Fix #1522 Ensure extensions and persistence plugins are only registered/created once](https://github.com/akkadotnet/akka.net/pull/1648)
+
+A special thanks to all of our contributors for making this happen!
+18 contributors since release v1.0.5
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 22 | 3564 | 28087 | Aaron Stannard |
+| 15 | 1710 | 1303 | rogeralsing |
+| 6 | 569 | 95 | Silv3rcircl3 |
+| 6 | 53594 | 4417 | Bartosz Sypytkowski |
+| 5 | 1786 | 345 | Sean Gilliam |
+| 3 | 786 | 159 | maxim.salamatko |
+| 2 | 765 | 277 | JeffCyr |
+| 2 | 44 | 53 | Chris Constantin |
+| 2 | 14 | 2 | Simon Anderson |
+| 1 | 84 | 4 | Bart de Boer |
+| 1 | 6051 | 27 | danielmarbach |
+| 1 | 6 | 2 | tstojecki |
+| 1 | 3 | 5 | Ralf1108 |
+| 1 | 27 | 0 | Andrew Skotzko |
+| 1 | 2 | 2 | easuter |
+| 1 | 2 | 1 | Danthar |
+| 1 | 182 | 0 | derwasp |
+| 1 | 179 | 0 | Onat Yiğit Mercan |
 
 #### 1.0.5 December 3 2015 ####
 **Maintenance release for Akka.NET v1.0.4**

@@ -1,66 +1,122 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetterMailbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
 namespace Akka.Actor
 {
-    public class DeadLetterMailbox : Mailbox
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Message queue implementation used to funnel messages to <see cref="DeadLetterActorRef"/>
+    /// </summary>
+    internal sealed class DeadLetterMessageQueue : IMessageQueue
     {
         private readonly IActorRef _deadLetters;
 
-        public DeadLetterMailbox(IActorRef deadLetters)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="deadLetters">TBD</param>
+        public DeadLetterMessageQueue(IActorRef deadLetters)
         {
             _deadLetters = deadLetters;
         }
 
-        public override void Post(IActorRef receiver, Envelope envelope)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public bool HasMessages => false;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public int Count => 0;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receiver">TBD</param>
+        /// <param name="envelope">TBD</param>
+        public void Enqueue(IActorRef receiver, Envelope envelope)
         {
-            var message = envelope.Message;
-            if(message is ISystemMessage)
+            if (envelope.Message is DeadLetter)
             {
-                Mailbox.DebugPrint("DeadLetterMailbox forwarded system message " + envelope+ " as a DeadLetter");
-                _deadLetters.Tell(new DeadLetter(message, receiver, receiver), receiver);
+                // actor subscribing to DeadLetter. Drop it.
+                return;
             }
-            else if(message is DeadLetter)
-            {
-                //Just drop it like it's hot
-                Mailbox.DebugPrint("DeadLetterMailbox dropped DeadLetter " + envelope);
-            }
-            else
-            {
-                Mailbox.DebugPrint("DeadLetterMailbox forwarded message " + envelope + " as a DeadLetter");
-                var sender = envelope.Sender;
-                _deadLetters.Tell(new DeadLetter(message, sender, receiver),sender);
-            }
+
+            _deadLetters.Tell(new DeadLetter(envelope.Message, envelope.Sender, receiver), envelope.Sender);
         }
 
-        public override void BecomeClosed()
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="envelope">TBD</param>
+        /// <returns>TBD</returns>
+        public bool TryDequeue(out Envelope envelope)
         {
-            
+            envelope = new Envelope(new NoMessage(), ActorRefs.NoSender);
+            return false;
         }
 
-        public override bool IsClosed{get { return true; }}
-
-        protected override int GetNumberOfMessages()
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="owner">TBD</param>
+        /// <param name="deadletters">TBD</param>
+        public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
-            return 0;
+            // do nothing
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Mailbox for dead letters.
+    /// </summary>
+    public sealed class DeadLetterMailbox : Mailbox
+    {
+        private readonly IActorRef _deadLetters;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="deadLetters">TBD</param>
+        public DeadLetterMailbox(IActorRef deadLetters) : base(new DeadLetterMessageQueue(deadLetters))
+        {
+            _deadLetters = deadLetters;
+            BecomeClosed(); // always closed
         }
 
-        protected override void Schedule()
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal override bool HasSystemMessages => false;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="newContents">TBD</param>
+        /// <returns>TBD</returns>
+        internal override EarliestFirstSystemMessageList SystemDrain(LatestFirstSystemMessageList newContents)
         {
-            //Intentionally left blank
+            return SystemMessageList.ENil;
         }
 
-        public override void CleanUp()
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="receiver">TBD</param>
+        /// <param name="message">TBD</param>
+        internal override void SystemEnqueue(IActorRef receiver, SystemMessage message)
         {
-            //Intentionally left blank
+            _deadLetters.Tell(new DeadLetter(message, receiver, receiver));
         }
     }
 }

@@ -1,28 +1,51 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Topics.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Remote;
 using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal abstract class TopicLike : ActorBase
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly TimeSpan PruneInterval;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly ICancelable PruneCancelable;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly ISet<IActorRef> Subscribers;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected readonly TimeSpan EmptyTimeToLive;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected Deadline PruneDeadline = null;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="emptyTimeToLive">TBD</param>
         protected TopicLike(TimeSpan emptyTimeToLive)
         {
             Subscribers = new HashSet<IActorRef>();
@@ -31,12 +54,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             PruneCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(PruneInterval, PruneInterval, Self, Prune.Instance, Self);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected override void PostStop()
         {
             base.PostStop();
             PruneCancelable.Cancel();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected bool DefaultReceive(object message)
         {
             if (message is Subscribe)
@@ -63,7 +94,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             }
             else if (message is Prune)
             {
-                if (PruneDeadline != null && PruneDeadline.IsOverdue) Context.Stop(Self);
+                if (PruneDeadline != null && PruneDeadline.IsOverdue)
+                {
+                    PruneDeadline = null;
+                    Context.Parent.Tell(NoMoreSubscribers.Instance);
+                }
+            }
+            else if (message is TerminateRequest)
+            {
+                if (Subscribers.Count == 0 && !Context.GetChildren().Any())
+                {
+                    Context.Stop(Self);
+                }
+                else
+                {
+                    Context.Parent.Tell(NewSubscriberArrived.Instance);
+                }
             }
             else
             {
@@ -74,8 +120,18 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             return true;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected abstract bool Business(object message);
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             return Business(message) || DefaultReceive(message);
@@ -92,47 +148,66 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class Topic : TopicLike
     {
         private readonly RoutingLogic _routingLogic;
+        private readonly PerGroupingBuffer _buffer;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="emptyTimeToLive">TBD</param>
+        /// <param name="routingLogic">TBD</param>
         public Topic(TimeSpan emptyTimeToLive, RoutingLogic routingLogic) : base(emptyTimeToLive)
         {
             _routingLogic = routingLogic;
+            _buffer = new PerGroupingBuffer();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Business(object message)
         {
             Subscribe subscribe;
             Unsubscribe unsubscribe;
             if ((subscribe = message as Subscribe) != null && subscribe.Group != null)
             {
-                var encodedGroup = Encode(subscribe.Group);
-                var child = encodedGroup == null ? ActorRefs.Nobody : Context.Child(encodedGroup);
-
-                if (!ActorRefs.Nobody.Equals(child))
+                var encodedGroup = Utils.EncodeName(subscribe.Group);
+                _buffer.BufferOr(Utils.MakeKey(Self.Path / encodedGroup), subscribe, Sender, () =>
                 {
-                    child.Forward(message);
-                }
-                else
-                {
-                    var group = Context.ActorOf(Props.Create(() => new Group(EmptyTimeToLive, _routingLogic)), encodedGroup);
-                    group.Forward(message);
-                    Context.Watch(group);
-                    Context.Parent.Tell(new RegisterTopic(group));
-                }
-
+                    var child = Context.Child(encodedGroup);
+                    if (!child.IsNobody())
+                    {
+                        child.Forward(message);
+                    }
+                    else
+                    {
+                        NewGroupActor(encodedGroup).Forward(message);
+                    }
+                });
                 PruneDeadline = null;
             }
             else if ((unsubscribe = message as Unsubscribe) != null && unsubscribe.Group != null)
             {
-                var encodedGroup = Encode(unsubscribe.Group);
-                var child = encodedGroup == null ? ActorRefs.Nobody : Context.Child(encodedGroup);
-
-                if (!child.Equals(ActorRefs.Nobody))
+                var encodedGroup = Utils.EncodeName(unsubscribe.Group);
+                _buffer.BufferOr(Utils.MakeKey(Self.Path / encodedGroup), unsubscribe, Sender, () =>
                 {
-                    child.Forward(message);
-                }
+                    var child = Context.Child(encodedGroup);
+                    if (!child.IsNobody())
+                    {
+                        child.Forward(message);
+                    }
+                    else
+                    {
+                        // no such group here
+                    }
+                });
             }
             else if (message is Subscribed)
             {
@@ -142,25 +217,58 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             {
                 Context.Parent.Forward(message);
             }
+            else if (message is NoMoreSubscribers)
+            {
+                var key = Utils.MakeKey(Sender);
+                _buffer.InitializeGrouping(key);
+                Sender.Tell(TerminateRequest.Instance);
+            }
+            else if (message is NewSubscriberArrived)
+            {
+                var key = Utils.MakeKey(Sender);
+                _buffer.ForwardMessages(key, Sender);
+            }
+            else if (message is Terminated)
+            {
+                var terminated = (Terminated)message;
+                var key = Utils.MakeKey(terminated.ActorRef);
+                _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewGroupActor(terminated.ActorRef.Path.Name));
+            }
             else return false;
             return true;
         }
 
-        private static string Encode(string name)
+        private IActorRef NewGroupActor(string encodedGroup)
         {
-            return name == null ? null : Uri.EscapeDataString(name);
+            var g = Context.ActorOf(Props.Create(() => new Group(EmptyTimeToLive, _routingLogic)), encodedGroup);
+            Context.Watch(g);
+            Context.Parent.Tell(new RegisterTopic(g));
+            return g;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class Group : TopicLike
     {
         private readonly RoutingLogic _routingLogic;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="emptyTimeToLive">TBD</param>
+        /// <param name="routingLogic">TBD</param>
         public Group(TimeSpan emptyTimeToLive, RoutingLogic routingLogic) : base(emptyTimeToLive)
         {
             _routingLogic = routingLogic;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         protected override bool Business(object message)
         {
             if (message is SendToOneSubscriber)
@@ -177,6 +285,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal static class Utils
     {
         /// <summary>
@@ -191,9 +302,41 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// user message.
         /// </para>
         /// </summary>
+        /// <param name="message">TBD</param>
+        /// <returns>TBD</returns>
         public static object WrapIfNeeded(object message)
         {
             return message is RouterEnvelope ? new MediatorRouterEnvelope(message) : message;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actorRef">TBD</param>
+        /// <returns>TBD</returns>
+        public static string MakeKey(IActorRef actorRef)
+        {
+            return MakeKey(actorRef.Path);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
+        public static string EncodeName(string name)
+        {
+            return name == null ? null : Uri.EscapeDataString(name);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <returns>TBD</returns>
+        public static string MakeKey(ActorPath path)
+        {
+            return path.ToStringWithoutAddress();
         }
     }
 }

@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterConfigFactory.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using Akka.Configuration;
 
 namespace Akka.Cluster.Configuration
@@ -34,7 +35,7 @@ namespace Akka.Cluster.Configuration
         /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
-            var assembly = typeof(ClusterConfigFactory).Assembly;
+            var assembly = typeof(ClusterConfigFactory).GetTypeInfo().Assembly;
 
             using (var stream = assembly.GetManifestResourceStream(resourceName))
             {

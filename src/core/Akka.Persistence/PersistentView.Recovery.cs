@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentView.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,8 +15,17 @@ namespace Akka.Persistence
     //      but the enhanced PersistentView will not be based on recovery infrastructure, and
     //      therefore this code will be replaced anyway
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class ViewState
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="isRecoveryRunning">TBD</param>
+        /// <param name="stateReceive">TBD</param>
         public ViewState(string name, bool isRecoveryRunning, StateReceive stateReceive)
         {
             Name = name;
@@ -24,48 +33,44 @@ namespace Akka.Persistence
             IsRecoveryRunning = isRecoveryRunning;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public string Name { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsRecoveryRunning { get; private set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public StateReceive StateReceive { get; private set; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             return Name;
         }
     }
 
+    /// <summary>
+    /// TBD
+    /// </summary>
     public partial class PersistentView
     {
         /// <summary>
-        /// Initial state. Waits for <see cref="Recover"/> request, and then submits a <see cref="LoadSnapshot"/>
-        /// request to snapshot store and then changes to <see cref="RecoveryStarted"/> state. All other message types are stashed.
-        /// </summary>
-        private ViewState RecoveryPending()
-        {
-            return new ViewState("recovery pending", true, (receive, message) =>
-            {
-                if (message is Recover)
-                {
-                    var recover = (Recover)message;
-                    ChangeState(RecoveryStarted(recover.ReplayMax));
-                    LoadSnapshot(SnapshotterId, recover.FromSnapshot, recover.ToSequenceNr);
-                }
-                else _internalStash.Stash();
-            });
-        }
-
-        /// <summary>
-        /// Processes a loaded snapshot, if any. A loaded snapshot is offered to view via <see cref="SnapshotOffer"/>
-        /// message in <see cref="PersistentActor.ReceiveRecover"/> method. Then initiates a message replay, either 
-        /// starting from the loaded snapshot or from scratch. Then switches to <see cref="ReplayStarted"/> state.
-        /// 
+        /// Processes a loaded snapshot, if any. A loaded snapshot is offered with a <see cref="SnapshotOffer"/>
+        /// message to the actor's <see cref="ActorBase.Receive"/> method. Then initiates a message replay, either 
+        /// starting from the loaded snapshot or from scratch, and switches to <see cref="ReplayStarted"/> state.
         /// All incoming messages are stashed.
         /// </summary>
         private ViewState RecoveryStarted(long replayMax)
         {
             return new ViewState("recovery started - replayMax: " + replayMax, true, (receive, message) =>
             {
-                if (message is Recover) return; // ignore
                 if (message is LoadSnapshotResult)
                 {
                     var loadResult = (LoadSnapshotResult)message;
@@ -73,7 +78,6 @@ namespace Akka.Persistence
                     {
                         var selectedSnapshot = loadResult.Snapshot;
                         LastSequenceNr = selectedSnapshot.Metadata.SequenceNr;
-                        // since we're recovering, we can ignore receive behavior from the stack
                         base.AroundReceive(receive, new SnapshotOffer(selectedSnapshot.Metadata, selectedSnapshot.Snapshot));
                     }
                     ChangeState(ReplayStarted(true));
@@ -84,34 +88,23 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Processes replayed message, if any. The actor's <see cref="PersistentActor.ReceiveRecover"/> is invoked 
+        /// Processes replayed message, if any. The actor's <see cref="ActorBase.Receive"/> is invoked 
         /// with the replayed events.
         /// 
-        /// If replay succeeds it switches to <see cref="Initialized"/> state and requests the highest stored sequence
-        /// number from the journal and <see cref="OnReplaySuccess"/> is called. Otherwise the <see cref="RecoveryFailure"/> 
-        /// is emitted with <see cref="OnReplayFailure"/> being called.
+        /// If replay succeeds it got highest stored sequence number response from the journal and
+        /// then switch it switches to <see cref="Idle"/> state.
         /// 
-        /// If processing fails, the exception is caught and stored for being thrown later and the state is changed
-        /// to <see cref="RecoveryFailed"/>.
         /// 
-        /// All incoming messages are stashed.
+        /// If replay succeeds the <see cref="OnReplaySuccess"/> callback method is called, otherwise
+        /// <see cref="OnReplayError"/> is called and remaining replay events are consumed (ignored).
+        /// 
+        /// All incoming messages are stashed when <paramref name="shouldAwait"/> is true.
         /// </summary>
         private ViewState ReplayStarted(bool shouldAwait)
         {
-            var stashUpdate = shouldAwait;
             return new ViewState("replay started", true, (receive, message) =>
             {
-                if (message is Update)
-                {
-                    var u = (Update)message;
-                    if (u.IsAwait && !stashUpdate)
-                    {
-                        stashUpdate = true;
-                        _internalStash.Stash();
-                    }
-                }
-                else if (message is Recover) return; // ignore
-                else if (message is ReplayedMessage)
+                if (message is ReplayedMessage)
                 {
                     var replayedMessage = (ReplayedMessage)message;
                     try
@@ -119,69 +112,96 @@ namespace Akka.Persistence
                         UpdateLastSequenceNr(replayedMessage.Persistent);
                         base.AroundReceive(receive, replayedMessage.Persistent.Payload);
                     }
-                    catch (Exception exc)
+                    catch (Exception ex)
                     {
-                        var currentMessage = Context.AsInstanceOf<ActorCell>().CurrentMessage;
-                        // delay throwing exception to prepare restart
-                        ChangeState(ReplayFailed(exc, currentMessage));
+                        ChangeState(IgnoreRemainingReplay(ex));
                     }
                 }
-                else if (message is ReplayMessagesSuccess)
+                else if (message is RecoverySuccess)
                 {
-                    OnReplayComplete(shouldAwait);
+                    OnReplayComplete();
                 }
                 else if (message is ReplayMessagesFailure)
                 {
                     var replayFailureMessage = (ReplayMessagesFailure)message;
-                    OnReplayComplete(shouldAwait);
-                    // FIXME what happens if RecoveryFailure is handled, i.e. actor is not stopped?
-                    base.AroundReceive(receive, new RecoveryFailure(replayFailureMessage.Cause));
+                    try
+                    {
+                        OnReplayError(replayFailureMessage.Cause);
+                    }
+                    finally
+                    {
+                        OnReplayComplete();
+                    }
                 }
-                else _internalStash.Stash();
+                else if (message is ScheduledUpdate)
+                {
+                    // ignore
+                }
+                else if (message is Update)
+                {
+                    var u = (Update) message;
+                    if (u.IsAwait)
+                    {
+                        _internalStash.Stash();
+                    }
+                }
+                else
+                {
+                    if (shouldAwait)
+                    {
+                        _internalStash.Stash();
+                    }
+                    else
+                    {
+                        try
+                        {
+                            base.AroundReceive(receive, message);
+                        }
+                        catch (Exception ex)
+                        {
+                            ChangeState(IgnoreRemainingReplay(ex));
+                        }
+                    }
+                }
             });
         }
 
         /// <summary>
-        /// Switches to <see cref="Idle"/> state and schedules the next update if <see cref="IsAutoUpdate"/> flag is set.
+        /// Switches to <see cref="Idle"/>.
         /// </summary>
-        private void OnReplayComplete(bool shouldAwait)
+        private void OnReplayComplete()
         {
             ChangeState(Idle());
 
-            if (shouldAwait)
-            {
-                _internalStash.UnstashAll();
-            }
+            _internalStash.UnstashAll();
         }
 
         /// <summary>
-        /// Consumes remaining replayed messages and switches to <see cref="PrepareRestart"/> state. Message that
-        /// caused an exception during replay is re-added to the mailbox and re-received in <see cref="PrepareRestart"/> state.
+        /// Consumes remaining replayed messages and then throws the exception.
         /// </summary>
-        private ViewState ReplayFailed(Exception cause, object failedMessage)
+        private ViewState IgnoreRemainingReplay(Exception cause)
         {
             return new ViewState("replay failed", true, (receive, message) =>
             {
-                if (message is ReplayMessagesFailure)
+                if (message is ReplayedMessage) { } 
+                else if (message is ReplayMessagesFailure)
                 {
-                    OnReplayFailureCompleted(receive, cause, failedMessage as IPersistentRepresentation);
                     // journal couldn't tell the maximum stored sequence number, hence the next
                     // replay must be a full replay (up to the highest stored sequence number)
                     // Recover(lastSequenceNr) is sent by preRestart
                     LastSequenceNr = long.MaxValue;
+                    OnReplayFailureCompleted(cause);
                 }
-                else if (message is ReplayMessagesSuccess) OnReplayFailureCompleted(receive, cause, failedMessage as IPersistentRepresentation);
-                else if (message is ReplayedMessage) UpdateLastSequenceNr(((ReplayedMessage)message).Persistent);
-                else if (message is Recover) return; // ignore
+                else if (message is RecoverySuccess) OnReplayFailureCompleted(cause);
                 else _internalStash.Stash();
             });
         }
 
-        private void OnReplayFailureCompleted(Receive receive, Exception cause, IPersistentRepresentation failed)
+        private void OnReplayFailureCompleted( Exception cause)
         {
             ChangeState(Idle());
-            var recoveryFailure = failed != null ? new RecoveryFailure(cause, failed.SequenceNr, failed.Payload) : new RecoveryFailure(cause);
-            base.AroundReceive(receive, recoveryFailure);
+            _internalStash.UnstashAll();
+            throw cause;
         }
 
 
@@ -189,22 +209,26 @@ namespace Akka.Persistence
         /// When receiving an <see cref="Update"/> event, switches to <see cref="ReplayStarted"/> state
         /// and triggers an incremental message replay. For any other message invokes actor default behavior.
         /// </summary>
-        /// <returns></returns>
         private ViewState Idle()
         {
             return new ViewState("idle", false, (receive, message) =>
             {
-                if (message is Update)
+                if (message is ReplayedMessage)
                 {
-                    var update = (Update)message;
-                    ChangeStateToReplayStarted(update.IsAwait, update.ReplayMax);
+                    // we can get ReplayedMessage here if it was stashed by user during replay
+                    // unwrap the payload
+                    base.AroundReceive(receive, ((ReplayedMessage) message).Persistent.Payload);
                 }
                 else if (message is ScheduledUpdate)
                 {
                     var scheduled = (ScheduledUpdate) message;
                     ChangeStateToReplayStarted(false, scheduled.ReplayMax);
                 }
-                else if (message is Recover) return; // ignore
+                else if (message is Update)
+                {
+                    var update = (Update)message;
+                    ChangeStateToReplayStarted(update.IsAwait, update.ReplayMax);
+                }
                 else base.AroundReceive(receive, message);
             });
         }

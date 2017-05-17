@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ namespace Akka.MultiNodeTestRunner
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
         /// 
-        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}]
+        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}] [-Dmultinode.spec={spec name}]
         /// 
         /// <list type="number">
         /// <listheader>
@@ -89,6 +89,13 @@ namespace Akka.MultiNodeTestRunner
         ///             Defaults to 6577
         ///     </description>
         /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.spec={spec name}</term>
+        ///     <description>
+        ///             Setting this flag means that only tests which contains the spec name will be executed
+        ///             otherwise all tests will be executed
+        ///     </description>
+        /// </item>
         /// </list>
         /// </summary>
         static void Main(string[] args)
@@ -101,28 +108,36 @@ namespace Akka.MultiNodeTestRunner
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
+            var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
 
             var tcpLogger = TestRunSystem.ActorOf(Props.Create(() => new TcpLoggingServer(SinkCoordinator)), "TcpLogger");
             TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint));
 
-            var assemblyName = Path.GetFullPath(args[0]);
+            var assemblyName = Path.GetFullPath(args[0].Trim('"')); //unquote the string first
             EnableAllSinks(assemblyName);
             PublishRunnerMessage(String.Format("Running MultiNodeTests for {0}", assemblyName));
 
-            using (var controller = new XunitFrontController(assemblyName))
+            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyName))
             {
                 using (var discovery = new Discovery())
                 {
                     controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
 
-                    foreach (var test in discovery.Tests.Reverse())
+                    foreach(var test in discovery.Tests.Reverse())
                     {
                         if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
                         {
                             PublishRunnerMessage(string.Format("Skipping test {0}. Reason - {1}", test.Value.First().MethodName, test.Value.First().SkipReason));
                             continue;
                         }
+
+                        if(!string.IsNullOrWhiteSpace(specName) && CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName, specName, CompareOptions.IgnoreCase) < 0)
+                        {
+                            PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
+                            continue;
+                        }
+                            
 
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
@@ -142,11 +157,13 @@ namespace Akka.MultiNodeTestRunner
                                     nodeTest.TypeName}"" -Dmultinode.test-method=""{nodeTest.MethodName
                                     }"" -Dmultinode.max-nodes={test.Value.Count} -Dmultinode.server-host=""{"localhost"
                                     }"" -Dmultinode.host=""{"localhost"}"" -Dmultinode.index={nodeTest.Node - 1
-                                    } -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={listenPort}";
+                                    } -Dmultinode.role=""{nodeTest.Role
+                                    }"" -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={listenPort}";
                             var nodeIndex = nodeTest.Node;
+                            var nodeRole = nodeTest.Role;
                             //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
-                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.MethodName));
-                            var logFilePath = Path.Combine(folder.FullName, "node" + nodeIndex + ".txt");
+                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
+                            var logFilePath = Path.Combine(folder.FullName, "node" + nodeIndex + "__" + nodeRole + ".txt");
                             var fileActor =
                                 TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
                             process.OutputDataReceived += (sender, eventArgs) =>
@@ -159,13 +176,13 @@ namespace Akka.MultiNodeTestRunner
                             {
                                 if (process.ExitCode == 0)
                                 {
-                                    ReportSpecPassFromExitCode(nodeIndex, closureTest.TestName);
+                                    ReportSpecPassFromExitCode(nodeIndex, nodeRole, closureTest.TestName);
                                 }
                             };
                             
                             process.Start();
                             process.BeginOutputReadLine();
-                            PublishRunnerMessage(string.Format("Started node {0} on pid {1}", nodeTest.Node, process.Id));
+                            PublishRunnerMessage(string.Format("Started node {0} : {1} on pid {2}", nodeIndex, nodeRole, process.Id));
                         }
 
                         foreach (var process in processes)
@@ -188,6 +205,11 @@ namespace Akka.MultiNodeTestRunner
             
             //Block until all Sinks have been terminated.
             TestRunSystem.WhenTerminated.Wait(TimeSpan.FromMinutes(1));
+
+            if (Debugger.IsAttached)
+            {
+                Console.ReadLine(); //block when debugging
+            }
 
             //Return the proper exit code
             Environment.Exit(ExitCodeContainer.ExitCode);
@@ -239,9 +261,9 @@ namespace Akka.MultiNodeTestRunner
             SinkCoordinator.Tell(tests);
         }
 
-        static void ReportSpecPassFromExitCode(int nodeIndex, string testName)
+        static void ReportSpecPassFromExitCode(int nodeIndex, string nodeRole, string testName)
         {
-            SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, testName + " passed."));
+            SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, nodeRole, testName + " passed."));
         }
 
         static void FinishSpec()

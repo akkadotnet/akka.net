@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Streams</AssemblyTitle>
+    <Description>Reactive stream support for Akka.NET</Description>
+    <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
+    <VersionPrefix>1.3.0</VersionPrefix>
+    <Authors>Akka.NET Team</Authors>
+    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
+    <PackageTags>akka;actors;actor model;Akka;concurrency;reactive;stream</PackageTags>
+    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="reference.conf" />
+    <ProjectReference Include="..\Akka\Akka.csproj" />
+    <PackageReference Include="Reactive.Streams" version="1.0.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <PackageReference Include="System.Reflection.TypeExtensions" version="4.3.0" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <DefineConstants>$(DefineConstants);SERIALIZATION;CLONEABLE;AKKAIO</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
+</Project>

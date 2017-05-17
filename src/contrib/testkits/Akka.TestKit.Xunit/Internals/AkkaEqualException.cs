@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaEqualException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,11 +11,21 @@ using Xunit.Sdk;
 
 namespace Akka.TestKit.Xunit.Internals
 {
+    /// <summary>
+    /// TBD
+    /// </summary>
     public class AkkaEqualException : EqualException
     {
         private readonly string _format;
         private readonly object[] _args;
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="expected">TBD</param>
+        /// <param name="actual">TBD</param>
+        /// <param name="format">TBD</param>
+        /// <param name="args">TBD</param>
         public AkkaEqualException(object expected, object actual, string format = "", params object[] args)
             : base(expected, actual)
         {
@@ -23,19 +33,20 @@ namespace Akka.TestKit.Xunit.Internals
             _args = args;
         }
 
-        public AkkaEqualException(object expected, object actual, bool skipPositionCheck, string format = "",
-            params object[] args)
-            : base(expected, actual, skipPositionCheck)
-        {
-            _args = args;
-            _format = format;
-        }
-
+#if SERIALIZATION
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="context">TBD</param>
         protected AkkaEqualException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
-
+#endif
+        /// <summary>
+        /// TBD
+        /// </summary>
         public override string Message
         {
             get
@@ -56,4 +67,3 @@ namespace Akka.TestKit.Xunit.Internals
         }
     }
 }
-

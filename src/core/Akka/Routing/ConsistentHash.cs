@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsistentHash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,51 +24,53 @@ namespace Akka.Routing
     /// Note that toString of the ring nodes are used for the node
     /// hash, i.e. make sure it is different for different nodes.
     /// </summary>
+    /// <typeparam name="T">The type of objects to store in the hash.</typeparam>
     public class ConsistentHash<T>
     {
         private readonly SortedDictionary<int, T> _nodes;
         private readonly int _virtualNodesFactor;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHash{T}"/> class.
+        /// </summary>
+        /// <param name="nodes">TBD</param>
+        /// <param name="virtualNodesFactor">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="virtualNodesFactor"/> is less than one.
+        /// </exception>
         public ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
         {
             _nodes = nodes;
 
-            if (virtualNodesFactor < 1) throw new ArgumentException("virtualNodesFactor must be >= 1");
+            if (virtualNodesFactor < 1) throw new ArgumentException("virtualNodesFactor must be >= 1", nameof(virtualNodesFactor));
 
             _virtualNodesFactor = virtualNodesFactor;
         }
 
-        /// <summary>
-        /// arrays for fast binary search access
-        /// </summary>
         private Tuple<int[], T[]> _ring = null;
         private Tuple<int[], T[]> RingTuple
         {
             get { return _ring ?? (_ring = Tuple.Create(_nodes.Keys.ToArray(), _nodes.Values.ToArray())); }
         }
 
-        /// <summary>
-        /// Sorted hash values of the nodes
-        /// </summary>
         private int[] NodeHashRing
         {
             get { return RingTuple.Item1; }
         }
 
-        /// <summary>
-        /// NodeRing is the nodes sorted in the same order as <see cref="NodeHashRing"/>, i.e. same index
-        /// </summary>
         private T[] NodeRing
         {
             get { return RingTuple.Item2; }
         }
 
         /// <summary>
-        /// Add a node to the hash ring.
+        /// Adds a node to the hash ring.
         /// 
         /// Note that <see cref="ConsistentHash{T}"/> is immutable and
         /// this operation returns a new instance.
         /// </summary>
+        /// <param name="node">The node to add to the hash ring</param>
+        /// <returns>A new instance of this hash ring with the given node added.</returns>
         public ConsistentHash<T> Add(T node)
         {
             return this + node;
@@ -80,17 +82,13 @@ namespace Akka.Routing
         /// Note that <see cref="ConsistentHash{T}"/> is immutable and
         /// this operation returns a new instance.
         /// </summary>
+        /// <param name="node">The node to remove from the hash ring</param>
+        /// <returns>A new instance of this hash ring with the given node removed.</returns>
         public ConsistentHash<T> Remove(T node)
         {
             return this - node;
         }
 
-        /// <summary>
-        /// Converts the result of <see cref="Array.BinarySearch{T}(T[], T)"/> into an index in the 
-        /// <see cref="RingTuple"/> array.
-        /// </summary>
-        /// <param name="i"></param>
-        /// <returns></returns>
         private int Idx(int i)
         {
             if (i >= 0) return i; //exact match
@@ -103,57 +101,76 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Get the node responsible for the data key.
-        /// Can only be used if nodes exist in the node ring.
-        /// Otherwise throws <see cref="ArgumentException"/>.
+        /// Retrieves the node associated with the data key.
         /// </summary>
+        /// <param name="key">The data key used for lookup.</param>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if the node ring is empty.
+        /// </exception>
+        /// <returns>The node associated with the data key</returns>
         public T NodeFor(byte[] key)
         {
-            if (IsEmpty) throw new InvalidOperationException(string.Format("Can't get node for [{0}] from an empty node ring", key));
+            if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
 
             return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }
 
         /// <summary>
-        /// Get the node responsible for the data key.
-        /// Can only be used if nodes exist in the node ring.
-        /// Otherwise throws <see cref="ArgumentException"/>.
+        /// Retrieves the node associated with the data key.
         /// </summary>
+        /// <param name="key">The data key used for lookup.</param>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if the node ring is empty.
+        /// </exception>
+        /// <returns>The node associated with the data key</returns>
         public T NodeFor(string key)
         {
-            if (IsEmpty) throw new InvalidOperationException(string.Format("Can't get node for [{0}] from an empty node ring", key));
+            if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
 
             return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }
 
         /// <summary>
-        /// Is the node ring empty? i.e. no nodes added or all removed
+        /// Check to determine if the node ring is empty (i.e. no nodes added or all removed)
         /// </summary>
         public bool IsEmpty
         {
             get { return !_nodes.Any(); }
         }
-        
+
+        /// <summary>
+        /// This class represents a surrogate of a <see cref="ConsistentHashingGroup"/> router.
+        /// Its main use is to help during the serialization process.
+        /// </summary>
         public class ConsistentHashingGroupSurrogate : ISurrogate
         {
+            /// <summary>
+            /// Creates a <see cref="ConsistentHashingGroup"/> encapsulated by this surrogate.
+            /// </summary>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="ConsistentHashingGroup"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new ConsistentHashingGroup(Paths);
             }
 
+            /// <summary>
+            /// The actor paths used by this router during routee selection.
+            /// </summary>
             public string[] Paths { get; set; }
         }
-
-
 
         #region Operator overloads
 
         /// <summary>
-        /// Add a node to the hash ring.
+        /// Adds a node to the hash ring.
         /// 
         /// Note that <see cref="ConsistentHash{T}"/> is immutable and
         /// this operation returns a new instance.
-        /// </summary>s
+        /// </summary>
+        /// <param name="hash">The hash ring used to derive a new ring with the given node added.</param>
+        /// <param name="node">The node to add to the hash ring</param>
+        /// <returns>A new instance of this hash ring with the given node added.</returns>
         public static ConsistentHash<T> operator +(ConsistentHash<T> hash, T node)
         {
             var nodeHash = ConsistentHash.HashFor(node.ToString());
@@ -167,6 +184,9 @@ namespace Akka.Routing
         /// Note that <see cref="ConsistentHash{T}"/> is immutable and
         /// this operation returns a new instance.
         /// </summary>
+        /// <param name="hash">The hash ring used to derive a new ring with the given node removed.</param>
+        /// <param name="node">The node to remove from the hash ring</param>
+        /// <returns>A new instance of this hash ring with the given node removed.</returns>
         public static ConsistentHash<T> operator -(ConsistentHash<T> hash, T node)
         {
             var nodeHash = ConsistentHash.HashFor(node.ToString());
@@ -185,6 +205,10 @@ namespace Akka.Routing
         /// <summary>
         /// Factory method to create a <see cref="ConsistentHash{T}"/> instance.
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="nodes">TBD</param>
+        /// <param name="virtualNodesFactor">TBD</param>
+        /// <returns>TBD</returns>
         public static ConsistentHash<T> Create<T>(IEnumerable<T> nodes, int virtualNodesFactor)
         {
             var sortedDict = new SortedDictionary<int, T>();
@@ -202,6 +226,12 @@ namespace Akka.Routing
 
         #region Hashing methods
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nodeHash">TBD</param>
+        /// <param name="vnode">TBD</param>
+        /// <returns>TBD</returns>
         internal static int ConcatenateNodeHash(int nodeHash, int vnode)
         {
             unchecked
@@ -211,19 +241,44 @@ namespace Akka.Routing
                 return (int)MurmurHash.FinalizeHash(h);
             }
         }
-        
+
+        /// <summary>
+        /// This class represents a surrogate of a <see cref="ConsistentHashingPool"/> router.
+        /// Its main use is to help during the serialization process.
+        /// </summary>
         public class ConsistentHashingPoolSurrogate : ISurrogate
         {
+            /// <summary>
+            /// Creates a <see cref="ConsistentHashingPool"/> encapsulated by this surrogate.
+            /// </summary>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="ConsistentHashingPool"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+                return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }
 
-            public int NrOfInstances { get; set; }
-            public bool UsePoolDispatcher { get; set; }
-            public Resizer Resizer { get; set; }
-            public SupervisorStrategy SupervisorStrategy { get; set; }
-            public string RouterDispatcher { get; set; }
+            /// <summary>
+            /// The number of routees associated with this pool.
+            /// </summary>
+             public int NrOfInstances { get; set; }
+            /// <summary>
+            /// Determine whether or not to use the pool dispatcher. The dispatcher is defined in the
+            /// 'pool-dispatcher' configuration property in the deployment section of the router.
+            /// </summary>
+             public bool UsePoolDispatcher { get; set; }
+            /// <summary>
+            /// The resizer to use when dynamically allocating routees to the pool.
+            /// </summary>
+             public Resizer Resizer { get; set; }
+            /// <summary>
+            /// The strategy to use when supervising the pool.
+            /// </summary>
+             public SupervisorStrategy SupervisorStrategy { get; set; }
+            /// <summary>
+            /// The dispatcher to use when passing messages to the routees.
+            /// </summary>
+             public string RouterDispatcher { get; set; }
         }
 
         /// <summary>
@@ -234,42 +289,52 @@ namespace Akka.Routing
         /// <returns>The object encoded into bytes - in the case of custom classes, the hashcode may be used.</returns>
         internal static object ToBytesOrObject(object obj)
         {
-                if (obj == null)
-                    return new byte[] { 0 };
-                if (obj is byte[])
-                    return (byte[])obj;
-                if (obj is int)
-                    return BitConverter.GetBytes((int)obj);
-                if (obj is uint)
-                    return BitConverter.GetBytes((uint)obj);
-                if (obj is short)
-                    return BitConverter.GetBytes((short)obj);
-                if (obj is ushort)
-                    return BitConverter.GetBytes((ushort)obj);
-                if (obj is bool)
-                    return BitConverter.GetBytes((bool)obj);
-                if (obj is long)
-                    return BitConverter.GetBytes((long)obj);
-                if (obj is ulong)
-                    return BitConverter.GetBytes((ulong)obj);
-                if (obj is char)
-                    return BitConverter.GetBytes((char)obj);
-                if (obj is float)
-                    return BitConverter.GetBytes((float)obj);
-                if (obj is double)
-                    return BitConverter.GetBytes((double)obj);
-                if (obj is decimal)
-                    return new BitArray(decimal.GetBits((decimal)obj)).ToBytes();
-                if (obj is Guid)
-                    return ((Guid)obj).ToByteArray();
+            if (obj == null)
+                return new byte[] { 0 };
+            if (obj is byte[])
+                return (byte[])obj;
+            if (obj is int)
+                return BitConverter.GetBytes((int)obj);
+            if (obj is uint)
+                return BitConverter.GetBytes((uint)obj);
+            if (obj is short)
+                return BitConverter.GetBytes((short)obj);
+            if (obj is ushort)
+                return BitConverter.GetBytes((ushort)obj);
+            if (obj is bool)
+                return BitConverter.GetBytes((bool)obj);
+            if (obj is long)
+                return BitConverter.GetBytes((long)obj);
+            if (obj is ulong)
+                return BitConverter.GetBytes((ulong)obj);
+            if (obj is char)
+                return BitConverter.GetBytes((char)obj);
+            if (obj is float)
+                return BitConverter.GetBytes((float)obj);
+            if (obj is double)
+                return BitConverter.GetBytes((double)obj);
+            if (obj is decimal)
+                return new BitArray(decimal.GetBits((decimal)obj)).ToBytes();
+            if (obj is Guid)
+                return ((Guid)obj).ToByteArray();
             return obj;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="bytes">TBD</param>
+        /// <returns>TBD</returns>
         internal static int HashFor(byte[] bytes)
         {
             return MurmurHash.ByteHash(bytes);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="hashKey">TBD</param>
+        /// <returns>TBD</returns>
         internal static int HashFor(string hashKey)
         {
             return MurmurHash.StringHash(hashKey);

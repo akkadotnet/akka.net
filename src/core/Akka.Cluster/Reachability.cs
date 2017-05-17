@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Reachability.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,11 +27,19 @@ namespace Akka.Cluster
     /// - Unreachable if any observer node considers it as Unreachable
     /// - Reachable otherwise, i.e. no observer node considers it as Unreachable
     /// </summary>
-    public class Reachability //TODO: ISerializable?
+    internal class Reachability //TODO: ISerializable?
     {
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Reachability Empty = 
             new Reachability(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="records">TBD</param>
+        /// <param name="versions">TBD</param>
         public Reachability(ImmutableList<Record> records, ImmutableDictionary<UniqueAddress, long> versions)
         {
             _cache = new Lazy<Cache>(() => new Cache(records));
@@ -39,17 +47,39 @@ namespace Akka.Cluster
             _records = records;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public sealed class Record
         {
             readonly UniqueAddress _observer;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public UniqueAddress Observer { get { return _observer; } }
             readonly UniqueAddress _subject;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public UniqueAddress Subject { get { return _subject; } }
             readonly ReachabilityStatus _status;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ReachabilityStatus Status { get { return _status; } }
             readonly long _version;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public long Version { get { return _version; } }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="observer">TBD</param>
+            /// <param name="subject">TBD</param>
+            /// <param name="status">TBD</param>
+            /// <param name="version">TBD</param>
             public Record(UniqueAddress observer, UniqueAddress subject, ReachabilityStatus status, long version)
             {
                 _observer = observer;
@@ -58,6 +88,11 @@ namespace Akka.Cluster
                 _version = version;
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="obj">TBD</param>
+            /// <returns>TBD</returns>
             public override bool Equals(object obj)
             {
                 var other = obj as Record;
@@ -68,6 +103,10 @@ namespace Akka.Cluster
                        _subject.Equals(other._subject);
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <returns>TBD</returns>
             public override int GetHashCode()
             {
                 unchecked
@@ -81,39 +120,76 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public enum ReachabilityStatus
         {
+            /// <summary>
+            /// TBD
+            /// </summary>
             Reachable,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Unreachable,
+            /// <summary>
+            /// TBD
+            /// </summary>
             Terminated
         }
 
         readonly ImmutableList<Record> _records;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableList<Record> Records { get { return _records; } }
         readonly ImmutableDictionary<UniqueAddress, long> _versions;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableDictionary<UniqueAddress, long> Versions { get { return _versions; } }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         class Cache
         {
             readonly ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>>
                 _observerRowsMap;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>> ObserverRowMap
             {
                 get { return _observerRowsMap; }
             }
 
             readonly ImmutableHashSet<UniqueAddress> _allTerminated;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableHashSet<UniqueAddress> AllTerminated { get { return _allTerminated; } }
 
             readonly ImmutableHashSet<UniqueAddress> _allUnreachable;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableHashSet<UniqueAddress> AllUnreachable { get { return _allUnreachable; } }
 
             readonly ImmutableHashSet<UniqueAddress> _allUnreachableOrTerminated;
+            /// <summary>
+            /// TBD
+            /// </summary>
             public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated
             {
                 get { return _allUnreachableOrTerminated; }
             }
 
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="records">TBD</param>
             public Cache(ImmutableList<Record> records)
             {
                 if (records.IsEmpty)
@@ -133,7 +209,7 @@ namespace Akka.Cluster
                         ImmutableDictionary<UniqueAddress, Record> m;
                         if(mapBuilder.TryGetValue(r.Observer, out m))
                         {
-                            m = m.SetItem(r.Subject, r);                            
+                            m = m.SetItem(r.Subject, r);
                         }
                         else
                         {
@@ -168,16 +244,34 @@ namespace Akka.Cluster
             return observerRows;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="observer">TBD</param>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public Reachability Unreachable(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Unreachable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="observer">TBD</param>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public Reachability Reachable(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Reachable);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="observer">TBD</param>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public Reachability Terminated(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Terminated);
@@ -225,6 +319,12 @@ namespace Akka.Cluster
             return new Reachability(newRecords, newVersions);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="allowed">TBD</param>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public Reachability Merge(IEnumerable<UniqueAddress> allowed, Reachability other)
         {
             var recordBuilder = ImmutableList.CreateBuilder<Record>();
@@ -266,15 +366,44 @@ namespace Akka.Cluster
             return new Reachability(recordBuilder.ToImmutable(), newVersions);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nodes">TBD</param>
+        /// <returns>TBD</returns>
         public Reachability Remove(IEnumerable<UniqueAddress> nodes)
         {
-            var newRecords = _records.FindAll(r => !nodes.Contains(r.Observer) && !nodes.Contains(r.Subject));
-            if (newRecords.Count == _records.Count) return this;
- 
+            var nodesSet = nodes.ToImmutableHashSet();
+            var newRecords = _records.FindAll(r => !nodesSet.Contains(r.Observer) && !nodesSet.Contains(r.Subject));
             var newVersions = _versions.RemoveRange(nodes);
             return new Reachability(newRecords, newVersions);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="nodes">TBD</param>
+        /// <returns>TBD</returns>
+        public Reachability RemoveObservers(ImmutableHashSet<UniqueAddress> nodes)
+        {
+            if (nodes.Count == 0)
+            {
+                return this;
+            }
+            else
+            {
+                var newRecords = _records.FindAll(r => !nodes.Contains(r.Observer));
+                var newVersions = _versions.RemoveRange(nodes);
+                return new Reachability(newRecords, newVersions);
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="observer">TBD</param>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public ReachabilityStatus Status(UniqueAddress observer, UniqueAddress subject)
         {
             var observerRows = ObserverRows(observer);
@@ -285,6 +414,11 @@ namespace Akka.Cluster
             return record.Status;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public ReachabilityStatus Status(UniqueAddress node)
         {
             if (_cache.Value.AllTerminated.Contains(node)) return ReachabilityStatus.Terminated;
@@ -292,11 +426,22 @@ namespace Akka.Cluster
             return ReachabilityStatus.Reachable;
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="node">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsReachable(UniqueAddress node)
         {
             return IsAllReachable || !AllUnreachableOrTerminated.Contains(node);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="observer">TBD</param>
+        /// <param name="subject">TBD</param>
+        /// <returns>TBD</returns>
         public bool IsReachable(UniqueAddress observer, UniqueAddress subject)
         {
             return Status(observer, subject) == ReachabilityStatus.Reachable;
@@ -307,6 +452,9 @@ namespace Akka.Cluster
             status(observer, subject) == Reachable
          */
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public bool IsAllReachable
         {
             get { return _records.IsEmpty; } 
@@ -320,11 +468,19 @@ namespace Akka.Cluster
             get { return _cache.Value.AllUnreachable; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated
         {
             get { return _cache.Value.AllUnreachableOrTerminated; }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="observer">TBD</param>
+        /// <returns>TBD</returns>
         public ImmutableHashSet<UniqueAddress> AllUnreachableFrom(UniqueAddress observer)
         {
             var observerRows = ObserverRows(observer);
@@ -334,6 +490,9 @@ namespace Akka.Cluster
                     observerRows.Where(p => p.Value.Status == ReachabilityStatus.Unreachable).Select(p => p.Key));
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableDictionary<UniqueAddress, ImmutableHashSet<UniqueAddress>> ObserversGroupedByUnreachable
         {
             get
@@ -353,11 +512,19 @@ namespace Akka.Cluster
             }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
         public ImmutableHashSet<UniqueAddress> AllObservers
         {
             get { return ImmutableHashSet.CreateRange(_versions.Keys); }
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="observer">TBD</param>
+        /// <returns>TBD</returns>
         public ImmutableList<Record> RecordsFrom(UniqueAddress observer)
         {
             var rows = ObserverRows(observer);
@@ -365,11 +532,20 @@ namespace Akka.Cluster
             return rows.Values.ToImmutableList();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             return _versions.GetHashCode();
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj)
         {
             var other = obj as Reachability;
@@ -379,23 +555,25 @@ namespace Akka.Cluster
                 _cache.Value.ObserverRowMap.Equals(other._cache.Value.ObserverRowMap);
         }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
-            var builder = new StringBuilder();
+            var builder = new StringBuilder("Reachability(");
 
             foreach (var observer in _versions.Keys)
             {
                 var rows = ObserverRows(observer);
-                if(rows == null) continue;
-                foreach(var row in rows)
-                {
-                    //TODO: ", " is wrong
-                    builder.Append(String.Format("{0} -> {1}: {2} [{3}] ({4}), ", observer.Address, row.Key, row.Value.Status,
-                        Status(row.Key), row.Value.Version));
-                }
+                if (rows == null) continue;
+
+                builder.AppendJoin(", ", rows, (b, row, index) =>
+                    b.AppendFormat("[{0} -> {1}: {2} [{3}] ({4})]",
+                        observer.Address, row.Key, row.Value.Status, Status(row.Key), row.Value.Version));
             }
 
-            return builder.ToString();
+            return builder.Append(')').ToString();
         }
     }
 }
