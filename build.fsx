@@ -7,12 +7,15 @@ open System.Text
 
 open Fake
 open Fake.DotNetCli
+open Fake.FileUtils
+open Fake.EnvironmentHelper
 
 // Variables
 let configuration = "Release"
 
 // Directories
 let output = __SOURCE_DIRECTORY__  @@ "build"
+let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
 let outputTests = output @@ "tests"
 let outputPerfTests = output @@ "perf"
 let outputBinaries = output @@ "binaries"
@@ -123,6 +126,60 @@ Target "MultiNodeTests" (fun _ ->
     
     multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
+
+//--------------------------------------------------------------------------------
+// NBench targets 
+//--------------------------------------------------------------------------------
+
+// Filter out assemblies which can't run on Linux, Mono, .NET Core, etc...
+let filterPlatformSpecificAssemblies (assembly:string) =
+    match assembly with
+    | assembly when (assembly.Contains("Sqlite") && isMono) -> false
+    | assembly when (assembly.Contains(".API") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Remote.TestKit.Tests") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Persistence.TestKit.Tests") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Streams.Tests.TCK") && isMono) -> false
+    | _ -> true
+
+Target "CleanPerf" <| fun _ ->
+    DeleteDir outputPerfTests
+
+Target "NBench" <| fun _ ->
+    // .NET Framework
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/**/*%s*.Tests.Performance.dll" assemblyFilter
+
+    mkdir outputPerfTests
+
+    let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
+    let nbenchTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! testSearchPath)
+    printfn "Using NBench.Runner: %s" nbenchTestPath
+
+    let runNBench assembly =
+        let spec = getBuildParam "spec"
+        let teamcityStr = (getBuildParam "teamcity")
+        let enableTeamCity = 
+            match teamcityStr with
+            | null -> false
+            | "" -> false
+            | _ -> bool.Parse teamcityStr
+
+        let args = new StringBuilder()
+                |> append assembly
+                |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
+                |> append (sprintf "concurrent=\"%b\"" true)
+                |> append (sprintf "trace=\"%b\"" true)
+                |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
+                |> toText
+
+        let result = ExecProcess(fun info -> 
+            info.FileName <- nbenchTestPath
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
+        if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
+    
+    nbenchTestAssemblies |> Seq.iter (runNBench)
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -281,6 +338,9 @@ Target "Nuget" DoNothing
 // tests dependencies
 "Clean" ==> "RestorePackages" ==> "RunTests"
 
+// NBench dependencies
+"CleanPerf" ==> "NBench"
+
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
 "CreateNuget" ==> "PublishNuget"
@@ -288,5 +348,8 @@ Target "Nuget" DoNothing
 
 // all
 "BuildRelease" ==> "All"
+"RunTests" ==> "All"
+"MultiNodeTests" ==> "All"
+"NBench" ==> "All"
 
 RunTargetOrDefault "Help"

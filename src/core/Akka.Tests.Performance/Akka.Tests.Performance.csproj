@@ -13,11 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBench" Version="0.3.4" />
-    <PackageReference Include="NBench.PerformanceCounters" Version="0.3.4" />
+    <PackageReference Include="NBench" Version="1.0.1" />
+    
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <Reference Include="System.Configuration" />
     <Reference Include="System.Xml" />
   </ItemGroup>
