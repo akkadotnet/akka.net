@@ -168,7 +168,7 @@ namespace Akka.Streams.Implementation.IO
                     }
 
                     _readBytesTotal += readBytes;
-                    var newChunks = chunks.Add(ByteString.Create(_buffer, 0, readBytes));
+                    var newChunks = chunks.Add(ByteString.CopyFrom(_buffer, 0, readBytes));
                     return ReadAhead(maxChunks, newChunks);
                 }
                 catch (Exception ex)

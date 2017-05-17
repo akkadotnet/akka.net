@@ -54,6 +54,7 @@ namespace Akka.IO
             {
                 _log.Debug("Resolution request for {0} from {1}", r.Name, Sender);
                 _resolver.Forward(r);
+                return true;
             }
             if (message is CacheCleanup)
             {

@@ -234,16 +234,18 @@
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
+    <Compile Include="IO\Buffers\BufferPool.cs" />
+    <Compile Include="IO\TcpSettings.cs" />
+    <Compile Include="IO\UdpSettings.cs" />
     <Compile Include="Pattern\BackoffOnRestartSupervisor.cs" />
     <Compile Include="Pattern\BackoffOptions.cs" />
-    <Compile Include="Pattern\BackoffSupervisor.cs" />
-    <Compile Include="IO\DatagramChannel.cs" />
     <Compile Include="IO\Dns.cs" />
     <Compile Include="IO\DnsProvider.cs" />
     <Compile Include="IO\InetAddressDnsProvider.cs" />
     <Compile Include="IO\InetAddressDnsResolver.cs" />
     <Compile Include="IO\SimpleDnsCache.cs" />
     <Compile Include="IO\SimpleDnsManager.cs" />
+    <Compile Include="IO\IPExtensions.cs" />
     <Compile Include="IO\Udp.cs" />
     <Compile Include="IO\UdpConnected.cs" />
     <Compile Include="IO\UdpConnectedManager.cs" />
@@ -253,19 +255,16 @@
     <Compile Include="IO\UdpSender.cs" />
     <Compile Include="IO\WithUdpSend.cs" />
     <Compile Include="Pattern\BackoffSupervisorBase.cs" />
+    <Compile Include="Pattern\BackoffSupervisor.cs" />
     <Compile Include="Pattern\CircuitBreaker.cs" />
     <Compile Include="Pattern\CircuitBreakerState.cs" />
     <Compile Include="Pattern\FutureTimeoutSupport.cs" />
     <Compile Include="Pattern\OpenCircuitException.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
-    <Compile Include="IO\ByteBuffer.cs" />
-    <Compile Include="IO\DirectByteBufferPool.cs" />
+    <Compile Include="IO\SocketEventArgsPool.cs" />
     <Compile Include="IO\Inet.cs" />
     <Compile Include="IO\IO.cs" />
-    <Compile Include="IO\SelectionHandler.cs" />
-    <Compile Include="IO\SocketAsyncEventArgsPool.cs" />
-    <Compile Include="IO\SocketChannel.cs" />
     <Compile Include="IO\Tcp.cs" />
     <Compile Include="IO\TcpConnection.cs" />
     <Compile Include="IO\TcpIncomingConnection.cs" />
@@ -273,7 +272,7 @@
     <Compile Include="IO\TcpManager.cs" />
     <Compile Include="IO\TcpOutgoingConnection.cs" />
     <Compile Include="NotUsed.cs" />
-    <Compile Include="Util\ByteIterator.cs" />
+    <Compile Include="Util\ByteHelpers.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
     <Compile Include="Util\FastLazy.cs" />
@@ -398,6 +397,7 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

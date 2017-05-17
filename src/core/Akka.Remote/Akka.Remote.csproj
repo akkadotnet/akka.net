@@ -145,7 +145,6 @@
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
-    <Compile Include="IPExtensions.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\DotNetty\AkkaLoggingHandler.cs" />
     <Compile Include="Transport\DotNetty\DotNettyTransportSettings.cs" />
