@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System.Net.Sockets;
 
 namespace Akka.IO
@@ -232,4 +232,3 @@ namespace Akka.IO
         }
     }
 }
-#endif

@@ -56,8 +56,8 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="SomeActor.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    
+    
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">

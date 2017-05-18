@@ -68,8 +68,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="WireTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    
+    
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj">

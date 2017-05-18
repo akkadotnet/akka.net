@@ -44,8 +44,8 @@
     <Compile Include="..\..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="WireSerializer.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    
+    
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Serialization.Wire.nuspec" />

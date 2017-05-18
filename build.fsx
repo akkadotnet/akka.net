@@ -9,7 +9,6 @@ open Fake
 open Fake.DotNetCli
 
 // Variables
-let configuration = "Release"
 let product = "Akka.NET"
 let authors = [ "Akka.NET Team" ]
 let copyright = "Copyright © 2013-2017 Akka.NET Team"

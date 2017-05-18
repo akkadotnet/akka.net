@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Linq;
 using System.Net;
@@ -128,7 +128,7 @@ namespace Akka.IO
             {
                 Log.Debug("Closing UDP connection to [{0}]", _connect.RemoteAddress);
 
-                _socket.Close();
+                _socket.Dispose();
 
                 Sender.Tell(Disconnected.Instance);
                 Log.Debug("Connection closed to [{0}], stopping listener", _connect.RemoteAddress);
@@ -245,4 +245,3 @@ namespace Akka.IO
         }
     }
 }
-#endif

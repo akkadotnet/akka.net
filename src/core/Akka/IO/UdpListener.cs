@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Linq;
 using System.Net.Sockets;
@@ -107,7 +107,7 @@ namespace Akka.IO
                 Log.Debug("Unbinding endpoint [{0}]", _bind.LocalAddress);
                 try
                 {
-                    Socket.Close();
+                    Socket.Dispose();
                     Sender.Tell(Unbound.Instance);
                     Log.Debug("Unbound endpoint [{0}], stopping listener", _bind.LocalAddress);
                 }
@@ -145,7 +145,7 @@ namespace Akka.IO
                 Log.Debug("Closing DatagramChannel after being stopped");
                 try
                 {
-                    Socket.Close();
+                    Socket.Dispose();
                 }
                 catch (Exception e)
                 {
@@ -165,4 +165,3 @@ namespace Akka.IO
         }
     }
 }
-#endif

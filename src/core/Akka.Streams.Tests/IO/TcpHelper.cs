@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -342,4 +342,3 @@ namespace Akka.Streams.Tests.IO
     }
 
 }
-#endif

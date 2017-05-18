@@ -14,10 +14,6 @@ namespace Akka.IO.Buffers
         public BufferPoolAllocationException(string message) : base(message)
         {
         }
-
-        public BufferPoolAllocationException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 
     /// <summary>

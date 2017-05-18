@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -544,4 +544,3 @@ namespace Akka.Streams.Implementation.IO
         public override bool CanWrite => false;
     }
 }
-#endif

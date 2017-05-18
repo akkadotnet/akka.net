@@ -44,11 +44,11 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BackendActor.cs" />
-    <Compile Include="FrontendActor.cs" />
-    <Compile Include="Messages.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    
+    
+    
+    
+    
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

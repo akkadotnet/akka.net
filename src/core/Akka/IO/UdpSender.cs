@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -81,7 +81,7 @@ namespace Akka.IO
             _log.Debug("Closing Socket after being stopped");
             try
             {
-                Socket.Close();
+                Socket.Dispose();
             }
             catch (Exception e)
             {
@@ -90,4 +90,3 @@ namespace Akka.IO
         }
     }
 }
-#endif

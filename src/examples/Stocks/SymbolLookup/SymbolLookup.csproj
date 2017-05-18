@@ -78,21 +78,21 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Actors\DispatcherActor.cs" />
-    <Compile Include="Actors\Messages\CompletedHeadlinesDownload.cs" />
-    <Compile Include="Actors\Messages\CompletedStockQuoteDownload.cs" />
-    <Compile Include="Actors\Messages\DownloadSymbolData.cs" />
-    <Compile Include="Actors\Messages\Failure.cs" />
-    <Compile Include="Actors\Messages\FullStockData.cs" />
-    <Compile Include="Actors\TickerActors.cs" />
+    
+    
+    
+    
+    
+    
+    
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="MainForm.Designer.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="YahooFinance\StockQuoteModels.cs" />
-    <Compile Include="YahooFinance\StockUriHelper.cs" />
+    
+    
+    
+    
+    
     <EmbeddedResource Include="MainForm.resx" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

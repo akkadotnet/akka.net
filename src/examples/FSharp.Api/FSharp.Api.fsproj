@@ -77,10 +77,10 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
-    <Compile Include="MapReduce.fs" />
-    <Compile Include="Greeter.fs" />
-    <Compile Include="Supervisioning.fs" />
-    <Compile Include="Program.fs" />
+    
+    
+    
+    
     <None Include="App.config" />
     <Content Include="packages.config" />
   </ItemGroup>
