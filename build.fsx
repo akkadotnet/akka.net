@@ -12,6 +12,7 @@ open Fake.DotNetCli
 let configuration = "Release"
 
 // Directories
+let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
 let output = __SOURCE_DIRECTORY__  @@ "bin"
 let outputTests = output @@ "tests"
 let outputPerfTests = output @@ "perf"
@@ -125,6 +126,42 @@ Target "MultiNodeTests" (fun _ ->
     
     multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
+
+Target "NBench" <| fun _ ->
+    CleanDir outputPerfTests
+    // .NET Framework
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/**/*%s*.Tests.Performance.dll" assemblyFilter
+
+    let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
+    let nbenchTestAssemblies = !! testSearchPath
+    printfn "Using NBench.Runner: %s" nbenchTestPath
+
+    let runNBench assembly =
+        let spec = getBuildParam "spec"
+        let teamcityStr = (getBuildParam "teamcity")
+        let enableTeamCity = 
+            match teamcityStr with
+            | null -> false
+            | "" -> false
+            | _ -> bool.Parse teamcityStr
+
+        let args = new StringBuilder()
+                |> append assembly
+                |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
+                |> append (sprintf "concurrent=\"%b\"" true)
+                |> append (sprintf "trace=\"%b\"" true)
+                |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
+                |> toText
+
+        let result = ExecProcess(fun info -> 
+            info.FileName <- nbenchTestPath
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
+        if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
+    
+    nbenchTestAssemblies |> Seq.iter (runNBench)
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -294,5 +331,8 @@ Target "Nuget" DoNothing
 
 // all
 "BuildRelease" ==> "All"
+"RunTests" ==> "All"
+"MultiNodeTests" ==> "All"
+"NBench" ==> "All"
 
 RunTargetOrDefault "Help"
