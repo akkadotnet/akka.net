@@ -70,7 +70,6 @@ Target "RunTests" (fun _ ->
         // Windows
         | true -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Streams.Tests.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
@@ -79,7 +78,6 @@ Target "RunTests" (fun _ ->
         | _ -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Streams.Tests.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
                   -- "./**/Akka.Persistence.Tests.csproj"
@@ -91,7 +89,7 @@ Target "RunTests" (fun _ ->
             (fun p -> 
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
-                    TimeOut = TimeSpan.FromMinutes 10. })
+                    TimeOut = TimeSpan.FromMinutes 60. })
                 (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     CreateDir outputTests
