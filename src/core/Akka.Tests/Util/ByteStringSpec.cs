@@ -4,6 +4,8 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Text;
 using Akka.IO;
@@ -24,7 +26,7 @@ namespace Akka.Tests.Util
             // TODO: Align with JVM Akka Generator
             public static Arbitrary<ByteString> ByteStrings()
             {
-                return Arb.From(Arb.Generate<byte[]>().Select(ByteString.Create));
+                return Arb.From(Arb.Generate<byte[]>().Select(ByteString.CopyFrom));
             }
         }
 
@@ -41,22 +43,22 @@ namespace Akka.Tests.Util
         }
 
         [Fact]
-        public void A_ByteString_must_have_correct_size_when_dropping()
+        public void A_ByteString_must_have_correct_size_when_slicing_from_index()
         {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Drop(b.Count).Count == a.Count)
+            Prop.ForAll((ByteString a, ByteString b) => (a + b).Slice(b.Count).Count == a.Count)
                 .QuickCheckThrowOnFailure();
         }
 
         [Fact]
-        public void A_ByteString_must_be_sequential_when_taking()
+        public void A_ByteString_must_be_sequential_when_slicing_from_start()
         {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Take(a.Count).SequenceEqual(a))
+            Prop.ForAll((ByteString a, ByteString b) => (a + b).Slice(0, a.Count).SequenceEqual(a))
                 .QuickCheckThrowOnFailure();
         }
         [Fact]
-        public void A_ByteString_must_be_sequential_when_dropping()
+        public void A_ByteString_must_be_sequential_when_slicing_from_index()
         {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Drop(a.Count).SequenceEqual(b))
+            Prop.ForAll((ByteString a, ByteString b) => (a + b).Slice(a.Count).SequenceEqual(b))
                 .QuickCheckThrowOnFailure();
         }
 
@@ -66,24 +68,27 @@ namespace Akka.Tests.Util
             Prop.ForAll((ByteString xs) =>
             {
                 var ys = xs.Compact();
-                return xs.SequenceEqual(ys) && ys.IsCompact();
+                return xs.SequenceEqual(ys) && ys.IsCompact;
             }).QuickCheckThrowOnFailure();
         }
+
         [Fact]
         public void A_ByteString_must_be_equal_to_the_original_when_recombining()
         {
-            Prop.ForAll((ByteString xs, int from, int until) =>
+            Prop.ForAll((ByteString xs, int until) =>
             {
-                var tmp1 = xs.SplitAt(until);
-                var tmp2 = tmp1.Item1.SplitAt(until);
-                return (tmp2.Item1 + tmp2.Item2 + tmp1.Item2).SequenceEqual(xs);
+                var tmp1 = xs.Slice(0, until);
+                var tmp2 = xs.Slice(until);
+                var tmp11 = tmp1.Slice(0, until);
+                var tmp12 = tmp1.Slice(until);
+                return (tmp11 + tmp12 + tmp2).SequenceEqual(xs);
             }).QuickCheckThrowOnFailure();
         }
 
         [Fact]
         public void A_ByteString_must_behave_as_expected_when_created_from_and_decoding_to_String()
         {
-            Prop.ForAll((string s) => ByteString.FromString(s, Encoding.UTF8).DecodeString(Encoding.UTF8) == (s ?? "")) // TODO: What should we do with null string?
+            Prop.ForAll((string s) => ByteString.FromString(s, Encoding.UTF8).ToString(Encoding.UTF8) == (s ?? "")) // TODO: What should we do with null string?
                 .QuickCheckThrowOnFailure();
         }
 
@@ -92,11 +97,11 @@ namespace Akka.Tests.Util
         {
             Prop.ForAll((ByteString a) =>
             {
-                var wasCompact = a.IsCompact();
+                var wasCompact = a.IsCompact;
                 var b = a.Compact();
                 return ((!wasCompact) || (b == a)) &&
                        b.SequenceEqual(a) &&
-                       b.IsCompact() &&
+                       b.IsCompact &&
                        b.Compact() == b;
             }).QuickCheckThrowOnFailure();
         }
@@ -104,7 +109,7 @@ namespace Akka.Tests.Util
         [Fact(DisplayName = @"A concatenated byte string should return the index of a byte in one the two byte strings.")]
         public void A_concatenated_bytestring_must_return_correct_index_of_elements_in_string()
         {
-            var b = ByteString.Create(new byte[] { 1 }) + ByteString.Create(new byte[] { 2 });
+            var b = ByteString.FromBytes(new byte[] { 1 }) + ByteString.FromBytes(new byte[] { 2 });
             int offset = b.IndexOf(2);
 
             Assert.Equal(1, offset);
@@ -113,7 +118,7 @@ namespace Akka.Tests.Util
         [Fact(DisplayName = @"A concatenated byte string should return -1 when it was not found in the concatenated byte strings")]
         public void A_concatenated_bytestring_must_return_negative_one_when_an_element_was_not_found()
         {
-            var b = ByteString.Create(new byte[] { 1 }) + ByteString.Create(new byte[] { 2 });
+            var b = ByteString.FromBytes(new byte[] { 1 }) + ByteString.FromBytes(new byte[] { 2 });
             int offset = b.IndexOf(3);
 
             Assert.Equal(-1, offset);

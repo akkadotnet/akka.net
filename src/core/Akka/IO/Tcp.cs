@@ -4,16 +4,20 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
+using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.IO.Buffers;
 
 namespace Akka.IO
 {
@@ -26,6 +30,7 @@ namespace Akka.IO
         /// TBD
         /// </summary>
         public static readonly Tcp Instance = new Tcp();
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -46,26 +51,55 @@ namespace Akka.IO
             return new TcpExt(system);
         }
 
+        #region internal connection messages
+        
+        internal abstract class SocketCompleted { }
+
+        internal sealed class SocketSent : SocketCompleted
+        {
+            public static readonly SocketSent Instance = new SocketSent();
+            private SocketSent() { }
+        }
+
+        internal sealed class SocketReceived : SocketCompleted
+        {
+            public static readonly SocketReceived Instance = new SocketReceived();
+            private SocketReceived() { }
+        }
+
+        internal sealed class SocketAccepted : SocketCompleted
+        {
+            public static readonly SocketAccepted Instance = new SocketAccepted();
+            private SocketAccepted() { }
+        }
+
+        internal sealed class SocketConnected : SocketCompleted
+        {
+            public static readonly SocketConnected Instance = new SocketConnected();
+            private SocketConnected() { }
+        }
+
+        #endregion
+
         /// <summary>
         /// TBD
         /// </summary>
-        public class Message : INoSerializationVerificationNeeded
-        {
+        public class Message : INoSerializationVerificationNeeded { }
 
-        }
-
+        #region user commands
+        
         // COMMANDS
         /// <summary>
         /// TBD
         /// </summary>
-        public class Command : Message, SelectionHandler.IHasFailureMessage
+        public abstract class Command : Message
         {
             private readonly CommandFailed _failureMessage;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Command()
+            protected Command()
             {
                 _failureMessage = new CommandFailed(this);
             }
@@ -73,15 +107,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public CommandFailed FailureMessage
-            {
-                get { return _failureMessage; }
-            }
-
-            object SelectionHandler.IHasFailureMessage.FailureMessage
-            {
-                get { return _failureMessage; }
-            }
+            public CommandFailed FailureMessage => _failureMessage;
         }
 
         /// <summary>
@@ -116,23 +142,26 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint RemoteAddress { get; private set; }
+            public EndPoint RemoteAddress { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint LocalAddress { get; private set; }
+            public EndPoint LocalAddress { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerable<Inet.SocketOption> Options { get; private set; }
+            public IEnumerable<Inet.SocketOption> Options { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public TimeSpan? Timeout { get; private set; }
+            public TimeSpan? Timeout { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public bool PullMode { get; private set; }
+            public bool PullMode { get; }
+
+            public override string ToString() =>
+                $"Connect(remote: {RemoteAddress}, local: {LocalAddress}, timeout: {Timeout}, pullMode: {PullMode})";
         }
 
         /// <summary>
@@ -169,23 +198,26 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Handler { get; set; }
+            public IActorRef Handler { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint LocalAddress { get; set; }
+            public EndPoint LocalAddress { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public int Backlog { get; set; }
+            public int Backlog { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerable<Inet.SocketOption> Options { get; set; }
+            public IEnumerable<Inet.SocketOption> Options { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public bool PullMode { get; set; }
+            public bool PullMode { get; }
+
+            public override string ToString() =>
+                $"Bind(addr: {LocalAddress}, handler: {Handler}, backlog: {Backlog}, pullMode: {PullMode})";
         }
 
         /// <summary>
@@ -200,27 +232,30 @@ namespace Akka.IO
             /// TBD
             /// </summary>
             /// <param name="handler">TBD</param>
-            /// <param name="keepOpenonPeerClosed">TBD</param>
+            /// <param name="keepOpenOnPeerClosed">TBD</param>
             /// <param name="useResumeWriting">TBD</param>
-            public Register(IActorRef handler, bool keepOpenonPeerClosed = false, bool useResumeWriting = true)
+            public Register(IActorRef handler, bool keepOpenOnPeerClosed = false, bool useResumeWriting = true)
             {
                 Handler = handler;
-                KeepOpenonPeerClosed = keepOpenonPeerClosed;
+                KeepOpenOnPeerClosed = keepOpenOnPeerClosed;
                 UseResumeWriting = useResumeWriting;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Handler { get; private set; }
+            public IActorRef Handler { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public bool KeepOpenonPeerClosed { get; private set; }
+            public bool KeepOpenOnPeerClosed { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public bool UseResumeWriting { get; private set; }
+            public bool UseResumeWriting { get; }
+
+            public override string ToString() =>
+                $"Register(handler: {Handler}, keepOpenOnPeerClosed: {KeepOpenOnPeerClosed}, resumeWriting: {UseResumeWriting})";
         }
 
         /// <summary>
@@ -270,10 +305,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public override ConnectionClosed Event
-            {
-                get { return Closed.Instance; }
-            }
+            public override ConnectionClosed Event => Closed.Instance;
         }
 
         /// <summary>
@@ -296,10 +328,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public override ConnectionClosed Event
-            {
-                get { return ConfirmedClosed.Instance; }
-            }
+            public override ConnectionClosed Event => ConfirmedClosed.Instance;
         }
 
         /// <summary>
@@ -323,10 +352,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public override ConnectionClosed Event
-            {
-                get { return Aborted.Instance; }
-            }
+            public override ConnectionClosed Event => Aborted.Instance;
         }
 
         /// <summary>
@@ -354,7 +380,10 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public object Token { get; private set; }
+            public object Token { get; }
+
+            public override string ToString() =>
+                $"NoAck({Token})";
         }
 
         /// <summary>
@@ -410,7 +439,7 @@ namespace Akka.IO
             /// <returns>TBD</returns>
             public static WriteCommand Create(params WriteCommand[] writes)
             {
-                return Create((IEnumerable<WriteCommand>) writes);
+                return Create((IEnumerable<WriteCommand>)writes);
             }
         }
 
@@ -427,10 +456,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public bool WantsAck
-            {
-                get { return !(Ack is NoAck); }
-            }
+            public bool WantsAck => !(Ack is NoAck);
 
             /// <summary>
             /// TBD
@@ -455,25 +481,29 @@ namespace Akka.IO
         /// </summary>
         public class Write : SimpleWriteCommand
         {
-            private readonly Event _ack;
             /// <summary>
             /// TBD
             /// </summary>
-            public ByteString Data { get; private set; }
+            public static readonly Write Empty = new Write(ByteString.Empty, NoAck.Instance);
 
             /// <summary>
             /// TBD
             /// </summary>
-            public override Event Ack
-            {
-                get { return _ack; }
-            }
+            public ByteString Data { get; }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public override Event Ack { get; }
 
             private Write(ByteString data, Event ack)
             {
-                _ack = ack;
+                Ack = ack;
                 Data = data;
             }
+
+            public override string ToString() =>
+                $"Write(bytes: {Data.Count}, ack: {Ack})";
 
             /// <summary>
             /// TBD
@@ -495,13 +525,9 @@ namespace Akka.IO
             {
                 return new Write(data, ack);
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static readonly Write Empty = new Write(ByteString.Empty, NoAck.Instance);
         }
 
+        /*
         /// <summary>
         /// Write `count` bytes starting at `position` from file at `filePath` to the connection.
         /// The count must be &gt; 0. The connection actor will reply with a <see cref="CommandFailed"/>
@@ -538,25 +564,25 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public string FilePath { get; private set; }
+            public string FilePath { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public long Position { get; private set; }
+            public long Position { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public long Count { get; private set; }
+            public long Count { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public override Event Ack
-            {
-                get { return _ack; }
-            }
+            public override Event Ack => _ack;
+
+            public override string ToString() =>
+                $"WriteFile(path: {FilePath}, position: {Position}, count: {Count}, ack: {Ack})";
         }
-
+        */
         /// <summary>
         /// A write command which aggregates two other write commands. Using this construct
         /// you can chain a number of <see cref="Akka.IO.Tcp.Write" /> and/or <see cref="Akka.IO.Tcp.WriteFile" /> commands together in a way
@@ -619,18 +645,15 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public SimpleWriteCommand Head
-            {
-                get { return _head; }
-            }
+            public SimpleWriteCommand Head => _head;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public WriteCommand TailCommand
-            {
-                get { return _tailCommand; }
-            }
+            public WriteCommand TailCommand => _tailCommand;
+
+            public override string ToString() =>
+                $"CompoundWrite({Head}, {TailCommand})";
         }
 
         /// <summary>
@@ -690,7 +713,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public int BatchSize { get; private set; }
+            public int BatchSize { get; }
 
             /// <summary>
             /// TBD
@@ -700,10 +723,15 @@ namespace Akka.IO
             {
                 BatchSize = batchSize;
             }
+
+            public override string ToString() =>
+                $"ResumeAccepting(batchSize: {BatchSize})";
         }
 
-        // EVENTS
+        #endregion
 
+        #region user events
+        
         /// <summary>
         /// Common interface for all events generated by the TCP layer actors.
         /// </summary>
@@ -730,7 +758,10 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public ByteString Data { get; private set; }
+            public ByteString Data { get; }
+
+            public override string ToString() =>
+                $"Received(bytes: {Data.Count})";
         }
 
         /// <summary>
@@ -755,11 +786,14 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint RemoteAddress { get; private set; }
+            public EndPoint RemoteAddress { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint LocalAddress { get; private set; }
+            public EndPoint LocalAddress { get; }
+
+            public override string ToString() =>
+                $"Connected(local: {LocalAddress}, remote: {RemoteAddress})";
         }
 
         /// <summary>
@@ -780,7 +814,10 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public Command Cmd { get; private set; }
+            public Command Cmd { get; }
+
+            public override string ToString() =>
+                $"CommandFailed({Cmd})";
         }
 
         /// <summary>
@@ -808,7 +845,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint LocalAddress { get; private set; }
+            public EndPoint LocalAddress { get; }
 
             /// <summary>
             /// TBD
@@ -818,6 +855,9 @@ namespace Akka.IO
             {
                 LocalAddress = localAddress;
             }
+
+            public override string ToString() =>
+                $"Bound({LocalAddress})";
         }
 
         /// <summary>
@@ -841,42 +881,27 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public virtual bool IsAborted
-            {
-                get { return false; }
-            }
+            public virtual bool IsAborted => false;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public virtual bool IsConfirmed
-            {
-                get { return false; }
-            }
+            public virtual bool IsConfirmed => false;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public virtual bool IsPeerClosed
-            {
-                get { return false; }
-            }
+            public virtual bool IsPeerClosed => false;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public virtual bool IsErrorClosed
-            {
-                get { return false; }
-            }
+            public virtual bool IsErrorClosed => false;
 
             /// <summary>
             /// TBD
             /// </summary>
-            public virtual string GetErrorCause()
-            {
-                return null;
-            }
+            public virtual string Cause => null;
         }
 
         /// <summary>
@@ -911,10 +936,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public override bool IsAborted
-            {
-                get { return true; }
-            }
+            public override bool IsAborted => true;
         }
 
         /// <summary>
@@ -935,10 +957,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public override bool IsConfirmed
-            {
-                get { return true; }
-            }
+            public override bool IsConfirmed => true;
         }
 
         /// <summary>
@@ -958,184 +977,153 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public override bool IsPeerClosed
-            {
-                get { return true; }
-            }
+            public override bool IsPeerClosed => true;
         }
 
         /// <summary>
         /// The connection has been closed due to an IO error.
         /// </summary>
-        public class ErrorClosed : ConnectionClosed
+        public sealed class ErrorClosed : ConnectionClosed
         {
-            private readonly string _cause;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="cause">TBD</param>
             public ErrorClosed(string cause)
             {
-                _cause = cause;
+                Cause = cause;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public override bool IsErrorClosed
-            {
-                get { return true; }
-            }
+            public override bool IsErrorClosed => true;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <returns>TBD</returns>
-            public override string GetErrorCause()
+            public override string Cause { get; }
+
+            public override string ToString() =>
+                $"ErrorClosed('{Cause}')";
+        }
+
+        #endregion
+
+        private class ConnectionSupervisorStrategyImp : OneForOneStrategy
+        {
+            public ConnectionSupervisorStrategyImp()
+                : base(StoppingStrategy.Decider)
+            { }
+
+            protected override void LogFailure(IActorContext context, IActorRef child, Exception cause, Directive directive)
             {
-                return _cause;
+                if (cause is DeathPactException)
+                {
+                    try
+                    {
+                        context.System.EventStream.Publish(new Debug(child.Path.ToString(), GetType(), "Closed after handler termination"));
+                    }
+                    catch (Exception _) { }
+                }
+                else base.LogFailure(context, child, cause, directive);
             }
         }
+        public static readonly SupervisorStrategy ConnectionSupervisorStrategy = new ConnectionSupervisorStrategyImp();
+
     }
 
     /// <summary>
     /// TBD
     /// </summary>
-    public class TcpExt : IOExtension
+    public sealed class TcpExt : IOExtension
     {
-        private readonly TcpSettings _settings;
-        private readonly IActorRef _manager;
-        private readonly IBufferPool _bufferPool;
-        private readonly MessageDispatcher _fileIoDispatcher;
+        public TcpExt(ExtendedActorSystem system) : this(system, TcpSettings.Create(system)) { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public class TcpSettings : SelectionHandlerSettings
+        internal TcpExt(ExtendedActorSystem system, TcpSettings settings)
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="config">TBD</param>
-            public TcpSettings(Config config)
-                : base(config)
-            {
-                //TODO: requiring, check defaults
-                NrOfSelectors = config.GetInt("nr-of-selectors", 1);
-                BatchAcceptLimit = config.GetInt("batch-accept-limit");
-                DirectBufferSize = config.GetInt("direct-buffer-size");
-                MaxDirectBufferPoolSize = config.GetInt("direct-buffer-pool-limit");
-                RegisterTimeout = config.GetTimeSpan("register-timeout");
-                ReceivedMessageSizeLimit = config.GetString("max-received-message-size") == "unlimited"
-                    ? int.MaxValue
-                    : config.GetInt("max-received-message-size");
-                ManagementDispatcher = config.GetString("management-dispatcher");
-                FileIODispatcher = config.GetString("file-io-dispatcher");
-                TransferToLimit = config.GetString("file-io-transferTo-limit") == "unlimited"
-                    ? int.MaxValue
-                    : config.GetInt("file-io-transferTo-limit");
-                MaxChannelsPerSelector = MaxChannels == -1 ? -1 : Math.Max(MaxChannels/NrOfSelectors, 1);
-                FinishConnectRetries = config.GetInt("finish-connect-retries", 3);
-            }
+            var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
+            if (bufferPoolConfig == null)
+                throw new ArgumentNullException(nameof(settings), $"Couldn't find a HOCON config for `{settings.BufferPoolConfigPath}`");
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int NrOfSelectors { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int BatchAcceptLimit { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int DirectBufferSize { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int MaxDirectBufferPoolSize { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public TimeSpan? RegisterTimeout { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int ReceivedMessageSizeLimit { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public string ManagementDispatcher { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public string FileIODispatcher { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int TransferToLimit { get; set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int FinishConnectRetries { get; private set; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        public TcpExt(ExtendedActorSystem system)
-        {
-            _settings = new TcpSettings(system.Settings.Config.GetConfig("akka.io.tcp"));
-            _bufferPool = new DirectByteBufferPool(_settings.DirectBufferSize, _settings.MaxDirectBufferPoolSize);
-            //_fileIoDispatcher = system.Dispatchers.Lookup(_settings.FileIODispatcher);
-            _manager = system.SystemActorOf(
-                props: Props.Create(() => new TcpManager(this))
-                                            .WithDispatcher(_settings.ManagementDispatcher)
-                                            .WithDeploy(Deploy.Local),
+            Settings = settings;
+            FileIoDispatcher = system.Dispatchers.Lookup(Settings.FileIODispatcher);
+            BufferPool = CreateBufferPool(system, bufferPoolConfig);
+            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(settings.InitialSocketAsyncEventArgs, OnComplete);
+            Manager = system.SystemActorOf(
+                props: Props.Create(() => new TcpManager(this)).WithDispatcher(Settings.ManagementDispatcher).WithDeploy(Deploy.Local),
                 name: "IO-TCP");
         }
 
         /// <summary>
-        /// TBD
+        /// Gets reference to a TCP manager actor.
         /// </summary>
-        public override IActorRef Manager
-        {
-            get { return _manager; }
-        }
+        public override IActorRef Manager { get; }
+
+        /// <summary>
+        /// A buffer pool used by current plugin.
+        /// </summary>
+        public IBufferPool BufferPool { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        /// <returns>TBD</returns>
-        public IActorRef GetManager()
-        {
-            return _manager;
-        }
+        public TcpSettings Settings { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public TcpSettings Settings
-        {
-            get { return _settings; }
-        }
+        internal ISocketEventArgsPool SocketEventArgsPool { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal IBufferPool BufferPool
+        internal MessageDispatcher FileIoDispatcher { get; }
+
+        private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
         {
-            get { return _bufferPool; }
+            var type = Type.GetType(config.GetString("class"), true);
+
+            if (!typeof(IBufferPool).IsAssignableFrom(type))
+                throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");
+
+            try
+            {
+                // try to construct via `BufferPool(ExtendedActorSystem, Config)` ctor
+                return (IBufferPool)Activator.CreateInstance(type, system, config);
+            }
+            catch
+            {
+                // try to construct via `BufferPool(ExtendedActorSystem)` ctor
+                return (IBufferPool)Activator.CreateInstance(type, system);
+            }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal MessageDispatcher FileIoDispatcher
+        private static void OnComplete(object sender, SocketAsyncEventArgs e)
         {
-            get { return _fileIoDispatcher; }
+            var actorRef = e.UserToken as IActorRef;
+            actorRef?.Tell(ResolveMessage(e));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Tcp.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
+        {
+            switch (e.LastOperation)
+            {
+                case SocketAsyncOperation.Receive:
+                case SocketAsyncOperation.ReceiveFrom:
+                    return Tcp.SocketReceived.Instance;
+                case SocketAsyncOperation.Send:
+                case SocketAsyncOperation.SendTo:
+                    return Tcp.SocketSent.Instance;
+                case SocketAsyncOperation.Accept:
+                    return Tcp.SocketAccepted.Instance;
+                case SocketAsyncOperation.Connect:
+                    return Tcp.SocketConnected.Instance;
+                default:
+                    throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported");
+            }
         }
     }
 
@@ -1326,4 +1314,3 @@ namespace Akka.IO
         }
     }
 }
-#endif

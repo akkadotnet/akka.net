@@ -499,7 +499,7 @@ namespace Akka.Streams.Implementation.IO
             }
 
             Array.Copy(chunk.ToArray(), 0, buffer, offset, count);
-            _detachedChunk = chunk.Drop(count);
+            _detachedChunk = chunk.Slice(count);
             return gotBytes + count;
         }
 
