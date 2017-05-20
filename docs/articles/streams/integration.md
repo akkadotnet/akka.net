@@ -96,7 +96,8 @@ It completes with `Success(false)` if element was dropped. It can also complete 
 `StreamCallbackStatus.Failure` when stream failed or `StreamCallbackStatus.StreamCompleted` 
 when downstream is completed.
 
-When used from an actor you typically `pipe` the result of the `CompletionStage` back to the actor to continue processing.
+When used from an actor you typically `pipe` the result of the `CompletionStage` back to the actor 
+to continue processing.
 // NOT DONE
 
 ####Source.ActorRef
@@ -522,7 +523,7 @@ Please note that a factory is necessary to achieve reusability of the resulting 
 
 As described above any Akka Streams ``Source`` can be exposed as a Reactive Streams ``Publisher`` 
 and any ``Sink`` can be exposed as a Reactive Streams ``Subscriber``. Therefore we recommend that you 
-implement Reactive Streams integrations with built-in stages or custom stages.
+implement Reactive Streams integrations with built-in stages or [custom stages](customstreamprocessing.md).
 
 For historical reasons the `ActorPublisher` class and `ActorSubscriber` class traits are
 provided to support implementing Reactive Streams `Publisher` class and `Subscriber` class with
