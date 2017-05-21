@@ -10,9 +10,12 @@ open Fake.DotNetCli
 
 // Variables
 let configuration = "Release"
+let solution = "./src/Akka.sln"
+let versionSuffix = getBuildParamOrDefault "versionsuffix" ""
 
 // Directories
-let output = __SOURCE_DIRECTORY__  @@ "build"
+let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
+let output = __SOURCE_DIRECTORY__  @@ "bin"
 let outputTests = output @@ "tests"
 let outputPerfTests = output @@ "perf"
 let outputBinaries = output @@ "binaries"
@@ -36,17 +39,19 @@ Target "Clean" (fun _ ->
 )
 
 Target "RestorePackages" (fun _ ->
+    let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
+
     DotNetCli.Restore
         (fun p -> 
             { p with
-                Project = "./src/Akka.sln"
-                NoCache = false })
+                Project = solution
+                NoCache = false
+                AdditionalArgs = additionalArgs })
 )
 
 Target "Build" (fun _ ->
     let projects = !! "./**/core/**/*.csproj"
                    ++ "./**/contrib/**/*.csproj"
-                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                    -- "./**/serializers/**/*Wire*.csproj"
 
     let runSingleProject project =
@@ -93,6 +98,7 @@ Target "RunTests" (fun _ ->
                     TimeOut = TimeSpan.FromMinutes 10. })
                 (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
+    CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
 )
 
@@ -101,14 +107,15 @@ Target "MultiNodeTests" (fun _ ->
     let multiNodeTestAssemblies = !! "src/**/bin/Release/**/Akka.Remote.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/**/Akka.Cluster.Tests.MultiNode.dll" ++
                                      "src/**/bin/Release/**/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Sharding.Tests.MultiNode.dll"
+                                     "src/**/bin/Release/**/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/Akka.DistributedData.Tests.MultiNode.dll"
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
     let runMultiNodeSpec assembly =
         let spec = getBuildParam "spec"
 
-        let args = new StringBuilder()
+        let args = StringBuilder()
                 |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
                 |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
@@ -124,24 +131,61 @@ Target "MultiNodeTests" (fun _ ->
     multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
 
+Target "NBench" <| fun _ ->
+    CleanDir outputPerfTests
+    // .NET Framework
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/**/*%s*.Tests.Performance.dll" assemblyFilter
+
+    let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
+    let nbenchTestAssemblies = !! testSearchPath
+    printfn "Using NBench.Runner: %s" nbenchTestPath
+
+    let runNBench assembly =
+        let spec = getBuildParam "spec"
+        let teamcityStr = (getBuildParam "teamcity")
+        let enableTeamCity = 
+            match teamcityStr with
+            | null -> false
+            | "" -> false
+            | _ -> bool.Parse teamcityStr
+
+        let args = StringBuilder()
+                |> append assembly
+                |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
+                |> append (sprintf "concurrent=\"%b\"" true)
+                |> append (sprintf "trace=\"%b\"" true)
+                |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
+                |> toText
+
+        let result = ExecProcess(fun info -> 
+            info.FileName <- nbenchTestPath
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
+        if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
+    
+    nbenchTestAssemblies |> Seq.iter (runNBench)
+
 //--------------------------------------------------------------------------------
 // Nuget targets 
 //--------------------------------------------------------------------------------
 
 Target "CreateNuget" (fun _ ->
-    let versionSuffix = getBuildParamOrDefault "versionsuffix" ""
-
     let projects = !! "src/**/Akka.csproj"
                    ++ "src/**/Akka.Cluster.csproj"
                    ++ "src/**/Akka.Cluster.TestKit.csproj"
                    ++ "src/**/Akka.Cluster.Tools.csproj"
                    ++ "src/**/Akka.Cluster.Sharding.csproj"
                    ++ "src/**/Akka.DistributedData.csproj"
+                   ++ "src/**/Akka.DistributedData.LightningDB.csproj"
                    ++ "src/**/Akka.Persistence.csproj"
                    ++ "src/**/Akka.Persistence.Query.csproj"
                    ++ "src/**/Akka.Persistence.TestKit.csproj"
                    ++ "src/**/Akka.Persistence.Query.Sql.csproj"
                    ++ "src/**/Akka.Persistence.Sql.Common.csproj"
+                   ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
+                   ++ "src/**/Akka.Persistence.Sqlite.csproj"
                    ++ "src/**/Akka.Remote.csproj"
                    ++ "src/**/Akka.Remote.TestKit.csproj"
                    ++ "src/**/Akka.Streams.csproj"
@@ -152,6 +196,7 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.DI.TestKit.csproj"
                    ++ "src/**/Akka.Serialization.Hyperion.csproj"
                    ++ "src/**/Akka.Serialization.TestKit.csproj"
+                   ++ "src/**/Akka.Remote.Transport.Helios.csproj"
 
     let runSingleProject project =
         DotNetCli.Pack
@@ -203,7 +248,7 @@ Target "Protobuf" <| fun _ ->
 
     let runProtobuf assembly =
         let protoName, destinationPath = assembly
-        let args = new StringBuilder()
+        let args = StringBuilder()
                 |> append (sprintf "-I=%s;%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/") (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
                 |> append (sprintf "--csharp_out=%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
                 |> append "--csharp_opt=file_extension=.g.cs"
@@ -288,5 +333,8 @@ Target "Nuget" DoNothing
 
 // all
 "BuildRelease" ==> "All"
+"RunTests" ==> "All"
+"MultiNodeTests" ==> "All"
+"NBench" ==> "All"
 
 RunTargetOrDefault "Help"
