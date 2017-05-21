@@ -154,7 +154,7 @@ expresses a graph that is a *partial graph*. Concepts around composing and nesti
 explained in detail in [Modularity, Composition and Hierarchy](modularitycomposition.md#basics-of-composition-and-modularity). It is also possible to wrap complex computation graphs as Flows, Sinks or Sources, which will be explained in detail in
 [Constructing Sources, Sinks and Flows from Partial Graphs](workingwithgraphs.md#constructing-sources-sinks-and-flows-from-partial-graphs).
 
-#Back-pressure in action
+# Back-pressure in action
 
 One of the main advantages of Akka Streams is that they *always* propagate back-pressure information from stream Sinks
 (Subscribers) to their Sources (Publishers). It is not an optional feature, and is enabled at all times. To learn more
@@ -178,7 +178,7 @@ The ``Buffer`` element takes an explicit and required ``OverflowStrategy``, whic
 when it receives another element while it is full. Strategies provided include dropping the oldest element (``DropHead``),
 dropping the entire buffer, signalling errors etc. Be sure to pick and choose the strategy that fits your use case best.
 
-#Materialized value
+# Materialized value
 
 So far we've been only processing data using Flows and consuming it into some kind of external Sink - be it by printing
 values or storing them in some external system. However sometimes we may be interested in some value that can be
