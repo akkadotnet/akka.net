@@ -67,17 +67,26 @@ Target "Build" (fun _ ->
 Target "RunTests" (fun _ ->
     let projects =
         match isWindows with
-        // Windows
-        | true -> !! "./**/Akka.Streams.Tests.csproj"               
-        // Linux/Mono
-        | _ -> !! "./**/Akka.Streams.Tests.csproj"
+            // Windows
+            | true -> !! "./**/core/**/*.Tests.csproj"
+                      ++ "./**/contrib/**/*.Tests.csproj"
+                      -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                      -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                      -- "./**/serializers/**/*Wire*.csproj"             
+            // Linux/Mono
+            | _ ->    !!  "./**/core/**/*.Tests.csproj"
+                      ++ "./**/contrib/**/*.Tests.csproj"
+                      -- "./**/serializers/**/*Wire*.csproj"
+                      -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                      -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
+                      -- "./**/Akka.Persistence.Tests.csproj"
 
     let runSingleProject project =
         DotNetCli.RunCommand
             (fun p -> 
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
-                    TimeOut = TimeSpan.FromMinutes 40. })
+                    TimeOut = TimeSpan.FromMinutes 30. })
                 (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     CreateDir outputTests
