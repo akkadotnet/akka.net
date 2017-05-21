@@ -4,7 +4,6 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if FSCHECK
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -164,4 +163,4 @@ namespace Akka.Remote.Tests
         }
     }
 }
-#endif
+
