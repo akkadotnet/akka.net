@@ -78,7 +78,6 @@ is completed with failure a `Akka.Actor.Status.Failure` message will be sent to 
 >It's often better to use `Sink.ActorRefWithAck` or `Ask` in `SelectAsync`, though. 
 
 #### Source.Queue
-// NOT DONE
 `Source.Queue` can be used for emitting elements to a stream from an actor (or from anything running 
 outside the stream). The elements will be buffered until the stream can process them. You can `Offer`
 elements to  the queue and they will be emitted to the stream if there is demand from downstream, 
@@ -87,15 +86,14 @@ otherwise they will be buffered until request for demand is received.
 Use overflow strategy `Akka.Streams.OverflowStrategy.Backpressure` to avoid dropping of elements 
 if the  buffer is full.
 
-`SourceQueue.Offer` returns `CompletionStage<StreamCallbackStatus<Boolean>>` 
-which completes with `Success(true)` if element was added to buffer or sent downstream. 
-It completes with `Success(false)` if element was dropped. It can also complete with
-`StreamCallbackStatus.Failure` when stream failed or `StreamCallbackStatus.StreamCompleted` 
+`ISourceQueueWithComplete.OfferAsync` returns `Task<IQueueOfferResult>` 
+which completes with `QueueOfferResult.Enqueued` if element was added to buffer or sent downstream. 
+It completes with `QueueOfferResult.Dropped` if element was dropped. It can also complete with
+`QueueOfferResult.Failure` when stream failed or `QueueOfferResult.QueueClosed` 
 when downstream is completed.
 
-When used from an actor you typically `pipe` the result of the `CompletionStage` back to the actor 
+When used from an actor you typically `pipe` the result of the `Task` back to the actor 
 to continue processing.
-// NOT DONE
 
 #### Source.ActorRef
 Messages sent to the actor that is materialized by ``Source.ActorRef`` will be emitted to the
@@ -522,7 +520,7 @@ As described above any Akka Streams ``Source`` can be exposed as a Reactive Stre
 and any ``Sink`` can be exposed as a Reactive Streams ``Subscriber``. Therefore we recommend that you 
 implement Reactive Streams integrations with built-in stages or [custom stages](customstreamprocessing.md).
 
-For historical reasons the `ActorPublisher` class and `ActorSubscriber` class traits are
+For historical reasons the `ActorPublisher` and `ActorSubscriber`  are
 provided to support implementing Reactive Streams `Publisher` class and `Subscriber` class with
 an `Actor` class.
 
