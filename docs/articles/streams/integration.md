@@ -3,7 +3,7 @@ layout: docs.hbs
 title: Integration
 ---
 
-#Integrating with Actors
+# Integrating with Actors
 For piping the elements of a stream as messages to an ordinary actor you can use the
 ``Sink.ActorRef``. Messages can be sent to a stream via the `IActorRef` that is
 materialized by ``Source.ActorRef``.
@@ -18,7 +18,7 @@ These can be consumed by other Reactive Stream libraries or used as a Akka Strea
 > `IActorPublisher` and `IActorSubscriber` cannot be used with remote actors, because if signals of the 
 Reactive Streams protocol (e.g. ``request``) are lost the stream may deadlock.
 
-####Source.ActorRef
+#### Source.ActorRef
 
 Messages sent to the actor that is materialized by ``Source.ActorRef`` will be emitted to the
 stream if there is demand from downstream, otherwise they will be buffered until request for
@@ -38,7 +38,7 @@ actor reference.
 The actor will be stopped when the stream is completed, failed or cancelled from downstream,
 i.e. you can watch it to get notified when that happens.
 
-####Sink.ActorRef
+#### Sink.ActorRef
 
 The sink sends the elements of the stream to the given `IActorRef`. If the target actor terminates
 the stream will be cancelled. When the stream is completed successfully the given ``OnCompleteMessage``
@@ -50,7 +50,7 @@ There is no back-pressure signal from the destination actor, i.e. if the actor i
 the mailbox of the actor will grow. For potentially slow consumer actors it is recommended to use a bounded mailbox 
 with zero `mailbox-push-timeout-time` or use a rate limiting stage in front of this stage.
 
-####ActorPublisher
+#### ActorPublisher
 Extend/mixin `Akka.Streams.Actor.ActorPublisher` in your `Actor` to make it a
 stream publisher that keeps track of the subscription life cycle and requested elements.
 
@@ -191,7 +191,7 @@ actorRef.Tell(new Job("c"));
 A publisher that is created with ``Sink.AsPublisher`` supports a specified number of subscribers. Additional
 subscription attempts will be rejected with an `IllegalStateException`.
 
-####ActorSubscriber
+#### ActorSubscriber
 Extend/mixin `Akka.Stream.Actor.ActorSubscriber` in your `Actor` to make it a
 stream subscriber with full control of stream back pressure. It will receive
 ``ActorSubscriberMessage.OnNext``, ``ActorSubscriberMessage.OnComplete`` and ``ActorSubscriberMessage.OnError``
@@ -337,7 +337,7 @@ Source.From(Enumerable.Range(1, n))
     .RunWith(Sink.ActorSubscriber<Message>(WorkerPool.Props), materializer);
 ```
 
-#Integrating with External Services
+# Integrating with External Services
 Stream transformations and side effects involving external non-stream based services can be
 performed with ``SelectAsync`` or ``SelectAsyncUnordered``.
 
@@ -440,7 +440,7 @@ Note that if the ``Ask`` is not completed within the given timeout the stream is
 If that is not desired outcome you can use ``Recover`` on the ``Ask`` `Task`.
 
 
-####Illustrating ordering and parallelism
+#### Illustrating ordering and parallelism
 Let us look at another example to get a better understanding of the ordering
 and parallelism characteristics of ``SelectAsync`` and ``SelectAsyncUnordered``.
 
@@ -626,7 +626,7 @@ The numbers in parenthesis illustrates how many calls that are in progress at
 the same time. Here the downstream demand and thereby the number of concurrent
 calls are limited by the buffer size (4) of the `ActorMaterializerSettings`.
 
-####Integrating with Reactive Streams
+#### Integrating with Reactive Streams
 `Reactive Streams` defines a standard for asynchronous stream processing with non-blocking
 back pressure. It makes it possible to plug together stream libraries that adhere to the standard.
 Akka Streams is one such library.
