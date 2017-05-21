@@ -2,6 +2,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.MultiNodeTestRunner.Shared.Tests</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
  
   <ItemGroup>

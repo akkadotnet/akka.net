@@ -3,7 +3,7 @@ layout: docs.hbs
 title: Dynamic stream handling
 ---
 
-#Controlling graph completion with KillSwitch
+# Controlling graph completion with KillSwitch
 
 A ``KillSwitch`` allows the completion of graphs of ``FlowShape`` from the outside. It consists of a flow element that
 can be linked to a graph of ``FlowShape`` needing completion control.
@@ -32,7 +32,7 @@ Graph completion is performed by both
 
 A ``KillSwitch`` can control the completion of one or multiple streams, and therefore comes in two different flavours.
 
-####UniqueKillSwitch
+#### UniqueKillSwitch
 
 ``UniqueKillSwitch`` allows to control the completion of **one** materialized ``Graph`` of ``FlowShape``. Refer to the
 below for usage examples.
@@ -81,7 +81,7 @@ last.Wait();
 last.Exception.Should().Be(error);
 ```
 
-####SharedKillSwitch
+#### SharedKillSwitch
 
 A ``SharedKillSwitch`` allows to control the completion of an arbitrary number graphs of ``FlowShape``. It can be
 materialized multiple times via its ``Flow`` method, and all materialized graphs linked to it are controlled by the switch.
