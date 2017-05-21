@@ -11,7 +11,7 @@ strategies, but the semantics have been adapted to the domain of stream processi
 > *ZipWith*, *GraphStage* junction, *ActorPublisher* source and *ActorSubscriber* sink 
 components do not honour the supervision strategy attribute yet.
 
-#Supervision Strategies
+# Supervision Strategies
 
 There are three ways to handle exceptions from application code:
 
@@ -92,7 +92,7 @@ var result = source.Limit(1000).RunWith(Sink.Seq<int>(), materializer);
 // result here will be a Task completed with Success(List(0, 1, 4, 0, 5, 12))
 ```
 
-#Errors from SelectAsync
+# Errors from SelectAsync
 Stream supervision can also be applied to the tasks of ``SelectAsync``.
 
 Let's say that we use an external service to lookup email addresses and we would like to
