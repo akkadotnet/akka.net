@@ -35,19 +35,16 @@ the `CompletionStage` of the `Ask` and it will be the element that is emitted do
 from `SelectAsync`.
 
 ```csharp
-public class Translator : ActorBase
+public class Translator : ReceiveActor
 {
-	protected override bool Receive(object message)
+	public Translator()
 	{
-		return message.Match()
-			.With<string>(word => 
-            {
-            	// ... process message
-				string reply = word.ToUpper();
-                // reply to the ask
-				Sender.Tell(reply, Self);
-			})
-            .WasHandled;
+		Receive<string>(word => {
+			// ... process message
+			string reply = word.ToUpper();
+			// reply to the ask
+			Sender.Tell(reply, Self);
+		});
 	}
 }
 ```
