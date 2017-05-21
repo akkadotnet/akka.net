@@ -67,19 +67,24 @@ Target "Build" (fun _ ->
 Target "RunTests" (fun _ ->
     let projects =
         match isWindows with
-            // Windows
-            | true -> !! "./**/core/**/*.Tests.csproj"
-                      ++ "./**/contrib/**/*.Tests.csproj"
-                      -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                      -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                      -- "./**/serializers/**/*Wire*.csproj"             
-            // Linux/Mono
-            | _ ->    !!  "./**/core/**/*.Tests.csproj"
-                      ++ "./**/contrib/**/*.Tests.csproj"
-                      -- "./**/serializers/**/*Wire*.csproj"
-                      -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                      -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
-                      -- "./**/Akka.Persistence.Tests.csproj"
+		// Windows
+        | true -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/Akka.Streams.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.Persistence.Tests.csproj"                 
+        // Linux/Mono
+        | _ -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.Streams.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
+                  -- "./**/Akka.Persistence.Tests.csproj"
+                  -- "./**/Akka.API.Tests.csproj"
+                  -- "./**/Akka.Persistence.Sqlite.Tests.csproj"
 
     let runSingleProject project =
         DotNetCli.RunCommand
