@@ -11,7 +11,7 @@ This chapter describes how actors are identified and located within a possibly d
 
 The above image displays the relationship between the most important entities within an actor system, please read on for the details.
 
-##What is an Actor Reference?
+## What is an Actor Reference?
 An actor reference is a subtype of `ActorRef`, whose foremost purpose is to support sending messages to the actor it represents. Each actor has access to its canonical (local) reference through the `Self` property; this reference is also included as sender reference by default for all messages sent to other actors. Conversely, during message processing the actor has access to a reference representing the sender of the current message through the sender method.
 
 There are several different types of actor references that are supported depending on the configuration of the actor system:
