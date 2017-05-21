@@ -29,7 +29,7 @@ Param(
     [string[]]$ScriptArgs
 )
 
-$FakeVersion = "4.50.0"
+$FakeVersion = "4.61.2"
 $NBenchVersion = "1.0.1"
 $DotNetChannel = "preview";
 $DotNetVersion = "1.0.3";

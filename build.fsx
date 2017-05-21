@@ -10,6 +10,8 @@ open Fake.DotNetCli
 
 // Variables
 let configuration = "Release"
+let solution = "./src/Akka.sln"
+let versionSuffix = getBuildParamOrDefault "versionsuffix" ""
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
@@ -37,17 +39,19 @@ Target "Clean" (fun _ ->
 )
 
 Target "RestorePackages" (fun _ ->
+    let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
+
     DotNetCli.Restore
         (fun p -> 
             { p with
-                Project = "./src/Akka.sln"
-                NoCache = false })
+                Project = solution
+                NoCache = false
+                AdditionalArgs = additionalArgs })
 )
 
 Target "Build" (fun _ ->
     let projects = !! "./**/core/**/*.csproj"
                    ++ "./**/contrib/**/*.csproj"
-                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                    -- "./**/serializers/**/*Wire*.csproj"
 
     let runSingleProject project =
@@ -142,7 +146,7 @@ Target "NBench" <| fun _ ->
             | "" -> false
             | _ -> bool.Parse teamcityStr
 
-        let args = new StringBuilder()
+        let args = StringBuilder()
                 |> append assembly
                 |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
                 |> append (sprintf "concurrent=\"%b\"" true)
@@ -163,8 +167,6 @@ Target "NBench" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "CreateNuget" (fun _ ->
-    let versionSuffix = getBuildParamOrDefault "versionsuffix" ""
-
     let projects = !! "src/**/Akka.csproj"
                    ++ "src/**/Akka.Cluster.csproj"
                    ++ "src/**/Akka.Cluster.TestKit.csproj"
