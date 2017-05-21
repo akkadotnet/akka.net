@@ -7,20 +7,20 @@ using Akka.Persistence.Internal;
 
 namespace Akka.Persistence
 {
-    public class RequestRecoveryPermit
+    internal class RequestRecoveryPermit
     { }
 
-    public class RecoveryPermitGranted
+    internal class RecoveryPermitGranted
     { }
 
-    public class ReturnRecoveryPermit
+    internal class ReturnRecoveryPermit
     { }
 
     /// <summary>
     /// When starting many persistent actors at the same time the journal its data store is protected 
     /// from being overloaded by limiting number of recoveries that can be in progress at the same time.
     /// </summary>
-    public class RecoveryPermitter : UntypedActor
+    internal class RecoveryPermitter : UntypedActor
     {
         private readonly int maxPermits;
         private readonly LinkedList<IActorRef> pending = new LinkedList<IActorRef>();
@@ -38,28 +38,27 @@ namespace Akka.Persistence
 
         protected override void OnReceive(object message)
         {
-            message.Match()
-                .With<RequestRecoveryPermit>(_ =>
+            if (message is RequestRecoveryPermit)
+            {
+                Context.Watch(Sender);
+                if (usedPermits > maxPermits)
                 {
-                    Context.Watch(Sender);
-                    if (usedPermits > maxPermits)
-                    {
-                        if (pending.Count == 0)
-                            Log.Debug("Exceeded max-concurrent-recoveries [{0}]. First pending {1}", maxPermits, Sender);
-                        pending.AddLast(Sender);
-                        maxPendingStats = Math.Max(maxPendingStats, pending.Count);
-                    }
-                    else
-                    {
-                        RecoveryPermitGranted(Sender);
-                    }
-                })
-                .With<ReturnRecoveryPermit>(_ => ReturnRecoveryPermit(Sender))
-                .With<Terminated>(terminated =>
+                    if (pending.Count == 0) 
+                        Log.Debug("Exceeded max-concurrent-recoveries [{0}]. First pending {1}", maxPermits, Sender);
+                    pending.AddLast(Sender);
+                    maxPendingStats = Math.Max(maxPendingStats, pending.Count);
+                }
+                else
                 {
-                    if (!pending.Remove(terminated.ActorRef))
-                        ReturnRecoveryPermit(terminated.ActorRef);
-                });
+                    RecoveryPermitGranted(Sender);
+                }
+            }
+            else if(message is ReturnRecoveryPermit)
+            {
+                ReturnRecoveryPermit(Sender);
+            }
+            else if (message is Terminated terminated && !pending.Remove(terminated.ActorRef))
+                ReturnRecoveryPermit(terminated.ActorRef);
         }
 
         private void ReturnRecoveryPermit(IActorRef actorRef)

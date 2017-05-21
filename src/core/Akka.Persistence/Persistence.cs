@@ -146,7 +146,7 @@ namespace Akka.Persistence
         /// INTERNAL API: When starting many persistent actors at the same time the journal its data store is protected 
         /// from being overloaded by limiting number of recoveries that can be in progress at the same time.
         /// </summary>
-        public IActorRef RecoveryPermitter()
+        internal IActorRef RecoveryPermitter()
         {
             return _recoveryPermitter.Value;
         }

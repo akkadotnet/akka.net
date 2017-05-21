@@ -49,9 +49,10 @@ namespace Akka.Persistence
         {
             return new EventsourcedState("waiting for recovery permit", true, (receive, message) =>
             {
-                message.Match()
-                    .With<RecoveryPermitGranted>(_ => StartRecovery(recovery))
-                    .Default(StashInternally);
+                if (message is RecoveryPermitGranted)
+                    StartRecovery(recovery);
+                else
+                    StashInternally(message);
             });
         }
 
@@ -84,9 +85,8 @@ namespace Akka.Persistence
             {
                 try
                 {
-                    if (message is LoadSnapshotResult)
+                    if (message is LoadSnapshotResult res)
                     {
-                        var res = (LoadSnapshotResult)message;
                         timeoutCancelable.Cancel();
                         if (res.Snapshot != null)
                         {
@@ -99,13 +99,12 @@ namespace Akka.Persistence
                         ChangeState(Recovering(recoveryBehavior, timeout));
                         Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
                     }
-                    else if (message is LoadSnapshotFailed)
+                    else if (message is LoadSnapshotFailed failed)
                     {
-                        var res = (LoadSnapshotFailed)message;
                         timeoutCancelable.Cancel();
                         try
                         {
-                            OnRecoveryFailure(res.Cause);
+                            OnRecoveryFailure(failed.Cause);
                         }
                         finally
                         {
