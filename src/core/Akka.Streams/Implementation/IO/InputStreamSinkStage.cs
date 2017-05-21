@@ -21,7 +21,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
     {
-        #region internal classes
+#region internal classes
 
         /// <summary>
         /// TBD
@@ -56,7 +56,7 @@ namespace Akka.Streams.Implementation.IO
 
             private Close()
             {
-                
+
             }
         }
 
@@ -159,7 +159,7 @@ namespace Akka.Streams.Implementation.IO
                 _stage = stage;
                 _callback = GetAsyncCallback((IAdapterToStageMessage messagae) =>
                 {
-                    if(messagae is ReadElementAcknowledgement)
+                    if (messagae is ReadElementAcknowledgement)
                         SendPullIfAllowed();
                     else if (messagae is Close)
                         CompleteStage();
@@ -173,7 +173,7 @@ namespace Akka.Streams.Implementation.IO
                 //1 is buffer for Finished or Failed callback
                 if (_stage._dataQueue.Count + 1 == _stage._dataQueue.BoundedCapacity)
                     throw new BufferOverflowException("Queue is full");
-                
+
                 _stage._dataQueue.Add(new Data(Grab(_stage._in)));
                 if (_stage._dataQueue.BoundedCapacity - _stage._dataQueue.Count > 1)
                     SendPullIfAllowed();
@@ -206,7 +206,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-        #endregion
+#endregion
 
         private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
@@ -259,16 +259,13 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamAdapter : Stream
     {
-        #region not supported 
+#region not supported 
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <exception cref="NotSupportedException">TBD</exception>
-        public override void Flush()
-        {
-            throw new NotSupportedException("This stream can only read");
-        }
+        public override void Flush() => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
         /// TBD
@@ -277,10 +274,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="origin">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            throw new NotSupportedException("This stream can only read");
-        }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
         /// TBD
@@ -288,10 +282,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="value">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override void SetLength(long value)
-        {
-            throw new NotSupportedException("This stream can only read");
-        }
+        public override void SetLength(long value) => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
         /// TBD
@@ -301,22 +292,13 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="count">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            throw new NotSupportedException("This stream can only read");
-        }
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <exception cref="NotSupportedException">TBD</exception>
-        public override long Length
-        {
-            get
-            {
-                throw new NotSupportedException("This stream can only read");
-            }
-        }
+        public override long Length => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
         /// TBD
@@ -324,16 +306,10 @@ namespace Akka.Streams.Implementation.IO
         /// <exception cref="NotSupportedException">TBD</exception>
         public override long Position
         {
-            get
-            {
-                throw new NotSupportedException("This stream can only read");
-            }
-            set
-            {
-                throw new NotSupportedException("This stream can only read");
-            }
+            get => throw new NotSupportedException("This stream can only read");
+            set => throw new NotSupportedException("This stream can only read");
         }
-        #endregion
+#endregion
 
         private static readonly Exception SubscriberClosedException = new IOException("Reactive stream is terminated, no reads are possible");
 
@@ -369,7 +345,7 @@ namespace Akka.Streams.Implementation.IO
             {
                 // at this point Subscriber may be already terminated
                 if (_isStageAlive)
-                    _sendToStage.WakeUp(InputStreamSinkStage.Close.Instance);
+                    _sendToStage.WakeUp(Close.Instance);
 
                 _isActive = false;
                 return NotUsed.Instance;
@@ -428,15 +404,14 @@ namespace Akka.Streams.Implementation.IO
 
                 if (_detachedChunk != null)
                     return ReadBytes(buffer, offset, count);
-
-                IStreamToAdapterMessage msg;
-                var success = _sharedBuffer.TryTake(out msg, _readTimeout);
+                
+                var success = _sharedBuffer.TryTake(out var msg, _readTimeout);
                 if (!success)
                     throw new IOException("Timeout on waiting for new data");
 
-                if (msg is Data)
+                if (msg is Data data)
                 {
-                    _detachedChunk = ((Data) msg).Bytes;
+                    _detachedChunk = data.Bytes;
                     return ReadBytes(buffer, offset, count);
                 }
                 if (msg is Finished)
@@ -444,10 +419,10 @@ namespace Akka.Streams.Implementation.IO
                     _isStageAlive = false;
                     return 0;
                 }
-                if (msg is Failed)
+                if (msg is Failed failed)
                 {
                     _isStageAlive = false;
-                    throw ((Failed) msg).Cause;
+                    throw failed.Cause;
                 }
 
                 throw new IllegalStateException("message 'Initialized' must come first");
@@ -466,20 +441,23 @@ namespace Akka.Streams.Implementation.IO
 
         private void WaitIfNotInitialized()
         {
-            if (!_isInitialized)
+            if (_isInitialized)
+                return;
+
+            if (_sharedBuffer.TryTake(out var message, _readTimeout))
             {
-                IStreamToAdapterMessage message;
-                _sharedBuffer.TryTake(out message, _readTimeout);
                 if (message is Initialized)
                     _isInitialized = true;
                 else
                     throw new IllegalStateException("First message must be Initialized notification");
             }
+            else
+                throw new IOException($"Timeout after {_readTimeout} waiting  Initialized message from stage");
         }
 
         private int ReadBytes(byte[] buffer, int offset, int count)
         {
-            if(_detachedChunk == null || _detachedChunk.IsEmpty)
+            if (_detachedChunk == null || _detachedChunk.IsEmpty)
                 throw new InvalidOperationException("Chunk must be pulled from shared buffer");
 
             var availableInChunk = _detachedChunk.Count;
@@ -519,9 +497,9 @@ namespace Akka.Streams.Implementation.IO
                 return _detachedChunk;
 
             var chunk = _sharedBuffer.Take();
-            if (chunk is Data)
+            if (chunk is Data data)
             {
-                _detachedChunk = ((Data) chunk).Bytes;
+                _detachedChunk = data.Bytes;
                 return _detachedChunk;
             }
             if (chunk is Finished)
