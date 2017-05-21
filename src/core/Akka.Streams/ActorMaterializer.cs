@@ -145,6 +145,15 @@ namespace Akka.Streams
         /// <summary>
         /// TBD
         /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <param name="delay">TBD</param>
         /// <param name="action">TBD</param>
         /// <returns>TBD</returns>
