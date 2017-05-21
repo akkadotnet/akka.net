@@ -3,21 +3,21 @@ layout: docs.hbs
 title: Integration
 ---
 
-#Integrating with Actors
+# Integrating with Actors
 For piping the elements of a stream as messages to an ordinary actor you can use ``Ask`` in a 
 ``SelectAsync`` or use ``Sink.ActorRefWithAck``.
 
 Messages can be sent to a stream with ``Source.Queue`` or via the ``IActorRef`` that is 
 materialized by ``Source.ActorRef``.
 
-####SelectAsync + Ask
+#### SelectAsync + Ask
 A nice way to delegate some processing of elements in a stream to an actor is to use ``Ask`` 
 in ``SelectAsync``. The back-pressure of the stream is maintained by the ``Task`` of the ``Ask``
 and the mailbox of the actor will not be filled with more messages than the given 
 ``parallelism`` of the ``SelectAsync`` stage.
 
 ```csharp
-var words = Source.From(new [] { "hello, hi" });
+var words = Source.From(new [] { "hello", "hi" });
 words
 	.SelectAsync(5, elem => _actorRef.Ask(elem, TimeSpan.FromSeconds(5)))
 	.Select(elem => (string)elem)
@@ -63,7 +63,7 @@ The same pattern can be used with [Actor routers](../actors/routers.md#Routers).
 `SelectAsyncUnordered` for better efficiency if you don't care about the order of the emitted 
 downstream elements (the replies).
 
-####Sink.ActorRefWithAck
+#### Sink.ActorRefWithAck
 The sink sends the elements of the stream to the given `IActorRef` that sends back back-pressure signal.
 First element is always `OnInitMessage`, then stream is waiting for the given acknowledgement message 
 from the given actor which means that it is ready to process elements. 
@@ -80,7 +80,7 @@ is completed with failure a `Akka.Actor.Status.Failure` message will be sent to 
 >`mailbox-push-timeout-time` or use a rate limiting stage in front. 
 >It's often better to use `Sink.ActorRefWithAck` or `Ask` in `SelectAsync`, though. 
 
-####Source.Queue
+#### Source.Queue
 // NOT DONE
 `Source.Queue` can be used for emitting elements to a stream from an actor (or from anything running 
 outside the stream). The elements will be buffered until the stream can process them. You can `Offer`
@@ -100,7 +100,7 @@ When used from an actor you typically `pipe` the result of the `CompletionStage`
 to continue processing.
 // NOT DONE
 
-####Source.ActorRef
+#### Source.ActorRef
 Messages sent to the actor that is materialized by ``Source.ActorRef`` will be emitted to the
 stream if there is demand from downstream, otherwise they will be buffered until request for
 demand is received.
@@ -120,7 +120,7 @@ actor reference.
 The actor will be stopped when the stream is completed, failed or cancelled from downstream,
 i.e. you can watch it to get notified when that happens.
 
-#Integrating with External Services
+# Integrating with External Services
 Stream transformations and side effects involving external non-stream based services can be
 performed with ``SelectAsync`` or ``SelectAsyncUnordered``.
 
@@ -223,7 +223,7 @@ Note that if the ``Ask`` is not completed within the given timeout the stream is
 If that is not desired outcome you can use ``Recover`` on the ``Ask`` `Task`.
 
 
-####Illustrating ordering and parallelism
+#### Illustrating ordering and parallelism
 Let us look at another example to get a better understanding of the ordering
 and parallelism characteristics of ``SelectAsync`` and ``SelectAsyncUnordered``.
 
@@ -409,7 +409,7 @@ The numbers in parenthesis illustrates how many calls that are in progress at
 the same time. Here the downstream demand and thereby the number of concurrent
 calls are limited by the buffer size (4) of the `ActorMaterializerSettings`.
 
-####Integrating with Reactive Streams
+#### Integrating with Reactive Streams
 `Reactive Streams` defines a standard for asynchronous stream processing with non-blocking
 back pressure. It makes it possible to plug together stream libraries that adhere to the standard.
 Akka Streams is one such library.
@@ -519,7 +519,7 @@ var flow = Flow.FromProcessor(()=> createProcessor(materializer));
 
 Please note that a factory is necessary to achieve reusability of the resulting `Flow`.
 
-####Implementing Reactive Streams Publisher or Subscriber
+#### Implementing Reactive Streams Publisher or Subscriber
 
 As described above any Akka Streams ``Source`` can be exposed as a Reactive Streams ``Publisher`` 
 and any ``Sink`` can be exposed as a Reactive Streams ``Subscriber``. Therefore we recommend that you 
