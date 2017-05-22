@@ -1162,17 +1162,19 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     _aggregator = _stage._aggregate(_aggregator, Grab(_stage.In));
-                    Pull(_stage.In);
                 }
                 catch (Exception ex)
                 {
-                    if (_decider(ex) == Directive.Stop)
+                    var strategy = _decider(ex);
+                    if (strategy == Directive.Stop)
                         FailStage(ex);
-                    else
-                    {
+                    else if (strategy == Directive.Restart)
                         _aggregator = _stage._zero;
+                }
+                finally
+                {
+                    if(!IsClosed(_stage.In))
                         Pull(_stage.In);
-                    }
                 }
             }
 
@@ -3424,37 +3426,61 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly Sum<T> _stage;
+            private readonly Decider _decider;
             private T _aggregator;
-            private readonly LambdaInHandler _rest;
 
-            public Logic(Sum<T> stage) : base(stage.Shape)
+            public Logic(Sum<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
-                _rest = new LambdaInHandler(onPush: () =>
-                {
-                    _aggregator = stage._reduce(_aggregator, Grab(stage.Inlet));
-                    Pull(stage.Inlet);
-                }, onUpstreamFinish: () =>
-                {
-                    Push(stage.Outlet, _aggregator);
-                    CompleteStage();
-                });
+                
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                // Initial input handler
-                SetHandler(stage.Inlet, this);
+                SetInitialInHandler();
                 SetHandler(stage.Outlet, this);
+            }
+
+            private void SetInitialInHandler()
+            {
+                SetHandler(_stage.Inlet, onPush: () =>
+                {
+                    _aggregator = Grab(_stage.Inlet);
+                    Pull(_stage.Inlet);
+                    SetHandler(_stage.Inlet, this);
+                }, onUpstreamFinish: () => FailStage(new NoSuchElementException("Sum over empty stream")));
             }
 
             public override void OnPush()
             {
-                _aggregator = Grab(_stage.Inlet);
-                Pull(_stage.Inlet);
-                SetHandler(_stage.Inlet, _rest);
+                try
+                {
+                    _aggregator = _stage._reduce(_aggregator, Grab(_stage.Inlet));
+                }
+                catch (Exception ex)
+                {
+                    var strategy = _decider(ex);
+                    if (strategy == Directive.Stop)
+                        FailStage(ex);
+                    else if (strategy == Directive.Restart)
+                    {
+                        _aggregator = default(T);
+                        SetInitialInHandler();
+                    }
+                }
+                finally
+                {
+                    if(!IsClosed(_stage.Inlet))
+                        Pull(_stage.Inlet);
+                }
             }
 
-            public override void OnUpstreamFinish() => FailStage(new NoSuchElementException("sum over empty stream"));
-
             public override void OnPull() => Pull(_stage.Inlet);
+
+            public override void OnUpstreamFinish()
+            {
+                Push(_stage.Outlet, _aggregator);
+                CompleteStage();
+            }
 
             public override string ToString() => $"Sum.Logic(aggregator={_aggregator}";
         }
@@ -3482,7 +3508,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
         /// Returns a <see cref="string" /> that represents this instance.
@@ -3551,19 +3577,19 @@ namespace Akka.Streams.Implementation.Fusing
                         CompleteStage();
                 }, onUpstreamFailure: OnFailure));
 
-                Action pushOut = () =>
+                void PushOut()
                 {
                     Push(_stage.Outlet, sinkIn.Grab());
                     if (!sinkIn.IsClosed)
                         sinkIn.Pull();
                     else
                         CompleteStage();
-                };
+                }
 
                 var outHandler = new LambdaOutHandler(onPull: () =>
                 {
                     if (sinkIn.IsAvailable)
-                        pushOut();
+                        PushOut();
                 }, onDownstreamFinish: () => sinkIn.Cancel());
 
                 Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
