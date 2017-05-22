@@ -16,7 +16,7 @@ flows and sinks. This makes them easily testable by wiring them up to other
 sources or sinks, or some test harnesses that `Akka.Testkit` or
 `Akka.Streams.Testkit` provide.
 
-#Built in sources, sinks and combinators
+# Built in sources, sinks and combinators
 
 Testing a custom sink can be as simple as attaching a source that emits
 elements from a predefined collection, running a constructed test flow and
@@ -65,7 +65,7 @@ task.Wait(TimeSpan.FromMilliseconds(500)).Should().BeTrue();
 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 4));
 ```
 
-#TestKit
+# TestKit
 
 Akka Stream offers integration with Actors out of the box. This support can be
 used for writing stream tests that use familiar `TestProbe` from the
@@ -132,7 +132,7 @@ task.Wait(TimeSpan.FromMilliseconds(500)).Should().BeTrue();
 task.Result.Should().Be("123");
 ```
 
-#Streams TestKit
+# Streams TestKit
 
 You may have noticed various code patterns that emerge when testing stream
 pipelines. Akka Stream has a separate `Akka.Streams.Testkit` module that
@@ -213,7 +213,7 @@ var ex = sub.ExpectError();
 ex.Message.Should().Contain("C-47");
 ```
 
-#Fuzzing Mode
+# Fuzzing Mode
 
 For testing, it is possible to enable a special stream execution mode that exercises concurrent execution paths
 more aggressively (at the cost of reduced performance) and therefore helps exposing race conditions in tests. To

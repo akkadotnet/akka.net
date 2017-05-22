@@ -315,7 +315,7 @@ The dead letter service follows the same rules with respect to delivery
 guarantees as all other message sends, hence it cannot be used to implement
 guaranteed delivery.
 
-###How do I Receive Dead Letters?
+### How do I Receive Dead Letters?
 
 An actor can subscribe to class `Akka.Actor.DeadLetter` on the event
 stream, see [Event stream](xref:event-bus) for how to do that. The subscribed actor will then receive all dead

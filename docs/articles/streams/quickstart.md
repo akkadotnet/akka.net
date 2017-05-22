@@ -57,7 +57,7 @@ We can use the new and shiny Sink we just created by attaching it to our factori
 factorials.Select(_ => _.ToString()).RunWith(LineSink("factorial2.txt"), materializer);
 ```
 
-##Time-Based Processing
+## Time-Based Processing
 Before we start looking at a more involved example we explore the streaming nature of what Akka Streams can do. Starting from the `factorials` source we transform the stream by zipping it together with another stream, represented by a `Source` that emits the number 0 to 100: the first number emitted by the `factorials` source is the factorial of zero, the second is the factorial of one, and so on. We combine these two by forming strings like "3! = 6".
 
 ```csharp
