@@ -30,7 +30,7 @@ namespace PersistenceBenchmark
                         table-name = event_journal
                         metadata-table-name = journal_metadata
                         auto-initialize = on
-                        connection-string = ""FullUri=file:memdb-journal.db?mode=memory&cache=shared;Version=3;""
+                        connection-string = ""Datasource=memdb-journal.db;Mode=Memory;Cache=Shared""
                     }
                 }
             }");
