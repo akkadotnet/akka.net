@@ -26,13 +26,12 @@ For example, let's configure an `ActorSystem` with HOCON:
 
 ```csharp
 var config = ConfigurationFactory.ParseString(@"
-akka.remote.helios.tcp {
-              transport-class =
-           ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-              transport-protocol = tcp
-              port = 8091
-              hostname = ""127.0.0.1""
-          }");
+akka.remote.dot-netty.tcp {
+    transport-class = ""Akka.Remote.Transport.DotNetty.DotNettyTransport, Akka.Remote""
+    transport-protocol = tcp
+    port = 8091
+    hostname = ""127.0.0.1""
+}");
 
 var system = ActorSystem.Create("MyActorSystem", config);
 ```
@@ -63,8 +62,7 @@ Here's an example of using HOCON inside `App.config`:
 <?xml version="1.0" encoding="utf-8" ?>
 <configuration>
   <configSections>
-    <section name="akka"
-             type="Akka.Configuration.Hocon.AkkaConfigurationSection, Akka" />
+    <section name="akka" type="Akka.Configuration.Hocon.AkkaConfigurationSection, Akka" />
   </configSections>
 
   <akka>
@@ -77,7 +75,7 @@ Here's an example of using HOCON inside `App.config`:
             loglevel = ERROR
             # this config section will be referenced as akka.actor
             actor {
-              provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
+              provider = remote
               debug {
                   receive = on
                   autoreceive = on
@@ -88,9 +86,8 @@ Here's an example of using HOCON inside `App.config`:
             }
             # here we're configuring the Akka.Remote module
             remote {
-              helios.tcp {
-                  transport-class =
-            "Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote"
+              dot-netty.tcp {
+                  transport-class = "Akka.Remote.Transport.DotNetty.DotNettyTransport, Akka.Remote"
                   #applied-adapters = []
                   transport-protocol = tcp
                   port = 8091
@@ -107,7 +104,7 @@ Here's an example of using HOCON inside `App.config`:
 And then we can load this configuration section into our `ActorSystem` via the following code:
 
 ```csharp
-var system = ActorSystem.Create("Mysystem"); //automatically loads App/Web.config
+var system = ActorSystem.Create("MySystem"); //automatically loads App/Web.config
 ```
 
 #### HOCON Configuration Supports Fallbacks

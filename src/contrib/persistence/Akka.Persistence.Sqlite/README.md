@@ -41,8 +41,8 @@ In addition, journal configuration specifies additional field:
 
 Akka.Persistence.Sqlite plugin allows to use in-memory databases, however requires to use them in shared mode in order to work correctly. Example connection strings for such configurations are described below:
 
-- `FullUri=file::memory:?cache=shared;` for anonymous in-memory database instances.
-- `FullUri=file:<database-name>.db?mode=memory&cache=shared;` for named in-memory database instances. This way you can provide many separate databases residing in memory.
+- `Datasource=file;Mode=Memory` for anonymous in-memory database instances.
+- `Datasource=file;Mode=Memory;Cache=Shared` for named in-memory database instances. This way you can provide many separate databases residing in memory.
 
 ### Custom SQL data queries
 
