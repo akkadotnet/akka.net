@@ -17,7 +17,7 @@ namespace Akka.Persistence.Sqlite.Tests
         private static AtomicCounter counter = new AtomicCounter(0);
 
         public SqliteJournalSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig("FullUri=file:memdb-journal-" + counter.IncrementAndGet() + ".db?mode=memory&cache=shared;"), "SqliteJournalSpec", output)
+            : base(CreateSpecConfig("Filename=file:memdb-journal-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteJournalSpec", output)
         {
             SqlitePersistence.Get(Sys);
 
