@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: remote-deployment
 title: Remote Deployment
 ---
 
@@ -58,7 +58,7 @@ class Program
             akka {  
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
                 remote {
-                    helios.tcp {
+                    dot-netty.tcp {
                         port = 8090
                         hostname = localhost
                     }
@@ -115,7 +115,7 @@ class Program
         using (var system = ActorSystem.Create("Deployer", ConfigurationFactory.ParseString(@"
             akka {  
                 actor{
-                    provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+                    provider = remote
                     deployment {
                         /remoteecho {
                             remote = ""akka.tcp://DeployTarget@localhost:8090""
@@ -123,7 +123,7 @@ class Program
                     }
                 }
                 remote {
-                    helios.tcp {
+                    dot-netty.tcp {
                         port = 0
                         hostname = localhost
                     }
