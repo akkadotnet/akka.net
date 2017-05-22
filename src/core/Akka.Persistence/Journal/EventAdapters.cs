@@ -370,8 +370,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public virtual IEventAdapter Get(Type type)
         {
-            IEventAdapter adapter;
-            if (_map.TryGetValue(type, out adapter))
+            if (_map.TryGetValue(type, out IEventAdapter adapter))
                 return adapter;
 
             // bindings are ordered from most specific to least specific

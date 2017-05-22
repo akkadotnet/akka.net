@@ -392,11 +392,8 @@ namespace Akka.Remote.Transport
 
         private IGremlinMode ChaosMode(Address remoteAddress)
         {
-            IGremlinMode mode;
-            if (addressChaosTable.TryGetValue(NakedAddress(remoteAddress), out mode))
-            {
+            if (addressChaosTable.TryGetValue(NakedAddress(remoteAddress), out var mode))
                 return mode;
-            }
 
             return PassThru.Instance;
         }

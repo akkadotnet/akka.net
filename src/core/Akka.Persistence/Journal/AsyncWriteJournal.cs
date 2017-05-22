@@ -454,9 +454,8 @@ namespace Akka.Persistence.Journal
                     _delayed.Add(desequenced.SequenceNr, desequenced);
                 }
 
-                Desequenced d;
                 var delivered = _delivered + 1;
-                if (_delayed.TryGetValue(delivered, out d))
+                if (_delayed.TryGetValue(delivered, out Desequenced d))
                 {
                     _delayed.Remove(delivered);
                     return d;

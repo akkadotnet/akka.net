@@ -131,11 +131,8 @@ namespace Akka.Cluster.Serialization
 
         public override object FromBinary(byte[] bytes, Type type)
         {
-            Func<byte[], object> factory;
-            if (_fromBinaryMap.TryGetValue(type, out factory))
-            {
+            if (_fromBinaryMap.TryGetValue(type, out var factory))
                 return factory(bytes);
-            }
 
             throw new ArgumentException($"{nameof(ClusterMessageSerializer)} cannot deserialize object of type {type}");
         }
@@ -400,7 +397,9 @@ namespace Akka.Cluster.Serialization
 
         private static int MapWithErrorMessage<T>(Dictionary<T, int> map, T value, string unknown)
         {
-            if (map.ContainsKey(value)) return map[value];
+            if (map.TryGetValue(value, out int mapIndex))
+                return mapIndex;
+
             throw new ArgumentException($"Unknown {unknown} [{value}] in cluster message");
         }
 

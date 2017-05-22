@@ -144,11 +144,8 @@ namespace Akka.Cluster.Sharding.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            Func<byte[], object> factory;
-            if (_fromBinaryMap.TryGetValue(manifest, out factory))
-            {
+            if (_fromBinaryMap.TryGetValue(manifest, out var factory))
                 return factory(bytes);
-            }
 
             throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{this.GetType()}]");
         }
