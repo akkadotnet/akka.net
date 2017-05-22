@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Data.Common;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal
@@ -52,6 +52,7 @@ namespace Akka.Persistence.Sqlite.Journal
         /// TBD
         /// </summary>
         protected override string CreateEventsJournalSql { get; }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -69,7 +70,7 @@ namespace Akka.Persistence.Sqlite.Journal
         /// <returns>TBD</returns>
         protected override DbCommand CreateCommand(DbConnection connection)
         {
-            return new SQLiteCommand((SQLiteConnection)connection);
+            return new SqliteCommand { Connection = (SqliteConnection)connection };
         }
     }
 }

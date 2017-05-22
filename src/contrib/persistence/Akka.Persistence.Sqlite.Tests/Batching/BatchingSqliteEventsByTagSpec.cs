@@ -31,7 +31,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                 table-name = event_journal
                 metadata-table-name = journal_metadata
                 auto-initialize = on
-                connection-string = ""FullUri=file:memdb-journal-{id}.db?mode=memory&cache=shared;""
+                connection-string = ""Datasource=memdb-journal-batch-{id}.db;Mode=Memory;Cache=Shared""
                 refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
