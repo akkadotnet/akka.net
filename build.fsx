@@ -73,7 +73,7 @@ Target "Build" (fun _ ->
 Target "RunTests" (fun _ ->
     let projects =
         match isWindows with
-		// Windows
+        // Windows
         | true -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
                   -- "./**/Akka.Streams.Tests.csproj"
