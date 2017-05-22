@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: custom-stream-processing
 title: Custom stream processing
 ---
 
@@ -365,6 +365,76 @@ If we attempt to draw the sequence of events, it shows that there is one "event 
 Completion handling usually (but not exclusively) comes into the picture when processing stages need to emit a few more elements after their upstream source has been completed. We have seen an example of this in our first `Duplicator` implementation where the last element needs to be doubled even after the upstream neighbour stage has been completed. This can be done by overriding the `onUpstreamFinish` callback in `SetHandler(in, action)`.
 
 Stages by default automatically stop once all of their ports (input and output) have been closed externally or internally. It is possible to opt out from this behavior by invoking `SetKeepGoing(true)` (which is not supported from the stages constructor and usually done in `PreStart`). In this case the stage **must** be explicitly closed by calling `CompleteStage()` or `FailStage(exception)`. This feature carries the risk of leaking streams and actors, therefore it should be used with care.
+
+### Logging inside GraphStages
+
+Logging debug or other important information in your stages is often a very good idea, especially when developing
+more advances stages which may need to be debugged at some point.
+ 
+The `Log` property is provided to enable you to easily obtain a `LoggingAdapter`
+inside of a `GraphStage` as long as the `Materializer` you're using is able to provide you with a logger.
+In that sense, it serves a very similar purpose as `ActorLogging` does for Actors. 
+
+> [!NOTE]
+> Please note that you can always simply use a logging library directly inside a Stage.
+Make sure to use an asynchronous appender however, to not accidentally block the stage when writing to files etc.
+
+The stage gets access to the `Log` property which it can safely use from any ``GraphStage`` callbacks:
+
+```csharp
+private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
+{
+	#region internal classes
+
+	private sealed class Logic : GraphStageLogic
+	{
+		public Logic(RandomLettersSource stage) : base(stage.Shape)
+		{
+			SetHandler(stage.Out, onPull: () =>
+			{
+				var c = NextChar(); // ASCII lower case letters
+
+				Log.Debug($"Randomly generated: {c}");	
+
+				Push(stage.Out, c.ToString());
+			});
+		}
+
+		private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
+	}
+
+	#endregion
+
+    public RandomLettersSource()
+    {
+	    Shape = new SourceShape<string>(Out);
+    }
+
+    private Outlet<string> Out { get; } = new Outlet<string>("RandomLettersSource.out");
+
+    public override SourceShape<string> Shape { get; }
+
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+}
+
+
+[Fact]
+public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
+{
+	const int n = 10;
+	EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
+	{
+		Source.FromGraph(new RandomLettersSource())
+			.Take(n)
+			.RunWith(Sink.Ignore<string>(), Materializer)
+			.Wait(TimeSpan.FromSeconds(3));
+	});
+}
+```
+
+> [!NOTE]
+> **SPI Note:** If you're implementing a Materializer, you can add this ability to your materializer by implementing 
+`IMaterializerLoggingProvider` in your `Materializer`.
 
 ### Using timers
 
