@@ -264,8 +264,10 @@ Target "Protobuf" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Documentation 
 //--------------------------------------------------------------------------------  
-Target "DocFx" <| fun _ ->
-    let docFxToolPath = findToolInSubPath "docfx.exe" "./tools/docfx.console/tools" 
+Target "DocFx" (fun _ ->
+    let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
+    DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
+    DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
 
     let docsPath = "./docs"
 
@@ -274,6 +276,7 @@ Target "DocFx" <| fun _ ->
                     Timeout = TimeSpan.FromMinutes 5.0; 
                     WorkingDirectory  = docsPath; 
                     DocFxJson = docsPath @@ "docfx.json" })
+)
 
 //--------------------------------------------------------------------------------
 // Help 

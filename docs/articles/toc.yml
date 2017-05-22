@@ -6,6 +6,8 @@
     href: intro/what-are-actors.md
   - name: Akka.NET Libraries and Modules
     href: intro/modules.md
+  - name: Part 1. Top-level Architecture
+    href: intro/tutorial-1.md
   - name: Getting Started
     href: intro/getting-started.md
   - name: The Obligatory Hello World
