@@ -106,8 +106,7 @@ namespace Akka.Tools.MatchHandler
                         //  }
 
                         //We might have a variable of the correct type already, so use it in that case
-                        ParameterExpression castedVariable;
-                        if(!castedInputVariables.TryGetValue(handlesType, out castedVariable))
+                        if(!castedInputVariables.TryGetValue(handlesType, out var castedVariable))
                         {
                             //The variable did not exist, create and store it:
                             //  var castedVariable = inputParameter as HandlesType;

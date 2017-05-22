@@ -146,8 +146,7 @@ namespace Akka.Dispatch
 
         private IPathEntry GetPathEntry(string path)
         {
-            IPathEntry pathEntry;
-            if (!_entryMap.TryGetValue(path, out pathEntry)) //cache miss
+            if (!_entryMap.TryGetValue(path, out var pathEntry)) //cache miss
             {
                 try
                 {
@@ -157,17 +156,11 @@ namespace Akka.Dispatch
                         {
                             var configValue = _config.GetValue(path);
                             if (configValue == null) //empty
-                            {
                                 pathEntry = EmptyPathEntry;
-                            }
                             else if (configValue.IsString()) //is a string value
-                            {
                                 pathEntry = new StringPathEntry(true, true, configValue.AtKey("cached"), configValue.GetString());
-                            }
                             else //some other type of HOCON value
-                            {
                                 pathEntry = new ValuePathEntry(true, true, configValue.AtKey("cached"));
-                            }
                         }
                         catch (Exception)
                         {
@@ -175,9 +168,7 @@ namespace Akka.Dispatch
                         }
                     }
                     else //couldn't find the path
-                    {
                         pathEntry = NonExistingPathEntry;
-                    }
                 }
                 catch (Exception) //configuration threw some sort of error
                 {
@@ -185,13 +176,8 @@ namespace Akka.Dispatch
                 }
 
                 if (_entryMap.TryAdd(path, pathEntry))
-                {
                     return pathEntry;
-                }
-                else
-                {
-                    return _entryMap[path];
-                }
+                return _entryMap[path];
             }
             
             //cache hit

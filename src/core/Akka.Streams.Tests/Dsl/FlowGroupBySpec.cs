@@ -553,16 +553,8 @@ namespace Akka.Streams.Tests.Dsl
                     upstreamSubscription.ExpectRequest();
                     upstreamSubscription.SendNext(byteString);
 
-                    if (!map.ContainsKey(index))
+                    if (map.TryGetValue(index, out var state))
                     {
-                        var probe = props.Probes[props.ProbesReaderTop].Task.AwaitResult();
-                        props.ProbesReaderTop++;
-                        map[index] = new SubFlowState(probe, false, byteString);
-                        //stream automatically requests next element 
-                    }
-                    else
-                    {
-                        var state = map[index];
                         if (state.FirstElement != null) //first element in subFlow 
                         {
                             if (!state.HasDemand)
@@ -585,6 +577,13 @@ namespace Akka.Streams.Tests.Dsl
                             props.BlockingNextElement = byteString;
                             RandomDemand(map, props);
                         }
+                    }
+                    else
+                    {
+                        var probe = props.Probes[props.PropesReaderTop].Task.AwaitResult();
+                        props.PropesReaderTop++;
+                        map[index] = new SubFlowState(probe, false, byteString);
+                        //stream automatically requests next element 
                     }
                 }
                 upstreamSubscription.SendComplete();

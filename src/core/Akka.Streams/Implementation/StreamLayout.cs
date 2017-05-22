@@ -176,8 +176,7 @@ namespace Akka.Streams.Implementation
             Func<int> ids = () => currentId++;
             Func<object, int> id = obj =>
             {
-                int x;
-                if (!idMap.TryGetValue(obj, out x))
+                if (!idMap.TryGetValue(obj, out int x))
                 {
                     x = ids();
                     idMap.Add(obj, x);
@@ -2217,8 +2216,8 @@ namespace Akka.Streams.Implementation
         {
             if (IsDebug) Console.WriteLine($"Registering source {materializedSource}");
 
-            if (MaterializedValueSource.ContainsKey(materializedSource.Computation))
-                MaterializedValueSource[materializedSource.Computation].AddFirst(materializedSource);
+            if (MaterializedValueSource.TryGetValue(materializedSource.Computation, out var list))
+                list.AddFirst(materializedSource);
             else
                 MaterializedValueSource.Add(materializedSource.Computation,
                     new LinkedList<IMaterializedValueSource>(new[] {materializedSource}));
@@ -2300,7 +2299,8 @@ namespace Akka.Streams.Implementation
             int spaces)
         {
             var indent = Enumerable.Repeat(" ", spaces).Aggregate("", (s, s1) => s + s1);
-            if (IsDebug) Console.WriteLine($"{indent}{node}");
+            if (IsDebug)
+                Console.WriteLine($"{indent}{node}");
             object result;
             if (node is StreamLayout.Atomic)
             {
@@ -2318,14 +2318,16 @@ namespace Akka.Streams.Implementation
                 var transform = (StreamLayout.Transform) node;
                 result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
             }
-            else result = NotUsed.Instance;
+            else
+                result = NotUsed.Instance;
 
-            if (IsDebug) Console.WriteLine($"{indent}result = {result}");
+            if (IsDebug)
+                Console.WriteLine($"{indent}result = {result}");
 
-            if (MaterializedValueSource.ContainsKey(node))
+            if (MaterializedValueSource.TryGetValue(node, out var sources))
             {
-                var sources = MaterializedValueSource[node];
-                if (IsDebug) Console.WriteLine($"{indent}triggering sources {sources}");
+                if (IsDebug)
+                    Console.WriteLine($"{indent}triggering sources {sources}");
                 MaterializedValueSource.Remove(node);
                 foreach (var source in sources)
                     source.SetValue(result);
@@ -2344,12 +2346,9 @@ namespace Akka.Streams.Implementation
             Subscribers[inPort] = subscriberOrVirtual;
             
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (CurrentLayout.Upstreams.ContainsKey(inPort))
-            {
-                IUntypedPublisher publisher;
-                if (Publishers.TryGetValue(CurrentLayout.Upstreams[inPort], out publisher))
+            if (CurrentLayout.Upstreams.TryGetValue(inPort, out var outPort))
+                if (Publishers.TryGetValue(outPort, out var publisher))
                     DoSubscribe(publisher, subscriberOrVirtual);
-            }
         }
 
 
@@ -2362,12 +2361,9 @@ namespace Akka.Streams.Implementation
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (CurrentLayout.Downstreams.ContainsKey(outPort))
-            {
-                object subscriber;
-                if (Subscribers.TryGetValue(CurrentLayout.Downstreams[outPort], out subscriber))
+            if (CurrentLayout.Downstreams.TryGetValue(outPort, out var inPort))
+                if (Subscribers.TryGetValue(inPort, out var subscriber))
                     DoSubscribe(publisher, subscriber);
-            }
         }
 
         private void DoSubscribe(IUntypedPublisher publisher, object subscriberOrVirtual)

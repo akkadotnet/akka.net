@@ -172,11 +172,7 @@ namespace Akka.DistributedData
                 {
                     var rhsDots = (MultiVersionVector)r;
                     var commonDots = rhsDots.Versions
-                        .Where(kv =>
-                        {
-                            long v;
-                            return rhsDots.Versions.TryGetValue(kv.Key, out v) && v == kv.Value;
-                        }).ToImmutableDictionary();
+                        .Where(kv => rhsDots.Versions.TryGetValue(kv.Key, out long v) && v == kv.Value).ToImmutableDictionary();
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
                     var rhsUniqueDots = rhsDots.Versions.RemoveRange(commonDotKeys);

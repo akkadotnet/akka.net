@@ -517,17 +517,13 @@ namespace Akka.Cluster.Sharding
         /// <param name="tref">TBD</param>
         protected virtual void EntityTerminated(IActorRef tref)
         {
-            ShardId id;
-            IImmutableList<Tuple<Msg, IActorRef>> buffer;
-            if (IdByRef.TryGetValue(tref, out id) && MessageBuffers.TryGetValue(id, out buffer) && buffer.Count != 0)
+            if (IdByRef.TryGetValue(tref, out var id) && MessageBuffers.TryGetValue(id, out var buffer) && buffer.Count != 0)
             {
                 Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
                 SendMessageBuffer(new EntityStarted(id));
             }
             else
-            {
                 ProcessChange(new EntityStopped(id), PassivateCompleted);
-            }
 
             Passivating = Passivating.Remove(tref);
         }
@@ -603,8 +599,7 @@ namespace Akka.Cluster.Sharding
 
         private void Passivate(IActorRef entity, object stopMessage)
         {
-            ShardId id;
-            if (IdByRef.TryGetValue(entity, out id) && !MessageBuffers.ContainsKey(id))
+            if (IdByRef.TryGetValue(entity, out var id) && !MessageBuffers.ContainsKey(id))
             {
                 Log.Debug("Passivating started on entity {0}", id);
 
@@ -641,8 +636,8 @@ namespace Akka.Cluster.Sharding
             var id = message.EntityId;
 
             // Get the buffered messages and remove the buffer
-            IImmutableList<Tuple<Msg, IActorRef>> buffer;
-            if (MessageBuffers.TryGetValue(id, out buffer)) MessageBuffers = MessageBuffers.Remove(id);
+            if (MessageBuffers.TryGetValue(id, out var buffer))
+                MessageBuffers = MessageBuffers.Remove(id);
 
             if (buffer.Count != 0)
             {
@@ -670,8 +665,7 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                IImmutableList<Tuple<Msg, IActorRef>> buffer;
-                if (MessageBuffers.TryGetValue(id, out buffer))
+                if (MessageBuffers.TryGetValue(id, out var buffer))
                 {
                     if (TotalBufferSize >= Settings.TunningParameters.BufferSize)
                     {

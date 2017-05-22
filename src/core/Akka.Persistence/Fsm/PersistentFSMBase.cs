@@ -282,15 +282,13 @@ namespace Akka.Persistence.Fsm
         {
             if (DebugEvent)
                 _log.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
-            if (_timers.ContainsKey(name))
-                _timers[name].Cancel();
+
+            if (_timers.TryGetValue(name, out Timer oldTimer))
+                oldTimer.Cancel();
+
             var timer = new Timer(name, msg, repeat, _timerGen.Next(), Context, DebugEvent ? _log : null);
             timer.Schedule(Self, timeout);
-
-            if (!_timers.ContainsKey(name))
-                _timers.Add(name, timer);
-            else
-                _timers[name] = timer;
+            _timers[name] = timer;
         }
 
         /// <summary>
@@ -305,9 +303,9 @@ namespace Akka.Persistence.Fsm
                 _log.Debug("Cancelling timer {0}", name);
             }
 
-            if (_timers.ContainsKey(name))
+            if (_timers.TryGetValue(name, out Timer timer))
             {
-                _timers[name].Cancel();
+                timer.Cancel();
                 _timers.Remove(name);
             }
         }
@@ -330,13 +328,7 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         /// <param name="state">TBD</param>
         /// <param name="timeout">TBD</param>
-        public void SetStateTimeout(TState state, TimeSpan? timeout)
-        {
-            if (!_stateTimeouts.ContainsKey(state))
-                _stateTimeouts.Add(state, timeout);
-            else
-                _stateTimeouts[state] = timeout;
-        }
+        public void SetStateTimeout(TState state, TimeSpan? timeout) => _stateTimeouts[state] = timeout;
 
         /// <summary>
         ///     Set handler which is called upon each state transition, i.e. not when
@@ -402,9 +394,9 @@ namespace Akka.Persistence.Fsm
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
-            if (_stateFunctions.ContainsKey(name))
+            if (_stateFunctions.TryGetValue(name, out StateFunction oldFunction))
             {
-                _stateFunctions[name] = OrElse(_stateFunctions[name], function);
+                _stateFunctions[name] = OrElse(oldFunction, function);
                 _stateTimeouts[name] = _stateTimeouts[name] ?? timeout;
             }
             else
@@ -562,13 +554,11 @@ namespace Akka.Persistence.Fsm
                 .With<TimeoutMarker>(marker =>
                 {
                     if (_generation == marker.Generation)
-                    {
                         ProcessMsg(new StateTimeout(), "state timeout");
-                    }
                 })
-                .With<Timer>(t =>
+                .With<Timer>(t => 
                 {
-                    if (_timers.ContainsKey(t.Name) && _timers[t.Name].Generation == t.Generation)
+                    if (_timers.TryGetValue(t.Name, out Timer timer) && timer.Generation == t.Generation)
                     {
                         if (_timeoutFuture != null)
                         {
@@ -577,9 +567,7 @@ namespace Akka.Persistence.Fsm
                         }
                         _generation++;
                         if (!t.Repeat)
-                        {
                             _timers.Remove(t.Name);
-                        }
                         ProcessMsg(t.Message, t);
                     }
                 })
