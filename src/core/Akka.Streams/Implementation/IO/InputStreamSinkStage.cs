@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -21,12 +21,14 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
     {
-#region internal classes
+        #region internal classes
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal interface IAdapterToStageMessage { }
+        internal interface IAdapterToStageMessage
+        {
+        }
 
         /// <summary>
         /// TBD
@@ -63,7 +65,9 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal interface IStreamToAdapterMessage { }
+        internal interface IStreamToAdapterMessage
+        {
+        }
 
         /// <summary>
         /// TBD
@@ -206,7 +210,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-#endregion
+        #endregion
 
         private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
@@ -240,7 +244,8 @@ namespace Akka.Streams.Implementation.IO
         /// This exception is thrown when the maximum size of the input buffer is less than or equal to zero.
         /// </exception>
         /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(
+            Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0)
@@ -249,7 +254,8 @@ namespace Akka.Streams.Implementation.IO
             _dataQueue = new BlockingCollection<IStreamToAdapterMessage>(maxBuffer + 2);
 
             var logic = new Logic(this);
-            return new LogicAndMaterializedValue<Stream>(logic, new InputStreamAdapter(_dataQueue, logic, _readTimeout));
+            return new LogicAndMaterializedValue<Stream>(logic,
+                new InputStreamAdapter(_dataQueue, logic, _readTimeout));
         }
     }
 
@@ -259,7 +265,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamAdapter : Stream
     {
-#region not supported 
+        #region not supported 
 
         /// <summary>
         /// TBD
@@ -274,7 +280,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="origin">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException("This stream can only read");
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException(
+            "This stream can only read");
 
         /// <summary>
         /// TBD
@@ -292,7 +299,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="count">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException("This stream can only read");
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException(
+            "This stream can only read");
 
         /// <summary>
         /// TBD
@@ -309,9 +317,11 @@ namespace Akka.Streams.Implementation.IO
             get => throw new NotSupportedException("This stream can only read");
             set => throw new NotSupportedException("This stream can only read");
         }
-#endregion
 
-        private static readonly Exception SubscriberClosedException = new IOException("Reactive stream is terminated, no reads are possible");
+        #endregion
+
+        private static readonly Exception SubscriberClosedException =
+            new IOException("Reactive stream is terminated, no reads are possible");
 
         private readonly BlockingCollection<IStreamToAdapterMessage> _sharedBuffer;
         private readonly IStageWithCallback _sendToStage;
@@ -327,7 +337,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="sharedBuffer">TBD</param>
         /// <param name="sendToStage">TBD</param>
         /// <param name="readTimeout">TBD</param>
-        public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer, IStageWithCallback sendToStage, TimeSpan readTimeout)
+        public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer,
+            IStageWithCallback sendToStage, TimeSpan readTimeout)
         {
             _sharedBuffer = sharedBuffer;
             _sendToStage = sendToStage;
@@ -345,7 +356,7 @@ namespace Akka.Streams.Implementation.IO
             {
                 // at this point Subscriber may be already terminated
                 if (_isStageAlive)
-                    _sendToStage.WakeUp(Close.Instance);
+                    _sendToStage.WakeUp(InputStreamSinkStage.Close.Instance);
 
                 _isActive = false;
                 return NotUsed.Instance;
@@ -395,7 +406,8 @@ namespace Akka.Streams.Implementation.IO
             if (buffer.Length <= 0) throw new ArgumentException("array size must be > 0", nameof(buffer));
             if (offset < 0) throw new ArgumentException("offset must be >= 0", nameof(offset));
             if (count <= 0) throw new ArgumentException("count must be > 0", nameof(count));
-            if (offset + count > buffer.Length) throw new ArgumentException("offset + count must be smaller or equal to the array length");
+            if (offset + count > buffer.Length)
+                throw new ArgumentException("offset + count must be smaller or equal to the array length");
 
             return ExecuteIfNotClosed(() =>
             {
@@ -404,7 +416,7 @@ namespace Akka.Streams.Implementation.IO
 
                 if (_detachedChunk != null)
                     return ReadBytes(buffer, offset, count);
-                
+
                 var success = _sharedBuffer.TryTake(out var msg, _readTimeout);
                 if (!success)
                     throw new IOException("Timeout on waiting for new data");
@@ -512,14 +524,15 @@ namespace Akka.Streams.Implementation.IO
         /// TBD
         /// </summary>
         public override bool CanRead => true;
+
         /// <summary>
         /// TBD
         /// </summary>
         public override bool CanSeek => false;
+
         /// <summary>
         /// TBD
         /// </summary>
         public override bool CanWrite => false;
     }
 }
-#endif
