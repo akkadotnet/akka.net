@@ -86,7 +86,7 @@ Once you've installed Akka.Cluster, we need to update our HOCON configuration to
 akka {
     actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 8081
             hostname = localhost
         }
@@ -109,7 +109,7 @@ You can, and should, specify multiple seed nodes inside this field - and seed no
 akka {
     actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 0 #let os pick random port
             hostname = localhost
         }
@@ -155,6 +155,7 @@ A node is a logical member of a cluster. A node is defined by the address at whi
 ### Seed Nodes
 A seed node is a well-known contact point that a new node must contact in order to join the cluster. Seed nodes function as the service-discovery mechanism of Akka.Cluster.
 
+> [!NOTE]
 > [Lighthouse](https://github.com/petabridge/lighthouse) is a pre-built, dedicated seed node tool that you can use. It's extremely lightweight and only needs to be upgraded when Akka.Cluster itself is upgraded. If you're hosted on a platform like Azure or AWS, you can also tap into the platform-specific APIs to accomplish the same effect.
 
 ## How a Cluster Forms
