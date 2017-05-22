@@ -182,7 +182,15 @@ namespace Akka.Streams.Dsl
         public Source<TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
             if (flow.Module == GraphStages.Identity<TOut2>().Module)
-                return this as Source<TOut2, TMat3>;
+            {
+                if (Keep.IsLeft(combine))
+                    return this as Source<TOut2, TMat3>;
+
+                if (Keep.IsRight(combine))
+                    return MapMaterializedValue(_ => NotUsed.Instance) as Source<TOut2, TMat3>;
+
+                return MapMaterializedValue(value=> combine(value, (TMat2)(object)NotUsed.Instance)) as Source<TOut2, TMat3>;
+            }
 
             var flowCopy = flow.Module.CarbonCopy();
             return new Source<TOut2, TMat3>(Module
