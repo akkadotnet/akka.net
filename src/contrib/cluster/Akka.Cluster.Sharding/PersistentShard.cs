@@ -135,12 +135,10 @@ namespace Akka.Cluster.Sharding
         /// <param name="tref">TBD</param>
         protected override void EntityTerminated(IActorRef tref)
         {
-            ShardId id;
-            IImmutableList<Tuple<Msg, IActorRef>> buffer;
 
-            if (IdByRef.TryGetValue(tref, out id))
+            if (IdByRef.TryGetValue(tref, out var id))
             {
-                if (MessageBuffers.TryGetValue(id, out buffer) && buffer.Count != 0)
+                if (MessageBuffers.TryGetValue(id, out var buffer) && buffer.Count != 0)
                 {
                     // Note; because we're not persisting the EntityStopped, we don't need
                     // to persist the EntityStarted either.
@@ -155,9 +153,7 @@ namespace Akka.Cluster.Sharding
                         Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.EntityRestartBackoff, Sender, new RestartEntity(id), Self);
                     }
                     else
-                    {
                         ProcessChange(new EntityStopped(id), PassivateCompleted);
-                    }
                 }
             }
 

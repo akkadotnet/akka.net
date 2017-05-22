@@ -1016,7 +1016,9 @@ namespace Akka.Remote
             if (readonlyEndpoint != null)
             {
                 var endpoint = readonlyEndpoint.Item1;
-                if (_pendingReadHandoffs.ContainsKey(endpoint)) _pendingReadHandoffs[endpoint].Disassociate();
+                if (_pendingReadHandoffs.TryGetValue(endpoint, out var protocolHandle))
+                    protocolHandle.Disassociate();
+
                 _pendingReadHandoffs.AddOrSet(endpoint, handle);
                 endpoint.Tell(new EndpointWriter.TakeOver(handle, Self));
                 _endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress).Match()
@@ -1046,9 +1048,7 @@ namespace Akka.Remote
                             _stashedInbound[pass.Endpoint] = stashedInboundForEp;
                         }
                         else
-                        {
                             CreateAndRegisterEndpoint(handle, _endpoints.RefuseUid(handle.RemoteAddress));
-                        }
                     }
                     else if (pass != null) // has a UID value
                     {
@@ -1068,9 +1068,7 @@ namespace Akka.Remote
                         }
                     }
                     else
-                    {
                         CreateAndRegisterEndpoint(handle, _endpoints.RefuseUid(handle.RemoteAddress));
-                    }
                 }
             }
         }
@@ -1156,9 +1154,8 @@ namespace Akka.Remote
 
         private void AcceptPendingReader(IActorRef takingOverFrom)
         {
-            if (_pendingReadHandoffs.ContainsKey(takingOverFrom))
+            if (_pendingReadHandoffs.TryGetValue(takingOverFrom, out var handle))
             {
-                var handle = _pendingReadHandoffs[takingOverFrom];
                 _pendingReadHandoffs.Remove(takingOverFrom);
                 _eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, inbound: true));
                 var endpoint = CreateEndpoint(handle.RemoteAddress, handle.LocalAddress,
@@ -1169,11 +1166,8 @@ namespace Akka.Remote
 
         private void RemovePendingReader(IActorRef takingOverFrom, AkkaProtocolHandle withHandle)
         {
-            if (_pendingReadHandoffs.ContainsKey(takingOverFrom) &&
-                _pendingReadHandoffs[takingOverFrom].Equals(withHandle))
-            {
+            if (_pendingReadHandoffs.TryGetValue(takingOverFrom, out var handle) && handle.Equals(withHandle))
                 _pendingReadHandoffs.Remove(takingOverFrom);
-            }
         }
 
         private void CreateAndRegisterEndpoint(AkkaProtocolHandle handle, int? refuseUid)
