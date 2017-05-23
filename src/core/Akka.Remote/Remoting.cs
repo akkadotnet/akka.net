@@ -376,24 +376,20 @@ namespace Akka.Remote
         internal static Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
-            HashSet<ProtocolTransportAddressPair> transports;
-
-            if (transportMapping.TryGetValue(remote.Protocol, out transports))
+            if (transportMapping.TryGetValue(remote.Protocol, out var transports))
             {
                 ProtocolTransportAddressPair[] responsibleTransports =
                     transports.Where(t => t.ProtocolTransport.IsResponsibleFor(remote)).ToArray();
                 if (responsibleTransports.Length == 0)
-                {
                     throw new RemoteTransportException(
                         "No transport is responsible for address:[" + remote + "] although protocol [" + remote.Protocol +
                         "] is available." +
                         " Make sure at least one transport is configured to be responsible for the address.",
                         null);
-                }
+
                 if (responsibleTransports.Length == 1)
-                {
                     return responsibleTransports.First().Address;
-                }
+
                 throw new RemoteTransportException(
                     "Multiple transports are available for [" + remote + ": " +
                     string.Join(",", responsibleTransports.Select(t => t.ToString())) + "] " +

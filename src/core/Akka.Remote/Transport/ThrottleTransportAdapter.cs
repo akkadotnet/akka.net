@@ -496,36 +496,27 @@ namespace Akka.Remote.Transport
 
         private ThrottleMode GetInboundMode(Address nakedAddress)
         {
-            Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
-            {
-                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both ||
-                    mode.Item2 == ThrottleTransportAdapter.Direction.Receive)
+            if (_throttlingModes.TryGetValue(nakedAddress, out var mode))
+                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both || mode.Item2 == ThrottleTransportAdapter.Direction.Receive)
                     return mode.Item1;
-            }
 
             return Unthrottled.Instance;
         }
 
         private ThrottleMode GetOutboundMode(Address nakedAddress)
         {
-            Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
-            {
-                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both ||
-                    mode.Item2 == ThrottleTransportAdapter.Direction.Send)
+            if (_throttlingModes.TryGetValue(nakedAddress, out var mode))
+                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both || mode.Item2 == ThrottleTransportAdapter.Direction.Send)
                     return mode.Item1;
-            }
+
             return Unthrottled.Instance;
         }
 
         private Task<SetThrottleAck> SetMode(Address nakedAddress, ThrottlerHandle handle)
         {
-             Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
-            {
+            if (_throttlingModes.TryGetValue(nakedAddress, out var mode))
                 return SetMode(handle, mode.Item1, mode.Item2);
-            }
+
             return SetMode(handle, Unthrottled.Instance, ThrottleTransportAdapter.Direction.Both);
         }
 

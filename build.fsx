@@ -7,6 +7,7 @@ open System.Text
 
 open Fake
 open Fake.DotNetCli
+open Fake.DocFxHelper
 
 // Variables
 let configuration = "Release"
@@ -16,8 +17,8 @@ let versionSuffix = getBuildParamOrDefault "versionsuffix" ""
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
 let output = __SOURCE_DIRECTORY__  @@ "bin"
-let outputTests = output @@ "tests"
-let outputPerfTests = output @@ "perf"
+let outputTests = __SOURCE_DIRECTORY__ @@ "TestResults"
+let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
 let outputMultiNode = output @@ "multinode"
@@ -33,6 +34,7 @@ Target "Clean" (fun _ ->
     CleanDir outputMultiNode
     CleanDir outputBinariesNet45
     CleanDir outputBinariesNetStandard
+    CleanDir "docs/_site"
 
     CleanDirs !! "./**/bin"
     CleanDirs !! "./**/obj"
@@ -95,7 +97,7 @@ Target "RunTests" (fun _ ->
             (fun p -> 
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
-                    TimeOut = TimeSpan.FromMinutes 10. })
+                    TimeOut = TimeSpan.FromMinutes 30. })
                 (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     CreateDir outputTests
@@ -262,7 +264,21 @@ Target "Protobuf" <| fun _ ->
         if result <> 0 then failwithf "protoc failed. %s %s" protocPath args
     
     protoFiles |> Seq.iter (runProtobuf)
-    
+
+//--------------------------------------------------------------------------------
+// Documentation 
+//--------------------------------------------------------------------------------  
+Target "DocFx" <| fun _ ->
+    let docFxToolPath = findToolInSubPath "docfx.exe" "./tools/docfx.console/tools" 
+
+    let docsPath = "./docs"
+
+    DocFx (fun p -> 
+                { p with 
+                    Timeout = TimeSpan.FromMinutes 5.0; 
+                    WorkingDirectory  = docsPath; 
+                    DocFxJson = docsPath @@ "docfx.json" })
+
 //--------------------------------------------------------------------------------
 // Help 
 //--------------------------------------------------------------------------------
@@ -330,6 +346,9 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
 "CreateNuget" ==> "PublishNuget"
 "PublishNuget" ==> "Nuget"
+
+// docs
+"Clean" ==> "Docfx"
 
 // all
 "BuildRelease" ==> "All"

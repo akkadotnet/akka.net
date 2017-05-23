@@ -1860,8 +1860,7 @@ namespace Akka.Remote
         /// </summary>
         protected override void PreStart()
         {
-            EndpointManager.ResendState resendState;
-            if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out resendState))
+            if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
             {
                 _ackedReceiveBuffer = resendState.Buffer;
                 DeliverAndAck();
@@ -1942,8 +1941,7 @@ namespace Akka.Remote
         private void SaveState()
         {
             var key = new EndpointManager.Link(LocalAddress, RemoteAddress);
-            EndpointManager.ResendState previousValue;
-            _receiveBuffers.TryGetValue(key, out previousValue);
+            _receiveBuffers.TryGetValue(key, out var previousValue);
             UpdateSavedState(key, previousValue);
         }
 
@@ -1970,15 +1968,11 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    var canReplace = _receiveBuffers.ContainsKey(key) && _receiveBuffers[key].Equals(expectedState);
-                    if (canReplace)
-                    {
+                    if (_receiveBuffers.TryGetValue(key, out var resendState) && resendState.Equals(expectedState))
                         _receiveBuffers[key] = Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState);
-                    }
                     else
                     {
-                        EndpointManager.ResendState previousValue;
-                        _receiveBuffers.TryGetValue(key, out previousValue);
+                        _receiveBuffers.TryGetValue(key, out var previousValue);
                         expectedState = previousValue;
                         continue;
                     }

@@ -11,14 +11,14 @@ Akka.NET uses the "Home Depot" extensibility model - the base [Akka NuGet packag
 ## Akka.Remote's Capabilities
 Akka.Remote introduces the following capabilities to Akka.NET applications:
 
-1. **Location transparency with RemoteActorRef** - write code that looks like it's communicating with local actors, but with just a few configuration settings your actors can begin communicating with actors hosted in remote processes in a way that's fully [location transparent](/concepts/location-transparency.md) to your code.
+1. **Location transparency with RemoteActorRef** - write code that looks like it's communicating with local actors, but with just a few configuration settings your actors can begin communicating with actors hosted in remote processes in a way that's fully [location transparent](xref:location-transparency) to your code.
 1. **Remote addressing** - Akka.Remote extends the `Address` and `ActorPath` components of Akka.NET to also now include information about how to connect to remote processes via `ActorSelection`.
 1. **Remote messaging** - send messages, *transparently*, to actors running in remote `ActorSystem`s elsewhere on the network.
 1. **Remote deployment** - remotely deploy actors via the `ActorOf` method onto remote `ActorSystem` instances, anywhere on the network! The location of your actors on the network becomes a deployment detail in Akka.Remote.
 1. **Multiple network transports** - out of the box Akka.Remote ships with support for TCP, but has the ability to plugin third party transports and active multiple of them at the same time.
 
 ## Distributed by Default
-Everything in Akka is designed to work in a distributed setting: all interactions of actors use purely message passing and everything is asynchronous. This effort has been undertaken to ensure that all functions are available equally when running within a single machine or on a cluster of hundreds of machines. The key for enabling this is to go from remote to local by way of optimization instead of trying to go from local to remote by way of generalization. See [this classic paper](http://doc.akka.io/docs/misc/smli_tr-94-29.pdf) for a detailed discussion on why the second approach is bound to fail.
+Everything in Akka.NET is designed to work in a distributed setting: all interactions of actors use purely message passing and everything is asynchronous. This effort has been undertaken to ensure that all functions are available equally when running within a single machine or on a cluster of hundreds of machines. The key for enabling this is to go from remote to local by way of optimization instead of trying to go from local to remote by way of generalization. See [this classic paper](http://doc.akka.io/docs/misc/smli_tr-94-29.pdf) for a detailed discussion on why the second approach is bound to fail.
 
 ## Ways in which Transparency is Broken
 What is true of Akka need not be true of the application which uses it, since designing for distributed execution poses some restrictions on what is possible. The most obvious one is that all messages sent over the wire must be serializable. While being a little less obvious this includes closures which are used as actor factories (i.e. within Props) if the actor is to be created on a remote node.
@@ -29,7 +29,7 @@ Message size can also be a concern. While in-process messages are only bound by 
 
 ```hocon
 akka {
-    helios.tcp {
+    dot-netty.tcp {
         # Maximum frame size: 4 MB
         maximum-frame-size = 4000000b
     }
@@ -41,7 +41,7 @@ Messages exceeding the maximum size will be dropped.
 You also have to be aware that some protocols (e.g. UDP) might not support arbitrarily large messages.
 
 ## How is Remoting Used?
-We took the idea of transparency to the limit in that there is nearly no API for the remoting layer of Akka: it is purely driven by configuration. Just write your application according to the principles outlined in the previous sections, then specify remote deployment of actor sub-trees in the configuration file. This way, your application can be scaled out without having to touch the code. The only piece of the API which allows programmatic influence on remote deployment is that Props contain a field which may be set to a specific Deploy instance; this has the same effect as putting an equivalent deployment into the configuration file (if both are given, configuration file wins).
+We took the idea of transparency to the limit in that there is nearly no API for the remoting layer of Akka.NET: it is purely driven by configuration. Just write your application according to the principles outlined in the previous sections, then specify remote deployment of actor sub-trees in the configuration file. This way, your application can be scaled out without having to touch the code. The only piece of the API which allows programmatic influence on remote deployment is that Props contain a field which may be set to a specific Deploy instance; this has the same effect as putting an equivalent deployment into the configuration file (if both are given, configuration file wins).
 
 ## Peer-to-Peer vs. Client-Server
 Akka Remoting is a communication module for connecting actor systems in a peer-to-peer fashion, and it is the foundation for Akka Clustering. The design of remoting is driven by two (related) design decisions:
@@ -50,7 +50,7 @@ Akka Remoting is a communication module for connecting actor systems in a peer-t
 2. The role of the communicating systems are symmetric in regards to connection patterns: there is no system that only accepts connections, and there is no system that only initiates connections.
 The consequence of these decisions is that it is not possible to safely create pure client-server setups with predefined roles (violates assumption 2) and using setups involving Network Address Translation or Load Balancers (violates assumption 1).
 
-For client-server setups it is better to use HTTP or [Akka I/O](../IO).
+For client-server setups it is better to use HTTP or [Akka I/O](xref:akka-io).
 
 ### Use Cases
 Akka.Remote is most commonly used in distributed applications that run across the network, some examples include:
@@ -82,11 +82,11 @@ Next, you'll need to enable the `RemoteActorRefProvider` inside [HOCON configura
 ```xml
 akka {
     actor {
-        provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
+        provider = remote
     }
 
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 8080
             hostname = localhost
         }
@@ -97,33 +97,30 @@ akka {
 See [Akka Remote Reference Config File](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote/Configuration/Remote.conf) for additional information on HOCON settings available in akka remote.
 
 ## Addresses, Transports, Endpoints, and Associations
-In the above section we mentioned that you have to bind a *transport* to an IP address and port, we did in that in HOCON inside the `helios.tcp` section. Why did we have to do any of that?
+In the above section we mentioned that you have to bind a *transport* to an IP address and port, we did in that in HOCON inside the `dot-netty.tcp` section. Why did we have to do any of that?
 
 Well, let's take a step back to define some key terms you'll need to be familiar with in order to use Akka.Remote:
 
-- **Transport** - a "transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [Helios](http://helios-io.github.io/ "Helios - Reactive socket middleware for .NET") TCP transport, but you could write your own transport and use that instead of you wish.
+- **Transport** - a "transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty) TCP transport, but you could write your own transport and use that instead of you wish.
 - **Address** - this refers to an IP address and port combination, just like any other IP-enabled protocol. You can also use a hostname instead of an IP address, but the hostname must be resolved to an IP address first. 
 - **Endpoint** - an "endpoint" is a specific address binding for a transport. If I open a TCP transport at `localhost:8080` then I've created an *endpoint* for that transport at that address.
 - **Association** - an "association" is a connection between two endpoints, each belonging to a different `ActorSystem`. Must have a valid *outbound* endpoint and a valid *inbound* endpoint in order to create the association.
 
-> [!NOTE]
-> Learn more about [Helios and the default Akka.Remote transports](transports.md) here.
-
 These terms form the basis for all remote interaction between `ActorSystem` instances, so they're critically important to learn and distinguish.
 
-So in the case of our previous example, `localhost:8080` is the inbound (listening) endpoint for the Helios TCP transport of the `ActorSystem` we configured.
+So in the case of our previous example, `localhost:8080` is the inbound (listening) endpoint for the `DotNetty` TCP transport of the `ActorSystem` we configured.
 
 ## How to Form Associations between Remote Systems
-So imagine we have the following two actor systems configured to both use the `helios.tcp` Akka.Remote transport:
+So imagine we have the following two actor systems configured to both use the `dot-netty.tcp` Akka.Remote transport:
 
 **Client**
 ```xml
 akka {  
     actor {
-        provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
+        provider = remote
     }
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 0 # bound to a dynamic port assigned by the OS
             hostname = localhost
         }
@@ -135,10 +132,10 @@ akka {
 ```xml
 akka {  
     actor {
-        provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
+        provider = remote
     }
     remote {
-        helios.tcp {
+        dot-netty.tcp {
             port = 8081 #bound to a specific port
             hostname = localhost
         }
@@ -176,11 +173,11 @@ Each `ActorPath` consists of four parts:
 
 When you want to connect to a remote `ActorSystem`, two important changes occur to the address:
 
-1. **The protocol gets augmented with the protocol of the network transport** - so in this case, since we're using the Helios TCP transport the protocol for communicating with all remote actors in our `ActorSystem` changes from `akka://` to `akka.tcp://`. When you deploy an actor remotely or send a message to a remote actor via `ActorSelection`, specifying this protocol is what tells your local `ActorSystem` how to deliver this message to the remote one!
+1. **The protocol gets augmented with the protocol of the network transport** - so in this case, since we're using the DotNetty TCP transport the protocol for communicating with all remote actors in our `ActorSystem` changes from `akka://` to `akka.tcp://`. When you deploy an actor remotely or send a message to a remote actor via `ActorSelection`, specifying this protocol is what tells your local `ActorSystem` how to deliver this message to the remote one!
 2. **The address gets populated with the inbound endpoint on the transport** - `localhost:9001` in this case. This lets your local system know how to attempt to establish an *outbound endpoint* to the remote `ActorSystem`.
 
 > [!NOTE]
-> for more information about addressing in Akka.NET, see [Actor References, Paths and Addresses](/concepts/addressing.md)
+> For more information about addressing in Akka.NET, see [Actor References, Paths and Addresses](xref:addressing)
 
 Here's how we actually use a remote `Address` to form an association between two remote `ActorSystem` instances.
 

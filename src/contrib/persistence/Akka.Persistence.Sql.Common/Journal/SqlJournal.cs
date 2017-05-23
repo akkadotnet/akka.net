@@ -338,8 +338,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="tag">TBD</param>
         public void AddTagSubscriber(IActorRef subscriber, string tag)
         {
-            ISet<IActorRef> subscriptions;
-            if (!_tagSubscribers.TryGetValue(tag, out subscriptions))
+            if (!_tagSubscribers.TryGetValue(tag, out var subscriptions))
             {
                 subscriptions = new HashSet<IActorRef>();
                 _tagSubscribers.Add(tag, subscriptions);
@@ -365,8 +364,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="persistenceId">TBD</param>
         public void AddPersistenceIdSubscriber(IActorRef subscriber, string persistenceId)
         {
-            ISet<IActorRef> subscriptions;
-            if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out subscriptions))
+            if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscriptions))
             {
                 subscriptions = new HashSet<IActorRef>();
                 _persistenceIdSubscribers.Add(persistenceId, subscriptions);
@@ -377,11 +375,9 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private async Task<long> NextTagSequenceNr(string tag)
         {
-            long value;
-            if (!_tagSequenceNr.TryGetValue(tag, out value))
-            {
+            if (!_tagSequenceNr.TryGetValue(tag, out long value))
                 value = await ReadHighestSequenceNrAsync(TagId(tag), 0L);
-            }
+
             value++;
             _tagSequenceNr = _tagSequenceNr.SetItem(tag, value);
             return value;
@@ -434,8 +430,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void NotifyPersistenceIdChange(string persistenceId)
         {
-            ISet<IActorRef> subscribers;
-            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out subscribers))
+            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out var subscribers))
             {
                 var changed = new EventAppended(persistenceId);
                 foreach (var subscriber in subscribers)
@@ -445,8 +440,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void NotifyTagChange(string tag)
         {
-            ISet<IActorRef> subscribers;
-            if (_tagSubscribers.TryGetValue(tag, out subscribers))
+            if (_tagSubscribers.TryGetValue(tag, out var subscribers))
             {
                 var changed = new TaggedEventAppended(tag);
                 foreach (var subscriber in subscribers)

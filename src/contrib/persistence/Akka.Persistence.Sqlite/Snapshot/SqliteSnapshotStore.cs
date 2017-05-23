@@ -8,7 +8,7 @@
 using System;
 using System.Data;
 using System.Data.Common;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Snapshot;
 
@@ -48,6 +48,7 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// TBD
         /// </summary>
         protected override string InsertSnapshotSql { get; }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -60,7 +61,7 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// <returns>TBD</returns>
         protected override DbCommand CreateCommand(DbConnection connection)
         {
-            return new SQLiteCommand((SQLiteConnection)connection);
+            return new SqliteCommand { Connection = (SqliteConnection)connection };
         }
 
         /// <summary>
@@ -130,7 +131,7 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// <returns>TBD</returns>
         protected override DbConnection CreateDbConnection(string connectionString)
         {
-            return new SQLiteConnection(connectionString);
+            return new SqliteConnection(connectionString);
         }
 
         /// <summary>

@@ -97,7 +97,7 @@
   - name: Buffers and working with rate
     href: streams/buffersandworkingwithrate.md
   - name: Custom stream processing
-    href: streams/customstreamprocessing.md
+    href: streams/custom-stream-processing.md
   - name: Integration
     href: streams/integration.md
   - name: Error Handling

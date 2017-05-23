@@ -49,10 +49,10 @@ namespace Akka.Util
             // iterative spin-locking put
             do
             {
-                ConcurrentSet<TValue> set;
-                if (_container.TryGetValue(key, out set))
+                if (_container.TryGetValue(key, out var set))
                 {
-                    if (set.IsEmpty) retry = true; //IF the set is empty then it has been removed, so signal retry
+                    if (set.IsEmpty)
+                        retry = true; //IF the set is empty then it has been removed, so signal retry
                     else //Else add the value to the set and signal that retry is not needed
                     {
                         added = set.TryAdd(value);
@@ -67,9 +67,7 @@ namespace Akka.Util
                     // Parry for two simultaneous "TryAdd(id,newSet)"
                     var oldSet = _container.GetOrAdd(key, newSet);
                     if (oldSet == newSet) // check to see if the same sets are equal by reference
-                    {
                         added = true; // no retry necessary
-                    }
                     else // someone added a different set to this key first
                     {
                         if (oldSet.IsEmpty)
@@ -94,15 +92,9 @@ namespace Akka.Util
         /// <returns>The first <typeparamref name="TValue"/> matching <paramref name="predicate"/>. <c>default(TValue)</c> otherwise.</returns>
         public TValue FindValue(TKey key, Func<TValue, bool> predicate)
         {
-            ConcurrentSet<TValue> set;
-            if (_container.TryGetValue(key, out set))
-            {
+            if (_container.TryGetValue(key, out var set))
                 return set.FirstOrDefault(predicate);
-            }
-            else
-            {
-                return default(TValue);
-            }
+            return default(TValue);
         }
 
         /// <summary>
@@ -113,11 +105,8 @@ namespace Akka.Util
         {
             get
             {
-                ConcurrentSet<TValue> set;
-                if (_container.TryGetValue(index, out set))
-                {
+                if (_container.TryGetValue(index, out var set))
                     return set;
-                }
                 return _emptySet;
             }
         } 
@@ -157,8 +146,7 @@ namespace Akka.Util
         /// <returns><c>true</c> if <paramref name="value"/> was removed. <c>false</c> otherwise.</returns>
         public bool Remove(TKey key, TValue value)
         {
-            ConcurrentSet<TValue> set;
-            if (_container.TryGetValue(key, out set))
+            if (_container.TryGetValue(key, out var set))
             {
                 if (set.TryRemove(value)) // If we can remove the value
                 {
