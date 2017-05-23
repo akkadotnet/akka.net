@@ -9,6 +9,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -349,7 +350,23 @@ namespace Akka.Streams.Tests.Dsl
         protected override void AfterAll()
         {
             base.AfterAll();
-            _manyLinesFile.Delete();
+
+            try
+            {
+                _manyLinesFile.Delete();
+            }
+            catch 
+            {
+                Thread.Sleep(3000);
+                try
+                {
+                    _manyLinesFile.Delete();
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
         }
     }
 }
