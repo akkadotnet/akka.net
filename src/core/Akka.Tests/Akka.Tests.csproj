@@ -131,6 +131,7 @@
     <Compile Include="Actor\ActorProducerPipelineTests.cs" />
     <Compile Include="Actor\ActorRefSpec.cs" />
     <Compile Include="Actor\AddressSpec.cs" />
+    <Compile Include="Actor\AkkaSyncContextSpec.cs" />
     <Compile Include="Actor\AskTimeoutSpec.cs" />
     <Compile Include="Actor\BugFix2176Spec.cs" />
     <Compile Include="Actor\Cancellation\AlreadyCancelledCancelableTests.cs" />
