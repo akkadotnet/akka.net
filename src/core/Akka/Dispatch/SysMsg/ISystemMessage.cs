@@ -87,9 +87,9 @@ namespace Akka.Dispatch.SysMsg
         public SystemMessage Head;
 
         /// <summary>
-        /// TBD
+        /// Creates a new message list.
         /// </summary>
-        /// <param name="head">TBD</param>
+        /// <param name="head">The current head item.</param>
         public LatestFirstSystemMessageList(SystemMessage head)
         {
             Head = head;
@@ -161,9 +161,9 @@ namespace Akka.Dispatch.SysMsg
         public SystemMessage Head;
 
         /// <summary>
-        /// TBD
+        /// Creates a new message list.
         /// </summary>
-        /// <param name="head">TBD</param>
+        /// <param name="head">The current head item.</param>
         public EarliestFirstSystemMessageList(SystemMessage head)
         {
             Head = head;
