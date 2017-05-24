@@ -279,13 +279,13 @@ namespace Akka.Dispatch.SysMsg
     public abstract class SystemMessage : ISystemMessage
     {
         /// <summary>
-        /// TBD
+        /// The next <see cref="ISystemMessage"/> in the linked list.
         /// </summary>
         [NonSerialized]
         internal SystemMessage Next;
 
         /// <summary>
-        /// TBD
+        /// Unlinks this message from the linked list.
         /// </summary>
         public void Unlink()
         {
@@ -293,7 +293,7 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        /// TBD
+        /// Returns <c>true</c> if we are unlinked.
         /// </summary>
         public bool Unlinked { get { return Next == null; } }
     }
@@ -303,10 +303,7 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class NoMessage : SystemMessage
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object"/>
         public override string ToString()
         {
             return "NoMessage";
@@ -349,10 +346,7 @@ namespace Akka.Dispatch.SysMsg
         /// <value><c>true</c> if [address terminated]; otherwise, <c>false</c>.</value>
         public bool AddressTerminated { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object"/>
         public override string ToString()
         {
             return "<DeathWatchNotification>: " + Actor + ", ExistenceConfirmed=" + ExistenceConfirmed + ", AddressTerminated=" + AddressTerminated;
