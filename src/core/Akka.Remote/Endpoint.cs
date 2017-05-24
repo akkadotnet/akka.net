@@ -1483,57 +1483,53 @@ namespace Akka.Remote
 
         private void SendBufferedMessages()
         {
-            var sendDelegate = new Func<object, bool>(msg =>
+            bool SendDelegate(object msg)
             {
-                if (msg is EndpointManager.Send)
+                switch (msg)
                 {
-                    return WriteSend(msg as EndpointManager.Send);
+                    case EndpointManager.Send s:
+                        return WriteSend(s);
+                    case FlushAndStop f:
+                        DoFlushAndStop();
+                        return false;
+                    case StopReading stop:
+                        _reader?.Tell(stop, stop.ReplyTo);
+                        return true;
+                    default:
+                        return true;
                 }
-                else if (msg is FlushAndStop)
-                {
-                    DoFlushAndStop();
-                    return false;
-                }
-                else if (msg is StopReading)
-                {
-                    var s = msg as StopReading;
-                    if (_reader != null) _reader.Tell(s, s.ReplyTo);
-                }
-                return true;
-            });
+            }
 
-            Func<int, bool> writeLoop = null;
-            writeLoop = new Func<int, bool>(count =>
+            bool WriteLoop(int count)
             {
                 if (count > 0 && _buffer.Any())
                 {
-                    if (sendDelegate(_buffer.First.Value))
+                    if (SendDelegate(_buffer.First.Value))
                     {
                         _buffer.RemoveFirst();
                         _writeCount += 1;
-                        return writeLoop(count - 1);
+                        return WriteLoop(count - 1);
                     }
                     return false;
                 }
 
                 return true;
-            });
+            }
 
-            Func<bool> writePrioLoop = null;
-            writePrioLoop = () =>
+            bool WritePrioLoop()
             {
                 if (!_prioBuffer.Any()) return true;
                 if (WriteSend(_prioBuffer.First.Value))
                 {
                     _prioBuffer.RemoveFirst();
-                    return writePrioLoop();
+                    return WritePrioLoop();
                 }
                 return false;
-            };
+            }
 
             var size = _buffer.Count;
 
-            var ok = writePrioLoop() && writeLoop(SendBufferBatchSize);
+            var ok = WritePrioLoop() && WriteLoop(SendBufferBatchSize);
             if (!_buffer.Any() && !_prioBuffer.Any())
             {
                 // FIXME remove this when testing/tuning is completed

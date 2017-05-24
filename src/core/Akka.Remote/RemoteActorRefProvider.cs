@@ -38,8 +38,8 @@ namespace Akka.Remote
             settings.InjectTopLevelFallback(RemoteConfigFactory.Default());
 
             var remoteDeployer = new RemoteDeployer(settings);
-            Func<ActorPath, IInternalActorRef> deadLettersFactory = path => new RemoteDeadLetterActorRef(this, path, eventStream);
-            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);
+            IInternalActorRef DeadLettersFactory(ActorPath path) => new RemoteDeadLetterActorRef(this, path, eventStream);
+            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, DeadLettersFactory);
             RemoteSettings = new RemoteSettings(settings.Config);
             Deployer = remoteDeployer;
             _log = _local.Log;
