@@ -327,19 +327,19 @@ namespace Akka.Remote
             /// <inheritdoc/>
             public override string ToString()
             {
-                Func<string> formatWatchingRefs = () =>
+                string FormatWatchingRefs()
                 {
                     if (!_watchingRefs.Any()) return "";
                     return $"{string.Join(", ", _watchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name))}";
-                };
+                }
 
-                Func<string> formatWatchingAddresses = () =>
+                string FormatWatchingAddresses()
                 {
                     if (!_watchingAddresses.Any()) return "";
                     return string.Join(",", WatchingAddresses);
-                };
+                }
 
-                return $"Stats(watching={_watching}, watchingNodes={_watchingNodes}, watchingRefs=[{formatWatchingRefs()}], watchingAddresses=[{formatWatchingAddresses()}])";
+                return $"Stats(watching={_watching}, watchingNodes={_watchingNodes}, watchingRefs=[{FormatWatchingRefs()}], watchingAddresses=[{FormatWatchingAddresses()}])";
             }
 
             /// <summary>
