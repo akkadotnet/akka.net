@@ -895,8 +895,7 @@ namespace Akka.Remote.Transport
             var tokens = payload.Length;
             //need to declare recursive delegates first before they can self-reference
             //might want to consider making this consumer function strongly typed: http://blogs.msdn.com/b/wesdyer/archive/2007/02/02/anonymous-recursion-in-c.aspx
-            Func<ThrottleMode, bool> tryConsume = null;
-            tryConsume = currentBucket =>
+            bool TryConsume(ThrottleMode currentBucket)
             {
                 var timeOfSend = MonotonicClock.GetNanos();
                 var res = currentBucket.TryConsumeTokens(timeOfSend, tokens);
@@ -904,15 +903,15 @@ namespace Akka.Remote.Transport
                 var allow = res.Item2;
                 if (allow)
                 {
-                    return OutboundThrottleMode.CompareAndSet(currentBucket, newBucket) || tryConsume(OutboundThrottleMode.Value);
+                    return OutboundThrottleMode.CompareAndSet(currentBucket, newBucket) || TryConsume(OutboundThrottleMode.Value);
                 }
                 return false;
-            };
+            }
 
             var throttleMode = OutboundThrottleMode.Value;
             if (throttleMode is Blackhole) return true;
 
-            var success = tryConsume(OutboundThrottleMode.Value);
+            var success = TryConsume(OutboundThrottleMode.Value);
             return success && WrappedHandle.Write(payload);
         }
 
