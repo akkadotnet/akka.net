@@ -831,13 +831,12 @@ namespace Akka.Remote
                 else if (readPolicy.Item1?.Item1 != null && quarantine.Uid != null && readPolicy.Item1?.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Item1); }
                 else { } // nothing to stop
 
-                Func<AkkaProtocolHandle, bool> matchesQuarantine = handle => handle.RemoteAddress.Equals(quarantine.RemoteAddress) &&
-                                                                         quarantine.Uid == handle.HandshakeInfo.Uid;
+                bool MatchesQuarantine(AkkaProtocolHandle handle) => handle.RemoteAddress.Equals(quarantine.RemoteAddress) && quarantine.Uid == handle.HandshakeInfo.Uid;
 
                 // Stop all matching pending read handoffs
                 _pendingReadHandoffs = _pendingReadHandoffs.Where(x =>
                 {
-                    var drop = matchesQuarantine(x.Value);
+                    var drop = MatchesQuarantine(x.Value);
                     // Side-effecting here
                     if (drop)
                     {
@@ -853,7 +852,7 @@ namespace Akka.Remote
                     var associations = x.Value.Where(assoc =>
                     {
                         var handle = assoc.Association.AsInstanceOf<AkkaProtocolHandle>();
-                        var drop = matchesQuarantine(handle);
+                        var drop = MatchesQuarantine(handle);
                         if (drop)
                             handle.Disassociate();
                         return !drop;
@@ -866,10 +865,7 @@ namespace Akka.Remote
             Receive<Send>(send =>
             {
                 var recipientAddress = send.Recipient.Path.Address;
-                Func<int?, IActorRef> createAndRegisterWritingEndpoint = refuseUid => _endpoints.RegisterWritableEndpoint(recipientAddress,
-                    CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse,
-                        _transportMapping[send.Recipient.LocalAddressToUse], _settings, writing: true,
-                        handleOption: null, refuseUid: refuseUid), uid: null, refuseUid: refuseUid);
+                IActorRef CreateAndRegisterWritingEndpoint(int? refuseUid) => _endpoints.RegisterWritableEndpoint(recipientAddress, CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse, _transportMapping[send.Recipient.LocalAddressToUse], _settings, writing: true, handleOption: null, refuseUid: refuseUid), uid: null, refuseUid: refuseUid);
 
                 // pattern match won't throw a NullReferenceException if one is returned by WritableEndpointWithPolicyFor
                 _endpoints.WritableEndpointWithPolicyFor(recipientAddress).Match()
@@ -880,20 +876,20 @@ namespace Akka.Remote
                         })
                     .With<Gated>(gated =>
                     {
-                        if (gated.TimeOfRelease.IsOverdue) createAndRegisterWritingEndpoint(gated.RefuseUid).Tell(send);
+                        if (gated.TimeOfRelease.IsOverdue) CreateAndRegisterWritingEndpoint(gated.RefuseUid).Tell(send);
                         else Context.System.DeadLetters.Tell(send);
                     })
                     .With<WasGated>(wasGated =>
                     {
-                        createAndRegisterWritingEndpoint(wasGated.RefuseUid).Tell(send);
+                        CreateAndRegisterWritingEndpoint(wasGated.RefuseUid).Tell(send);
                     })
                     .With<Quarantined>(quarantined =>
                     {
                         // timeOfRelease is only used for garbage collection reasons, therefore it is ignored here. We still have
                         // the Quarantined tombstone and we know what UID we don't want to accept, so use it.
-                        createAndRegisterWritingEndpoint(quarantined.Uid).Tell(send);
+                        CreateAndRegisterWritingEndpoint(quarantined.Uid).Tell(send);
                     })
-                    .Default(msg => createAndRegisterWritingEndpoint(null).Tell(send));
+                    .Default(msg => CreateAndRegisterWritingEndpoint(null).Tell(send));
             });
             Receive<InboundAssociation>(ia => HandleInboundAssociation(ia, false));
             Receive<EndpointWriter.StoppedReading>(endpoint => AcceptPendingReader(endpoint.Writer));
