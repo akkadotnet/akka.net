@@ -46,9 +46,10 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly TryToIdentifySingleton Instance = new TryToIdentifySingleton();
+            public static TryToIdentifySingleton Instance { get; } = new TryToIdentifySingleton();
             private TryToIdentifySingleton() { }
         }
+
         /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
@@ -57,7 +58,6 @@ namespace Akka.Cluster.Tools.Singleton
         {
             return ConfigurationFactory.FromResource<ClusterSingletonManager>("Akka.Cluster.Tools.Singleton.reference.conf");
         }
-
 
         /// <summary>
         /// Factory method for <see cref="ClusterSingletonProxy"/> <see cref="Actor.Props"/>.
