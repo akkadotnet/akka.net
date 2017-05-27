@@ -43,7 +43,7 @@ namespace Akka.Streams.IO
         /// If the IO operation resulted in an error, returns the corresponding <see cref="Exception"/>
         /// or throws <see cref="NotSupportedException"/> otherwise.
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">Is thrown if the property is accessed for a successful <see cref="IOResult"/></exception>
         public Exception Error
         {
             get
@@ -55,5 +55,20 @@ namespace Akka.Streams.IO
             }
         }
 
+        /// <summary>
+        /// Creates successful IOResult
+        /// </summary>
+        /// <param name="count">Numeric value depending on context, for example IO operations performed or bytes processed.</param>
+        /// <returns>Successful IOResult</returns>
+        public static IOResult Success(long count) => new IOResult(count, Result.Success(NotUsed.Instance));
+
+        /// <summary>
+        /// Creates failed IOResult, <paramref name="count"/> should be the number of bytes (or other unit, please document in your APIs) processed before failing
+        /// </summary>
+        /// <param name="count">Numeric value depending on context, for example IO operations performed or bytes processed.</param>
+        /// <param name="reason">The corresponding <see cref="Exception"/></param>
+        /// <returns>Failed IOResult</returns>
+        public static IOResult Failed(long count, Exception reason)
+            => new IOResult(count, Result.Failure<NotUsed>(reason));
     }
 }

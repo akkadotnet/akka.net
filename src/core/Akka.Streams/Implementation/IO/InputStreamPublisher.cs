@@ -91,9 +91,9 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionSource.SetResult(new IOResult(_readBytesTotal, Result.Failure<NotUsed>(ex)));
+                _completionSource.SetResult(IOResult.Failed(_readBytesTotal, ex));
             }
-            _completionSource.SetResult(new IOResult(_readBytesTotal, Result.Success(NotUsed.Instance)));
+            _completionSource.SetResult(IOResult.Success(_readBytesTotal));
         }
 
         private void ReadAndSignal()
