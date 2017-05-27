@@ -143,8 +143,10 @@ namespace Akka.Streams.TestKit
             {
                 var t = _probe.RemainingOrDilated(null);
                 var message = _probe.ReceiveOne(t);
-                if (message is OnNext<T>) return ((OnNext<T>) message).Element;
-                else throw new Exception("expected OnNext, found " + message);
+                if (message is OnNext<T>)
+                    return ((OnNext<T>) message).Element;
+
+                throw new Exception("expected OnNext, found " + message);
             }
 
             /// <summary>
@@ -153,6 +155,15 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNext(T element)
             {
                 _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element));
+                return this;
+            }
+
+            /// <summary>
+            /// Fluent DSL. Expect a stream element during specified time or timeout.
+            /// </summary>
+            public ManualProbe<T> ExpectNext(TimeSpan timeout, T element)
+            {
+                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
                 return this;
             }
 
@@ -368,14 +379,32 @@ namespace Akka.Streams.TestKit
                 return this;
             }
 
+            /// <summary>
+            /// Expect next element and test it with the <paramref name="predicate"/>
+            /// </summary>
+            /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
+            /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
+            /// <returns>The next element</returns>
             public TOther ExpectNext<TOther>(Predicate<TOther> predicate)
             {
                 return _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element)).Element;
             }
 
+            /// <summary>
+            /// Expect next element and test it with the <paramref name="predicate"/>
+            /// </summary>
+            /// <typeparam name="TOther">The <see cref="Type"/> of the expected message</typeparam>
+            /// <param name="predicate">The <see cref="Predicate{T}"/> that is applied to the message</param>
+            /// <returns>this</returns>
+            public ManualProbe<T> MatchNext<TOther>(Predicate<TOther> predicate)
+            {
+                _probe.ExpectMsg<OnNext<TOther>>(x => predicate(x.Element));
+                return this;
+            }
+
             public TOther ExpectEvent<TOther>(Func<ISubscriberEvent, TOther> func)
             {
-                return func(_probe.ExpectMsg<ISubscriberEvent>());
+                return func(_probe.ExpectMsg<ISubscriberEvent>(hint: "message matching function"));
             }
 
             /// <summary>

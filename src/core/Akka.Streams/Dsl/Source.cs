@@ -746,9 +746,11 @@ namespace Akka.Streams.Dsl
         /// there is no space available in the buffer.
         /// 
         /// Acknowledgement mechanism is available.
-        /// <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> returns <see cref="Task"/> which completes with true
-        /// if element was added to buffer or sent downstream. It completes
-        /// with false if element was dropped.
+        /// <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> returns <see cref="Task"/>
+        /// which completes with <see cref="QueueOfferResult.Enqueued"/> if element was added to buffer or sent downstream.
+        /// It completes with <see cref="QueueOfferResult.Dropped"/> if element was dropped.
+        /// Can also complete with <see cref="QueueOfferResult.Failure"/> - when stream failed
+        /// or <see cref="QueueOfferResult.QueueClosed"/> when downstream is completed.
         /// 
         /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> until buffer is full.
         /// 
