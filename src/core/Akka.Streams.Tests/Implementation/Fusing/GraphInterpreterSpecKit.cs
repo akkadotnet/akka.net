@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
@@ -22,7 +23,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 {
     public class GraphInterpreterSpecKit : AkkaSpec
     {
-        public GraphInterpreterSpecKit(ITestOutputHelper output = null) : base(output)
+        public GraphInterpreterSpecKit(ITestOutputHelper output = null, Config config = null) : base(output, config)
         {
         }
 

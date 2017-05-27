@@ -123,5 +123,16 @@ namespace Akka.Streams.Tests.Dsl
                     .Be(error);
             }, Materializer);
         }
+
+        [Fact]
+        public void A_Aggregate_must_complete_task_and_return_zero_given_an_empty_stream()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var task = Source.From(Enumerable.Empty<int>())
+                    .RunAggregate(0, (acc, element) => acc + element, Materializer);
+                task.AwaitResult().ShouldBe(0);
+            }, Materializer);
+        }
     }
 }
