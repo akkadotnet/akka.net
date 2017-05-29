@@ -612,6 +612,14 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Creates a <see cref="Source{TOut,TMat}"/> that is not materialized until there is downstream demand, when the source gets materialized
+        /// the materialized task is completed with its value, if downstream cancels or fails without any demand the
+        /// <paramref name="create"/> factory is never called and the materialized <see cref="Task{TResult}"/> is failed.
+        /// </summary>
+        public static Source<TOut, Task<TMat>> Lazily<TOut, TMat>(Func<Source<TOut, TMat>> create) 
+            => FromGraph(LazySource.Create(create));
+
+        /// <summary>
         /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as a <see cref="ISubscriber{T}"/>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>

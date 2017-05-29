@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 
@@ -412,6 +410,10 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes LazySink = Attributes.CreateName("lazySink");
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly Attributes LazySource = Attributes.CreateName("lazySource");
         /// <summary>
         /// TBD
         /// </summary>
