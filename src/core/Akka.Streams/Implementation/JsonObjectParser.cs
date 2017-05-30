@@ -50,6 +50,7 @@ namespace Akka.Streams.Implementation
         private bool _completedObject;
         private bool _inStringExpression;
         private bool _isStartOfEscapeSequence;
+        private byte _lastInput = 0;
 
         /// <summary>
         /// TBD
@@ -140,7 +141,7 @@ namespace Akka.Streams.Implementation
             }
             else if (input == Backslash)
             {
-                _isStartOfEscapeSequence = true;
+                _isStartOfEscapeSequence = _lastInput != Backslash;
                 _pos++;
             }
             else if (input == DoubleQuote)
@@ -180,7 +181,8 @@ namespace Akka.Streams.Implementation
             }
             else
                 throw new Framing.FramingException($"Invalid JSON encountered at position {_pos} of {_buffer.DecodeString()}");
-        }
 
+            _lastInput = input;
+        }
     }
 }
