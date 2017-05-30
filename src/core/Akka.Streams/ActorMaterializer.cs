@@ -29,7 +29,7 @@ namespace Akka.Streams
     /// steps are split up into asynchronous regions is implementation
     /// dependent.
     /// </summary>
-    public abstract class ActorMaterializer : IMaterializer, IDisposable
+    public abstract class ActorMaterializer : IMaterializer, IMaterializerLoggingProvider, IDisposable
     {
         /// <summary>
         /// TBD
@@ -182,8 +182,13 @@ namespace Akka.Streams
         public abstract IActorRef ActorOf(MaterializationContext context, Props props);
 
         /// <summary>
-        /// TBD
+        /// Creates a new logging adapter.
         /// </summary>
+        /// <param name="logSource">The source that produces the log events.</param>
+        /// <returns>The newly created logging adapter.</returns>
+        public abstract ILoggingAdapter MakeLogger(object logSource);
+
+        /// <inheritdoc/>
         public void Dispose() => Shutdown();
     }
 

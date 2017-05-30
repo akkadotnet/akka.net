@@ -82,7 +82,7 @@ namespace Akka.Streams.TestKit
             public void Subscribe(ISubscriber<T> subscriber)
             {
                 var subscription = new StreamTestKit.PublisherProbeSubscription<T>(subscriber, _probe);
-                _probe.Ref.Tell(new TestPublisher.Subscribe(subscription));
+                _probe.Ref.Tell(new Subscribe(subscription));
                 if (AutoOnSubscribe) subscriber.OnSubscribe(subscription);
             }
 
@@ -100,7 +100,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectRequest(ISubscription subscription, int n)
             {
-                _probe.ExpectMsg<TestPublisher.RequestMore>(x => x.NrOfElements == n && x.Subscription == subscription);
+                _probe.ExpectMsg<RequestMore>(x => x.NrOfElements == n && x.Subscription == subscription);
                 return this;
             }
 
