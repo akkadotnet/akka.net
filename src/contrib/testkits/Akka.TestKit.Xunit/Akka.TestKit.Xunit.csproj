@@ -1,16 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\..\..\common.props" />
+
   <PropertyGroup>
     <AssemblyTitle>Akka.TestKit.Xunit</AssemblyTitle>
     <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
-    <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
-    <VersionPrefix>1.3.0</VersionPrefix>
-    <Authors>Akka.NET Team</Authors>
     <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
     <PackageTags>akka;actors;actor model;Akka;concurrency;testkit;xunit</PackageTags>
-    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
-    <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
 

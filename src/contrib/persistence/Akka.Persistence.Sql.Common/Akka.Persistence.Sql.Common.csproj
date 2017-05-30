@@ -1,17 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\..\..\common.props" />
+
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Sql.Common</AssemblyTitle>
     <Description>Akka.NET Persistence ADO.NET middleware</Description>
-    <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
-    <VersionPrefix>1.3.0</VersionPrefix>
     <VersionSuffix>beta</VersionSuffix>
-    <Authors>Akka.NET Team</Authors>
     <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
     <PackageTags>akka;actors;actor model;Akka;concurrency;persistence;eventsource;sql</PackageTags>
-    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
-    <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.6' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
