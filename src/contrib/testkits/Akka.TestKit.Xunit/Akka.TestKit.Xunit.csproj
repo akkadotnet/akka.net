@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.TestKit.Xunit</AssemblyTitle>
     <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
     <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;testkit;xunit</PackageTags>
+    <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
 

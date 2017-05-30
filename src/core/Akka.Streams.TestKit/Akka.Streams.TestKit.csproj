@@ -5,6 +5,7 @@
     <AssemblyTitle>Akka.Streams.TestKit</AssemblyTitle>
     <Description>Testkit for Reactive stream support for Akka.NET</Description>
     <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);reactive;stream;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>

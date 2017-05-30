@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.Remote.Transport.Helios</AssemblyTitle>
     <Description>(Legacy) Akka.NET remote transport layer based on Helios.</Description>
     <TargetFrameworks>net45</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;transport;helios</PackageTags>
+    <PackageTags>$(AkkaPackageTags);transport;helios</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

@@ -6,7 +6,7 @@
     <Description>Hyperion serializer for Akka.NET</Description>
     <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net45</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;hyperion;serializer;serialize</PackageTags>
+    <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

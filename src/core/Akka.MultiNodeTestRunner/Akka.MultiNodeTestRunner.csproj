@@ -6,7 +6,7 @@
     <Description>Akka.NET Multi-node Test Runner; used for executing tests written with Akka.Remote.TestKit</Description>
     <TargetFrameworks>net452</TargetFrameworks>
     <OutputType>Exe</OutputType>
-    <PackageTags>akka;actors;actor model;Akka;concurrency</PackageTags>
+    <PackageTags>$(AkkaPackageTags)</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

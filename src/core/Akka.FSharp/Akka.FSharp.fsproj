@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.FSharp</AssemblyTitle>
     <Description>F# API support for Akka.NET</Description>
     <TargetFramework>net45</TargetFramework>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;F#;Fsharp</PackageTags>
+    <PackageTags>$(AkkaPackageTags);F#;Fsharp</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>

@@ -6,7 +6,7 @@
     <Description>Akka.NET Persistence ADO.NET middleware</Description>
     <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;persistence;eventsource;sql</PackageTags>
+    <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.6' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>

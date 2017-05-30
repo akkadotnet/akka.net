@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.Remote.TestKit</AssemblyTitle>
     <Description>TestKit for Testing Distributed Akka.NET Applications</Description>
     <TargetFrameworks>net452</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;network;testkit</PackageTags>
+    <PackageTags>$(AkkaPackageTags);network;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

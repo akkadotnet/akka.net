@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka</AssemblyTitle>
     <Description>Akka.NET is a port of the popular Java/Scala framework Akka to .NET</Description>
     <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency</PackageTags>
+    <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>
@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="$(JsonNetVersion)" />
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
     <PackageReference Include="System.Collections.Immutable" Version="1.3.1" />
   </ItemGroup>
 

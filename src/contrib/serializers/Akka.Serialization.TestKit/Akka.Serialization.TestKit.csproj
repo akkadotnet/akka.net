@@ -6,7 +6,7 @@
     <Description>Serialization TestKit for Akka.NET</Description>
     <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net452</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;hyperion;serializer;serialize;testkit</PackageTags>
+    <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

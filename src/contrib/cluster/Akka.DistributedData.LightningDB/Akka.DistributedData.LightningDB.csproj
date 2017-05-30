@@ -6,7 +6,7 @@
     <Description>Replicated data using CRDT structures</Description>
     <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;network;cluster;crdt;replication;lightningdb;lmdb</PackageTags>
+    <PackageTags>$(AkkaPackageTags);network;cluster;crdt;replication;lightningdb;lmdb</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
   </PropertyGroup>

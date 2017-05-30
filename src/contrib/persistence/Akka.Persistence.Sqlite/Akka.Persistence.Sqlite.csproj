@@ -6,7 +6,7 @@
     <Description>Akka.NET Persistence journal and snapshot store backed by SQLite.</Description>
     <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net451;netstandard1.6</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;persistence;eventsource;sql;sqlite</PackageTags>
+    <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;sqlite</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.6' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
   </PropertyGroup>
