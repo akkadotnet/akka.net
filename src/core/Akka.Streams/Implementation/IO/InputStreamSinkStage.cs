@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#if AKKAIO
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -21,7 +21,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
     {
-        #region internal classes
+#region internal classes
 
         /// <summary>
         /// TBD
@@ -210,7 +210,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-        #endregion
+#endregion
 
         private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
@@ -265,7 +265,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamAdapter : Stream
     {
-        #region not supported 
+#region not supported 
 
         /// <summary>
         /// TBD
@@ -318,7 +318,7 @@ namespace Akka.Streams.Implementation.IO
             set => throw new NotSupportedException("This stream can only read");
         }
 
-        #endregion
+#endregion
 
         private static readonly Exception SubscriberClosedException =
             new IOException("Reactive stream is terminated, no reads are possible");
@@ -376,7 +376,7 @@ namespace Akka.Streams.Implementation.IO
         public sealed override int ReadByte()
         {
             var a = new byte[1];
-            return Read(a, 0, 1) != 0 ? a[0] : -1;
+            return Read(a, 0, 1) != 0 ? a[0] & 0xff : -1;
         }
 
         /// <summary>
@@ -536,3 +536,4 @@ namespace Akka.Streams.Implementation.IO
         public override bool CanWrite => false;
     }
 }
+#endif
