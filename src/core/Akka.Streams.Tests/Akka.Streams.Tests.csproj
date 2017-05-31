@@ -27,8 +27,6 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="Microsoft.CSharp" />
-    <PackageReference Include="FsCheck" Version="2.6.2" />
-    <PackageReference Include="FsCheck.Xunit" Version="2.6.2" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">

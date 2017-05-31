@@ -790,22 +790,59 @@ namespace Akka.Cluster.Sharding
             else return HandleSnapshotResult(message);
         }
 
+
         private bool HandleSnapshotResult(object message)
         {
-            if (message is SaveSnapshotSuccess) Log.Debug("Persistent snapshot saved successfully");
-            else if (message is SaveSnapshotFailure) Log.Warning("Persistent snapshot failure: {0}", ((SaveSnapshotFailure)message).Cause.Message);
-            else return false;
+            switch (message)
+            {
+                case SaveSnapshotSuccess m:
+                    Log.Debug("Persistent snapshot saved successfully");
+                    /*
+                     * delete old events but keep the latest around because
+                     *
+                     * it's not safe to delete all events immediate because snapshots are typically stored with a weaker consistency
+                     * level which means that a replay might "see" the deleted events before it sees the stored snapshot,
+                     * i.e. it will use an older snapshot and then not replay the full sequence of events
+                     *
+                     * for debugging if something goes wrong in production it's very useful to be able to inspect the events
+                     */
+                    var deleteToSequenceNr = m.Metadata.SequenceNr - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter;
+                    if (deleteToSequenceNr > 0)
+                    {
+                        DeleteMessages(deleteToSequenceNr);
+                    }
+                    break;
+
+                case SaveSnapshotFailure m:
+                    Log.Warning("Persistent snapshot failure: {0}", m.Cause.Message);
+                    break;
+                case DeleteMessagesSuccess m:
+                    Log.Debug("Persistent messages to {0} deleted successfully", m.ToSequenceNr);
+                    DeleteSnapshots(new SnapshotSelectionCriteria(m.ToSequenceNr - 1));
+                    break;
+                case DeleteMessagesFailure m:
+                    Log.Warning("Persistent messages to {0} deletion failure: {1}", m.ToSequenceNr, m.Cause.Message);
+                    break;
+                case DeleteSnapshotsSuccess m:
+                    Log.Debug("Persistent snapshots matching {0} deleted successfully", m.Criteria);
+                    break;
+                case DeleteSnapshotsFailure m:
+                    Log.Warning("Persistent snapshots matching {0} deletion failure: {1}", m.Criteria, m.Cause.Message);
+                    break;
+                default:
+                    return false;
+            }
             return true;
         }
 
-         /// <summary>
+        /// <summary>
         /// TBD
         /// </summary>
         /// <typeparam name="TEvent">TBD</typeparam>
         /// <param name="e">TBD</param>
         /// <param name="handler">TBD</param>
         /// <returns>TBD</returns>
-       protected void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
+        protected void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
         {
             SaveSnapshotIfNeeded();
             Persist(e, handler);
