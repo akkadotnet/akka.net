@@ -11,10 +11,8 @@ using System.Linq;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
-#if !CORECLR
 using FsCheck;
 using FsCheck.Xunit;
-#endif
 using Xunit;
 
 namespace Akka.Tests.Util.Internal
@@ -104,7 +102,6 @@ namespace Akka.Tests.Util.Internal
             actual.ShouldAllBeEquivalentTo(expectation);
         }
 
-#if !CORECLR
         [Property]
         public void SplitDottedPathHonouringQuotesWithTestOracle()
         {
@@ -143,7 +140,6 @@ namespace Akka.Tests.Util.Internal
                 return z;
             }
         }
-#endif
 
         /// <summary>
         /// Like selectMany, but alternates between two selectors (starting with even for item 0)
