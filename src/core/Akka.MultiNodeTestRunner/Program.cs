@@ -39,7 +39,7 @@ namespace Akka.MultiNodeTestRunner
         /// </summary>
         protected static string OutputDirectory;
 
-        protected static string TeamCityFormattingOn;
+        protected static bool TeamCityFormattingOn;
 
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
@@ -102,11 +102,13 @@ namespace Akka.MultiNodeTestRunner
         /// </summary>
         static void Main(string[] args)
         {
-            OutputDirectory = CommandLine.GetProperty("multinode.output-directory") ?? string.Empty;
-            TeamCityFormattingOn = CommandLine.GetProperty("multinode.teamcity") ?? false.ToString();
+            OutputDirectory = CommandLine.GetProperty("multinode.output-directory") ?? string.Empty;           
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
-            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
+            var teamCityFormattingOn = CommandLine.GetProperty("multinode.teamcity") ?? "false";
+            SinkCoordinator = TestRunSystem.ActorOf(Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn) ?
+                Props.Create<SinkCoordinator>(TeamCityFormattingOn) :
+                Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
