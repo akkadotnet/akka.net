@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
-using Google.Protobuf;
+using Google.ProtocolBuffers;
 using Xunit;
 using Xunit.Abstractions;
 using Address = Akka.Actor.Address;
@@ -27,7 +27,7 @@ namespace Akka.DistributedData.Tests.Serialization
                 provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             }
             akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
-        
+
         private readonly UniqueAddress _address1 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 1);
         private readonly UniqueAddress _address2 = new UniqueAddress(new Address("akka.tcp", "sys", "other.host.org", 4711), 2);
         private readonly UniqueAddress _address3 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 3);
@@ -54,25 +54,25 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new Unsubscribe(_keyA, ref1));
             CheckSerialization(new Changed(_keyA, data1));
             CheckSerialization(new DataEnvelope(data1));
-            CheckSerialization(new DataEnvelope(data1, ImmutableDictionary.CreateRange(new[]
+            CheckSerialization(new DataEnvelope(data1, ImmutableDictionary.CreateRange(new Dictionary<UniqueAddress, IPruningState>
             {
-                new KeyValuePair<UniqueAddress, PruningState>(_address1, new PruningState(_address2, PruningPerformed.Instance)), 
-                new KeyValuePair<UniqueAddress, PruningState>(_address3, new PruningState(_address2, new PruningInitialized(_address1.Address))), 
+                { _address1, new PruningPerformed(DateTime.UtcNow) },
+                { _address3, new PruningInitialized(_address2, _address1.Address) },
             })));
             CheckSerialization(new Write("A", new DataEnvelope(data1)));
             CheckSerialization(WriteAck.Instance);
             CheckSerialization(new Read("A"));
             CheckSerialization(new ReadResult(new DataEnvelope(data1)));
             CheckSerialization(new ReadResult(null));
-            CheckSerialization(new Internal.Status(ImmutableDictionary.CreateRange(new []
+            CheckSerialization(new Internal.Status(ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, ByteString>("A", ByteString.CopyFromUtf8("a")),
-                new KeyValuePair<string, ByteString>("B", ByteString.CopyFromUtf8("b")),  
+                new KeyValuePair<string, ByteString>("B", ByteString.CopyFromUtf8("b")),
             }), 3, 10));
-            CheckSerialization(new Gossip(ImmutableDictionary.CreateRange(new []
+            CheckSerialization(new Gossip(ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, DataEnvelope>("A", new DataEnvelope(data1)),
-                new KeyValuePair<string, DataEnvelope>("B", new DataEnvelope(GSet.Create("b").Add("b"))),  
+                new KeyValuePair<string, DataEnvelope>("B", new DataEnvelope(GSet.Create("b").Add("b"))),
             }), true));
         }
 

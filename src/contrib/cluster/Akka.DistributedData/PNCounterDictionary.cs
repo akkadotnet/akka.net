@@ -23,9 +23,10 @@ namespace Akka.DistributedData
     /// with <see cref="PNCounter"/> values. 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
-    public class PNCounterDictionary<TKey> : IReplicatedData<PNCounterDictionary<TKey>>, 
-        IRemovedNodePruning<PNCounterDictionary<TKey>>, 
-        IReplicatedDataSerialization, 
+    public class PNCounterDictionary<TKey> :
+        IDeltaReplicatedData<PNCounterDictionary<TKey>, ORDictionary<TKey, PNCounter>.IDeltaOperation>,
+        IRemovedNodePruning<PNCounterDictionary<TKey>>,
+        IReplicatedDataSerialization,
         IEquatable<PNCounterDictionary<TKey>>,
         IEnumerable<KeyValuePair<TKey, BigInteger>>
     {
@@ -82,7 +83,8 @@ namespace Akka.DistributedData
         /// </summary>
         public bool TryGetValue(TKey key, out BigInteger value)
         {
-            if (_underlying.TryGetValue(key, out var counter))
+            PNCounter counter;
+            if (_underlying.TryGetValue(key, out counter))
             {
                 value = counter.Value;
                 return true;
@@ -136,19 +138,21 @@ namespace Akka.DistributedData
         public PNCounterDictionary<TKey> Remove(UniqueAddress node, TKey key) =>
             new PNCounterDictionary<TKey>(_underlying.Remove(node, key));
 
-        public PNCounterDictionary<TKey> Merge(PNCounterDictionary<TKey> other) => 
+        public PNCounterDictionary<TKey> Merge(PNCounterDictionary<TKey> other) =>
             new PNCounterDictionary<TKey>(_underlying.Merge(other._underlying));
 
-        public IReplicatedData Merge(IReplicatedData other) => 
-            Merge((PNCounterDictionary<TKey>) other);
+        public IReplicatedData Merge(IReplicatedData other) =>
+            Merge((PNCounterDictionary<TKey>)other);
 
-        public bool NeedPruningFrom(UniqueAddress removedNode) => 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => _underlying.ModifiedByNodes;
+
+        public bool NeedPruningFrom(UniqueAddress removedNode) =>
             _underlying.NeedPruningFrom(removedNode);
 
-        public PNCounterDictionary<TKey> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => 
+        public PNCounterDictionary<TKey> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
             new PNCounterDictionary<TKey>(_underlying.Prune(removedNode, collapseInto));
 
-        public PNCounterDictionary<TKey> PruningCleanup(UniqueAddress removedNode) => 
+        public PNCounterDictionary<TKey> PruningCleanup(UniqueAddress removedNode) =>
             new PNCounterDictionary<TKey>(_underlying.PruningCleanup(removedNode));
 
         /// <inheritdoc/>
@@ -161,13 +165,13 @@ namespace Akka.DistributedData
         }
 
         /// <inheritdoc/>
-        public IEnumerator<KeyValuePair<TKey, BigInteger>> GetEnumerator() => 
+        public IEnumerator<KeyValuePair<TKey, BigInteger>> GetEnumerator() =>
             _underlying.Select(x => new KeyValuePair<TKey, BigInteger>(x.Key, x.Value.Value)).GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => 
-            obj is PNCounterDictionary<TKey> && Equals((PNCounterDictionary<TKey>) obj);
+        public override bool Equals(object obj) =>
+            obj is PNCounterDictionary<TKey> && Equals((PNCounterDictionary<TKey>)obj);
 
         /// <inheritdoc/>
         public override int GetHashCode() => _underlying.GetHashCode();
@@ -183,6 +187,25 @@ namespace Akka.DistributedData
             sb.Append(')');
             return sb.ToString();
         }
+
+        #region delta 
+
+        public ORDictionary<TKey, PNCounter>.IDeltaOperation Delta => _underlying.Delta;
+
+        public PNCounterDictionary<TKey> MergeDelta(ORDictionary<TKey, PNCounter>.IDeltaOperation delta) =>
+            new PNCounterDictionary<TKey>(_underlying.MergeDelta(delta));
+
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) =>
+            MergeDelta((ORDictionary<TKey, PNCounter>.IDeltaOperation)delta);
+
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
+
+        public PNCounterDictionary<TKey> ResetDelta() =>
+            new PNCounterDictionary<TKey>(_underlying.ResetDelta());
+
+        #endregion
     }
 
     public class PNCounterDictionaryKey<T> : Key<PNCounterDictionary<T>>

@@ -17,7 +17,7 @@ namespace Akka.DistributedData.Local
         /// </summary>
         /// <param name="cluster">TBD</param>
         /// <returns>TBD</returns>
-        public static LocalGCounter GCounter(this Cluster.Cluster cluster) => 
+        public static LocalGCounter GCounter(this Cluster.Cluster cluster) =>
             new LocalGCounter(cluster, Akka.DistributedData.GCounter.Empty);
 
         /// <summary>
@@ -72,7 +72,8 @@ namespace Akka.DistributedData.Local
         /// <typeparam name="TVal">TBD</typeparam>
         /// <param name="cluster">TBD</param>
         /// <returns>TBD</returns>
-        public static LocalORDictionary<TKey, TVal> ORDictionary<TKey, TVal>(this Cluster.Cluster cluster) where TVal : IReplicatedData =>
+        public static LocalORDictionary<TKey, TVal> ORDictionary<TKey, TVal>(this Cluster.Cluster cluster)
+            where TVal : IReplicatedData<TVal> =>
             new LocalORDictionary<TKey, TVal>(cluster, Akka.DistributedData.ORDictionary<TKey, TVal>.Empty);
 
         /// <summary>
@@ -83,7 +84,8 @@ namespace Akka.DistributedData.Local
         /// <param name="cluster">TBD</param>
         /// <param name="dictionary">TBD</param>
         /// <returns>TBD</returns>
-        public static LocalORDictionary<TKey, TVal> ORDictionary<TKey, TVal>(this Cluster.Cluster cluster, ORDictionary<TKey, TVal> dictionary) where TVal : IReplicatedData =>
+        public static LocalORDictionary<TKey, TVal> ORDictionary<TKey, TVal>(this Cluster.Cluster cluster, ORDictionary<TKey, TVal> dictionary)
+            where TVal : IReplicatedData<TVal> =>
             new LocalORDictionary<TKey, TVal>(cluster, dictionary);
 
         /// <summary>
@@ -93,8 +95,8 @@ namespace Akka.DistributedData.Local
         /// <typeparam name="TVal">TBD</typeparam>
         /// <param name="cluster">TBD</param>
         /// <returns>TBD</returns>
-        public static LocalORMultiDictionary<TKey, TVal> ORMultiDictionary<TKey, TVal>(this Cluster.Cluster cluster)  =>
-            new LocalORMultiDictionary<TKey, TVal>(cluster, Akka.DistributedData.ORMultiDictionary<TKey, TVal>.Empty);
+        public static LocalORMultiDictionary<TKey, TVal> ORMultiDictionary<TKey, TVal>(this Cluster.Cluster cluster) =>
+            new LocalORMultiDictionary<TKey, TVal>(cluster, Akka.DistributedData.ORMultiValueDictionary<TKey, TVal>.Empty);
 
         /// <summary>
         /// Creates an instance of an ORMultiDictionary scoped to a current cluster.
@@ -104,7 +106,7 @@ namespace Akka.DistributedData.Local
         /// <param name="cluster">TBD</param>
         /// <param name="dictionary">TBD</param>
         /// <returns>TBD</returns>
-        public static LocalORMultiDictionary<TKey, TVal> ORMultiDictionary<TKey, TVal>(this Cluster.Cluster cluster, ORMultiDictionary<TKey, TVal> dictionary) =>
+        public static LocalORMultiDictionary<TKey, TVal> ORMultiDictionary<TKey, TVal>(this Cluster.Cluster cluster, ORMultiValueDictionary<TKey, TVal> dictionary) =>
             new LocalORMultiDictionary<TKey, TVal>(cluster, dictionary);
 
         /// <summary>
