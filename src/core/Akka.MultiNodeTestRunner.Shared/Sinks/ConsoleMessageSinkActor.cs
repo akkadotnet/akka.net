@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Globalization;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
@@ -20,8 +21,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class ConsoleMessageSinkActor : TestCoordinatorEnabledMessageSink
     {
-        public ConsoleMessageSinkActor(bool useTestCoordinator) : base(useTestCoordinator)
+        private readonly bool _teamCity;
+        public ConsoleMessageSinkActor(bool useTestCoordinator, bool teamCity = false) : base(useTestCoordinator)
         {
+            _teamCity = teamCity;
         }
 
         #region Message handling
@@ -38,17 +41,17 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         private void PrintSpecRunResults(FactData data)
         {
-            WriteSpecMessage(string.Format("Results for {0}", data.FactName));
-            WriteSpecMessage(string.Format("Start time: {0}", new DateTime(data.StartTime, DateTimeKind.Utc)));
+            WriteSpecMessage($"Results for {data.FactName}");
+            WriteSpecMessage($"Start time: {new DateTime(data.StartTime, DateTimeKind.Utc)}");
             foreach (var node in data.NodeFacts)
             {
-                WriteSpecMessage(string.Format(" --> Node {0}:{1} : {2} [{3} elapsed]", node.Value.NodeIndex, node.Value.NodeRole,
-                    node.Value.Passed.GetValueOrDefault(false) ? "PASS" : "FAIL", node.Value.Elapsed));
+                WriteSpecMessage(
+                    $" --> Node {node.Value.NodeIndex}:{node.Value.NodeRole} : {(node.Value.Passed.GetValueOrDefault(false) ? "PASS" : "FAIL")} [{node.Value.Elapsed} elapsed]");
             }
-            WriteSpecMessage(string.Format("End time: {0}",
-                new DateTime(data.EndTime.GetValueOrDefault(DateTime.UtcNow.Ticks), DateTimeKind.Utc)));
-            WriteSpecMessage(string.Format("FINAL RESULT: {0} after {1}.",
-                data.Passed.GetValueOrDefault(false) ? "PASS" : "FAIL", data.Elapsed));
+            WriteSpecMessage(
+                $"End time: {new DateTime(data.EndTime.GetValueOrDefault(DateTime.UtcNow.Ticks), DateTimeKind.Utc)}");
+            WriteSpecMessage(
+                $"FINAL RESULT: {(data.Passed.GetValueOrDefault(false) ? "PASS" : "FAIL")} after {data.Elapsed}.");
 
             //If we had a failure
             if (data.Passed.GetValueOrDefault(false) == false)
@@ -58,14 +61,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 {
                     if (node.Value.Passed.GetValueOrDefault(false) == false)
                     {
-                        WriteSpecMessage(string.Format("<----------- BEGIN NODE {0}:{1} ----------->", node.Key, node.Value.NodeRole));
+                        WriteSpecMessage($"<----------- BEGIN NODE {node.Key}:{node.Value.NodeRole} ----------->");
                         foreach (var resultMessage in node.Value.ResultMessages)
                         {
-                            WriteSpecMessage(String.Format(" --> {0}", resultMessage.Message));
+                            WriteSpecMessage($" --> {resultMessage.Message}");
                         }
                         if(node.Value.ResultMessages == null || node.Value.ResultMessages.Count == 0)
                             WriteSpecMessage("[received no messages - SILENT FAILURE].");
-                        WriteSpecMessage(string.Format("<----------- END NODE {0}:{1} ----------->", node.Key, node.Value.NodeRole));
+                        WriteSpecMessage($"<----------- END NODE {node.Key}:{node.Value.NodeRole} ----------->");
                     }
                 }
             }
@@ -88,7 +91,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected override void HandleTestRunTree(TestRunTree tree)
         {
             var passedSpecs = tree.Specs.Count(x => x.Passed.GetValueOrDefault(false));
-            WriteSpecMessage(string.Format("Test run completed in [{0}] with {1}/{2} specs passed.", tree.Elapsed, passedSpecs, tree.Specs.Count()));
+            WriteSpecMessage(
+                $"Test run completed in [{tree.Elapsed}] with {passedSpecs}/{tree.Specs.Count()} specs passed.");
             foreach (var factData in tree.Specs)
             {
                 PrintSpecRunResults(factData);
@@ -97,7 +101,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void HandleNewSpec(BeginNewSpec newSpec)
         {
-            WriteSpecMessage(string.Format("Beginning spec {0}.{1} on {2} nodes", newSpec.ClassName, newSpec.MethodName, newSpec.Nodes.Count));
+            if (_teamCity)
+            {
+                WriteSpecMessage($"[RUNNER][{DateTime.UtcNow.ToShortTimeString()}]: Beginning spec {newSpec.ClassName}.{newSpec.MethodName} on {newSpec.Nodes.Count} nodes");
+            }
+            else
+            {
+                WriteSpecMessage($"Beginning spec {newSpec.ClassName}.{newSpec.MethodName} on {newSpec.Nodes.Count} nodes");
+            }
 
             base.HandleNewSpec(newSpec);
         }
@@ -137,25 +148,55 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// <summary>
         /// Used to print a spec status message (spec starting, finishing, failed, etc...)
         /// </summary>
-        private void WriteSpecMessage(string message)
+        protected virtual void WriteSpecMessage(string message)
         {
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.WriteLine("[RUNNER][{0}]: {1}", DateTime.UtcNow.ToShortTimeString(), message);
-            Console.ResetColor();
+            if (_teamCity)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Console.WriteLine(message);
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Console.WriteLine("[RUNNER][{0}]: {1}", DateTime.UtcNow.ToShortTimeString(), message);
+                Console.ResetColor();
+            }
         }
 
-        private void WriteSpecPass(int nodeIndex, string nodeRole, string message)
+        protected virtual void WriteSpecPass(int nodeIndex, string nodeRole, string message)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("[NODE{0}:{1}][{2}]: SPEC PASSED: {3}", nodeIndex, nodeRole, DateTime.UtcNow.ToShortTimeString(), message);
-            Console.ResetColor();
+            if (_teamCity)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine(
+                    $"##teamcity[testStdOut name=\'{TeamCityEscape($"[NODE{nodeIndex}:{nodeRole}]")}\' out=\'{TeamCityEscape(message)}\'");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("[NODE{0}:{1}][{2}]: SPEC PASSED: {3}", nodeIndex, nodeRole, DateTime.UtcNow.ToShortTimeString(), message);
+                Console.ResetColor();
+            }
         }
 
         private void WriteSpecFail(int nodeIndex, string nodeRole, string message)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("[NODE{0}:{1}][{2}]: SPEC FAILED: {3}", nodeIndex, nodeRole, DateTime.UtcNow.ToShortTimeString(), message);
-            Console.ResetColor();
+            if (_teamCity)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine(
+                    $"##teamcity[testFailed name=\'{TeamCityEscape($"[NODE{nodeIndex}:{nodeRole}]")}\' out=\'{TeamCityEscape(message)}\'");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("[NODE{0}:{1}][{2}]: SPEC FAILED: {3}", nodeIndex, nodeRole,
+                    DateTime.UtcNow.ToShortTimeString(), message);
+                Console.ResetColor();
+            }
         }
 
         private void WriteRunnerMessage(LogMessageForTestRunner nodeMessage)
@@ -192,6 +233,22 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             return color;
         }
 
+        private static string TeamCityEscape(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
+
+            return input.Replace("|", "||")
+                .Replace("'", "|'")
+                .Replace("\n", "|n")
+                .Replace("\r", "|r")
+                .Replace(char.ConvertFromUtf32(int.Parse("0086", NumberStyles.HexNumber)), "|x")
+                .Replace(char.ConvertFromUtf32(int.Parse("2028", NumberStyles.HexNumber)), "|l")
+                .Replace(char.ConvertFromUtf32(int.Parse("2029", NumberStyles.HexNumber)), "|p")
+                .Replace("[", "|[")
+                .Replace("]", "|]");
+        }
+
         #endregion
     }
 
@@ -200,8 +257,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class ConsoleMessageSink : MessageSink
     {
-        public ConsoleMessageSink()
-            : base(Props.Create(() => new ConsoleMessageSinkActor(true)))
+        public ConsoleMessageSink(bool teamCity = false)
+            : base(Props.Create(() => new ConsoleMessageSinkActor(true, teamCity)))
         {
         }
 

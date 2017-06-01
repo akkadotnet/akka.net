@@ -39,6 +39,8 @@ namespace Akka.MultiNodeTestRunner
         /// </summary>
         protected static string OutputDirectory;
 
+        protected static string TeamCityFormattingOn;
+
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
         /// 
@@ -101,6 +103,7 @@ namespace Akka.MultiNodeTestRunner
         static void Main(string[] args)
         {
             OutputDirectory = CommandLine.GetProperty("multinode.output-directory") ?? string.Empty;
+            TeamCityFormattingOn = CommandLine.GetProperty("multinode.teamcity") ?? false.ToString();
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
             SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
