@@ -20,7 +20,7 @@ namespace Akka.DistributedData.Local
     /// </summary>
     /// <typeparam name="TKey">TBD</typeparam>
     /// <typeparam name="TVal">TBD</typeparam>
-    public struct LocalORDictionary<TKey, TVal> : ISurrogated, IEnumerable<KeyValuePair<TKey, TVal>> where TVal : IReplicatedData
+    public struct LocalORDictionary<TKey, TVal> : ISurrogated, IEnumerable<KeyValuePair<TKey, TVal>> where TVal : IReplicatedData<TVal>
     {
         /// <summary>
         /// TBD

@@ -26,7 +26,7 @@ namespace Akka.DistributedData.Tests.Serialization
                 provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             }
             akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
-        
+
         private readonly UniqueAddress _address1 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 1);
         private readonly UniqueAddress _address2 = new UniqueAddress(new Address("akka.tcp", "sys", "other.host.org", 4711), 2);
         private readonly UniqueAddress _address3 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 3);
@@ -153,15 +153,15 @@ namespace Akka.DistributedData.Tests.Serialization
         [Fact]
         public void ReplicatedDataSerializer_should_serialize_ORMultiDictionary()
         {
-            CheckSerialization(ORMultiDictionary<string, string>.Empty);
-            CheckSerialization(ORMultiDictionary<string, string>.Empty.AddItem(_address1, "a", "A"));
-            CheckSerialization(ORMultiDictionary<string, string>.Empty
+            CheckSerialization(ORMultiValueDictionary<string, string>.Empty);
+            CheckSerialization(ORMultiValueDictionary<string, string>.Empty.AddItem(_address1, "a", "A"));
+            CheckSerialization(ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_address1, "a", "A1")
                 .SetItems(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }))
                 .AddItem(_address2, "a", "A2"));
 
-            var m1 = ORMultiDictionary<string, string>.Empty.AddItem(_address1, "a", "A1").AddItem(_address2, "a", "A2");
-            var m2 = ORMultiDictionary<string, string>.Empty.SetItems(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }));
+            var m1 = ORMultiValueDictionary<string, string>.Empty.AddItem(_address1, "a", "A1").AddItem(_address2, "a", "A2");
+            var m2 = ORMultiValueDictionary<string, string>.Empty.SetItems(_address2, "b", ImmutableHashSet.CreateRange(new[] { "B1", "B2", "B3" }));
             CheckSameContent(m1.Merge(m2), m2.Merge(m1));
         }
 
@@ -188,7 +188,7 @@ namespace Akka.DistributedData.Tests.Serialization
             var serializer = Sys.Serialization.FindSerializerFor(expected);
             var blob = serializer.ToBinary(expected);
             var actual = serializer.FromBinary(blob, expected.GetType());
-            
+
             // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
             // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets
             // fails on structural equality

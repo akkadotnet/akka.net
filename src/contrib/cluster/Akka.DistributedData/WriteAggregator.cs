@@ -17,7 +17,7 @@ namespace Akka.DistributedData
     {
         public static Props Props(IKey key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable) =>
             Actor.Props.Create(() => new WriteAggregator(key, envelope, consistency, req, nodes, unreachable, replyTo, durable)).WithDeploy(Deploy.Local);
-        
+
         private readonly IKey _key;
         private readonly DataEnvelope _envelope;
         private readonly IWriteConsistency _consistency;
@@ -39,7 +39,7 @@ namespace Akka.DistributedData
             _durable = durable;
             _write = new Write(key.Id, envelope);
             _gotLocalStoreReply = !durable;
-            _gotNackFrom =ImmutableHashSet<Address>.Empty;
+            _gotNackFrom = ImmutableHashSet<Address>.Empty;
             DoneWhenRemainingSize = GetDoneWhenRemainingSize();
         }
 
@@ -47,15 +47,15 @@ namespace Akka.DistributedData
 
         protected bool NotEnoughNodes => DoneWhenRemainingSize < 0 || Nodes.Count < DoneWhenRemainingSize;
 
-        protected override int DoneWhenRemainingSize { get; } 
+        protected override int DoneWhenRemainingSize { get; }
 
         private int GetDoneWhenRemainingSize()
         {
-            if (_consistency is WriteTo) return Nodes.Count - (((WriteTo) _consistency).N - 1);
+            if (_consistency is WriteTo) return Nodes.Count - (((WriteTo)_consistency).N - 1);
             else if (_consistency is WriteAll) return 0;
             else if (_consistency is WriteMajority)
             {
-                var consistency = (WriteMajority) _consistency;
+                var consistency = (WriteMajority)_consistency;
                 var N = Nodes.Count + 1;
                 var w = CalculateMajorityWithMinCapacity(consistency.MinCapacity, N);
                 return N - w;
@@ -115,7 +115,7 @@ namespace Akka.DistributedData
             object reply;
             if (isSuccess && isDelete) reply = new DeleteSuccess(_key, _req);
             else if (isSuccess) reply = new UpdateSuccess(_key, _req);
-            else if (isTimeoutOrNotEnoughNodes && isDelete) reply = new ReplicationDeletedFailure(_key);
+            else if (isTimeoutOrNotEnoughNodes && isDelete) reply = new ReplicationDeleteFailure(_key);
             else if (isTimeoutOrNotEnoughNodes) reply = new UpdateTimeout(_key, _req);
             else reply = new StoreFailure(_key, _req);
 
@@ -145,7 +145,7 @@ namespace Akka.DistributedData
         public override string ToString() => "WriteLocal";
     }
 
-    public sealed class WriteTo : IWriteConsistency
+    public sealed class WriteTo : IWriteConsistency, IEquatable<WriteTo>
     {
         public int N { get; }
 
@@ -159,16 +159,27 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        public override bool Equals(object obj)
-        {
-            var other = obj as WriteTo;
-            return other != null && (N == other.N && Timeout == other.Timeout);
-        }
+        public override bool Equals(object obj) => Equals(obj as WriteTo);
 
         public override string ToString() => $"WriteTo({N}, timeout={Timeout})";
+
+        public bool Equals(WriteTo other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return N == other.N && Timeout.Equals(other.Timeout);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (N * 397) ^ Timeout.GetHashCode();
+            }
+        }
     }
 
-    public sealed class WriteMajority : IWriteConsistency
+    public sealed class WriteMajority : IWriteConsistency, IEquatable<WriteMajority>
     {
         public TimeSpan Timeout { get; }
         public int MinCapacity { get; }
@@ -179,16 +190,27 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        public override bool Equals(object obj)
-        {
-            var other = obj as WriteMajority;
-            return other != null && Timeout == other.Timeout && MinCapacity == other.MinCapacity;
-        }
+        public override bool Equals(object obj) => Equals(obj as WriteMajority);
 
         public override string ToString() => $"WriteMajority(timeout={Timeout})";
+
+        public bool Equals(WriteMajority other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Timeout.Equals(other.Timeout) && MinCapacity == other.MinCapacity;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Timeout.GetHashCode() * 397) ^ MinCapacity;
+            }
+        }
     }
 
-    public sealed class WriteAll : IWriteConsistency
+    public sealed class WriteAll : IWriteConsistency, IEquatable<WriteAll>
     {
         public TimeSpan Timeout { get; }
 
@@ -197,12 +219,20 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        public override bool Equals(object obj)
-        {
-            var other = obj as WriteAll;
-            return other != null && Timeout == other.Timeout;
-        }
+        public override bool Equals(object obj) => Equals(obj as WriteAll);
 
         public override string ToString() => $"WriteAll(timeout={Timeout})";
+
+        public bool Equals(WriteAll other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Timeout.Equals(other.Timeout);
+        }
+
+        public override int GetHashCode()
+        {
+            return Timeout.GetHashCode();
+        }
     }
 }

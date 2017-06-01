@@ -9,139 +9,69 @@ using Akka.Actor;
 using Akka.Cluster;
 using System;
 using System.Collections.Immutable;
-using System.Text;
 
 namespace Akka.DistributedData
 {
-    public interface IPruningPhase { }
-
-    internal sealed class PruningInitialized : IPruningPhase, IEquatable<PruningInitialized>
+    internal sealed class PruningInitialized : IPruningState
     {
-        public static readonly PruningInitialized Empty = new PruningInitialized(ImmutableHashSet<Address>.Empty);
-
+        public UniqueAddress Owner { get; }
         public IImmutableSet<Address> Seen { get; }
 
-        public PruningInitialized(params Address[] seen)
-        {
-            Seen = seen.ToImmutableHashSet();
-        }
+        public PruningInitialized(UniqueAddress owner, params Address[] seen)
+            : this(owner, seen.ToImmutableHashSet()) { }
 
-        public PruningInitialized(IImmutableSet<Address> seen)
+        public PruningInitialized(UniqueAddress owner, IImmutableSet<Address> seen)
         {
+            Owner = owner;
             Seen = seen;
         }
 
-        public bool Equals(PruningInitialized other)
+        public IPruningState AddSeen(Address node) =>
+            Seen.Contains(node) || Owner.Address == node
+                ? this
+                : new PruningInitialized(Owner, Seen.Add(node));
+
+        public IPruningState Merge(IPruningState other)
         {
-            if (ReferenceEquals(other, null)) return false;
-            if (ReferenceEquals(this, other)) return true;
+            if (other is PruningPerformed) return other;
 
-            return Seen.SetEquals(other.Seen);
-        }
-
-        public override bool Equals(object obj) =>
-            obj is PruningInitialized && Equals((PruningInitialized)obj);
-
-        public override int GetHashCode() => Seen.GetHashCode();
-
-        public override string ToString()
-        {
-            var sb = new StringBuilder("PruningInitialized(");
-            if (Seen != null)
-            {
-                foreach (var entry in Seen)
-                {
-                    sb.Append(entry).Append(", ");
-                }
-            }
-            sb.Append(')');
-            return sb.ToString();
+            var that = (PruningInitialized)other;
+            if (this.Owner == that.Owner)
+                return new PruningInitialized(this.Owner, this.Seen.Union(that.Seen));
+            else if (Member.AddressOrdering.Compare(this.Owner.Address, that.Owner.Address) > 0)
+                return other;
+            else
+                return this;
         }
     }
 
-    internal sealed class PruningPerformed : IPruningPhase
+    internal sealed class PruningPerformed : IPruningState
     {
-        public static PruningPerformed Instance = new PruningPerformed();
+        public PruningPerformed(DateTime obsoleteTime)
+        {
+            ObsoleteTime = obsoleteTime;
+        }
 
-        private PruningPerformed() { }
+        public DateTime ObsoleteTime { get; }
 
-        public override bool Equals(object obj) => obj != null && obj is PruningPerformed;
+        public bool IsObsolete(DateTime currentTime) => ObsoleteTime <= currentTime;
+        public IPruningState AddSeen(Address node) => this;
 
-        public override int GetHashCode() => -1798412870; // "PruningPerformed".GetHashCode()
+        public IPruningState Merge(IPruningState other)
+        {
+            var that = other as PruningPerformed;
+            if (that != null)
+            {
+                return this.ObsoleteTime >= that.ObsoleteTime ? this : that;
+            }
+            else return this;
+        }
     }
 
-    public sealed class PruningState
+    public interface IPruningState
     {
-        public UniqueAddress Owner { get; }
+        IPruningState AddSeen(Address node);
 
-        public IPruningPhase Phase { get; }
-
-        public PruningState(UniqueAddress owner, IPruningPhase phase)
-        {
-            Owner = owner;
-            Phase = phase;
-        }
-
-        internal PruningState AddSeen(Address node)
-        {
-            if (Phase is PruningPerformed) return this;
-            if (Phase is PruningInitialized)
-            {
-                var p = (PruningInitialized)Phase;
-                if (p.Seen.Contains(node) || Owner.Address == node)
-                {
-                    return this;
-                }
-                else
-                {
-                    return new PruningState(Owner, new PruningInitialized(p.Seen.Add(node)));
-                }
-            }
-            else
-            {
-                throw new Exception("Invalid pruning phase provided");
-            }
-        }
-
-        internal PruningState Merge(PruningState that)
-        {
-            if (Phase is PruningPerformed) return this;
-            if (that.Phase is PruningPerformed) return that;
-            if (Phase is PruningInitialized && that.Phase is PruningInitialized)
-            {
-                var p1 = (PruningInitialized)Phase;
-                var p2 = (PruningInitialized)that.Phase;
-                if (this.Owner == that.Owner)
-                    return new PruningState(Owner, new PruningInitialized(p1.Seen.Union(p2.Seen)));
-                else if (Member.AddressOrdering.Compare(this.Owner.Address, that.Owner.Address) > 0)
-                    return that;
-                else
-                    return this;
-            }
-            else
-            {
-                throw new Exception("Invalid pruning state provided");
-            }
-        }
-
-        public override bool Equals(object obj) => obj is PruningState && Equals((PruningState) obj);
-
-        private bool Equals(PruningState other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            if (ReferenceEquals(other, this)) return true;
-
-            return Equals(Owner, other.Owner) && Equals(Phase, other.Phase);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return ((Owner != null ? Owner.GetHashCode() : 0) * 397) ^ (Phase != null ? Phase.GetHashCode() : 0);
-            }
-        }
-
-        public override string ToString() => $"PrunningState(owner={Owner}, phase={Phase})";
+        IPruningState Merge(IPruningState other);
     }
 }
