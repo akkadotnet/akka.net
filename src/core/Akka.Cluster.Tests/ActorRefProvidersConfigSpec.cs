@@ -40,11 +40,13 @@ namespace Akka.Cluster.Tests
 
         private void ConfigureAndVerify(string alias, Type actorProviderType)
         {
-            var config = ConfigurationFactory.ParseString(@"akka.actor.provider = " + alias);
+            var config = ConfigurationFactory.ParseString(@"akka.actor.provider = " + alias)
+                .WithFallback(ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port = 0")); // use a random port to avoid issues with async and parallelization
             using (var system = ActorSystem.Create(nameof(ActorRefProvidersConfigSpec), config))
             {
                 var ext = (ExtendedActorSystem) system;
                 ext.Provider.GetType().ShouldBe(actorProviderType);
+                system.Terminate().Wait(TimeSpan.FromSeconds(3)); // force the system to cleanup and shutdown
             }
         }
     }

@@ -88,8 +88,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// <summary>
         /// Leave the console message sink enabled by default
         /// </summary>
-        public SinkCoordinator(bool teamCity = false)
-            : this(new[] { new ConsoleMessageSink(teamCity) })
+        public SinkCoordinator()
+            : this(new[] { new ConsoleMessageSink() })
         {
 
         }
@@ -157,7 +157,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             });
             Receive<NodeCompletedSpecWithSuccess>(s => PublishToChildren(s));
             Receive<IList<NodeTest>>(tests => BeginSpec(tests));
-            Receive<EndSpec>(spec => EndSpec());
+            Receive<EndSpec>(spec => EndSpec(spec.ClassName, spec.MethodName));
             Receive<RunnerMessage>(runner => PublishToChildren(runner));
         }
 
@@ -168,10 +168,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
 
 
-        private void EndSpec()
+        private void EndSpec(string testName, string methodName)
         {
             foreach (var sink in Sinks)
-                sink.EndTest();
+                sink.EndTest(testName, methodName);
         }
 
         private void BeginSpec(IList<NodeTest> tests)
