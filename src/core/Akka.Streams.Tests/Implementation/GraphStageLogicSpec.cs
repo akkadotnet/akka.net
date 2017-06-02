@@ -341,7 +341,10 @@ namespace Akka.Streams.Tests.Implementation
                     .Via(new Emit1234().Named("testStage"))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(5)
-                    .ExpectNext(1, 2, 3, 4)
+                    .ExpectNext(1)
+                    //emitting with callback gives nondeterminism whether 2 or 3 will be pushed first
+                    .ExpectNextUnordered(2, 3)
+                    .ExpectNext(4)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -358,7 +361,14 @@ namespace Akka.Streams.Tests.Implementation
                     .Via(g)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(9)
-                    .ExpectNext(1, 2, 3, 4, 5, 6, 7, 8)
+                    .ExpectNext(1)
+                    //emitting with callback gives nondeterminism whether 2 or 3 will be pushed first
+                    .ExpectNextUnordered(2, 3)
+                    .ExpectNext(4)
+                    .ExpectNext(5)
+                    //emitting with callback gives nondeterminism whether 6 or 7 will be pushed first
+                    .ExpectNextUnordered(6, 7)
+                    .ExpectNext(8)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -375,7 +385,14 @@ namespace Akka.Streams.Tests.Implementation
                     .Via(g)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(9)
-                    .ExpectNext(1, 2, 3, 4, 5, 6, 7, 8)
+                    .ExpectNext(1)
+                    //emitting with callback gives nondeterminism whether 2 or 3 will be pushed first
+                    .ExpectNextUnordered(2, 3)
+                    .ExpectNext(4)
+                    .ExpectNext(5)
+                    //emitting with callback gives nondeterminism whether 6 or 7 will be pushed first
+                    .ExpectNextUnordered(6, 7)
+                    .ExpectNext(8)
                     .ExpectComplete();
             }, Materializer);
         }

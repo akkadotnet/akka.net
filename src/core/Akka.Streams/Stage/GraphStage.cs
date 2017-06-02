@@ -498,17 +498,34 @@ namespace Akka.Streams.Stage
                 AndThen();
                 if (FollowUps != null)
                 {
-                    if (Logic.GetHandler(Out) is Emitting e)
-                        e.AddFollowUps(this);
-                    else
+                    // If (while executing andThen() callback) handler was changed to new emitting,
+                    // we should add it to the end of emission queue
+                    var currentHandler = Logic.GetHandler(Out);
+                    if(currentHandler is Emitting e)
+                        AddFollowUp(e);
+
+                    var next = Dequeue();
+                    if (next is EmittingCompletion completion)
                     {
-                        var next = Dequeue();
-                        if (next is EmittingCompletion)
-                            Logic.Complete(Out);
+                        // If next element is emitting completion and there are some elements after it,
+                        // we to need pass them before completion
+                        if (completion.FollowUps != null)
+                            Logic.SetHandler(Out, DequeueHeadAndAddToTail(completion));
                         else
-                            Logic.SetHandler(Out, next);
+                            Logic.Complete(Out);
                     }
+                    else
+                        Logic.SetHandler(Out, next);
                 }
+            }
+
+            private IOutHandler DequeueHeadAndAddToTail(Emitting head)
+            {
+                var next = head.Dequeue();
+                next.AddFollowUp(head);
+                next.FollowUps = null;
+                next.FollowUpsTail = null;
+                return next;
             }
 
             public void AddFollowUp(Emitting e)
@@ -544,7 +561,7 @@ namespace Akka.Streams.Stage
             /// not be retained (setHandler will install the followUp). For this reason
             /// the followUpsTail knowledge needs to be passed on to the next runner.
             /// </summary>
-            private OutHandler Dequeue()
+            private Emitting Dequeue()
             {
                 var result = FollowUps;
                 result.FollowUpsTail = FollowUpsTail;
@@ -874,8 +891,7 @@ namespace Akka.Streams.Stage
                 // only used in StageLogic, i.e. thread safe
                 if (_log == null)
                 {
-                    var provider = Materializer as IMaterializerLoggingProvider;
-                    if (provider != null)
+                    if (Materializer is IMaterializerLoggingProvider provider)
                         _log = provider.MakeLogger(LogSource);
                     else
                         _log = NoLogger.Instance;
@@ -1117,9 +1133,9 @@ namespace Akka.Streams.Stage
             if ((connection.PortState & (InReady | InFailed)) ==
                 (InReady | InFailed))
             {
-                var failed = connection.Slot as GraphInterpreter.Failed;
                 // This can only be Empty actually (if a cancel was concurrent with a failure)
-                return failed != null && !ReferenceEquals(failed.PreviousElement, Empty.Instance);
+                return connection.Slot is GraphInterpreter.Failed failed &&
+                       !ReferenceEquals(failed.PreviousElement, Empty.Instance);
             }
 
             return false;

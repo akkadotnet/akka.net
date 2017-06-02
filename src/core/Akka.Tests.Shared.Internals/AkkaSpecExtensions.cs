@@ -199,6 +199,17 @@ namespace Akka.TestKit
         /// <summary>
         /// TBD
         /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="actual">TBD</param>
+        /// <param name="expected">TBD</param>
+        public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, IEnumerable<T> expected)
+        {
+            ShouldBe(actual, expected);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <typeparam name="TException">TBD</typeparam>
         /// <param name="func">TBD</param>
         public static async Task ThrowsAsync<TException>(Func<Task> func)

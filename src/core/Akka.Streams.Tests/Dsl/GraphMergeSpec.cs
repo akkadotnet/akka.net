@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
@@ -78,7 +79,10 @@ namespace Akka.Streams.Tests.Dsl
                     collected.Add(probe.ExpectNext());
                 }
 
-                collected.ShouldAllBeEquivalentTo(Enumerable.Range(1,10));
+                collected.Where(i => i <= 4).ShouldOnlyContainInOrder(1, 2, 3, 4);
+                collected.Where(i => i >= 5).ShouldOnlyContainInOrder(5, 6, 7, 8, 9, 10);
+
+                collected.ShouldBeEquivalentTo(Enumerable.Range(1, 10).ToArray());
                 probe.ExpectComplete();
             }, Materializer);
         }
