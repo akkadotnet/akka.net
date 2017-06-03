@@ -47,9 +47,9 @@ PM> Install-Package Akka.FSharp
 ### Contributing
 #### Where Can I Contribute?
 
-[![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues Needing Help Now!)](http://waffle.io/akkadotnet/akka.net)
+[![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues%20Needing%20Help%20Now!)](http://waffle.io/akkadotnet/akka.net)
 <br>
-[![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General Issues Up For Grabs)](http://waffle.io/akkadotnet/akka.net)
+[![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General%20Issues%20Up%20For%20Grabs)](http://waffle.io/akkadotnet/akka.net)
 
 > *All contributions are welcome! Please consider the [issues categorized in the `Help!` column](http://waffle.io/akkadotnet/akka.net) first, as they are areas we could really use your help :)*
 
