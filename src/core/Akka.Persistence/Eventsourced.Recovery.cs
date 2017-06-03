@@ -140,20 +140,6 @@ namespace Akka.Persistence
             Extension.RecoveryPermitter().Tell(new ReturnRecoveryPermit(), Self);
         }
 
-        private void TransitToProcessingState()
-        {
-            ReturnRecoveryPermit();
-
-            if (_eventBatch.Count > 0) FlushBatch();
-
-            if (_pendingStashingPersistInvocations > 0)
-                ChangeState(PersistingEvents());
-            else
-            {
-                ChangeState(ProcessingCommands());
-                _internalStash.UnstashAll();
-            }
-        }
 
         /// <summary>
         /// Processes replayed messages, if any. The actor's <see cref="ReceiveRecover"/> is invoked with the replayed events.
@@ -170,9 +156,8 @@ namespace Akka.Persistence
             // protect against event replay stalling forever because of journal overloaded and such
             var timeoutCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, Self, new RecoveryTick(false), Self);
             var eventSeenInInterval = false;
-            var recoveryRunning = true;
 
-            return new EventsourcedState("replay started", recoveryRunning, (receive, message) =>
+            return new EventsourcedState("replay started", true, (receive, message) =>
             {
                 try
                 {
@@ -196,6 +181,7 @@ namespace Akka.Persistence
                             {
                                 Context.Stop(Self);
                             }
+                            ReturnRecoveryPermit();
                         }
                     }
                     else if (message is RecoverySuccess)
@@ -203,16 +189,18 @@ namespace Akka.Persistence
                         var m = (RecoverySuccess)message;
                         timeoutCancelable.Cancel();
                         OnReplaySuccess();
+                        ChangeState(ProcessingCommands());
                         _sequenceNr = m.HighestSequenceNr;
                         LastSequenceNr = m.HighestSequenceNr;
-                        recoveryRunning = false;
+                        _internalStash.UnstashAll();
+
                         try
                         {
                             base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
                         }
                         finally
                         {
-                            TransitToProcessingState();
+                            ReturnRecoveryPermit();
                         }
                     }
                     else if (message is ReplayMessagesFailure)
