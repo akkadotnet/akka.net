@@ -588,6 +588,7 @@ namespace Akka.DistributedData.Tests
             var acc = new Dictionary<string, VersionVector> { { "K1", VersionVector.Create(_nodeA, 3L) } }.ToImmutableDictionary();
             var expectedDots = new Dictionary<string, VersionVector>
             {
+                { "K1", VersionVector.Create(_nodeA, 3L) },
                 { "K3", VersionVector.Create(_nodeA, 4L) },
                 { "K4", VersionVector.Create(_nodeD, 8L) }, // "a" -> 3 removed, optimized to include only those unseen
             };

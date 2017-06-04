@@ -177,11 +177,19 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public override bool Equals(object obj) => obj is GSet<T> && Equals((GSet<T>)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override int GetHashCode() => Elements.GetHashCode();
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = 0;
+                foreach (var element in Elements)
+                {
+                    hashCode = (hashCode * 397) ^ (element?.GetHashCode() ?? 0);
+                }
+                return hashCode;
+            }
+        }
+
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
