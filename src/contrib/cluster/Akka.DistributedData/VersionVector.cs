@@ -110,7 +110,7 @@ namespace Akka.DistributedData
 
         public bool IsAfter(VersionVector y) => CompareOnlyTo(y, Ordering.After) == Ordering.After;
 
-        public static bool operator ==(VersionVector x, VersionVector y) => !ReferenceEquals(x, null) && x.Equals(y);
+        public static bool operator ==(VersionVector x, VersionVector y) => x?.Equals(y) ?? ReferenceEquals(x, y);
 
         /// <summary>
         /// Returns true if <paramref name="x"/> VersionVector has other 

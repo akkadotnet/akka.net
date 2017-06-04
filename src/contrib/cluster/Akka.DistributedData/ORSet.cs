@@ -581,25 +581,25 @@ namespace Akka.DistributedData
             var kv = other.ElementsMap.First();
             var elem = kv.Key;
 
+            var thisDot = ElementsMap.GetValueOrDefault(elem);
             var deleteDotNodes = new List<UniqueAddress>();
-            var allLessThanOrEq = true;
+            var deleteDotsAreGreater = true;
             using (var deleteDots = other._versionVector.VersionEnumerator)
             {
                 while (deleteDots.MoveNext())
                 {
                     var curr = deleteDots.Current;
                     deleteDotNodes.Add(curr.Key);
-                    allLessThanOrEq &= _versionVector.VersionAt(curr.Key) <= curr.Value;
+                    deleteDotsAreGreater &= (thisDot != null ? (thisDot.VersionAt(curr.Key) <= curr.Value) : false);
                 }
             }
 
             var newElementsMap = ElementsMap;
-            if (allLessThanOrEq)
+            if (deleteDotsAreGreater)
             {
-                VersionVector dot;
-                if (ElementsMap.TryGetValue(elem, out dot))
+                if (thisDot != null)
                 {
-                    using (var e = dot.VersionEnumerator)
+                    using (var e = thisDot.VersionEnumerator)
                     {
                         var allContains = true;
                         while (e.MoveNext()) allContains &= deleteDotNodes.Contains(e.Current.Key);
