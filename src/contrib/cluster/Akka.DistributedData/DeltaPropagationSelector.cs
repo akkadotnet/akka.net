@@ -63,7 +63,7 @@ namespace Akka.DistributedData
                     var buffer = new Address[sliceSize];
                     for (int i = 0; i < sliceSize; i++)
                     {
-                        buffer[i] = all[(start + i) % buffer.Length];
+                        buffer[i] = all[(start + i) % all.Length];
                     }
                     slice = ImmutableArray.CreateRange(buffer);
                 }
@@ -79,9 +79,12 @@ namespace Akka.DistributedData
                     var deltas = ImmutableDictionary<string, Tuple<IReplicatedData, long, long>>.Empty.ToBuilder();
                     foreach (var entry in _deltaEntries)
                     {
-                        var deltaSentToNodeForKey = _deltaSentToNode.GetValueOrDefault(entry.Key, ImmutableDictionary<Address, long>.Empty);
+                        var key = entry.Key;
+                        var entries = entry.Value;
+
+                        var deltaSentToNodeForKey = _deltaSentToNode.GetValueOrDefault(key, ImmutableDictionary<Address, long>.Empty);
                         var j = deltaSentToNodeForKey.GetValueOrDefault(node, 0L);
-                        var deltaEntriesAfterJ = DeltaEntriesAfter(entry.Value, j);
+                        var deltaEntriesAfterJ = DeltaEntriesAfter(entries, j);
                         if (!deltaEntriesAfterJ.IsEmpty)
                         {
                             var fromSeqNr = deltaEntriesAfterJ.Keys.First(); // should be min
@@ -89,7 +92,7 @@ namespace Akka.DistributedData
 
                             // in most cases the delta group merging will be the same for each node,
                             // so we cache the merged results
-                            var cacheKey = Tuple.Create(entry.Key, fromSeqNr, toSeqNr);
+                            var cacheKey = Tuple.Create(key, fromSeqNr, toSeqNr);
                             IReplicatedData deltaGroup;
                             if (!cache.TryGetValue(cacheKey, out deltaGroup))
                             {
@@ -106,8 +109,8 @@ namespace Akka.DistributedData
                                 cache[cacheKey] = deltaGroup;
                             }
 
-                            deltas[entry.Key] = Tuple.Create(deltaGroup, fromSeqNr, toSeqNr);
-                            _deltaSentToNode = _deltaSentToNode.SetItem(entry.Key, deltaSentToNodeForKey.SetItem(node, toSeqNr));
+                            deltas[key] = Tuple.Create(deltaGroup, fromSeqNr, toSeqNr);
+                            _deltaSentToNode = _deltaSentToNode.SetItem(key, deltaSentToNodeForKey.SetItem(node, toSeqNr));
                         }
                     }
 
@@ -116,7 +119,7 @@ namespace Akka.DistributedData
                         // Important to include the pruning state in the deltas. For example if the delta is based
                         // on an entry that has been pruned but that has not yet been performed on the target node.
                         var deltaPropagation = CreateDeltaPropagation(deltas.ToImmutable());
-                        result.Add(node, deltaPropagation);
+                        result[node] = deltaPropagation;
                     }
                 }
 

@@ -9,14 +9,15 @@ using Akka.Actor;
 using Akka.DistributedData.Internal;
 using System;
 using System.Collections.Immutable;
+using Akka.Cluster;
 using Akka.Event;
 
 namespace Akka.DistributedData
 {
     internal class WriteAggregator : ReadWriteAggregator
     {
-        public static Props Props(IKey key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable) =>
-            Actor.Props.Create(() => new WriteAggregator(key, envelope, consistency, req, nodes, unreachable, replyTo, durable)).WithDeploy(Deploy.Local);
+        public static Props Props(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable) =>
+            Actor.Props.Create(() => new WriteAggregator(key, envelope, delta, consistency, req, nodes, unreachable, replyTo, durable)).WithDeploy(Deploy.Local);
 
         private readonly IKey _key;
         private readonly DataEnvelope _envelope;
@@ -24,13 +25,17 @@ namespace Akka.DistributedData
         private readonly object _req;
         private readonly IActorRef _replyTo;
         private readonly Write _write;
+        private readonly DeltaPropagation _delta;
         private readonly bool _durable;
+        private readonly UniqueAddress _selfUniqueAddress;
         private bool _gotLocalStoreReply;
         private ImmutableHashSet<Address> _gotNackFrom;
 
-        public WriteAggregator(IKey key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable)
+        public WriteAggregator(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, 
+            IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable)
             : base(nodes, unreachable, consistency.Timeout)
         {
+            _selfUniqueAddress = Cluster.Cluster.Get(Context.System).SelfUniqueAddress;
             _key = key;
             _envelope = envelope;
             _consistency = consistency;
@@ -38,11 +43,15 @@ namespace Akka.DistributedData
             _replyTo = replyTo;
             _durable = durable;
             _write = new Write(key.Id, envelope);
+            _delta = delta == null
+                ? null
+                : new DeltaPropagation(_selfUniqueAddress, true,
+                    ImmutableDictionary<string, Delta>.Empty.Add(key.Id, delta));
             _gotLocalStoreReply = !durable;
             _gotNackFrom = ImmutableHashSet<Address>.Empty;
             DoneWhenRemainingSize = GetDoneWhenRemainingSize();
         }
-
+        
         protected bool IsDone => _gotLocalStoreReply && (Remaining.Count <= DoneWhenRemainingSize || (Remaining.Except(_gotNackFrom).Count == 0) || NotEnoughNodes);
 
         protected bool NotEnoughNodes => DoneWhenRemainingSize < 0 || Nodes.Count < DoneWhenRemainingSize;
@@ -68,7 +77,8 @@ namespace Akka.DistributedData
 
         protected override void PreStart()
         {
-            foreach (var n in PrimaryNodes) Replica(n).Tell(_write);
+            var msg = (object)_delta ?? _write;
+            foreach (var n in PrimaryNodes) Replica(n).Tell(msg);
 
             if (IsDone) Reply(isTimeout: false);
         }
@@ -84,6 +94,10 @@ namespace Akka.DistributedData
                 _gotNackFrom = _gotNackFrom.Remove(SenderAddress);
                 if (IsDone) Reply(isTimeout: false);
             })
+            .With<DeltaNack>(_ =>
+            {
+                // ok, will be retried with full state
+            })
             .With<UpdateSuccess>(x =>
             {
                 _gotLocalStoreReply = true;
@@ -92,11 +106,22 @@ namespace Akka.DistributedData
             .With<StoreFailure>(x =>
             {
                 _gotLocalStoreReply = true;
-                _gotNackFrom = _gotNackFrom.Remove(Cluster.Cluster.Get(Context.System).SelfAddress);
+                _gotNackFrom = _gotNackFrom.Remove(_selfUniqueAddress.Address);
                 if (IsDone) Reply(isTimeout: false);
             })
             .With<SendToSecondary>(x =>
             {
+                // Deltas must be applied in order and we can't keep track of ordering of
+                // simultaneous updates so there is a chance that the delta could not be applied.
+                // Try again with the full state to the primary nodes that have not acked.
+                if (_delta != null)
+                {
+                    foreach (var address in PrimaryNodes.Intersect(Remaining))
+                    {
+                        Replica(address).Tell(_write);
+                    }
+                }
+
                 foreach (var n in SecondaryNodes)
                     Replica(n).Tell(_write);
             })

@@ -343,6 +343,9 @@ namespace Akka.DistributedData
 
         public ImmutableHashSet<UniqueAddress> ModifiedByNodes => _versionVector.ModifiedByNodes;
         public bool NeedPruningFrom(UniqueAddress removedNode) => _versionVector.NeedPruningFrom(removedNode);
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
 
         public ORSet<T> Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {

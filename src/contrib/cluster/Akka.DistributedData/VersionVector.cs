@@ -78,6 +78,10 @@ namespace Akka.DistributedData
 
         public abstract ImmutableHashSet<UniqueAddress> ModifiedByNodes { get; }
         public abstract bool NeedPruningFrom(UniqueAddress removedNode);
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
+
         public abstract VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto);
 
         public abstract VersionVector PruningCleanup(UniqueAddress removedNode);

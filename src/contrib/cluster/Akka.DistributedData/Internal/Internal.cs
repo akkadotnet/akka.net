@@ -538,7 +538,11 @@ namespace Akka.DistributedData.Internal
                 var filteredMergedPruning = mergedPrunning.Count == 0
                     ? mergedPrunning.ToImmutable()
                     : mergedPrunning
-                        .Where(entry => (entry.Value as PruningPerformed)?.IsObsolete(currentTime) ?? false)
+                        .Where(entry =>
+                        {
+                            var performed = entry.Value as PruningPerformed;
+                            return !performed?.IsObsolete(currentTime) ?? true;
+                        })
                         .ToImmutableDictionary();
 
                 // cleanup and merge DeltaVersions
