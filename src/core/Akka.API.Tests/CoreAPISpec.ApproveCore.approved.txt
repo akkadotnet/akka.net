@@ -1686,6 +1686,7 @@ namespace Akka.Actor
         public TerminatedProps() { }
         public override Akka.Actor.ActorBase NewActor() { }
     }
+    [System.ObsoleteAttribute("TypedActor in its current shape will be removed in v1.5")]
     public abstract class TypedActor : Akka.Actor.ActorBase
     {
         protected TypedActor() { }
