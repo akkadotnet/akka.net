@@ -55,6 +55,9 @@ Target "Build" (fun _ ->
     let projects = !! "./**/core/**/*.csproj"
                    ++ "./**/contrib/**/*.csproj"
                    -- "./**/serializers/**/*Wire*.csproj"
+    
+    if (isMono) then
+        setEnvironVar "FrameworkPathOverride" "/usr/lib/mono/4.5/"
 
     let runSingleProject project =
         DotNetCli.Build
