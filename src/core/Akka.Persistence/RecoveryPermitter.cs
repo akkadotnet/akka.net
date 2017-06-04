@@ -41,9 +41,9 @@ namespace Akka.Persistence
             if (message is RequestRecoveryPermit)
             {
                 Context.Watch(Sender);
-                if (usedPermits > maxPermits)
+                if (usedPermits >= maxPermits)
                 {
-                    if (pending.Count == 0) 
+                    if (pending.Count == 0)
                         Log.Debug("Exceeded max-concurrent-recoveries [{0}]. First pending {1}", maxPermits, Sender);
                     pending.AddLast(Sender);
                     maxPendingStats = Math.Max(maxPendingStats, pending.Count);
@@ -53,12 +53,15 @@ namespace Akka.Persistence
                     RecoveryPermitGranted(Sender);
                 }
             }
-            else if(message is ReturnRecoveryPermit)
+            else if (message is ReturnRecoveryPermit)
             {
                 ReturnRecoveryPermit(Sender);
             }
             else if (message is Terminated terminated && !pending.Remove(terminated.ActorRef))
+            {
+                // pre-mature termination should be rare
                 ReturnRecoveryPermit(terminated.ActorRef);
+            }
         }
 
         private void ReturnRecoveryPermit(IActorRef actorRef)
