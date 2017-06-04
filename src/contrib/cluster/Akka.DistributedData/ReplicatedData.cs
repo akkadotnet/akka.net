@@ -7,6 +7,7 @@
 
 using System.Collections.Immutable;
 using Akka.Cluster;
+using Akka.DistributedData.Serialization;
 
 namespace Akka.DistributedData
 {
@@ -55,6 +56,8 @@ namespace Akka.DistributedData
         /// which has been removed from the cluster.
         /// </summary>
         bool NeedPruningFrom(UniqueAddress removedNode);
+        IReplicatedData PruningCleanup(UniqueAddress removedNode);
+        IReplicatedData Prune(UniqueAddress removedNode, UniqueAddress collapseInto);
     }
 
     /// <summary>

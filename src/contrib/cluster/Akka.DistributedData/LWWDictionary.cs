@@ -243,6 +243,10 @@ namespace Akka.DistributedData
         public bool NeedPruningFrom(UniqueAddress removedNode) =>
             _underlying.NeedPruningFrom(removedNode);
 
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
+
         /// <summary>
         /// TBD
         /// </summary>

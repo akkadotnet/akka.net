@@ -57,7 +57,7 @@ namespace Akka.DistributedData.Tests
         public DeltaPropagationSelectorSpec()
         {
             this.selfUniqueAddress = new UniqueAddress(new Address("akka", "Sys", "localhost", 4999), 1);
-            this.nodes = Enumerable.Range(2500, 2600)
+            this.nodes = Enumerable.Range(2500, 100)
                 .Select(i => new Address("akka", "Sys", "localhost", i))
                 .ToImmutableArray();
         }
@@ -182,7 +182,7 @@ namespace Akka.DistributedData.Tests
             var delta2 = GSet<string>.Empty.Add("a2");
             var delta3 = GSet<string>.Empty.Add("a3");
 
-            var selector = new TestSelector(selfUniqueAddress, nodes.Take(3).ToImmutableArray());
+            var selector = new TestSelector2(selfUniqueAddress, nodes.Take(3).ToImmutableArray());
 
             selector.Update("A", delta1);
             var expected1 = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty

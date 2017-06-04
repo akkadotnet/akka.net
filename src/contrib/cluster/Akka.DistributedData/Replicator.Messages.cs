@@ -441,7 +441,7 @@ namespace Akka.DistributedData
             return Equals(Key, other.Key) && Equals(Data, other.Data);
         }
 
-        public T Get<T>(IKey<T> key)
+        public T Get<T>(IKey<T> key) where T : IReplicatedData
         {
             if (!Equals(Key, key)) throw new ArgumentException("Wrong key used, must be contained key");
             return (T)Data;
@@ -1004,15 +1004,6 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
         public DataDeletedException(string message) : base(message)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DataDeletedException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected DataDeletedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

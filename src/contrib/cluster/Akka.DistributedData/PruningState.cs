@@ -12,7 +12,7 @@ using System.Collections.Immutable;
 
 namespace Akka.DistributedData
 {
-    internal sealed class PruningInitialized : IPruningState
+    internal sealed class PruningInitialized : IPruningState, IEquatable<PruningInitialized>
     {
         public UniqueAddress Owner { get; }
         public IImmutableSet<Address> Seen { get; }
@@ -46,9 +46,26 @@ namespace Akka.DistributedData
             else
                 return this;
         }
+
+        public bool Equals(PruningInitialized other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Owner, other.Owner) && Seen.SetEquals(other.Seen);
+        }
+
+        public override bool Equals(object obj) => obj is PruningInitialized && Equals((PruningInitialized)obj);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Owner != null ? Owner.GetHashCode() : 0) * 397) ^ (Seen != null ? Seen.GetHashCode() : 0);
+            }
+        }
     }
 
-    internal sealed class PruningPerformed : IPruningState
+    internal sealed class PruningPerformed : IPruningState, IEquatable<PruningPerformed>
     {
         public PruningPerformed(DateTime obsoleteTime)
         {
@@ -69,6 +86,17 @@ namespace Akka.DistributedData
             }
             else return this;
         }
+
+        public bool Equals(PruningPerformed other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return ObsoleteTime.Equals(other.ObsoleteTime);
+        }
+
+        public override bool Equals(object obj) => obj is PruningPerformed && Equals((PruningPerformed)obj);
+
+        public override int GetHashCode() => ObsoleteTime.GetHashCode();
     }
 
     public interface IPruningState

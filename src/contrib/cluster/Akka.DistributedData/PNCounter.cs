@@ -121,6 +121,10 @@ namespace Akka.DistributedData
         public bool NeedPruningFrom(Cluster.UniqueAddress removedNode) =>
             Increments.NeedPruningFrom(removedNode) || Decrements.NeedPruningFrom(removedNode);
 
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
+
         public PNCounter Prune(Cluster.UniqueAddress removedNode, Cluster.UniqueAddress collapseInto) =>
             new PNCounter(Increments.Prune(removedNode, collapseInto), Decrements.Prune(removedNode, collapseInto));
 

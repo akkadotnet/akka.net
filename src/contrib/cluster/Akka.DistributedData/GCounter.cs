@@ -180,6 +180,10 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public bool NeedPruningFrom(UniqueAddress removedNode) => State.ContainsKey(removedNode);
 
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
+
         /// <summary>
         /// TBD
         /// </summary>
