@@ -30,7 +30,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is Evt)
                 {
-                    Latch.Ready(TimeSpan.FromSeconds(10));
+                    Latch?.Ready(TimeSpan.FromSeconds(10));
                 }
             }
 

@@ -111,7 +111,7 @@ namespace Akka.Persistence
                             Context.Stop(Self);
                         }
                     }
-                    else if (message is RecoveryTick)
+                    else if (message is RecoveryTick tick && tick.Snapshot)
                     {
                         try
                         {
@@ -125,7 +125,9 @@ namespace Akka.Persistence
                         }
                     }
                     else
+                    {
                         StashInternally(message);
+                    }
                 }
                 catch (Exception)
                 {
@@ -137,9 +139,8 @@ namespace Akka.Persistence
 
         private void ReturnRecoveryPermit()
         {
-            Extension.RecoveryPermitter().Tell(new ReturnRecoveryPermit(), Self);
+            Extension.RecoveryPermitter().Tell(Akka.Persistence.ReturnRecoveryPermit.Instance, Self);
         }
-
 
         /// <summary>
         /// Processes replayed messages, if any. The actor's <see cref="ReceiveRecover"/> is invoked with the replayed events.
@@ -216,33 +217,25 @@ namespace Akka.Persistence
                             Context.Stop(Self);
                         }
                     }
-                    else if (message is RecoveryTick)
+                    else if (message is RecoveryTick tick && !tick.Snapshot)
                     {
-                        var isSnapshotTick = ((RecoveryTick)message).Snapshot;
-                        if (!isSnapshotTick)
+                        if (!eventSeenInInterval)
                         {
-                            if (!eventSeenInInterval)
+                            timeoutCancelable.Cancel();
+                            try
                             {
-                                timeoutCancelable.Cancel();
-                                try
-                                {
-                                    OnRecoveryFailure(
-                                        new RecoveryTimedOutException(
-                                            $"Recovery timed out, didn't get event within {timeout.TotalSeconds}s, highest sequence number seen {_sequenceNr}."));
-                                }
-                                finally
-                                {
-                                    Context.Stop(Self);
-                                }
+                                OnRecoveryFailure(
+                                    new RecoveryTimedOutException(
+                                        $"Recovery timed out, didn't get event within {timeout.TotalSeconds}s, highest sequence number seen {_sequenceNr}."));
                             }
-                            else
+                            finally
                             {
-                                eventSeenInInterval = false;
+                                Context.Stop(Self);
                             }
                         }
                         else
                         {
-                            // snapshot tick, ignore
+                            eventSeenInInterval = false;
                         }
                     }
                     else

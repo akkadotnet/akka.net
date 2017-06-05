@@ -7,14 +7,23 @@ using Akka.Persistence.Internal;
 
 namespace Akka.Persistence
 {
-    internal class RequestRecoveryPermit
-    { }
+    internal sealed class RequestRecoveryPermit
+    {
+        public static RequestRecoveryPermit Instance { get; } = new RequestRecoveryPermit();
+        private RequestRecoveryPermit() { }
+    }
 
-    internal class RecoveryPermitGranted
-    { }
+    internal sealed class RecoveryPermitGranted
+    {
+        public static RecoveryPermitGranted Instance { get; } = new RecoveryPermitGranted();
+        private RecoveryPermitGranted() { }
+    }
 
-    internal class ReturnRecoveryPermit
-    { }
+    internal sealed class ReturnRecoveryPermit
+    {
+        public static ReturnRecoveryPermit Instance { get; } = new ReturnRecoveryPermit();
+        private ReturnRecoveryPermit() { }
+    }
 
     /// <summary>
     /// When starting many persistent actors at the same time the journal its data store is protected 
@@ -22,18 +31,19 @@ namespace Akka.Persistence
     /// </summary>
     internal class RecoveryPermitter : UntypedActor
     {
-        private readonly int maxPermits;
         private readonly LinkedList<IActorRef> pending = new LinkedList<IActorRef>();
         private readonly ILoggingAdapter Log = Context.GetLogger();
-        private int usedPermits;
-        private int maxPendingStats;
+        private int _usedPermits;
+        private int _maxPendingStats;
 
         public static Props Props(int maxPermits) =>
             Actor.Props.Create(() => new RecoveryPermitter(maxPermits));
 
+        public int MaxPermits { get; }
+
         public RecoveryPermitter(int maxPermits)
         {
-            this.maxPermits = maxPermits;
+            MaxPermits = maxPermits;
         }
 
         protected override void OnReceive(object message)
@@ -41,12 +51,12 @@ namespace Akka.Persistence
             if (message is RequestRecoveryPermit)
             {
                 Context.Watch(Sender);
-                if (usedPermits >= maxPermits)
+                if (_usedPermits >= MaxPermits)
                 {
                     if (pending.Count == 0)
-                        Log.Debug("Exceeded max-concurrent-recoveries [{0}]. First pending {1}", maxPermits, Sender);
+                        Log.Debug("Exceeded max-concurrent-recoveries [{0}]. First pending {1}", MaxPermits, Sender);
                     pending.AddLast(Sender);
-                    maxPendingStats = Math.Max(maxPendingStats, pending.Count);
+                    _maxPendingStats = Math.Max(_maxPendingStats, pending.Count);
                 }
                 else
                 {
@@ -66,10 +76,10 @@ namespace Akka.Persistence
 
         private void ReturnRecoveryPermit(IActorRef actorRef)
         {
-            usedPermits--;
+            _usedPermits--;
             Context.Unwatch(actorRef);
 
-            if (usedPermits < 0)
+            if (_usedPermits < 0)
                 throw new IllegalStateException("Permits must not be negative");
 
             if (pending.Count > 0)
@@ -78,17 +88,17 @@ namespace Akka.Persistence
                 RecoveryPermitGranted(popRef);
             }
 
-            if (pending.Count != 0 || maxPendingStats <= 0)
+            if (pending.Count != 0 || _maxPendingStats <= 0)
                 return;
 
-            Log.Debug("Drained pending recovery permit requests, max in progress was [{0}], still [{1}] in progress", usedPermits + maxPendingStats, usedPermits);
-            maxPendingStats = 0;
+            Log.Debug("Drained pending recovery permit requests, max in progress was [{0}], still [{1}] in progress", _usedPermits + _maxPendingStats, _usedPermits);
+            _maxPendingStats = 0;
         }
 
         private void RecoveryPermitGranted(IActorRef actorRef)
         {
-            usedPermits++;
-            actorRef.Tell(new RecoveryPermitGranted());
+            _usedPermits++;
+            actorRef.Tell(Akka.Persistence.RecoveryPermitGranted.Instance);
         }
     }
 }

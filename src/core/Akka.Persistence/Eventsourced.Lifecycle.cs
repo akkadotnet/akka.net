@@ -29,7 +29,7 @@ namespace Akka.Persistence
 
         private void RequestRecoveryPermit()
         {
-            Extension.RecoveryPermitter().Tell(new RequestRecoveryPermit(), Self);
+            Extension.RecoveryPermitter().Tell(Akka.Persistence.RequestRecoveryPermit.Instance, Self);
             ChangeState(WaitingRecoveryPermit(Recovery));
         }
 
