@@ -8,6 +8,8 @@
     href: intro/modules.md
   - name: Part 1. Top-level Architecture
     href: intro/tutorial-1.md
+  - name: Part 2. The Device Actor
+    href: intro/tutorial-2.md
   - name: Getting Started
     href: intro/getting-started.md
   - name: The Obligatory Hello World
