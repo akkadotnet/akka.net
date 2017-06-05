@@ -12,10 +12,6 @@
     href: intro/tutorial-2.md
   - name: Part 3. Device Groups and Manager
     href: intro/tutorial-3.md
-  - name: Getting Started
-    href: intro/getting-started.md
-  - name: The Obligatory Hello World
-    href: intro/the-obligatory-hello-world.md
   - name: Use-case and Deployment Scenarios
     href: intro/use-case-and-deployment-scenarios.md
   - name: Production Users and Use Cases for Akka.NET
