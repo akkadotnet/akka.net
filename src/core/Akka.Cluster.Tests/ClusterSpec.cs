@@ -256,7 +256,7 @@ namespace Akka.Cluster.Tests
                 ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
 
                 // Second task should complete (not cancelled)
-                task2.Should(t => t.IsCompleted && !t.IsCanceled, "Task should be completed, but not cancelled.");
+                AwaitCondition(() => task2.IsCompleted && !task2.IsCanceled, null, "Task should be completed, but not cancelled.");
             });
 
             // Subsequent LeaveAsync() tasks expected to complete immediately (not cancelled)
