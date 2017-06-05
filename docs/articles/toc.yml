@@ -10,6 +10,8 @@
     href: intro/tutorial-1.md
   - name: Part 2. The Device Actor
     href: intro/tutorial-2.md
+  - name: Part 3. Device Groups and Manager
+    href: intro/tutorial-3.md
   - name: Getting Started
     href: intro/getting-started.md
   - name: The Obligatory Hello World
