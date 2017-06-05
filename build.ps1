@@ -29,13 +29,15 @@ Param(
     [string[]]$ScriptArgs
 )
 
-$FakeVersion = "4.50.0"
-$NBenchVersion = "0.3.4"
+$FakeVersion = "4.61.2"
+$NBenchVersion = "1.0.1"
 $DotNetChannel = "preview";
-$DotNetVersion = "1.0.3";
+$DotNetVersion = "1.0.4";
 $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1";
 $NugetVersion = "4.1.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
+$ProtobufVersion = "3.2.0"
+$DocfxVersion = "2.17.3"
 
 # Make sure tools folder exists
 $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
@@ -133,9 +135,23 @@ if (!(Test-Path $NBenchDllPath)) {
 $ProtobufExePath = Join-Path $ToolPath "Google.Protobuf.Tools/tools/windows_x64/protoc.exe"
 if (!(Test-Path $ProtobufExePath)) {
     Write-Host "Installing Google.Protobuf.Tools..."
-    Invoke-Expression "&`"$NugetPath`" install Google.Protobuf.Tools -ExcludeVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
+    Invoke-Expression "&`"$NugetPath`" install Google.Protobuf.Tools -ExcludeVersion -Version $ProtobufVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
     if ($LASTEXITCODE -ne 0) {
         Throw "An error occured while restoring Google.Protobuf.Tools from NuGet."
+    }
+}
+
+###########################################################################
+# Docfx
+###########################################################################
+
+# Make sure Docfx has been installed.
+$DocfxExePath = Join-Path $ToolPath "docfx.console/tools/docfx.exe"
+if (!(Test-Path $DocfxExePath)) {
+    Write-Host "Installing Docfx..."
+    Invoke-Expression "&`"$NugetPath`" install docfx.console -ExcludeVersion -Version $DocfxVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
+    if ($LASTEXITCODE -ne 0) {
+        Throw "An error occured while restoring docfx.console from NuGet."
     }
 }
 

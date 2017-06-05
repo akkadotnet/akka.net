@@ -234,8 +234,7 @@ namespace Akka.Streams.Stage
         private void OnInternalTimer(TimerMessages.Scheduled scheduled)
         {
             var id = scheduled.TimerId;
-            TimerMessages.Timer timer;
-            if (_keyToTimers.TryGetValue(scheduled.TimerKey, out timer) && timer.Id == id)
+            if (_keyToTimers.TryGetValue(scheduled.TimerKey, out var timer) && timer.Id == id)
             {
                 if (!scheduled.IsRepeating)
                     _keyToTimers.Remove(scheduled.TimerKey);
@@ -304,8 +303,7 @@ namespace Akka.Streams.Stage
         /// <param name="timerKey">key of the timer to cancel</param>
         protected internal void CancelTimer(object timerKey)
         {
-            TimerMessages.Timer timer;
-            if (_keyToTimers.TryGetValue(timerKey, out timer))
+            if (_keyToTimers.TryGetValue(timerKey, out var timer))
             {
                 timer.Task.Cancel();
                 _keyToTimers.Remove(timerKey);
@@ -420,7 +418,7 @@ namespace Akka.Streams.Stage
     ///  The stage logic is always stopped once all its input and output ports have been closed, i.e. it is not possible to
     ///  keep the stage alive for further processing once it does not have any open ports.
     /// </summary>
-    public abstract class GraphStageLogic
+    public abstract class GraphStageLogic : IStageLogging
     {
         #region internal classes
 
@@ -843,6 +841,7 @@ namespace Akka.Streams.Stage
         public virtual bool KeepGoingAfterAllPortsClosed => false;
 
         private StageActorRef _stageActorRef;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -853,6 +852,31 @@ namespace Akka.Streams.Stage
                 if (_stageActorRef == null)
                     throw StageActorRefNotInitializedException.Instance;
                 return _stageActorRef;
+            }
+        }
+
+        private ILoggingAdapter _log;
+
+        /// <summary>
+        /// Override to customise reported log source 
+        /// </summary>
+        protected object LogSource => this;
+
+        public ILoggingAdapter Log
+        {
+            get
+            {
+                // only used in StageLogic, i.e. thread safe
+                if (_log == null)
+                {
+                    var provider = Materializer as IMaterializerLoggingProvider;
+                    if (provider != null)
+                        _log = provider.MakeLogger(LogSource);
+                    else
+                        _log = NoLogger.Instance;
+                }
+
+                return _log;
             }
         }
 

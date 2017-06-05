@@ -15,7 +15,8 @@ namespace Akka.Persistence.Sqlite.Tests.Query
 {
     public class SqliteEventsByTagSpec : EventsByTagSpec
     {
-        public static readonly AtomicCounter Counter = new AtomicCounter(200);
+        public static readonly AtomicCounter Counter = new AtomicCounter(300);
+
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
@@ -31,7 +32,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                 table-name = event_journal
                 metadata-table-name = journal_metadata
                 auto-initialize = on
-                connection-string = ""FullUri=file:memdb-journal-{id}.db?mode=memory&cache=shared;""
+                connection-string = ""Filename=file:memdb-journal-query-{id}.db;Mode=Memory;Cache=Shared""
                 refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")

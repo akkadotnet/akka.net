@@ -37,8 +37,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid, int? refuseUid)
         {
-            EndpointManager.EndpointPolicy existing;
-            _addressToWritable.TryGetValue(address, out existing);
+            _addressToWritable.TryGetValue(address, out var existing);
 
             var pass = existing as EndpointManager.Pass;
             if (pass != null) // if we already have a writable endpoint....
@@ -59,14 +58,11 @@ namespace Akka.Remote
         /// <param name="uid">TBD</param>
         public void RegisterWritableEndpointUid(Address remoteAddress, int uid)
         {
-            EndpointManager.EndpointPolicy existing;
-            if (_addressToWritable.TryGetValue(remoteAddress, out existing))
+            if (_addressToWritable.TryGetValue(remoteAddress, out var existing))
             {
                 var pass = existing as EndpointManager.Pass;
                 if (pass != null)
-                {
                     _addressToWritable[remoteAddress] = new EndpointManager.Pass(pass.Endpoint, uid, pass.RefuseUid);
-                }
                 // if the policy is not Pass, then the GotUid might have lost the race with some failure
             }
         }
@@ -78,21 +74,15 @@ namespace Akka.Remote
         /// <param name="refuseUid">TBD</param>
         public void RegisterWritableEndpointRefuseUid(Address remoteAddress, int refuseUid)
         {
-            EndpointManager.EndpointPolicy existing;
-            if (_addressToWritable.TryGetValue(remoteAddress, out existing))
+            if (_addressToWritable.TryGetValue(remoteAddress, out var existing))
             {
                 var pass = existing as EndpointManager.Pass;
                 if (pass != null)
-                {
                     _addressToWritable[remoteAddress] = new EndpointManager.Pass(pass.Endpoint, pass.Uid, refuseUid);
-                } else if (existing is EndpointManager.Gated)
-                {
+                else if (existing is EndpointManager.Gated)
                     _addressToWritable[remoteAddress] = new EndpointManager.Gated(((EndpointManager.Gated)existing).TimeOfRelease, refuseUid);
-                }
                 else if (existing is EndpointManager.WasGated)
-                {
                     _addressToWritable[remoteAddress] = new EndpointManager.WasGated(refuseUid);
-                }
             }
         }
 
@@ -119,16 +109,13 @@ namespace Akka.Remote
             if (IsWritable(endpoint))
             {
                 var address = _writableToAddress[endpoint];
-                EndpointManager.EndpointPolicy policy;
-                _addressToWritable.TryGetValue(address, out policy);
+                _addressToWritable.TryGetValue(address, out var policy);
                 if (policy != null && policy.IsTombstone)
                 {
                     //if there is already a tombstone directive, leave it there
                 }
                 else
-                {
                     _addressToWritable.Remove(address);
-                }
                 _writableToAddress.Remove(endpoint);
             }
             else if (IsReadOnly(endpoint))
@@ -146,8 +133,8 @@ namespace Akka.Remote
         public Address AddressForWriter(IActorRef writer)
         {
             // Needs to return null if the key is not in the dictionary, instead of throwing.
-            Address value;
-            return _writableToAddress.TryGetValue(writer, out value) ? value : null;
+            _writableToAddress.TryGetValue(writer, out var value);
+            return value;
         }
 
         /// <summary>
@@ -157,12 +144,8 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public Tuple<IActorRef, int> ReadOnlyEndpointFor(Address address)
         {
-            Tuple<IActorRef, int> tmp;
-            if (_addressToReadonly.TryGetValue(address, out tmp))
-            {
-                return tmp;
-            }
-            return null;
+            _addressToReadonly.TryGetValue(address, out var tmp);
+            return tmp;
         }
 
         /// <summary>
@@ -227,12 +210,8 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public EndpointManager.EndpointPolicy WritableEndpointWithPolicyFor(Address address)
         {
-            EndpointManager.EndpointPolicy tmp;
-            if (_addressToWritable.TryGetValue(address, out tmp))
-            {
-                return tmp;
-            }
-            return null;
+            _addressToWritable.TryGetValue(address, out var tmp);
+            return tmp;
         }
 
         /// <summary>
@@ -257,13 +236,13 @@ namespace Akka.Remote
             if (IsWritable(endpoint))
             {
                 var address = _writableToAddress[endpoint];
-                EndpointManager.EndpointPolicy policy;
-                if (_addressToWritable.TryGetValue(address, out policy))
+                if (_addressToWritable.TryGetValue(address, out var policy))
                 {
                     if (policy is EndpointManager.Quarantined)
                     {
-                    } // don't overwrite Quarantined with Gated
-                    if (policy is EndpointManager.Pass)
+                        // don't overwrite Quarantined with Gated
+                    }
+                    else if (policy is EndpointManager.Pass)
                     {
                         _addressToWritable[address] = new EndpointManager.Gated(timeOfRelease,
                             policy.AsInstanceOf<EndpointManager.Pass>().RefuseUid);
@@ -277,7 +256,8 @@ namespace Akka.Remote
                     }
                     else if (policy is EndpointManager.Gated)
                     {
-                    } // already gated
+                        // already gated
+                    }
                 }
                 else
                 {

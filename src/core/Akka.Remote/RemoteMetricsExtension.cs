@@ -94,33 +94,22 @@ namespace Akka.Remote
         }
         private void Check(Type type, long payloadBytes, long newMax)
         {
-            long max;
-            if (_maxPayloadBytes.TryGetValue(type, out max))
+            if (_maxPayloadBytes.TryGetValue(type, out long max))
             {
                 if (payloadBytes > max)
                 {
                     if (_maxPayloadBytes.TryUpdate(type, newMax, max))
-                    {
-                        _log.Info("New maximum payload size for [{0}] is [{1}] bytes", type.FullName,
-                            payloadBytes);
-
-                    }
+                        _log.Info("New maximum payload size for [{0}] is [{1}] bytes", type.FullName, payloadBytes);
                     else
-                    {
                         Check(type, payloadBytes, newMax);
-                    }
                 }
             }
             else
             {
                 if (_maxPayloadBytes.TryAdd(type, newMax))
-                {
                     _log.Info("Payload size for [{0}] is [{1}] bytes", type.FullName, payloadBytes);
-                }
                 else
-                {
                     Check(type, payloadBytes, newMax);
-                }
             }
         }
     }

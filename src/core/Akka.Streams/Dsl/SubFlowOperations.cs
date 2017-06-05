@@ -259,8 +259,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task"/> and the
-        /// value of that task will be emitted downstream. As many tasks as requested elements by
-        /// downstream may run in parallel and each processed element will be emitted downstream
+        /// value of that task will be emitted downstream.  The number of tasks
+        /// that shall run in parallel is given as the first argument to <see cref="SelectAsyncUnordered{TIn,TOut,TMat,TClosed}"/>.
+        /// Each processed element will be emitted dowstream
         /// as soon as it is ready, i.e. it is possible that the elements are not emitted downstream
         /// in the same order as received from upstream.
         /// 
@@ -348,9 +349,9 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Terminate processing (and cancel the upstream publisher) after <paramref name="predicate"/>
-        /// returns false for the first time. Due to input buffering some elements may have been
-        /// requested from upstream publishers that will then not be processed downstream
-        /// of this step.
+        /// returns false for the first time, including the first failed element iff inclusive is true
+        /// Due to input buffering some elements may have been requested from upstream publishers
+        /// that will then not be processed downstream of this step.
         /// 
         /// The stream will be completed without producing any elements if <paramref name="predicate"/> is false for
         /// the first stream element.
@@ -359,19 +360,20 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Backpressures when downstream backpressures
         /// <para>
-        /// Completes when <paramref name="predicate"/> returned false or upstream completes
+        /// Completes when <paramref name="predicate"/> returned false (or 1 after predicate returns false if <paramref name="inclusive"/>) or upstream completes
         /// </para>
         /// Cancels when <paramref name="predicate"/> returned false or downstream cancels
+        /// </para>
+        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
         /// <returns>TBD</returns>
-        public static SubFlow<TOut, TMat, TClosed> TakeWhile<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate)
+        public static SubFlow<TOut, TMat, TClosed> TakeWhile<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
-            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.TakeWhile(flow, predicate);
+            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.TakeWhile(flow, predicate, inclusive);
         }
 
         /// <summary>
@@ -574,6 +576,41 @@ namespace Akka.Streams.Dsl
         public static SubFlow<TOut2, TMat, TClosed> Scan<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> scan)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Scan(flow, zero, scan);
+        }
+
+        /// <summary>
+        /// Similar to <see cref="Scan{TOut1,TOut2,TMat}"/> but with a asynchronous function,
+        /// emits its current value which starts at <paramref name="zero"/> and then
+        /// applies the current and next value to the given function <paramref name="scan"/>
+        /// emitting a <see cref="Task{TOut}"/> that resolves to the next current value.
+        /// 
+        /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
+        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// the stream will continue.
+        /// 
+        /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
+        /// <see cref="Directive.Resume"/> current value starts at the previous
+        /// current value, or zero when it doesn't have one, and the stream will continue.
+        /// <para>
+        /// Emits the <see cref="Task{TOut}"/> returned by <paramref name="scan"/> completes
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes upstream completes and the last task returned by <paramref name="scan"/> completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="zero">TBD</param>
+        /// <param name="scan">TBD</param>
+        /// <returns>TBD</returns>
+        public static SubFlow<TOut2, TMat, TClosed> ScanAsync<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, TOut2 zero, Func<TOut2, TOut1, Task<TOut2>> scan)
+        {
+            return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.ScanAsync(flow, zero, scan);
         }
 
         /// <summary>
@@ -1181,6 +1218,24 @@ namespace Akka.Streams.Dsl
         public static SubFlow<TOut2, TMat, TClosed> MergeMany<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed>  flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.MergeMany(flow, breadth, flatten);
+        }
+        
+        /// <summary>
+        /// Combine the elements of current flow into a stream of tuples consisting
+        /// of all elements paired with their index. Indices start at 0.
+        /// 
+        /// <para/>
+        /// Emits when upstream emits an element and is paired with their index
+        /// <para/>
+        /// Backpressures when downstream backpressures
+        /// <para/>
+        /// Completes when upstream completes
+        /// <para/>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static SubFlow<Tuple<TOut1, long>, TMat, TClosed> ZipWithIndex<TOut1, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow)
+        {
+            return (SubFlow<Tuple<TOut1, long>, TMat, TClosed>)InternalFlowOperations.ZipWithIndex(flow);
         }
 
         /// <summary>

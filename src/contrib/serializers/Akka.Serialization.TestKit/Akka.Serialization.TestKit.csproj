@@ -1,16 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\common.props" />
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Serialization.TestKit</AssemblyTitle>
     <Description>Serialization TestKit for Akka.NET</Description>
-    <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
-    <VersionPrefix>1.3.0</VersionPrefix>
     <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>net452</TargetFrameworks>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;hyperion;serializer;serialize;testkit</PackageTags>
-    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
-    <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize;testkit</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

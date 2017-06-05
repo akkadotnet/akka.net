@@ -496,36 +496,27 @@ namespace Akka.Remote.Transport
 
         private ThrottleMode GetInboundMode(Address nakedAddress)
         {
-            Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
-            {
-                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both ||
-                    mode.Item2 == ThrottleTransportAdapter.Direction.Receive)
+            if (_throttlingModes.TryGetValue(nakedAddress, out var mode))
+                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both || mode.Item2 == ThrottleTransportAdapter.Direction.Receive)
                     return mode.Item1;
-            }
 
             return Unthrottled.Instance;
         }
 
         private ThrottleMode GetOutboundMode(Address nakedAddress)
         {
-            Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
-            {
-                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both ||
-                    mode.Item2 == ThrottleTransportAdapter.Direction.Send)
+            if (_throttlingModes.TryGetValue(nakedAddress, out var mode))
+                if (mode.Item2 == ThrottleTransportAdapter.Direction.Both || mode.Item2 == ThrottleTransportAdapter.Direction.Send)
                     return mode.Item1;
-            }
+
             return Unthrottled.Instance;
         }
 
         private Task<SetThrottleAck> SetMode(Address nakedAddress, ThrottlerHandle handle)
         {
-             Tuple<ThrottleMode, ThrottleTransportAdapter.Direction> mode;
-            if (_throttlingModes.TryGetValue(nakedAddress, out mode))
-            {
+            if (_throttlingModes.TryGetValue(nakedAddress, out var mode))
                 return SetMode(handle, mode.Item1, mode.Item2);
-            }
+
             return SetMode(handle, Unthrottled.Instance, ThrottleTransportAdapter.Direction.Both);
         }
 
@@ -983,8 +974,7 @@ namespace Akka.Remote.Transport
             var tokens = payload.Length;
             //need to declare recursive delegates first before they can self-reference
             //might want to consider making this consumer function strongly typed: http://blogs.msdn.com/b/wesdyer/archive/2007/02/02/anonymous-recursion-in-c.aspx
-            Func<ThrottleMode, bool> tryConsume = null; 
-            tryConsume = currentBucket =>
+            bool TryConsume(ThrottleMode currentBucket)
             {
                 var timeOfSend = MonotonicClock.GetNanos();
                 var res = currentBucket.TryConsumeTokens(timeOfSend, tokens);
@@ -992,15 +982,15 @@ namespace Akka.Remote.Transport
                 var allow = res.Item2;
                 if (allow)
                 {
-                    return OutboundThrottleMode.CompareAndSet(currentBucket, newBucket) || tryConsume(OutboundThrottleMode.Value);
+                    return OutboundThrottleMode.CompareAndSet(currentBucket, newBucket) || TryConsume(OutboundThrottleMode.Value);
                 }
                 return false;
-            };
+            }
 
             var throttleMode = OutboundThrottleMode.Value;
             if (throttleMode is Blackhole) return true;
             
-            var success = tryConsume(OutboundThrottleMode.Value);
+            var success = TryConsume(OutboundThrottleMode.Value);
             return success && WrappedHandle.Write(payload);
         }
 

@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <Copyright>Copyright © 2013-2017 Akka.NET Team</Copyright>
+    <Authors>Akka.NET Team</Authors>
+    <VersionPrefix>1.3.0</VersionPrefix>
+    <PackageIconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <XunitVersion>2.3.0-beta2-*</XunitVersion>
+    <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
+  </PropertyGroup>
+  
+</Project>

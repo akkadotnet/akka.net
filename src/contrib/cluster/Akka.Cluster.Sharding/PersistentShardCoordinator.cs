@@ -90,61 +90,71 @@ namespace Akka.Cluster.Sharding
                 if (e is ShardRegionRegistered)
                 {
                     var message = e as ShardRegionRegistered;
-                    if (Regions.ContainsKey(message.Region)) throw new ArgumentException($"Region {message.Region} is already registered", nameof(e));
+                    if (Regions.ContainsKey(message.Region))
+                        throw new ArgumentException($"Region {message.Region} is already registered", nameof(e));
 
                     return Copy(regions: Regions.SetItem(message.Region, ImmutableList<ShardId>.Empty));
                 }
-                else if (e is ShardRegionProxyRegistered)
+
+                if (e is ShardRegionProxyRegistered)
                 {
                     var message = e as ShardRegionProxyRegistered;
-                    if (RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException($"Region proxy {message.RegionProxy} is already registered", nameof(e));
+                    if (RegionProxies.Contains(message.RegionProxy))
+                        throw new ArgumentException($"Region proxy {message.RegionProxy} is already registered", nameof(e));
 
                     return Copy(regionProxies: RegionProxies.Add(message.RegionProxy));
                 }
-                else if (e is ShardRegionTerminated)
+
+                if (e is ShardRegionTerminated)
                 {
-                    IImmutableList<ShardId> shardRegions;
                     var message = e as ShardRegionTerminated;
-                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
+                    if (!Regions.TryGetValue(message.Region, out var shardRegions))
+                        throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
 
                     return Copy(
                         regions: Regions.Remove(message.Region),
                         shards: Shards.RemoveRange(shardRegions),
                         unallocatedShards: shardRegions.Aggregate(UnallocatedShards, (set, shard) => set.Add(shard)));
                 }
-                else if (e is ShardRegionProxyTerminated)
+
+                if (e is ShardRegionProxyTerminated)
                 {
                     var message = e as ShardRegionProxyTerminated;
-                    if (!RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException($"Region proxy {message.RegionProxy} not registered", nameof(e));
+                    if (!RegionProxies.Contains(message.RegionProxy))
+                        throw new ArgumentException($"Region proxy {message.RegionProxy} not registered", nameof(e));
 
                     return Copy(regionProxies: RegionProxies.Remove(message.RegionProxy));
                 }
-                else if (e is ShardHomeAllocated)
+
+                if (e is ShardHomeAllocated)
                 {
-                    IImmutableList<ShardId> shardRegions;
                     var message = e as ShardHomeAllocated;
-                    if (!Regions.TryGetValue(message.Region, out shardRegions)) throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
-                    if (Shards.ContainsKey(message.Shard)) throw new ArgumentException($"Shard {message.Shard} is already allocated", nameof(e));
+                    if (!Regions.TryGetValue(message.Region, out var shardRegions))
+                        throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
+                    if (Shards.ContainsKey(message.Shard))
+                        throw new ArgumentException($"Shard {message.Shard} is already allocated", nameof(e));
 
                     return Copy(
                         shards: Shards.SetItem(message.Shard, message.Region),
                         regions: Regions.SetItem(message.Region, shardRegions.Add(message.Shard)),
                         unallocatedShards: UnallocatedShards.Remove(message.Shard));
                 }
-                else if (e is ShardHomeDeallocated)
+
+                if (e is ShardHomeDeallocated)
                 {
-                    IActorRef region;
-                    IImmutableList<ShardId> shardRegions;
                     var message = e as ShardHomeDeallocated;
-                    if (!Shards.TryGetValue(message.Shard, out region)) throw new ArgumentException($"Shard {message.Shard} not allocated", nameof(e));
-                    if (!Regions.TryGetValue(region, out shardRegions)) throw new ArgumentException($"Region {region} for shard {message.Shard} not registered", nameof(e));
+                    if (!Shards.TryGetValue(message.Shard, out var region))
+                        throw new ArgumentException($"Shard {message.Shard} not allocated", nameof(e));
+                    if (!Regions.TryGetValue(region, out var shardRegions))
+                        throw new ArgumentException($"Region {region} for shard {message.Shard} not registered", nameof(e));
 
                     return Copy(
                         shards: Shards.Remove(message.Shard),
                         regions: Regions.SetItem(region, shardRegions.Where(s => s != message.Shard).ToImmutableList()),
                         unallocatedShards: UnallocatedShards.Add(message.Shard));
                 }
-                else return this;
+
+                return this;
             }
 
             /// <summary>
@@ -451,8 +461,7 @@ namespace Akka.Cluster.Sharding
         {
             if (!_gracefullShutdownInProgress.Contains(request.ShardRegion))
             {
-                IImmutableList<ShardId> shards;
-                if (_currentState.Regions.TryGetValue(request.ShardRegion, out shards))
+                if (_currentState.Regions.TryGetValue(request.ShardRegion, out var shards))
                 {
                     Log.Debug("Graceful shutdown of region [{0}] with shards [{1}]", request.ShardRegion, string.Join(", ", shards));
                     _gracefullShutdownInProgress = _gracefullShutdownInProgress.Add(request.ShardRegion);
@@ -466,9 +475,8 @@ namespace Akka.Cluster.Sharding
             _rebalanceInProgress = _rebalanceInProgress.Remove(done.Shard);
             Log.Debug("Rebalance shard [{0}] done [{1}]", done.Shard, done.Ok);
 
-            IActorRef region;
             // The shard could have been removed by ShardRegionTerminated
-            if (_currentState.Shards.ContainsKey(done.Shard))
+            if (_currentState.Shards.TryGetValue(done.Shard, out var region))
             {
                 if (done.Ok)
                     Update(new ShardHomeDeallocated(done.Shard), e =>
@@ -477,7 +485,7 @@ namespace Akka.Cluster.Sharding
                         Log.Debug("Shard [{0}] deallocated", e.Shard);
                         AllocateShardHomes();
                     });
-                else if (_currentState.Shards.TryGetValue(done.Shard, out region))
+                else
                     // rebalance not completed, graceful shutdown will be retried
                     _gracefullShutdownInProgress = _gracefullShutdownInProgress.Remove(region);
             }
@@ -500,16 +508,14 @@ namespace Akka.Cluster.Sharding
 
         private void HandleResendShardHost(ResendShardHost resend)
         {
-            IActorRef region;
-            if (_currentState.Shards.TryGetValue(resend.Shard, out region) && region.Equals(resend.Region))
+            if (_currentState.Shards.TryGetValue(resend.Shard, out var region) && region.Equals(resend.Region))
                 SendHostShardMessage(resend.Shard, region);
         }
 
         private void HandleShardStated(ShardStarted message)
         {
             var shard = message.Shard;
-            ICancelable cancel;
-            if (_unAckedHostShards.TryGetValue(shard, out cancel))
+            if (_unAckedHostShards.TryGetValue(shard, out var cancel))
             {
                 cancel.Cancel();
                 _unAckedHostShards = _unAckedHostShards.Remove(shard);
@@ -529,8 +535,7 @@ namespace Akka.Cluster.Sharding
             var shard = getShardHome.Shard;
             if (!_rebalanceInProgress.Contains(shard))
             {
-                IActorRef region;
-                if (_currentState.Shards.TryGetValue(shard, out region))
+                if (_currentState.Shards.TryGetValue(shard, out var region))
                 {
                     if (_regionTerminationInProgress.Contains(region))
                         Log.Debug("GetShardHome [{0}] request ignored, due to region [{1}] termination in progress.", shard, region);
@@ -560,8 +565,7 @@ namespace Akka.Cluster.Sharding
 
         private void RegionTerminated(IActorRef terminatedRef)
         {
-            IImmutableList<ShardId> shards;
-            if (_currentState.Regions.TryGetValue(terminatedRef, out shards))
+            if (_currentState.Regions.TryGetValue(terminatedRef, out var shards))
             {
                 Log.Debug("Shard region terminated: [{0}]", terminatedRef);
                 foreach (var shard in shards)
@@ -657,8 +661,7 @@ namespace Akka.Cluster.Sharding
             {
                 if (!_rebalanceInProgress.Contains(shard))
                 {
-                    IActorRef rebalanceFromRegion;
-                    if (_currentState.Shards.TryGetValue(shard, out rebalanceFromRegion))
+                    if (_currentState.Shards.TryGetValue(shard, out var rebalanceFromRegion))
                     {
                         _rebalanceInProgress = _rebalanceInProgress.Add(shard);
                         Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
@@ -677,8 +680,7 @@ namespace Akka.Cluster.Sharding
         {
             if (!_rebalanceInProgress.Contains(shard))
             {
-                IActorRef aref;
-                if (_currentState.Shards.TryGetValue(shard, out aref))
+                if (_currentState.Shards.TryGetValue(shard, out var aref))
                     getShardHomeSender.Tell(new ShardHome(shard, aref));
                 else
                 {
@@ -788,22 +790,59 @@ namespace Akka.Cluster.Sharding
             else return HandleSnapshotResult(message);
         }
 
+
         private bool HandleSnapshotResult(object message)
         {
-            if (message is SaveSnapshotSuccess) Log.Debug("Persistent snapshot saved successfully");
-            else if (message is SaveSnapshotFailure) Log.Warning("Persistent snapshot failure: {0}", ((SaveSnapshotFailure)message).Cause.Message);
-            else return false;
+            switch (message)
+            {
+                case SaveSnapshotSuccess m:
+                    Log.Debug("Persistent snapshot saved successfully");
+                    /*
+                     * delete old events but keep the latest around because
+                     *
+                     * it's not safe to delete all events immediate because snapshots are typically stored with a weaker consistency
+                     * level which means that a replay might "see" the deleted events before it sees the stored snapshot,
+                     * i.e. it will use an older snapshot and then not replay the full sequence of events
+                     *
+                     * for debugging if something goes wrong in production it's very useful to be able to inspect the events
+                     */
+                    var deleteToSequenceNr = m.Metadata.SequenceNr - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter;
+                    if (deleteToSequenceNr > 0)
+                    {
+                        DeleteMessages(deleteToSequenceNr);
+                    }
+                    break;
+
+                case SaveSnapshotFailure m:
+                    Log.Warning("Persistent snapshot failure: {0}", m.Cause.Message);
+                    break;
+                case DeleteMessagesSuccess m:
+                    Log.Debug("Persistent messages to {0} deleted successfully", m.ToSequenceNr);
+                    DeleteSnapshots(new SnapshotSelectionCriteria(m.ToSequenceNr - 1));
+                    break;
+                case DeleteMessagesFailure m:
+                    Log.Warning("Persistent messages to {0} deletion failure: {1}", m.ToSequenceNr, m.Cause.Message);
+                    break;
+                case DeleteSnapshotsSuccess m:
+                    Log.Debug("Persistent snapshots matching {0} deleted successfully", m.Criteria);
+                    break;
+                case DeleteSnapshotsFailure m:
+                    Log.Warning("Persistent snapshots matching {0} deletion failure: {1}", m.Criteria, m.Cause.Message);
+                    break;
+                default:
+                    return false;
+            }
             return true;
         }
 
-         /// <summary>
+        /// <summary>
         /// TBD
         /// </summary>
         /// <typeparam name="TEvent">TBD</typeparam>
         /// <param name="e">TBD</param>
         /// <param name="handler">TBD</param>
         /// <returns>TBD</returns>
-       protected void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
+        protected void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
         {
             SaveSnapshotIfNeeded();
             Persist(e, handler);

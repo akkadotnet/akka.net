@@ -116,11 +116,8 @@ namespace Akka.Configuration.Hocon
         /// </returns>
         public HoconValue GetKey(string key)
         {
-            if (Items.ContainsKey(key))
-            {
-                return Items[key];
-            }
-            return null;
+            Items.TryGetValue(key, out var value);
+            return value;
         }
 
         /// <summary>
@@ -132,10 +129,8 @@ namespace Akka.Configuration.Hocon
         /// <returns>The value associated with the supplied key.</returns>
         public HoconValue GetOrCreateKey(string key)
         {
-            if (Items.ContainsKey(key))
-            {
-                return Items[key];
-            }
+            if (Items.TryGetValue(key, out var value))
+                return value;
             var child = new HoconValue();
             Items.Add(key, child);
             return child;
@@ -188,17 +183,13 @@ namespace Akka.Configuration.Hocon
 
             foreach (var otherItem in otherItems)
             {
-                if (thisItems.ContainsKey(otherItem.Key))
+                //if other key was present in this object and if we have a value, 
+                //just ignore the other value, unless it is an object
+                if (thisItems.TryGetValue(otherItem.Key, out var thisItem))
                 {
-                    //other key was present in this object.
-                    //if we have a value, just ignore the other value, unless it is an object
-                    var thisItem = thisItems[otherItem.Key];
-
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
-                    {
                         thisItem.GetObject().Merge(otherItem.Value.GetObject());
-                    }
                 }
                 else
                 {
@@ -219,12 +210,10 @@ namespace Akka.Configuration.Hocon
 
             foreach (var otherItem in otherItems)
             {
-                if (thisItems.ContainsKey(otherItem.Key))
+                //if other key was present in this object and if we have a value,
+                //just ignore the other value, unless it is an object
+                if (thisItems.TryGetValue(otherItem.Key, out var thisItem))
                 {
-                    //other key was present in this object.
-                    //if we have a value, just ignore the other value, unless it is an object
-                    var thisItem = thisItems[otherItem.Key];
-
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
                     {
