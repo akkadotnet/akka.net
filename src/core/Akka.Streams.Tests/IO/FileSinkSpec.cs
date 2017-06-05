@@ -18,6 +18,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.IO;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -205,6 +206,23 @@ namespace Akka.Streams.Tests.IO
                     {
                         Shutdown(sys);
                     }
+                });
+            }, _materializer);
+        }
+
+        // Needed help converting this test case
+        [Fact]
+        public void SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
+        {
+            this.AssertAllStagesStopped(() => {
+                TargetFile(f => {
+                    var completion = Source.From(_testByteStrings);
+                    completion.RunWith(Sink.LazySink<ByteString, Task<IOResult>>(
+                            b => Task.FromResult(FileIO.ToFile(f)),
+                            () => Task.FromResult(new IOResult(0, new Result<NotUsed>(NotUsed.Instance)))
+                        ), _materializer);
+                    completion.MapMaterializedValue();
+                    
                 });
             }, _materializer);
         }
