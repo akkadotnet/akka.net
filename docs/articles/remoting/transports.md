@@ -6,7 +6,7 @@ title: Transports
 # Akka.Remote Transports
 In the [Akka.Remote overview](index.md) we introduced the concept of "transports" for Akka.Remote.
 
->  A"transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [Helios](http://helios-io.github.io/ "Helios - Reactive socket middleware for .NET") TCP transport, but you could write your own transport and use that instead of you wish.
+>  A"transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty") TCP transport, but you could write your own transport and use that instead of you wish.
 
 In this section we'll expand a bit more on what transports are and how Akka.Remote can support multiple transports simultaneously.
 
@@ -19,7 +19,7 @@ Transports in Akka.Remote are abstractions on top of actual network transports, 
 Transports **do not need to care** about:
 * **Serialization** - that's handled by Akka.NET itself;
 * **Connection-oriented behavior** - the assocation process inside Akka.Remote ensures this, even over connectionless transports like UDP;
-* **Reliable delivery** - for system messages this is handled by Akka.Remote and for user-defined messages this is taken care of at the application level through something like the [`AtLeastOnceDeliveryActor` class](http://api.getakka.net/docs/stable/html/2FD30363.htm), part of Akka.Persistence;
+* **Reliable delivery** - for system messages this is handled by Akka.Remote and for user-defined messages this is taken care of at the application level through something like the [`AtLeastOnceDeliveryActor` class](/api/Akka.Persistence.AtLeastOnceDeliveryActor.html), part of Akka.Persistence;
 * **Handling network failures** - all a transport needs to do is forward that information back up to Akka.Remote.
 
 Transports **do need to care** about:
@@ -33,12 +33,12 @@ Transports **do need to care** about:
 Transports are just plumbing for Akka.Remote - they carry out their tasks and keep things simple and performant.
 
 ## Akka.Remote's Built-in Transports
-Out of the box Akka.NET uses a socket-based transport built on top of the [Helios socket library](http://helios-io.github.io/).
+Out of the box Akka.NET uses a socket-based transport built on top of the [DotNetty](https://github.com/Azure/DotNetty).
 
 > [!NOTE]
-> Helios supports both TCP and UDP, but currently only TCP support is included within Akka.NET. TCP is what most Akka.Remote and Akka.Cluster users use.
+> DotNetty supports both TCP and UDP, but currently only TCP support is included within Akka.NET. TCP is what most Akka.Remote and Akka.Cluster users use.
 
-To enable the Helios TCP transport, we need to add a section for it inside our `remote` section in [HOCON configuration](/concepts/configuration.md):
+To enable the DotNetty TCP transport, we need to add a section for it inside our `remote` section in [HOCON configuration](/articles/concepts/configuration.md):
 
 ```xml
 akka {  
@@ -46,7 +46,7 @@ akka {
         provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
     }
     remote {
-        helios.tcp {
+         dot-netty.tcp {
             port = 8081 #bound to a specific port
             hostname = localhost
         }
@@ -77,7 +77,7 @@ akka{
 You'd define a custom HOCON section (`akka.remote.google-quic`) and let Akka.Remote know that it should read that section for a transport definition inside `akka.remote.enabled-transports`.
 
 > [!NOTE]
-> To implement a custom transport yourself, you need to implement the [`Akka.Remote.Transport.Transport` abstract class](http://api.getakka.net/docs/stable/html/F60EF1D2.htm).
+> To implement a custom transport yourself, you need to implement the [`Akka.Remote.Transport.Transport` abstract class](/api/Akka.Remote.Transport.Transport.html).
 
 One important thing to note is the `akka.remote.google-quic.transport-protocol` setting - this specifices the address scheme you will use to address remote actors via the Quic protocol.
 
@@ -91,17 +91,17 @@ So the protocol you use in your remote `ActorSelection`s will need to use the st
 ## Running Multiple Transports Simultaneously
 One of the most productive features of Akka.Remote is its ability to allow you to support multiple transports simultaneously within a single `ActorSystem`.
 
-Suppose we added UDP support for the built-in Helios transport - here's what running both a UDP and TCP transport at the same time would look like in HOCON configuration.
+Suppose we added UDP support for the built-in DotNetty transport - here's what running both a UDP and TCP transport at the same time would look like in HOCON configuration.
 
 ```xml
 akka{
     remote {
-        enabled-transports = ["akka.remote.helios.tcp", "akka.remote.helios.udp"]
-        helios.tcp {
+        enabled-transports = ["akka.remote.dot-netty.tcp", "akka.remote.dot-netty.udp"]
+        dot-netty.tcp {
             port = 8081
             hostname = localhost
         }
-        helios.udp {
+        dot-netty.udp {
             port = 8082 # needs to be on a different port or IP than TCP
             hostname = localhost
         }
@@ -111,8 +111,8 @@ akka{
 
 Both TCP and UDP are enabled in this scenario. But how do I know which transport is being used when I send a message to a `RemoteActorRef`? That's indicated by the protocol scheme used in the `Address` of the remote actor:
 
-    akka.tcp://MySystem@localhost:8081/user/actor #helios.tcp
-    akka.udp://MySystem@localhost:8082/user/actor #helios.udp
+    akka.tcp://MySystem@localhost:8081/user/actor #dot-netty.tcp
+    akka.udp://MySystem@localhost:8082/user/actor #dot-netty.udp
 
 So if you want to send a message to a remote actor over UDP, you'd write something like this:
 
@@ -134,13 +134,13 @@ One common DevOps issue that comes up often with Akka.Remote is something along 
 
 This can be solved through a built-in configuration property that is supported on every Akka.Remote transport, including third-party ones called the `public-hostname` property.
 
-For instance, we can bind a Helios TCP transport to listen on all addresses (`0.0.0.0`) so we can accept messages from multiple network interfaces (which is more common in server-side environments than you might think) but still register itself as listening on `machine1.foobar.com`:
+For instance, we can bind a DotNetty TCP transport to listen on all addresses (`0.0.0.0`) so we can accept messages from multiple network interfaces (which is more common in server-side environments than you might think) but still register itself as listening on `machine1.foobar.com`:
 
 ```xml
 akka{
     remote {
-        enabled-transports = ["akka.remote.helios.tcp", "akka.remote.helios.udp"]
-        helios.tcp {
+        enabled-transports = ["akka.remote.dot-netty.tcp", "akka.remote.dot-netty.udp"]
+        dot-netty.tcp {
             port = 8081
             hostname = 0.0.0.0 # listen on all interfaces
             public-hostname = "machine1.foobar.com"
@@ -149,7 +149,7 @@ akka{
 }
 ```
 
-This configuration allows the `ActorSystem`'s Helios TCP transport to listen on all interfaces, but when it associates with a remote system it'll tell the remote system that it's address is actually `machine1.foobar.com`.
+This configuration allows the `ActorSystem`'s DotNetty TCP transport to listen on all interfaces, but when it associates with a remote system it'll tell the remote system that it's address is actually `machine1.foobar.com`.
 
 Why is this distinction important? Why do we care about registering an publicly accessible hostname with our `ActorSystem`? Because in the event that other systems need to connect or reconnect to this process, *they need to have a reachable address.*
 
