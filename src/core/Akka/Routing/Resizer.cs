@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Dispatch;
 
 namespace Akka.Routing
 {
@@ -219,31 +218,25 @@ namespace Akka.Routing
             return currentRoutees.Count(
                 routee =>
                 {
-                    var actorRefRoutee = routee as ActorRefRoutee;
-                    if (actorRefRoutee != null)
+                    if (routee is ActorRefRoutee actorRefRoutee && actorRefRoutee.Actor is ActorRefWithCell actorRef)
                     {
-                        var actorRef = actorRefRoutee.Actor as ActorRefWithCell;
-                        if (actorRef != null)
+                        var underlying = actorRef.Underlying;
+                        if (underlying is ActorCell cell)
                         {
-                            var underlying = actorRef.Underlying;
-                            var cell = underlying as ActorCell;
-                            if (cell != null)
-                            {
-                                if (PressureThreshold == 1)
-                                    return cell.Mailbox.IsScheduled() && cell.Mailbox.HasMessages;
-                                if (PressureThreshold < 1)
-                                    return cell.Mailbox.IsScheduled() && cell.CurrentMessage != null;
+                            if (PressureThreshold == 1)
+                                return cell.Mailbox.IsScheduled() && cell.Mailbox.HasMessages;
+                            if (PressureThreshold < 1)
+                                return cell.Mailbox.IsScheduled() && cell.CurrentMessage != null;
 
-                                return cell.Mailbox.NumberOfMessages >= PressureThreshold;
-                            }
-                            else
-                            {
-                                if (PressureThreshold == 1)
-                                    return underlying.HasMessages;
-                                if (PressureThreshold < 1)
-                                    return true; //unstarted cells are always busy, for instance
-                                return underlying.NumberOfMessages >= PressureThreshold;
-                            }
+                            return cell.Mailbox.NumberOfMessages >= PressureThreshold;
+                        }
+                        else
+                        {
+                            if (PressureThreshold == 1)
+                                return underlying.HasMessages;
+                            if (PressureThreshold < 1)
+                                return true; //unstarted cells are always busy, for instance
+                            return underlying.NumberOfMessages >= PressureThreshold;
                         }
                     }
                     return false;
@@ -271,7 +264,7 @@ namespace Akka.Routing
         /// <returns>proposed increase in capacity</returns>
         public int Rampup(int pressure, int capacity)
         {
-            return (pressure < capacity) ? 0 : Convert.ToInt32(Math.Ceiling(RampupRate * capacity));
+            return pressure < capacity ? 0 : Convert.ToInt32(Math.Ceiling(RampupRate * capacity));
         }
 
         /// <summary>
@@ -382,4 +375,3 @@ namespace Akka.Routing
         }
     }
 }
-
