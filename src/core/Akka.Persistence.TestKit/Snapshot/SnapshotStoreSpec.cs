@@ -80,33 +80,21 @@ namespace Akka.Persistence.TestKit.Snapshot
             }
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_not_load_a_snapshot_given_an_invalid_persistence_id()
         {
             SnapshotStore.Tell(new LoadSnapshot("invalid", SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_not_load_a_snapshot_given_non_matching_timestamp_criteria()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(long.MaxValue, new DateTime(100000)), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_not_load_a_snapshot_given_non_matching_sequence_number_criteria()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(7), long.MaxValue), _senderProbe.Ref);
@@ -116,11 +104,7 @@ namespace Akka.Persistence.TestKit.Snapshot
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == 7);
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_load_the_most_recent_snapshot()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
@@ -131,11 +115,7 @@ namespace Akka.Persistence.TestKit.Snapshot
                 && result.Snapshot.Snapshot.ToString() == "s-5");
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_bound()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13), long.MaxValue), _senderProbe.Ref);
@@ -153,11 +133,7 @@ namespace Akka.Persistence.TestKit.Snapshot
                 && result.Snapshot.Snapshot.ToString() == "s-3");
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13, Metadata[2].Timestamp), long.MaxValue), _senderProbe.Ref);
@@ -175,11 +151,7 @@ namespace Akka.Persistence.TestKit.Snapshot
                 && result.Snapshot.Snapshot.ToString() == "s-3");
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
         {
             var md = Metadata[2];
@@ -200,11 +172,7 @@ namespace Akka.Persistence.TestKit.Snapshot
                 && result.Snapshot.Snapshot.ToString() == "s-2");
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_delete_all_snapshots_matching_upper_sequence_number_and_timestamp_bounds()
         {
             var md = Metadata[2];
@@ -228,11 +196,7 @@ namespace Akka.Persistence.TestKit.Snapshot
                 && result.Snapshot.Snapshot.ToString() == "s-4");
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_not_delete_snapshots_with_non_matching_upper_timestamp_bounds()
         {
             var md = Metadata[3];
@@ -253,11 +217,7 @@ namespace Akka.Persistence.TestKit.Snapshot
                 && result.Snapshot.Snapshot.ToString() == "s-4");
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number()
         {
             var md = Metadata[4];
@@ -271,11 +231,7 @@ namespace Akka.Persistence.TestKit.Snapshot
             // metadata timestamp may have been changed
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
         [Fact]
-#endif
         public void SnapshotStore_should_save_bigger_size_snapshot()
         {
             var metadata = new SnapshotMetadata(Pid, 100);
