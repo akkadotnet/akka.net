@@ -909,7 +909,7 @@ namespace Akka.Streams.Implementation
             private readonly TaskCompletionSource<TMat> _completion;
             private readonly Lazy<Decider> _decider;
 
-            internal bool Completed;
+            private bool _completed;
 
             public Logic(LazySink<TIn, TMat> stage, Attributes inheritedAttributes,
                 TaskCompletionSource<TMat> completion) : base(stage.Shape)
@@ -973,7 +973,7 @@ namespace Akka.Streams.Implementation
             private void GotCompletionEvent()
             {
                 SetKeepGoing(true);
-                Completed = true;
+                _completed = true;
             }
 
             public override void PreStart() => Pull(_stage.In);
@@ -987,8 +987,21 @@ namespace Akka.Streams.Implementation
             private void InitInternalSource(Sink<TIn, TMat> sink, TIn firstElement)
             {
                 var sourceOut = new SubSource(this, firstElement);
-                _completion.TrySetResult(Source.FromGraph(sourceOut.Source)
-                    .RunWith(sink, Interpreter.SubFusingMaterializer));
+
+                try {
+                    var matVal = Source.FromGraph(sourceOut.Source)
+                        .RunWith(sink, Interpreter.SubFusingMaterializer);
+                    _completion.TrySetResult(matVal);
+                } catch (Exception ex) {
+                    /*
+                     case NonFatal(ex) => 
+                        promise.tryFailure(ex)
+                        failStage(ex)
+                     */ 
+                    _completion.TrySetException(ex);
+                    FailStage(ex);
+                }
+                
             }
 
             #region SubSource
@@ -1006,7 +1019,7 @@ namespace Akka.Streams.Implementation
                     SetHandler(new LambdaOutHandler(onPull: () =>
                     {
                         Push(firstElement);
-                        if (_logic.Completed)
+                        if (_logic._completed)
                             SourceComplete();
                         else
                             SwitchToFinalHandler();
