@@ -295,4 +295,3 @@ namespace Akka.Persistence.Tests
         #endregion
     }
 }
-
