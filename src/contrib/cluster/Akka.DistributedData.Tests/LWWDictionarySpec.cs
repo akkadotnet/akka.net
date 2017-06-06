@@ -121,7 +121,7 @@ namespace Akka.DistributedData.Tests
             m3.MergeDelta(m4.Delta).Entries.Should().BeEquivalentTo(new Dictionary<string, int>
             {
                 {"a", 1},
-                {"b", 2},
+                {"b", 22},
                 {"c", 3}
             });
         }

@@ -156,7 +156,7 @@ namespace Akka.DistributedData.Tests
 
             var merged2 = m2.Merge(m1);
             merged2.Entries.Keys.Should().Contain("a");
-            merged2["a"].Elements.Should().BeEquivalentTo("A");
+            merged2["a"].Elements.Should().BeEquivalentTo("A2");
             merged2.Entries.Keys.Should().Contain("b");
             merged2["b"].Elements.Should().BeEquivalentTo("B1");
             merged2.Entries.Keys.Should().Contain("c");
@@ -319,7 +319,7 @@ namespace Akka.DistributedData.Tests
             var merged1 = m1.Merge(m2);
 
             var m3 = merged1.ResetDelta().Remove(_node1, "b");
-            var m4 = merged1.ResetDelta().AddOrUpdate(_node2, "b", GSet<string>.Empty, x => x.Add("B2"));
+            var m4 = merged1.ResetDelta().SetItem(_node2, "b", GSet<string>.Empty.Add("B2"));
 
             var merged2 = m3.Merge(m4);
 
@@ -354,14 +354,12 @@ namespace Akka.DistributedData.Tests
             merged2.Entries["a"].Elements.Should().BeEquivalentTo("A");
             // note that B is not included, because it was removed in both timelines
             merged2.Entries["b"].Elements.Should().BeEquivalentTo("B1", "B2");
-            merged2.Entries["c"].Elements.Should().BeEquivalentTo("C");
 
             var merged3 = m3.MergeDelta(m4.Delta);
 
             merged3.Entries["a"].Elements.Should().BeEquivalentTo("A");
             // note that B is not included, because it was removed in both timelines
             merged3.Entries["b"].Elements.Should().BeEquivalentTo("B1", "B2");
-            merged3.Entries["c"].Elements.Should().BeEquivalentTo("C");
         }
 
         [Fact]
@@ -481,7 +479,7 @@ namespace Akka.DistributedData.Tests
             // because the condition of keeping global vvector is violated
             // by removal of the whole entry for the removed key "b" which results in removal of it's value's vvector
             var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A")).SetItem(_node1, "b", ORSet.Create(_node1, "B"));
-            var m2 = ORDictionary.Create(_node1, "c", ORSet.Create(_node2, "C"));
+            var m2 = ORDictionary.Create(_node2, "c", ORSet.Create(_node2, "C"));
 
             // m1 - node1 gets the update from m2
             var merged1 = m1.Merge(m2);
