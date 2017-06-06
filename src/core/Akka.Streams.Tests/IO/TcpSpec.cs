@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.IO
             resultFuture.Result.ShouldBe(expectedOutput);
         }
 
-        [Fact]
+        [Fact(Skip="FIXME .net core / linux")]
         public void Outgoing_TCP_stream_must_fail_the_materialized_task_when_the_connection_fails()
         {
             this.AssertAllStagesStopped(() =>
