@@ -289,5 +289,57 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
 
         }
+
+        [Fact]
+        public void A_FlattenMerge_must_bubble_up_substream_materialization_exception()
+        {
+            this.AssertAllStagesStopped(() => {
+                var matFail = new TestException("fail!");
+
+                var task = Source.Single("whatever")
+                    .MergeMany(4, x => Source.FromGraph(new FailingInnerMat(matFail)))
+                    .RunWith(Sink.Ignore<string>(), Materializer);
+
+                try
+                {
+                    task.Wait(TimeSpan.FromSeconds(1));
+                }
+                catch (AggregateException) { }
+
+                task.IsFaulted.ShouldBe(true);
+                task.Exception.ShouldNotBe(null);
+                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+
+            }, Materializer);
+        }
+
+        private sealed class FailingInnerMat : GraphStage<SourceShape<string>>
+        {
+            #region Logic
+            private sealed class FailingLogic : GraphStageLogic
+            {
+                public FailingLogic(Shape shape, TestException ex) : base(shape)
+                {
+                    throw ex;
+                }
+            }
+            #endregion
+
+            public FailingInnerMat(TestException ex)
+            {
+                var outlet = new Outlet<string>("out");
+                Shape = new SourceShape<string>(outlet);
+                _ex = ex;
+            }
+
+            private readonly TestException _ex;
+
+            public override SourceShape<string> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            {
+                return new FailingLogic(Shape, _ex);
+            }
+        }
     }
 }

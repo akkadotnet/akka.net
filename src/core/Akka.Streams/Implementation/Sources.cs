@@ -798,7 +798,9 @@ namespace Akka.Streams.Implementation
                 }
                 catch (Exception e)
                 {
-                    _completion.SetException(e);
+                    subSink.Cancel();
+                    FailStage(e);
+                    _completion.TrySetException(e);
                 }
             }
 

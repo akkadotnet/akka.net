@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Dsl;
@@ -150,6 +151,59 @@ namespace Akka.Streams.Tests.Dsl
                 attributes.Should().Contain(outer);
                 attributes.IndexOf(outer).Should().BeLessThan(attributes.IndexOf(inner));
             }, Materializer);
+        }
+
+        [Fact]
+        public void A_lazy_source_must_fail_correctly_when_materialization_of_inner_source_fails()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                var matFail = new TestException("fail!");
+
+                var task = Source.Lazily(() => Source.FromGraph(new FailingInnerMat(matFail)))
+                    .To(Sink.Ignore<string>())
+                    .Run(Materializer);
+
+                try
+                {
+                    task.Wait(TimeSpan.FromSeconds(1));
+                }
+                catch (AggregateException) {}
+
+                task.IsFaulted.ShouldBe(true);
+                task.Exception.ShouldNotBe(null);
+                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+
+            }, Materializer);
+        }
+
+        private sealed class FailingInnerMat : GraphStage<SourceShape<string>>
+        {
+            #region Logic
+            private sealed class FailingLogic : GraphStageLogic
+            {
+                public FailingLogic(Shape shape, TestException ex) : base(shape)
+                {
+                    throw ex;
+                }
+            }
+            #endregion
+
+            public FailingInnerMat(TestException ex)
+            {
+                var outlet = new Outlet<string>("out");
+                Shape = new SourceShape<string>(outlet);
+                _ex = ex;
+            }
+
+            private readonly TestException _ex;
+
+            public override SourceShape<string> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            {
+                return new FailingLogic(Shape, _ex);
+            }
         }
 
         private sealed class AttibutesSourceStage : GraphStage<SourceShape<Attributes>>
