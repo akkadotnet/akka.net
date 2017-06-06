@@ -74,7 +74,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// When an remembering entries and the entity stops without issuing a <see cref="Shard.Passivate"/>, 
+        /// When an remembering entries and the entity stops without issuing a <see cref="Shard.Passivate"/>,
         /// we restart it after a back off using this message.
         /// </summary>
         [Serializable]
@@ -96,7 +96,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// When initialising a shard with remember entities enabled the following message is used to restart 
+        /// When initialising a shard with remember entities enabled the following message is used to restart
         /// batches of entity actors at a time.
         /// </summary>
         [Serializable]
@@ -120,7 +120,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        protected internal abstract class StateChange
+        protected internal abstract class StateChange: IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
