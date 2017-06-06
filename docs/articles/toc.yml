@@ -12,6 +12,8 @@
     href: intro/tutorial-2.md
   - name: Part 3. Device Groups and Manager
     href: intro/tutorial-3.md
+  - name: Part 4. Querying a Group of Devices
+    href: intro/tutorial-4.md
   - name: Use-case and Deployment Scenarios
     href: intro/use-case-and-deployment-scenarios.md
   - name: Production Users and Use Cases for Akka.NET
