@@ -645,7 +645,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// DomainEvents for the persistent state of the event sourced PersistentShardCoordinator
         /// </summary>
-        public interface IDomainEvent { }
+        public interface IDomainEvent: IClusterShardingSerializable { }
 
         /// <summary>
         /// TBD
@@ -863,7 +863,7 @@ namespace Akka.Cluster.Sharding
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(other, this)) return true;
 
-                return Shard.Equals(other.Shard) 
+                return Shard.Equals(other.Shard)
                     && Region.Equals(other.Region);
             }
 
