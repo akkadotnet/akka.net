@@ -908,7 +908,8 @@ namespace Akka.Streams.Implementation
             private readonly LazySink<TIn, TMat> _stage;
             private readonly TaskCompletionSource<TMat> _completion;
             private readonly Lazy<Decider> _decider;
-            private SubSource _sourceOut;
+
+            internal bool Completed;
 
             public Logic(LazySink<TIn, TMat> stage, Attributes inheritedAttributes,
                 TaskCompletionSource<TMat> completion) : base(stage.Shape)
@@ -941,11 +942,7 @@ namespace Akka.Streams.Implementation
                             TaskContinuationOptions.ExecuteSynchronously);
                     SetHandler(_stage.In, new LambdaInHandler(
                             onPush: () => { },
-                            onUpstreamFinish: () =>
-                            {
-                                SetKeepGoing(true);
-                                _sourceOut.Completed = true;
-                            },
+                            onUpstreamFinish: GotCompletionEvent,
                             onUpstreamFailure: Failure
                         ));
                 }
@@ -973,6 +970,12 @@ namespace Akka.Streams.Implementation
 
             public override void OnUpstreamFailure(Exception e) => Failure(e);
 
+            private void GotCompletionEvent()
+            {
+                SetKeepGoing(true);
+                Completed = true;
+            }
+
             public override void PreStart() => Pull(_stage.In);
 
             private void Failure(Exception ex)
@@ -983,8 +986,8 @@ namespace Akka.Streams.Implementation
 
             private void InitInternalSource(Sink<TIn, TMat> sink, TIn firstElement)
             {
-                _sourceOut = new SubSource(this, firstElement);
-                _completion.TrySetResult(Source.FromGraph(_sourceOut.Source)
+                var sourceOut = new SubSource(this, firstElement);
+                _completion.TrySetResult(Source.FromGraph(sourceOut.Source)
                     .RunWith(sink, Interpreter.SubFusingMaterializer));
             }
 
@@ -994,7 +997,6 @@ namespace Akka.Streams.Implementation
             {
                 private readonly Logic _logic;
                 private readonly LazySink<TIn, TMat> _stage;
-                internal bool Completed;
 
                 public SubSource(Logic logic, TIn firstElement) : base(logic, "LazySink")
                 {
@@ -1004,7 +1006,7 @@ namespace Akka.Streams.Implementation
                     SetHandler(new LambdaOutHandler(onPull: () =>
                     {
                         Push(firstElement);
-                        if (Completed)
+                        if (_logic.Completed)
                             SourceComplete();
                         else
                             SwitchToFinalHandler();
@@ -1012,11 +1014,7 @@ namespace Akka.Streams.Implementation
 
                     logic.SetHandler(_stage.In, new LambdaInHandler(
                         onPush: () => Push(logic.Grab(_stage.In)),
-                        onUpstreamFinish: () =>
-                        {
-                            logic.SetKeepGoing(true);
-                            Completed = true;
-                        },
+                        onUpstreamFinish: logic.GotCompletionEvent,
                         onUpstreamFailure: SourceFailure));
                 }
 
