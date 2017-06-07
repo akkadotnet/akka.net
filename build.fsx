@@ -74,22 +74,26 @@ Target "RunTests" (fun _ ->
     let projects =
         match isWindows with
         // Windows
-        | true -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Streams.Tests.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Persistence.Tests.csproj"                 
+        //| true -> !! "./**/core/**/*.Tests.csproj"
+        //          ++ "./**/contrib/**/*.Tests.csproj"
+        //          -- "./**/Akka.Streams.Tests.csproj"
+        //          -- "./**/Akka.Remote.TestKit.Tests.csproj"
+        //          -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+        //          -- "./**/serializers/**/*Wire*.csproj"
+        //          -- "./**/Akka.Persistence.Tests.csproj"                 
+        | true -> !! "./**/Akka.Persistence.Tests.csproj"
+        //// Linux/Mono
+        //| _ -> !! "./**/core/**/*.Tests.csproj"
+        //          ++ "./**/contrib/**/*.Tests.csproj"
+        //          -- "./**/serializers/**/*Wire*.csproj"
+        //          -- "./**/Akka.Streams.Tests.csproj"
+        //          -- "./**/Akka.Remote.TestKit.Tests.csproj"
+        //          -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
+        //          -- "./**/Akka.Persistence.Tests.csproj"
+        //          -- "./**/Akka.API.Tests.csproj"
+         
         // Linux/Mono
-        | _ -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Streams.Tests.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
-                  -- "./**/Akka.Persistence.Tests.csproj"
-                  -- "./**/Akka.API.Tests.csproj"
+        | _ -> !! "./**/Akka.Persistence.Tests.csproj"
 
     let runSingleProject project =
         DotNetCli.RunCommand
@@ -97,7 +101,7 @@ Target "RunTests" (fun _ ->
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
                     TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+                (sprintf "xunit -parallel none -class Akka.Persistence.Tests.SnapshotFailureRobustnessSpec -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
