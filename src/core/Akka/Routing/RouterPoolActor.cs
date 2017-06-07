@@ -8,7 +8,6 @@
 using System.Linq;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -35,8 +34,7 @@ namespace Akka.Routing
         {
             _supervisorStrategy = supervisorStrategy;
 
-            var pool = Cell.RouterConfig as Pool;
-            if (pool != null)
+            if (Cell.RouterConfig is Pool pool)
             {
                 Pool = pool;
             }
@@ -61,8 +59,7 @@ namespace Akka.Routing
         /// <param name="message">The message.</param>
         protected override void OnReceive(object message)
         {
-            var poolSize = message as AdjustPoolSize;
-            if (poolSize != null)
+            if (message is AdjustPoolSize poolSize)
             {
                 if (poolSize.Change > 0)
                 {
@@ -85,8 +82,5 @@ namespace Akka.Routing
                 base.OnReceive(message);
             }
         }
-
-
     }
 }
-

@@ -127,8 +127,8 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Tail_chopping_group_router_must_throw_exception_if_no_result_will_arrive_within_the_given_time()
         {
-            var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(500.Milliseconds())), "Actor3");
-            var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(500.Milliseconds())), "Actor4");
+            var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1500.Milliseconds())), "Actor3");
+            var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1500.Milliseconds())), "Actor4");
 
             var probe = CreateTestProbe();
             var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };

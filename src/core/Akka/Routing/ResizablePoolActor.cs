@@ -33,11 +33,8 @@ namespace Akka.Routing
         {
             get
             {
-                var resizablePoolCell = Context as ResizablePoolCell;
-                if (resizablePoolCell != null)
-                    return resizablePoolCell;
-                else 
-                    throw new ActorInitializationException($"Resizable router actor can only be used when resizer is defined, not in {Context.GetType()}");
+                return Context is ResizablePoolCell resizablePoolCell
+                    ? resizablePoolCell : throw new ActorInitializationException($"Resizable router actor can only be used when resizer is defined, not in {Context.GetType()}");
             }
         }
 
@@ -72,7 +69,5 @@ namespace Akka.Routing
     /// </summary>
     public class Resize : RouterManagementMessage
     {
-        
     }
 }
-
