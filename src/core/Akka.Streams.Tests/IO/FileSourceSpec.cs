@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-//#if AKKAIO
+#if AKKAIO
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -109,7 +109,7 @@ namespace Akka.Streams.Tests.IO
                 var startPosition = 1000;
                 var bufferAttributes = Attributes.CreateInputBuffer(1, 2);
 
-                var p = FileIO.FromFile(_testFilePath, chunkSize, startPosition)
+                var p = FileIO.FromFile(TestFile(), chunkSize, startPosition)
                     .WithAttributes(bufferAttributes)
                     .RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
 

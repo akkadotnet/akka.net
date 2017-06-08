@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.IO
 
                 Func<List<string>, long, Task<IOResult>> write = (lines, pos) => Source.From(lines)
                     .Select(ByteString.FromString)
-                    .RunWith(FileIO.ToFile(f, fileMode:FileMode.Create, startPosition:pos), _materializer);
+                    .RunWith(FileIO.ToFile(f, fileMode:FileMode.OpenOrCreate, startPosition:pos), _materializer);
 
                 var completion1 = write(_testLines, 0);
                 completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -253,6 +253,21 @@ namespace Akka.Streams.Tests.IO
         public void SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
         {
             this.AssertAllStagesStopped(() => {
+                TargetFile(f => {
+                    var lazySink = Sink.LazySink(
+                        (ByteString _) => Task.FromResult(FileIO.ToFile(f)),
+                        () => Task.FromResult(IOResult.Success(0)))
+                        .MapMaterializedValue(t => {
+                            t.Wait(TimeSpan.FromSeconds(3));
+                            return t.Result;
+                        });
+
+                    var completion = Source.From(new []{_testByteStrings.Head()})
+                        .RunWith(lazySink, _materializer);
+
+                    completion.Wait(TimeSpan.FromSeconds(3));
+                    CheckFileContent(f, _testLines.Head());
+                });
             }, _materializer);
         }
 
