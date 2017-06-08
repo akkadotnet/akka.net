@@ -1162,17 +1162,19 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     _aggregator = _stage._aggregate(_aggregator, Grab(_stage.In));
-                    Pull(_stage.In);
                 }
                 catch (Exception ex)
                 {
-                    if (_decider(ex) == Directive.Stop)
+                    var strategy = _decider(ex);
+                    if (strategy == Directive.Stop)
                         FailStage(ex);
-                    else
-                    {
+                    else if (strategy == Directive.Restart)
                         _aggregator = _stage._zero;
+                }
+                finally
+                {
+                    if(!IsClosed(_stage.In))
                         Pull(_stage.In);
-                    }
                 }
             }
 
@@ -1911,11 +1913,136 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class Buffer<T> : DetachedStage<T, T>
+    public sealed class Buffer<T> : SimpleLinearGraphStage<T>
     {
+        #region Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly Buffer<T> _stage;
+            private readonly Action<T> _enqueue;
+            private IBuffer<T> _buffer;
+            
+
+            public Logic(Buffer<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+
+                var strategy = _stage._overflowStrategy;
+                switch (strategy)
+                {
+                    case OverflowStrategy.DropHead:
+                        _enqueue = element =>
+                        {
+                            if (_buffer.IsFull)
+                                _buffer.DropHead();
+                            _buffer.Enqueue(element);
+                            Pull(_stage.Inlet);
+                        };
+                        break;
+                    case OverflowStrategy.DropTail:
+                        _enqueue = element =>
+                        {
+                            if (_buffer.IsFull)
+                                _buffer.DropTail();
+                            _buffer.Enqueue(element);
+                            Pull(_stage.Inlet);
+                        };
+                        break;
+                    case OverflowStrategy.DropBuffer:
+                        _enqueue = element =>
+                        {
+                            if (_buffer.IsFull)
+                                _buffer.Clear();
+                            _buffer.Enqueue(element);
+                            Pull(_stage.Inlet);
+                        };
+                        break;
+                    case OverflowStrategy.DropNew:
+                        _enqueue = element =>
+                        {
+                            if (!_buffer.IsFull)
+                                _buffer.Enqueue(element);
+
+                            Pull(_stage.Inlet);
+                        };
+                        break;
+                    case OverflowStrategy.Backpressure:
+                        _enqueue = element =>
+                        {
+                            _buffer.Enqueue(element);
+
+                            if (!_buffer.IsFull)
+                                Pull(_stage.Inlet);
+                        };
+                        break;
+                    case OverflowStrategy.Fail:
+                        _enqueue = element =>
+                        {
+                            if (_buffer.IsFull)
+                                FailStage(new BufferOverflowException(
+                                    $"Buffer overflow (max capacity was {_stage._count})"));
+                            else
+                            {
+                                _buffer.Enqueue(element);
+                                Pull(_stage.Inlet);
+                            }
+                        };
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                SetHandler(_stage.Outlet, this);
+                SetHandler(_stage.Inlet, this);
+            }
+
+            public override void PreStart()
+            {
+                _buffer = Buffer.Create<T>(_stage._count, Materializer);
+                Pull(_stage.Inlet);
+            }
+
+            public override void OnPush()
+            {
+                var element = Grab(_stage.Inlet);
+
+                // If out is available, then it has been pulled but no dequeued element has been delivered.
+                // It means the buffer at this moment is definitely empty,
+                // so we just push the current element to out, then pull.
+                if (IsAvailable(_stage.Outlet))
+                {
+                    Push(_stage.Outlet, element);
+                    Pull(_stage.Inlet);
+                }
+                else
+                    _enqueue(element);
+            }
+
+            public override void OnPull()
+            {
+                if(_buffer.NonEmpty)
+                    Push(_stage.Outlet, _buffer.Dequeue());
+                if(IsClosed(_stage.Inlet))
+                {
+                    if (_buffer.IsEmpty)
+                        CompleteStage();
+                }
+                else if (!HasBeenPulled(_stage.Inlet))
+                    Pull(_stage.Inlet);
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if(_buffer.IsEmpty)
+                    CompleteStage();
+            }
+        }
+
+        #endregion
+
         private readonly int _count;
-        private readonly Func<IDetachedContext<T>, T, IUpstreamDirective> _enqueueAction;
-        private IBuffer<T> _buffer;
+        private readonly OverflowStrategy _overflowStrategy;
 
         /// <summary>
         /// TBD
@@ -1928,106 +2055,10 @@ namespace Akka.Streams.Implementation.Fusing
         public Buffer(int count, OverflowStrategy overflowStrategy)
         {
             _count = count;
-            _enqueueAction = EnqueueAction(overflowStrategy);
+            _overflowStrategy = overflowStrategy;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        public override void PreStart(ILifecycleContext context)
-            => _buffer = Buffer.Create<T>(_count, context.Materializer);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override IUpstreamDirective OnPush(T element, IDetachedContext<T> context)
-            => context.IsHoldingDownstream ? context.PushAndPull(element) : _enqueueAction(context, element);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override IDownstreamDirective OnPull(IDetachedContext<T> context)
-        {
-            if (context.IsFinishing)
-            {
-                var element = _buffer.Dequeue();
-                return _buffer.IsEmpty ? context.PushAndFinish(element) : context.Push(element);
-            }
-            if (context.IsHoldingUpstream)
-                return context.PushAndPull(_buffer.Dequeue());
-            if (_buffer.IsEmpty)
-                return context.HoldDownstream();
-            return context.Push(_buffer.Dequeue());
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override ITerminationDirective OnUpstreamFinish(IDetachedContext<T> context)
-            => _buffer.IsEmpty ? context.Finish() : context.AbsorbTermination();
-
-        private Func<IDetachedContext<T>, T, IUpstreamDirective> EnqueueAction(OverflowStrategy overflowStrategy)
-        {
-            switch (overflowStrategy)
-            {
-                case OverflowStrategy.DropHead:
-                    return (context, element) =>
-                    {
-                        if (_buffer.IsFull)
-                            _buffer.DropHead();
-                        _buffer.Enqueue(element);
-                        return context.Pull();
-                    };
-                case OverflowStrategy.DropTail:
-                    return (context, element) =>
-                    {
-                        if (_buffer.IsFull)
-                            _buffer.DropTail();
-                        _buffer.Enqueue(element);
-                        return context.Pull();
-                    };
-                case OverflowStrategy.DropBuffer:
-                    return (context, element) =>
-                    {
-                        if (_buffer.IsFull)
-                            _buffer.Clear();
-                        _buffer.Enqueue(element);
-                        return context.Pull();
-                    };
-                case OverflowStrategy.DropNew:
-                    return (context, element) =>
-                    {
-                        if (!_buffer.IsFull)
-                            _buffer.Enqueue(element);
-                        return context.Pull();
-                    };
-                case OverflowStrategy.Backpressure:
-                    return (context, element) =>
-                    {
-                        _buffer.Enqueue(element);
-                        return _buffer.IsFull ? context.HoldUpstream() : context.Pull();
-                    };
-                case OverflowStrategy.Fail:
-                    return (context, element) =>
-                    {
-                        if (_buffer.IsFull)
-                            return
-                                context.Fail(new BufferOverflowException($"Buffer overflow (max capacity was {_count})"));
-                        _buffer.Enqueue(element);
-                        return context.Pull();
-                    };
-                default:
-                    throw new NotSupportedException($"Overflow strategy {overflowStrategy} is not supported");
-            }
-        }
+        
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
@@ -3395,37 +3426,61 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class Logic : InAndOutGraphStageLogic
         {
             private readonly Sum<T> _stage;
+            private readonly Decider _decider;
             private T _aggregator;
-            private readonly LambdaInHandler _rest;
 
-            public Logic(Sum<T> stage) : base(stage.Shape)
+            public Logic(Sum<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
-                _rest = new LambdaInHandler(onPush: () =>
-                {
-                    _aggregator = stage._reduce(_aggregator, Grab(stage.Inlet));
-                    Pull(stage.Inlet);
-                }, onUpstreamFinish: () =>
-                {
-                    Push(stage.Outlet, _aggregator);
-                    CompleteStage();
-                });
+                
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                // Initial input handler
-                SetHandler(stage.Inlet, this);
+                SetInitialInHandler();
                 SetHandler(stage.Outlet, this);
+            }
+
+            private void SetInitialInHandler()
+            {
+                SetHandler(_stage.Inlet, onPush: () =>
+                {
+                    _aggregator = Grab(_stage.Inlet);
+                    Pull(_stage.Inlet);
+                    SetHandler(_stage.Inlet, this);
+                }, onUpstreamFinish: () => FailStage(new NoSuchElementException("Sum over empty stream")));
             }
 
             public override void OnPush()
             {
-                _aggregator = Grab(_stage.Inlet);
-                Pull(_stage.Inlet);
-                SetHandler(_stage.Inlet, _rest);
+                try
+                {
+                    _aggregator = _stage._reduce(_aggregator, Grab(_stage.Inlet));
+                }
+                catch (Exception ex)
+                {
+                    var strategy = _decider(ex);
+                    if (strategy == Directive.Stop)
+                        FailStage(ex);
+                    else if (strategy == Directive.Restart)
+                    {
+                        _aggregator = default(T);
+                        SetInitialInHandler();
+                    }
+                }
+                finally
+                {
+                    if(!IsClosed(_stage.Inlet))
+                        Pull(_stage.Inlet);
+                }
             }
 
-            public override void OnUpstreamFinish() => FailStage(new NoSuchElementException("sum over empty stream"));
-
             public override void OnPull() => Pull(_stage.Inlet);
+
+            public override void OnUpstreamFinish()
+            {
+                Push(_stage.Outlet, _aggregator);
+                CompleteStage();
+            }
 
             public override string ToString() => $"Sum.Logic(aggregator={_aggregator}";
         }
@@ -3453,7 +3508,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
         /// Returns a <see cref="string" /> that represents this instance.
@@ -3522,19 +3577,19 @@ namespace Akka.Streams.Implementation.Fusing
                         CompleteStage();
                 }, onUpstreamFailure: OnFailure));
 
-                Action pushOut = () =>
+                void PushOut()
                 {
                     Push(_stage.Outlet, sinkIn.Grab());
                     if (!sinkIn.IsClosed)
                         sinkIn.Pull();
                     else
                         CompleteStage();
-                };
+                }
 
                 var outHandler = new LambdaOutHandler(onPull: () =>
                 {
                     if (sinkIn.IsAvailable)
-                        pushOut();
+                        PushOut();
                 }, onDownstreamFinish: () => sinkIn.Cancel());
 
                 Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);

@@ -1123,7 +1123,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Buffer<T, TMat>(this IFlow<T, TMat> flow, int size, OverflowStrategy strategy)
         {
-            return flow.AndThen(new Buffer<T>(size, strategy));
+            return flow.Via(new Fusing.Buffer<T>(size, strategy));
         }
 
         /// <summary>

@@ -47,6 +47,7 @@ namespace Akka.Streams
         public abstract Akka.Streams.ActorMaterializerSettings EffectiveSettings(Akka.Streams.Attributes attributes);
         public abstract Akka.Event.ILoggingAdapter MakeLogger(object logSource);
         public abstract TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable);
+        public abstract TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, Akka.Streams.Attributes initialAttributes);
         public abstract Akka.Actor.ICancelable ScheduleOnce(System.TimeSpan delay, System.Action action);
         public abstract Akka.Actor.ICancelable ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action);
         public abstract void Shutdown();
@@ -579,6 +580,7 @@ namespace Akka.Streams
     {
         Akka.Dispatch.MessageDispatcher ExecutionContext { get; }
         TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable);
+        TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, Akka.Streams.Attributes initialAttributes);
         Akka.Actor.ICancelable ScheduleOnce(System.TimeSpan delay, System.Action action);
         Akka.Actor.ICancelable ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action);
         Akka.Streams.IMaterializer WithNamePrefix(string namePrefix);
@@ -661,6 +663,7 @@ namespace Akka.Streams
         public static readonly Akka.Streams.IMaterializer Instance;
         public Akka.Dispatch.MessageDispatcher ExecutionContext { get; }
         public TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable) { }
+        public TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, Akka.Streams.Attributes initialAttributes) { }
         public Akka.Actor.ICancelable ScheduleOnce(System.TimeSpan delay, System.Action action) { }
         public Akka.Actor.ICancelable ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action) { }
         public Akka.Streams.IMaterializer WithNamePrefix(string name) { }
@@ -2107,6 +2110,8 @@ namespace Akka.Streams.Implementation
         public override Akka.Event.ILoggingAdapter MakeLogger(object logSource) { }
         public override TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable) { }
         public override TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, System.Func<Akka.Streams.Implementation.Fusing.GraphInterpreterShell, Akka.Actor.IActorRef> subFlowFuser) { }
+        public override TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, Akka.Streams.Attributes initialAttributes) { }
+        public override TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, System.Func<Akka.Streams.Implementation.Fusing.GraphInterpreterShell, Akka.Actor.IActorRef> subFlowFuser, Akka.Streams.Attributes initialAttributes) { }
         public override Akka.Actor.ICancelable ScheduleOnce(System.TimeSpan delay, System.Action action) { }
         public override Akka.Actor.ICancelable ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action) { }
         public override void Shutdown() { }
@@ -2336,6 +2341,7 @@ namespace Akka.Streams.Implementation
         public override Akka.Actor.IActorRef ActorOf(Akka.Streams.MaterializationContext context, Akka.Actor.Props props) { }
         protected Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name, string dispatcher) { }
         public abstract TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, System.Func<Akka.Streams.Implementation.Fusing.GraphInterpreterShell, Akka.Actor.IActorRef> subFlowFuser);
+        public abstract TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, System.Func<Akka.Streams.Implementation.Fusing.GraphInterpreterShell, Akka.Actor.IActorRef> subFlowFuser, Akka.Streams.Attributes initialAttributes);
     }
     public class static FanIn
     {
@@ -2994,6 +3000,7 @@ namespace Akka.Streams.Implementation
         public SubFusingActorMaterializerImpl(Akka.Streams.Implementation.ExtendedActorMaterializer delegateMaterializer, System.Func<Akka.Streams.Implementation.Fusing.GraphInterpreterShell, Akka.Actor.IActorRef> registerShell) { }
         public Akka.Dispatch.MessageDispatcher ExecutionContext { get; }
         public TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable) { }
+        public TMat Materialize<TMat>(Akka.Streams.IGraph<Akka.Streams.ClosedShape, TMat> runnable, Akka.Streams.Attributes initialAttributes) { }
         public Akka.Actor.ICancelable ScheduleOnce(System.TimeSpan delay, System.Action action) { }
         public Akka.Actor.ICancelable ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action) { }
         public Akka.Streams.IMaterializer WithNamePrefix(string namePrefix) { }
@@ -3243,13 +3250,10 @@ namespace Akka.Streams.Implementation.Fusing
         public override Akka.Streams.FlowShape<TIn, TOut> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
-    public sealed class Buffer<T> : Akka.Streams.Stage.DetachedStage<T, T>
+    public sealed class Buffer<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public Buffer(int count, Akka.Streams.OverflowStrategy overflowStrategy) { }
-        public override Akka.Streams.Stage.IDownstreamDirective OnPull(Akka.Streams.Stage.IDetachedContext<T> context) { }
-        public override Akka.Streams.Stage.IUpstreamDirective OnPush(T element, Akka.Streams.Stage.IDetachedContext<T> context) { }
-        public override Akka.Streams.Stage.ITerminationDirective OnUpstreamFinish(Akka.Streams.Stage.IDetachedContext<T> context) { }
-        public override void PreStart(Akka.Streams.Stage.ILifecycleContext context) { }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public sealed class Collect<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
@@ -3701,11 +3705,6 @@ namespace Akka.Streams.Implementation.IO
 }
 namespace Akka.Streams.Implementation.Stages
 {
-    public sealed class Buffer<T> : Akka.Streams.Implementation.Stages.SymbolicStage<T, T>
-    {
-        public Buffer(int size, Akka.Streams.OverflowStrategy overflowStrategy, Akka.Streams.Attributes attributes = null) { }
-        public override Akka.Streams.Stage.IStage<T, T> Create(Akka.Streams.Attributes effectiveAttributes) { }
-    }
     public class static DefaultAttributes
     {
         public static readonly Akka.Streams.Attributes ActorPublisherSource;

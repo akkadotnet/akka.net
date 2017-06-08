@@ -122,6 +122,14 @@ Fail directly with a user specified exception.
 
 **completes** fails the stream directly with the given exception
 
+#### Lazily
+
+Defers creation and materialization of a `Source` until there is demand.
+
+**emits** depends on the wrapped `Source`
+
+**completes** depends on the wrapped `Source`
+
 #### ActorPublisher
 
 Wrap an actor extending ``ActorPublisher`` as a source.
