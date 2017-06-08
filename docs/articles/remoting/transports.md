@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: remote_transports
 title: Transports
 ---
 
@@ -19,7 +19,7 @@ Transports in Akka.Remote are abstractions on top of actual network transports, 
 Transports **do not need to care** about:
 * **Serialization** - that's handled by Akka.NET itself;
 * **Connection-oriented behavior** - the assocation process inside Akka.Remote ensures this, even over connectionless transports like UDP;
-* **Reliable delivery** - for system messages this is handled by Akka.Remote and for user-defined messages this is taken care of at the application level through something like the [`AtLeastOnceDeliveryActor` class](/api/Akka.Persistence.AtLeastOnceDeliveryActor.html), part of Akka.Persistence;
+* **Reliable delivery** - for system messages this is handled by Akka.Remote and for user-defined messages this is taken care of at the application level through something like the [`AtLeastOnceDeliveryActor` class](xref:at-least-once-delivery), part of Akka.Persistence;
 * **Handling network failures** - all a transport needs to do is forward that information back up to Akka.Remote.
 
 Transports **do need to care** about:
@@ -77,7 +77,7 @@ akka{
 You'd define a custom HOCON section (`akka.remote.google-quic`) and let Akka.Remote know that it should read that section for a transport definition inside `akka.remote.enabled-transports`.
 
 > [!NOTE]
-> To implement a custom transport yourself, you need to implement the [`Akka.Remote.Transport.Transport` abstract class](/api/Akka.Remote.Transport.Transport.html).
+> To implement a custom transport yourself, you need to implement the [`Akka.Remote.Transport.Transport` abstract class](xref:Akka.Remote.Transport.Transport).
 
 One important thing to note is the `akka.remote.google-quic.transport-protocol` setting - this specifices the address scheme you will use to address remote actors via the Quic protocol.
 
@@ -91,17 +91,17 @@ So the protocol you use in your remote `ActorSelection`s will need to use the st
 ## Running Multiple Transports Simultaneously
 One of the most productive features of Akka.Remote is its ability to allow you to support multiple transports simultaneously within a single `ActorSystem`.
 
-Suppose we added UDP support for the built-in DotNetty transport - here's what running both a UDP and TCP transport at the same time would look like in HOCON configuration.
+Suppose we created support for an http transport - here's what running both the DotNetty TCP transport and our *imaginary* http transport at the same time would look like in HOCON configuration.
 
 ```xml
 akka{
     remote {
-        enabled-transports = ["akka.remote.dot-netty.tcp", "akka.remote.dot-netty.udp"]
+        enabled-transports = ["akka.remote.dot-netty.tcp", "akka.remote.magic.http"]
         dot-netty.tcp {
             port = 8081
             hostname = localhost
         }
-        dot-netty.udp {
+        magic.http {
             port = 8082 # needs to be on a different port or IP than TCP
             hostname = localhost
         }
@@ -109,15 +109,15 @@ akka{
 }
 ```
 
-Both TCP and UDP are enabled in this scenario. But how do I know which transport is being used when I send a message to a `RemoteActorRef`? That's indicated by the protocol scheme used in the `Address` of the remote actor:
+Both TCP and HTTP are enabled in this scenario. But how do I know which transport is being used when I send a message to a `RemoteActorRef`? That's indicated by the protocol scheme used in the `Address` of the remote actor:
 
     akka.tcp://MySystem@localhost:8081/user/actor #dot-netty.tcp
-    akka.udp://MySystem@localhost:8082/user/actor #dot-netty.udp
+    akka.udp://MySystem@localhost:8082/user/actor #magic.http
 
-So if you want to send a message to a remote actor over UDP, you'd write something like this:
+So if you want to send a message to a remote actor over HTTP, you'd write something like this:
 
 ```csharp
-var as = MyActorSystem.ActorSelection("akka.udp://RemoteSystem@localhost:8082/user/actor");
+var as = MyActorSystem.ActorSelection("akka.http://RemoteSystem@localhost:8082/user/actor");
 as.Tell("remote message!"); //delivers message to remote system, if they're also using this transport
 ```
 
