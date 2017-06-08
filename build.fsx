@@ -88,7 +88,6 @@ Target "RunTests" (fun _ ->
                   -- "./**/Akka.Streams.Tests.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
-                  -- "./**/Akka.Persistence.Tests.csproj"
                   -- "./**/Akka.API.Tests.csproj"
 
     let runSingleProject project =
