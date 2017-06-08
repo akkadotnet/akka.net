@@ -150,6 +150,44 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public void SynchronousFileSink_should_allow_writing_from_specific_position_to_the_file()
+        {
+            TargetFile(f => {
+                var testLinesCommon = new List<string>
+                {
+                    new string('a', 1000) + "\n",
+                    new string('b', 1000) + "\n",
+                    new string('c', 1000) + "\n",
+                    new string('d', 1000) + "\n",
+                };
+
+                var commonByteString = ByteString.FromString(testLinesCommon.Join("")).Compact();
+                var startPosition = commonByteString.Count;
+
+                var testLinesPart2 = new List<string>()
+                {
+                    new string('x', 1000) + "\n",
+                    new string('x', 1000) + "\n",
+                };
+
+                Func<List<string>, long, Task<IOResult>> write = (lines, pos) => Source.From(lines)
+                    .Select(ByteString.FromString)
+                    .RunWith(FileIO.ToFile(f, fileMode:FileMode.Create, startPosition:pos), _materializer);
+
+                var completion1 = write(_testLines, 0);
+                completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                var result1 = completion1.Result;
+
+                var completion2 = write(testLinesPart2, startPosition);
+                completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                var result2 = completion2.Result;
+
+                f.Length.ShouldBe(startPosition + result2.Count);
+                CheckFileContent(f, testLinesCommon.Join("") + testLinesPart2.Join(""));
+            });
+        }
+
+        [Fact]
         public void SynchronousFileSink_should_use_dedicated_blocking_io_dispatcher_by_default()
         {
             this.AssertAllStagesStopped(() =>
@@ -215,15 +253,6 @@ namespace Akka.Streams.Tests.IO
         public void SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
         {
             this.AssertAllStagesStopped(() => {
-                TargetFile(f => {
-                    var completion = Source.From(_testByteStrings);
-                    completion.RunWith(Sink.LazySink<ByteString, Task<IOResult>>(
-                            b => Task.FromResult(FileIO.ToFile(f)),
-                            () => Task.FromResult(new IOResult(0, new Result<NotUsed>(NotUsed.Instance)))
-                        ), _materializer);
-                    completion.MapMaterializedValue();
-                    
-                });
             }, _materializer);
         }
 
