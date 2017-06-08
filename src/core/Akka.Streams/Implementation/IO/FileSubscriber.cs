@@ -82,9 +82,8 @@ namespace Akka.Streams.Implementation.IO
             try
             {
                 _chan = _f.Open(_fileMode, FileAccess.Write);
-                if (_startPosition > 0) {
+                if (_startPosition > 0)
                     _chan.Position = _startPosition;
-                }
                 base.PreStart();
             }
             catch (Exception ex)

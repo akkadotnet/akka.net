@@ -992,12 +992,9 @@ namespace Akka.Streams.Implementation
                     var matVal = Source.FromGraph(sourceOut.Source)
                         .RunWith(sink, Interpreter.SubFusingMaterializer);
                     _completion.TrySetResult(matVal);
-                } catch (Exception ex) {
-                    /*
-                     case NonFatal(ex) => 
-                        promise.tryFailure(ex)
-                        failStage(ex)
-                     */ 
+                }
+                catch (Exception ex)
+                {
                     _completion.TrySetException(ex);
                     FailStage(ex);
                 }

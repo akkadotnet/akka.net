@@ -104,7 +104,8 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public void Filesource_could_read_partial_contents_from_a_file()
         {
-            this.AssertAllStagesStopped(() => {
+            this.AssertAllStagesStopped(() => 
+            {
                 var chunkSize = 512;
                 var startPosition = 1000;
                 var bufferAttributes = Attributes.CreateInputBuffer(1, 2);
@@ -141,8 +142,7 @@ namespace Akka.Streams.Tests.IO
                 var expectedChunk = nextChunk();
                 for(int i=0; i<10; ++i)
                 {
-                    var actual = c.ExpectNext().DecodeString(Encoding.UTF8);
-                    actual.Should().Be(expectedChunk);
+                    c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(expectedChunk);
                     expectedChunk = nextChunk();
                 }
                 c.ExpectComplete();
