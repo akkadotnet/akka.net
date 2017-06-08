@@ -16,7 +16,7 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TestKit.Journal
+namespace Akka.Persistence.TCK.Journal
 {
     public abstract class JournalSpec : PluginSpec
     {

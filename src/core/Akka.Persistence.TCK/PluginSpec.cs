@@ -11,7 +11,7 @@ using Akka.Configuration;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TestKit
+namespace Akka.Persistence.TCK
 {
     public abstract class PluginSpec : Akka.TestKit.Xunit2.TestKit, IDisposable
     {

@@ -6,13 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq;
 using Akka.Configuration;
-using Akka.Persistence.TestKit.Snapshot;
+using Akka.Persistence.TCK.Snapshot;
+using Akka.Persistence.TestKit.Tests;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TestKit.Tests
+namespace Akka.Persistence.TCK.Tests
 {
     // FIXME
     public abstract class LocalSnapshotStoreSpec : SnapshotStoreSpec
