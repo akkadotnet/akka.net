@@ -277,38 +277,36 @@ namespace Akka.Dispatch
                 _mailboxSizeWarningIssued = true;
             }
 
-            Func<MailboxType, MailboxType> verifyRequirements = mailboxType =>
+            MailboxType VerifyRequirements(MailboxType mailboxType)
             {
-                Lazy<Type> mqType = new Lazy<Type>(() => GetProducedMessageQueueType(mailboxType));
+                var mqType = new Lazy<Type>(() => GetProducedMessageQueueType(mailboxType));
                 if (hasMailboxRequirement && !mailboxRequirement.IsAssignableFrom(mqType.Value))
-                    throw new ArgumentException($"produced message queue type [{mqType.Value}] does not fulfill requirement for dispatcher [{id}]." +
-                                                $"Must be a subclass of [{mailboxRequirement}]");
+                    throw new ArgumentException($"produced message queue type [{mqType.Value}] does not fulfill requirement for dispatcher [{id}]." + $"Must be a subclass of [{mailboxRequirement}]");
                 if (HasRequiredType(actorType) && !actorRequirement.Value.IsAssignableFrom(mqType.Value))
-                    throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." +
-                                                $"Must be a subclass of [{mailboxRequirement}]");
+                    throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." + $"Must be a subclass of [{mailboxRequirement}]");
                 return mailboxType;
-            };
+            }
 
             if (!deploy.Mailbox.Equals(Deploy.NoMailboxGiven))
-                return verifyRequirements(Lookup(deploy.Mailbox));
+                return VerifyRequirements(Lookup(deploy.Mailbox));
             if (!deploy.Dispatcher.Equals(Deploy.NoDispatcherGiven) && hasMailboxType)
-                return verifyRequirements(Lookup(dispatcherConfig.GetString("id")));
+                return VerifyRequirements(Lookup(dispatcherConfig.GetString("id")));
             if (actorRequirement.Value != null)
             {
                 try
                 {
-                    return verifyRequirements(LookupByQueueType(actorRequirement.Value));
+                    return VerifyRequirements(LookupByQueueType(actorRequirement.Value));
                 }
                 catch (Exception e)
                 {
                     if (hasMailboxRequirement)
-                        return verifyRequirements(LookupByQueueType(mailboxRequirement));
+                        return VerifyRequirements(LookupByQueueType(mailboxRequirement));
                     throw;
                 }
             }
             if (hasMailboxRequirement)
-                return verifyRequirements(LookupByQueueType(mailboxRequirement));
-            return verifyRequirements(Lookup(DefaultMailboxId));
+                return VerifyRequirements(LookupByQueueType(mailboxRequirement));
+            return VerifyRequirements(Lookup(DefaultMailboxId));
         }
 
         /// <summary>

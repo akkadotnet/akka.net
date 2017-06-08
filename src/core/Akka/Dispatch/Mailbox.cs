@@ -105,7 +105,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Posts the specified envelope to the mailbox.
         /// </summary>
-        /// <param name="receiver">TBD</param>
+        /// <param name="receiver">The actor sending this message to the mailbox</param>
         /// <param name="envelope">The envelope.</param>
         internal void Enqueue(IActorRef receiver, Envelope envelope)
         {
@@ -375,8 +375,7 @@ namespace Akka.Dispatch
         {
             while (ShouldProcessMessage())
             {
-                Envelope next;
-                if (!TryDequeue(out next)) return;
+                if (!TryDequeue(out var next)) return;
 
                 DebugPrint("{0} processing message {1}", Actor.Self, next);
 
