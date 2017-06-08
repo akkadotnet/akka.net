@@ -14,6 +14,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
@@ -23,7 +24,8 @@ namespace Akka.Persistence.TCK.Query
 
         protected IReadJournal ReadJournal { get; set; }
 
-        protected EventsByPersistenceIdSpec(Config config) : base(config)
+        protected EventsByPersistenceIdSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(config, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }

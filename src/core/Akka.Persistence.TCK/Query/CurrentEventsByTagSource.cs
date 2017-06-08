@@ -12,6 +12,7 @@ using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
@@ -21,7 +22,8 @@ namespace Akka.Persistence.TCK.Query
 
         protected IReadJournal ReadJournal { get; set; }
 
-        protected CurrentEventsByTagSource(Config config) : base(config)
+        protected CurrentEventsByTagSource(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(config, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -33,7 +35,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_query_CurrentEventsByTag_should_find_existing_events()
+        public virtual void ReadJournal_query_CurrentEventsByTag_should_find_existing_events()
         {
             var queries = ReadJournal as ICurrentEventsByTagQuery;
             var a = Sys.ActorOf(Query.TestActor.Props("a"));
@@ -76,7 +78,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_query_CurrentEventsByTag_should_complete_when_no_events()
+        public virtual void ReadJournal_query_CurrentEventsByTag_should_complete_when_no_events()
         {
             var queries = ReadJournal as ICurrentEventsByTagQuery;
             var a = Sys.ActorOf(Query.TestActor.Props("a"));
@@ -92,8 +94,8 @@ namespace Akka.Persistence.TCK.Query
             probe.Request(2).ExpectComplete();
         }
 
-        [Fact(Skip = "Not done in original implementation")]
-        public void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
+        [Fact]
+        public virtual void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
         {
             var queries = ReadJournal as ICurrentEventsByTagQuery;
             ReadJournal_query_CurrentEventsByTag_should_find_existing_events();
@@ -117,7 +119,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_query_CurrentEventsByTag_should_find_events_from_offset()
+        public virtual void ReadJournal_query_CurrentEventsByTag_should_find_events_from_offset()
         {
             var queries = ReadJournal as ICurrentEventsByTagQuery;
 

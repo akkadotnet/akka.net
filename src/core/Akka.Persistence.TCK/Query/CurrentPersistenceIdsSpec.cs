@@ -13,6 +13,7 @@ using Akka.Streams;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
@@ -22,7 +23,8 @@ namespace Akka.Persistence.TCK.Query
 
         protected IReadJournal ReadJournal { get; set; }
 
-        protected CurrentPersistenceIdsSpec(Config config) : base(config)
+        protected CurrentPersistenceIdsSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(config, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -34,7 +36,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentPersistenceIds_should_find_existing_events()
+        public virtual void ReadJournal_CurrentPersistenceIds_should_find_existing_events()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentPersistenceIdsQuery>();
 
@@ -51,7 +53,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentPersistenceIds_should_deliver_persistenceId_only_once_if_there_are_multiple_events_spanning_partitions()
+        public virtual void ReadJournal_CurrentPersistenceIds_should_deliver_persistenceId_only_once()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentPersistenceIdsQuery>();
 
@@ -66,7 +68,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_query_CurrentPersistenceIds_should_not_see_new_events_after_complete()
+        public virtual void ReadJournal_query_CurrentPersistenceIds_should_not_see_new_events_after_complete()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentPersistenceIdsQuery>();
 
@@ -76,18 +78,20 @@ namespace Akka.Persistence.TCK.Query
 
             var greenSrc = queries.CurrentPersistenceIds();
             var probe = greenSrc.RunWith(this.SinkProbe<string>(), Materializer);
-            probe.Request(3)
-                .ExpectNextUnordered("a", "b", "c")
+            probe.Request(2)
+                .ExpectNext("a")
+                .ExpectNext("c")
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             Setup("d", 1);
 
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             probe.Request(5)
+                .ExpectNext("b")
                 .ExpectComplete();
         }
 
-        protected IActorRef Setup(string persistenceId, int n)
+        private IActorRef Setup(string persistenceId, int n)
         {
             var pref = Sys.ActorOf(Query.TestActor.Props(persistenceId));
             for (int i = 1; i <= n; i++)
