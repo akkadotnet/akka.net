@@ -32,6 +32,22 @@
     <PackageReference Include="System.Threading.ThreadPool" Version="4.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PartialHandlerArgumentsCapture.cs</LastGenOutput>
+    </None>
+    <Compile Update="Util\MatchHandler\PartialHandlerArgumentsCapture.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>PartialHandlerArgumentsCapture.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;CLONEABLE;AKKAIO;APPDOMAIN</DefineConstants>
   </PropertyGroup>
