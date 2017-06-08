@@ -121,6 +121,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        [Trait("racy", "racy")]
         public void Conflate_must_work_on_a_variable_rate_chain()
         {
             var future = Source.From(Enumerable.Range(1, 1000)).ConflateWithSeed(i => i, (sum, i) => sum + i).Select(i =>
@@ -134,6 +135,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        [Trait("racy","racy")]
         public void Conflate_must_work_on_a_variable_rate_chain_simple_conflate()
         {
             var future = Source.From(Enumerable.Range(1, 1000)).Conflate((sum, i) => sum + i).Select(i =>

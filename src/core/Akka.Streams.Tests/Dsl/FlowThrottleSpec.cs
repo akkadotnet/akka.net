@@ -174,6 +174,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        [Trait("racy", "racy")]
         public void Throttle_for_single_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
             this.AssertAllStagesStopped(() =>
@@ -390,6 +391,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        [Trait("racy", "racy")]
         public void Throttle_for_various_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
             this.AssertAllStagesStopped(() =>

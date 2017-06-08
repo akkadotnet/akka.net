@@ -71,12 +71,11 @@ Target "Build" (fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "RunTests" (fun _ ->
-    let projects =
+    let parallelProjects =
         match isWindows with
         // Windows
         | true -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Streams.Tests.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
@@ -85,11 +84,20 @@ Target "RunTests" (fun _ ->
         | _ -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Streams.Tests.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
                   -- "./**/Akka.Persistence.Tests.csproj"
                   -- "./**/Akka.API.Tests.csproj"
+     
+    let syncProjects = !! "./**/Akka.Streams.Tests.csproj"
+
+    let runSingleProjectParallel project =
+        DotNetCli.RunCommand
+            (fun p -> 
+                { p with 
+                    WorkingDir = (Directory.GetParent project).FullName
+                    TimeOut = TimeSpan.FromMinutes 30. })
+                (sprintf "xunit -notrait \"racy=racy\" -parallel collections -teamcity -xml %s_parallel_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     let runSingleProject project =
         DotNetCli.RunCommand
@@ -97,10 +105,11 @@ Target "RunTests" (fun _ ->
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
                     TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+                (sprintf "xunit -trait \"racy=racy\" -parallel none -teamcity -xml %s_sync_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     CreateDir outputTests
-    projects |> Seq.iter (runSingleProject)
+    syncProjects |> Seq.iter (runSingleProject)
+    parallelProjects |> Seq.iter (runSingleProjectParallel)
 )
 
 Target "MultiNodeTests" (fun _ ->
