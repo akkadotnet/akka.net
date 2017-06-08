@@ -233,6 +233,7 @@
     <Compile Include="Event\LogLevel.cs" />
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
+    <Compile Include="Event\DebugLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
     <Compile Include="Pattern\BackoffOnRestartSupervisor.cs" />
     <Compile Include="Pattern\BackoffOptions.cs" />
