@@ -108,9 +108,8 @@ namespace Akka.Streams.Implementation.IO
             try
             {
                 _chan = _f.Open(FileMode.Open, FileAccess.Read);
-                if (_startPosition > 0) {
+                if (_startPosition > 0)
                     _chan.Position = _startPosition;
-                }
             }
             catch (Exception ex)
             {
