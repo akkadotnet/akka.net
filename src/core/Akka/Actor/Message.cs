@@ -25,12 +25,7 @@ namespace Akka.Actor
         /// </exception>
         public Envelope(object message, IActorRef sender, ActorSystem system)
         {
-            if (message == null)
-            {
-                throw new ArgumentNullException(nameof(message), "The message cannot be null.");
-            }
-
-            Message = message;
+            Message = message ?? throw new ArgumentNullException(nameof(message), "The message cannot be null.");
             Sender = sender != ActorRefs.NoSender ? sender : system.DeadLetters;
         }
 
