@@ -47,21 +47,20 @@ namespace Akka.Persistence.TCK.Query
 
             var blackSrc = queries.EventsByTag("black", offset: 0L);
             var probe = blackSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
-            probe.Request(2)
-                .ExpectNext(new EventEnvelope(0L, "b", 1L, "a black car"))
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            probe.Request(2);
+            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("a black car"));
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             d.Tell("a black dog");
             ExpectMsg("a black dog-done");
             d.Tell("a black night");
             ExpectMsg("a black night-done");
 
-            probe
-                .ExpectNext(new EventEnvelope(1L, "d", 1L, "a black dog"))
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-            probe
-                .Request(10)
-                .ExpectNext(new EventEnvelope(2L, "d", 2L, "a black night"));
+            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "d" && p.SequenceNr == 1L && p.Event.Equals("a black dog"));
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            probe.Request(10);
+            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "d" && p.SequenceNr == 2L && p.Event.Equals("a black night"));
+            probe.Cancel();
         }
 
         [Fact]
@@ -73,26 +72,35 @@ namespace Akka.Persistence.TCK.Query
             var b = Sys.ActorOf(Query.TestActor.Props("b"));
             var c = Sys.ActorOf(Query.TestActor.Props("c"));
 
+            a.Tell("hello");
+            ExpectMsg("hello-done");
             a.Tell("a green apple");
             ExpectMsg("a green apple-done");
-            a.Tell("a green banana");
-            ExpectMsg("a green banana-done");
             b.Tell("a black car");
             ExpectMsg("a black car-done");
+            a.Tell("something else");
+            ExpectMsg("something else-done");
+            a.Tell("a green banana");
+            ExpectMsg("a green banana-done");
             b.Tell("a green leaf");
             ExpectMsg("a green leaf-done");
             c.Tell("a green cucumber");
             ExpectMsg("a green cucumber-done");
 
-            var greenSrc = queries.EventsByTag("green", offset: 2L);
-            var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            var greenSrc1 = queries.EventsByTag("green", offset: 0L);
+            var probe1 = greenSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe1.Request(2);
+            probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 2L && p.Event.Equals("a green apple"));
+            var offs = probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 4L && p.Event.Equals("a green banana"));
+            probe1.Cancel();
 
-            probe
-                .Request(10)
-                // note that banana is not included, since exclusive offset
-                .ExpectNext(new EventEnvelope(2L, "b", 2L, "a green leaf"))
-                .ExpectNext(new EventEnvelope(3L, "c", 1L, "a green cucumber"))
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            var greenSrc2 = queries.EventsByTag("green", offset: offs.Offset);
+            var probe2 = greenSrc2.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe2.Request(10);
+            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 2L && p.Event.Equals("a green leaf"));
+            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "c" && p.SequenceNr == 1L && p.Event.Equals("a green cucumber"));
+            probe2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            probe2.Cancel();
         }
     }
 }

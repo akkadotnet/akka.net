@@ -46,18 +46,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
         }
 
         [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_query_CurrentEventsByTag_should_find_existing_events()
-        {
-            
-        }
-
-        [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_query_CurrentEventsByTag_should_find_events_from_offset()
-        {
-        }
-
-        [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
+        public override void ReadJournal_query_CurrentEventsByTag_should_complete_when_no_events()
         {
         }
     }

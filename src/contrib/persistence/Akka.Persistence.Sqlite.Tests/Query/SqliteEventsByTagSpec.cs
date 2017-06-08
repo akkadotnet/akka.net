@@ -44,15 +44,5 @@ namespace Akka.Persistence.Sqlite.Tests.Query
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
-
-        [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_live_query_EventsByTag_should_find_new_events()
-        {
-        }
-
-        [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_live_query_EventsByTag_should_find_events_from_offset()
-        {
-        }
     }
 }
