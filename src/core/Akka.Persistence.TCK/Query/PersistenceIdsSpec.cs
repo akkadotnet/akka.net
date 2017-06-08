@@ -13,6 +13,7 @@ using Akka.Streams;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
@@ -22,7 +23,8 @@ namespace Akka.Persistence.TCK.Query
 
         protected IReadJournal ReadJournal { get; set; }
 
-        protected PersistenceIdsSpec(Config config) : base(config)
+        protected PersistenceIdsSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
+            : base(config, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -34,7 +36,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_AllPersistenceIds_should_find_new_events()
+        public virtual void ReadJournal_AllPersistenceIds_should_find_new_events()
         {
             var queries = ReadJournal.AsInstanceOf<IAllPersistenceIdsQuery>();
 
@@ -51,7 +53,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_AllPersistenceIds_should_find_new_events_after_demand_request()
+        public virtual void ReadJournal_AllPersistenceIds_should_find_new_events_after_demand_request()
         {
             var queries = ReadJournal.AsInstanceOf<IAllPersistenceIdsQuery>();
 
@@ -76,7 +78,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_AllPersistenceIds_should_only_deliver_what_requested_if_there_is_more_in_the_buffer()
+        public virtual void ReadJournal_AllPersistenceIds_should_only_deliver_what_requested_if_there_is_more_in_the_buffer()
         {
             var queries = ReadJournal.AsInstanceOf<IAllPersistenceIdsQuery>();
 
@@ -106,7 +108,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_AllPersistenceIds_should_deliver_persistenceId_only_once_if_there_are_multiple_events()
+        public virtual void ReadJournal_AllPersistenceIds_should_deliver_persistenceId_only_once_if_there_are_multiple_events()
         {
             var queries = ReadJournal.AsInstanceOf<IAllPersistenceIdsQuery>();
 
@@ -132,7 +134,7 @@ namespace Akka.Persistence.TCK.Query
             });
         }
 
-        protected IActorRef Setup(string persistenceId, int n)
+        private IActorRef Setup(string persistenceId, int n)
         {
             var pref = Sys.ActorOf(Query.TestActor.Props(persistenceId));
             for (int i = 1; i <= n; i++)

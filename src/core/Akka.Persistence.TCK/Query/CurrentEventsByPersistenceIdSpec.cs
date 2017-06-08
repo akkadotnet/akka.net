@@ -14,6 +14,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
@@ -23,7 +24,8 @@ namespace Akka.Persistence.TCK.Query
 
         protected IReadJournal ReadJournal { get; set; }
 
-        protected CurrentEventsByPersistenceIdSpec(Config config) : base(config)
+        protected CurrentEventsByPersistenceIdSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(config, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -35,7 +37,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_find_existing_events()
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_find_existing_events()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("a");
@@ -51,7 +53,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_find_existing_events_up_to_a_sequence_number()
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_find_existing_events_up_to_a_sequence_number()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("b");
@@ -62,8 +64,8 @@ namespace Akka.Persistence.TCK.Query
                 .ExpectComplete();
         }
 
-        [Fact(Skip = "Not done in original implementation")]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_not_see_new_events_after_completion()
+        [Fact]
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_not_see_new_events_after_completion()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("f");
@@ -83,7 +85,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong()
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("g1");
@@ -96,7 +98,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0()
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("g2");
@@ -108,8 +110,8 @@ namespace Akka.Persistence.TCK.Query
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
         }
 
-        [Fact(Skip = "Not done in original implementation")]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup()
+        [Fact]
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("h");
@@ -125,7 +127,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_empty_journal()
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_empty_journal()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = SetupEmpty("i");
@@ -135,7 +137,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_journal_from_0_to_0()
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_journal_from_0_to_0()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("k1");
@@ -145,7 +147,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_empty_journal_from_0_to_0()
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_empty_journal_from_0_to_0()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = SetupEmpty("k2");
@@ -154,8 +156,8 @@ namespace Akka.Persistence.TCK.Query
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
         }
 
-        [Fact(Skip = "This test is not implemented for redis yet, due to limitations of StackExchange.Redis client")]
-        public void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_journal_from_SequenceNr_greater_than_HighestSequenceNr()
+        [Fact]
+        public virtual void ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_journal_from_SequenceNr_greater_than_HighestSequenceNr()
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("l");

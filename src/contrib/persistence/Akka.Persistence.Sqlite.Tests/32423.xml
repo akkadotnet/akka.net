@@ -1,0 +1,513 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<assemblies timestamp="06/08/2017 17:24:33">
+  <assembly name="C:\Projects\akka.net\src\contrib\persistence\Akka.Persistence.Sqlite.Tests\bin\Debug\net452\win7-x64\Akka.Persistence.Sqlite.Tests.DLL" environment="64-bit .NET 4.0.30319.42000 [collection-per-class, parallel (4 threads)]" test-framework="xUnit.net 2.3.0.3683" run-date="2017-06-08" run-time="17:22:49" config-file="C:\Users\ravenger\.nuget\packages\dotnet-xunit\2.3.0-beta2-build3683\tools\net452\xunit.console.exe.Config" total="115" passed="108" failed="0" skipped="7" time="104.385" errors="0">
+    <errors />
+    <collection total="11" passed="11" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" time="1.440">
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_not_load_a_snapshot_given_an_invalid_persistence_id" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_not_load_a_snapshot_given_an_invalid_persistence_id" time="0.8446868" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number" time="0.060591" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_save_bigger_size_snapshot" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_save_bigger_size_snapshot" time="0.0490991" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_bound" time="0.0483497" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_not_load_a_snapshot_given_non_matching_timestamp_criteria" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_not_load_a_snapshot_given_non_matching_timestamp_criteria" time="0.0507131" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_not_delete_snapshots_with_non_matching_upper_timestamp_bounds" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_not_delete_snapshots_with_non_matching_upper_timestamp_bounds" time="0.07704" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_delete_all_snapshots_matching_upper_sequence_number_and_timestamp_bounds" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_delete_all_snapshots_matching_upper_sequence_number_and_timestamp_bounds" time="0.0603796" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_load_the_most_recent_snapshot" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_load_the_most_recent_snapshot" time="0.0492805" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata" time="0.0747007" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound" time="0.0547244" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec.SnapshotStore_should_not_load_a_snapshot_given_non_matching_sequence_number_criteria" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreSpec" method="SnapshotStore_should_not_load_a_snapshot_given_non_matching_sequence_number_criteria" time="0.0699801" result="Pass" />
+    </collection>
+    <collection total="15" passed="15" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" time="2.244">
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup" time="0.9022921" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_optionally_may_reject_non_serializable_events" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_optionally_may_reject_non_serializable_events" time="0.1400191" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_not_replay_permanently_deleted_messages_on_range_deletion" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_not_replay_permanently_deleted_messages_on_range_deletion" time="0.3046401" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_replay_messages_using_a_lower_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_replay_messages_using_a_lower_sequence_number_bound" time="0.0875855" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_replay_messages_using_an_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_replay_messages_using_an_upper_sequence_number_bound" time="0.076686" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound" time="0.0717838" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_not_replay_messages_if_count_limit_equals_zero" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_not_replay_messages_if_count_limit_equals_zero" time="0.0847669" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_not_replay_messages_if_lower_sequence_number_bound_is_greater_than_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_not_replay_messages_if_lower_sequence_number_bound_is_greater_than_upper_sequence_number_bound" time="0.072085" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_not_replay_messages_if_the_persistent_actor_has_not_yet_written_messages" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_not_replay_messages_if_the_persistent_actor_has_not_yet_written_messages" time="0.0609581" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_replay_messages_using_a_count_limit" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_replay_messages_using_a_count_limit" time="0.0826345" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_not_reset_HighestSequenceNr_after_message_deletion" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_not_reset_HighestSequenceNr_after_message_deletion" time="0.0731144" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_replay_a_single_message_if_count_limit_is_equal_one" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_replay_a_single_message_if_count_limit_is_equal_one" time="0.0715944" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_replay_a_single_if_lower_sequence_number_bound_equals_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_replay_a_single_if_lower_sequence_number_bound_equals_upper_sequence_number_bound" time="0.0726154" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound_and_count_limit" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound_and_count_limit" time="0.0730934" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec.Journal_should_replay_all_messages" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteJournalSpec" method="Journal_should_replay_all_messages" time="0.070281" result="Pass" />
+    </collection>
+    <collection total="15" passed="15" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" time="1.437">
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_not_replay_messages_if_count_limit_equals_zero" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_not_replay_messages_if_count_limit_equals_zero" time="0.1099678" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_replay_messages_using_a_count_limit" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_replay_messages_using_a_count_limit" time="0.0816949" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_optionally_may_reject_non_serializable_events" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_optionally_may_reject_non_serializable_events" time="0.1031026" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_not_replay_messages_if_the_persistent_actor_has_not_yet_written_messages" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_not_replay_messages_if_the_persistent_actor_has_not_yet_written_messages" time="0.0804393" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_not_replay_permanently_deleted_messages_on_range_deletion" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_not_replay_permanently_deleted_messages_on_range_deletion" time="0.3097439" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_replay_messages_using_an_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_replay_messages_using_an_upper_sequence_number_bound" time="0.0713863" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_replay_all_messages" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_replay_all_messages" time="0.0709954" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound_and_count_limit" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound_and_count_limit" time="0.0749425" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_not_reset_HighestSequenceNr_after_message_deletion" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_not_reset_HighestSequenceNr_after_message_deletion" time="0.0869992" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_replay_messages_using_a_lower_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_replay_messages_using_a_lower_sequence_number_bound" time="0.0710447" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup" time="0.0757485" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_not_replay_messages_if_lower_sequence_number_bound_is_greater_than_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_not_replay_messages_if_lower_sequence_number_bound_is_greater_than_upper_sequence_number_bound" time="0.0776209" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_replay_a_single_message_if_count_limit_is_equal_one" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_replay_a_single_message_if_count_limit_is_equal_one" time="0.0770601" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound" time="0.0722953" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec.Journal_should_replay_a_single_if_lower_sequence_number_bound_equals_upper_sequence_number_bound" type="Akka.Persistence.Sqlite.Tests.SqliteJournalSpec" method="Journal_should_replay_a_single_if_lower_sequence_number_bound_equals_upper_sequence_number_bound" time="0.074335" result="Pass" />
+    </collection>
+    <collection total="11" passed="11" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" time="1.617">
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_empty_journal_from_0_to_0" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_empty_journal_from_0_to_0" time="0.3244209" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:51][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:51][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:51][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_empty_journal" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_empty_journal" time="0.0419814" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0" time="0.0606557" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_find_existing_events_up_to_a_sequence_number" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_find_existing_events_up_to_a_sequence_number" time="0.0633178" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0012][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0012][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_should_implement_ICurrentEventsByPersistenceIdQuery" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_should_implement_ICurrentEventsByPersistenceIdQuery" time="0.0339882" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong" time="0.0630831" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_find_existing_events" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_find_existing_events" time="0.5600318" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup" time="0.0718233" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0014][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0014][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_journal_from_0_to_0" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_journal_from_0_to_0" time="0.0709601" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_journal_from_SequenceNr_greater_than_HighestSequenceNr" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_return_empty_stream_for_journal_from_SequenceNr_greater_than_HighestSequenceNr" time="0.0604455" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec.ReadJournal_CurrentEventsByPersistenceId_should_not_see_new_events_after_completion" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByPersistenceIdSpec" method="ReadJournal_CurrentEventsByPersistenceId_should_not_see_new_events_after_completion" time="0.2663242" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0009][ActorSystem(SqliteCurrentEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0012][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0012][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+    <collection total="14" passed="14" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" time="1.873">
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_0" time="0.0632431" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0014][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0014][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_live_query_EventsByPersistenceId_should_find_new_events" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_live_query_EventsByPersistenceId_should_find_new_events" time="0.0631778" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_implement_standard_EventsByTagQuery" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_implement_standard_EventsByTagQuery" time="0.1354791" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_live_query_EventsByPersistenceId_should_find_new_events_after_demand_request" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_live_query_EventsByPersistenceId_should_find_new_events_after_demand_request" time="0.2632238" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:52][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:52][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_return_empty_stream_for_journal_from_0_to_0" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_return_empty_stream_for_journal_from_0_to_0" time="0.0677817" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:52][Thread 0010][ActorSystem(test)] System shutdown initiated
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_find_existing_events" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_find_existing_events" time="0.5785953" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0010][ActorSystem(test)] System shutdown initiated
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_return_empty_stream_for_journal_from_SequenceNr_greater_than_HighestSequenceNr" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_return_empty_stream_for_journal_from_SequenceNr_greater_than_HighestSequenceNr" time="0.0641044" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_live_query_EventsByPersistenceId_should_find_new_events_up_to_SequenceNr" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_live_query_EventsByPersistenceId_should_find_new_events_up_to_SequenceNr" time="0.0747736" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0010][ActorSystem(test)] System shutdown initiated
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_return_empty_stream_for_cleaned_journal_from_0_to_MaxLong" time="0.0689579" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0010][ActorSystem(test)] System shutdown initiated
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_return_empty_stream_for_empty_journal" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_return_empty_stream_for_empty_journal" time="0.0415368" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0010][ActorSystem(test)] System shutdown initiated
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_return_empty_stream_for_empty_journal_from_0_to_0" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_return_empty_stream_for_empty_journal_from_0_to_0" time="0.0479136" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0012][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0012][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_not_see_new_events_after_demand_request" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_not_see_new_events_after_demand_request" time="0.2647523" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:54][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:54][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:54][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_return_remaining_values_after_partial_journal_cleanup" time="0.0699843" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:54][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:54][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:54][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec.Sql_query_EventsByPersistenceId_should_find_existing_events_up_to_a_sequence_number" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByPersistenceIdSpec" method="Sql_query_EventsByPersistenceId_should_find_existing_events_up_to_a_sequence_number" time="0.0690292" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:54][Thread 0010][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:54][Thread 0012][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:54][Thread 0012][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+    <collection total="1" passed="1" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.SqliteJournalConnectionFailureSpec" time="3.611">
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalConnectionFailureSpec.Persistent_actor_should_throw_exception_upon_connection_failure" type="Akka.Persistence.Sqlite.Tests.SqliteJournalConnectionFailureSpec" method="Persistent_actor_should_throw_exception_upon_connection_failure" time="3.6109121" result="Pass" />
+    </collection>
+    <collection total="1" passed="1" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreConnectionFailureSpec" time="3.618">
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreConnectionFailureSpec.Persistent_actor_should_throw_exception_upon_connection_failure_when_saving_snapshot" type="Akka.Persistence.Sqlite.Tests.SqliteSnapshotStoreConnectionFailureSpec" method="Persistent_actor_should_throw_exception_upon_connection_failure_when_saving_snapshot" time="3.6179377" result="Pass" />
+    </collection>
+    <collection total="2" passed="2" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.SqliteConfigSpec" time="0.072">
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteConfigSpec.Should_sqlite_journal_has_default_config" type="Akka.Persistence.Sqlite.Tests.SqliteConfigSpec" method="Should_sqlite_journal_has_default_config" time="0.0400539" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0009][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteConfigSpec.Should_sqlite_snapshot_has_default_config" type="Akka.Persistence.Sqlite.Tests.SqliteConfigSpec" method="Should_sqlite_snapshot_has_default_config" time="0.0317432" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0009][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+    <collection total="3" passed="3" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteAllPersistenceIdSpec" time="0.433">
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteAllPersistenceIdSpec.Sql_query_AllPersistenceIds_should_find_new_persistence_ids" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteAllPersistenceIdSpec" method="Sql_query_AllPersistenceIds_should_find_new_persistence_ids" time="0.3395467" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0007][ActorSystem(test)] System shutdown initiated
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$v] Message WriteMessagesSuccessful from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$v was not delivered. 1 dead letters encountered.
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$v] Message WriteMessageSuccess from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$v was not delivered. 2 dead letters encountered.
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$y] Message WriteMessagesSuccessful from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$y was not delivered. 3 dead letters encountered.
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$y] Message WriteMessageSuccess from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$y was not delivered. 4 dead letters encountered.
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$w] Message WriteMessagesSuccessful from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$w was not delivered. 5 dead letters encountered.
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$z] Message WriteMessagesSuccessful from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$z was not delivered. 6 dead letters encountered.
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$w] Message WriteMessageSuccess from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$w was not delivered. 7 dead letters encountered.
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$z] Message WriteMessageSuccess from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$z was not delivered. 8 dead letters encountered.
+[INFO][08.06.2017 14:22:53][Thread 0004][akka://test/user/$x] Message WriteMessagesSuccessful from akka://test/system/akka.persistence.journal.sqlite to akka://test/user/$x was not delivered. 9 dead letters encountered.
+[DEBUG][08.06.2017 14:22:53][Thread 0012][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0012][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteAllPersistenceIdSpec.Sql_query_AllPersistenceIds_should_find_existing_persistence_ids" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteAllPersistenceIdSpec" method="Sql_query_AllPersistenceIds_should_find_existing_persistence_ids" time="0.0698873" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0007][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteAllPersistenceIdSpec.Sql_query_AllPersistenceIds_should_implement_standard_AllPersistenceIdsQuery" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteAllPersistenceIdSpec" method="Sql_query_AllPersistenceIds_should_implement_standard_AllPersistenceIdsQuery" time="0.0236628" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0007][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+    <collection total="5" passed="2" failed="0" skipped="3" name="Test collection for Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec" time="0.155">
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec.ReadJournal_should_implement_ICurrentEventsByTagQuery" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec" method="ReadJournal_should_implement_ICurrentEventsByTagQuery" time="0.0361489" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:53][Thread 0007][ActorSystem(SqliteCurrentEventsByTagSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:53][Thread 0014][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec.ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec" method="ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete" time="0" result="Skip">
+        <reason><![CDATA[Not implemented yet]]></reason>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec.ReadJournal_query_CurrentEventsByTag_should_find_events_from_offset" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec" method="ReadJournal_query_CurrentEventsByTag_should_find_events_from_offset" time="0" result="Skip">
+        <reason><![CDATA[Not implemented yet]]></reason>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec.ReadJournal_query_CurrentEventsByTag_should_find_existing_events" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec" method="ReadJournal_query_CurrentEventsByTag_should_find_existing_events" time="0" result="Skip">
+        <reason><![CDATA[Not implemented yet]]></reason>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec.ReadJournal_query_CurrentEventsByTag_should_complete_when_no_events" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentEventsByTagSpec" method="ReadJournal_query_CurrentEventsByTag_should_complete_when_no_events" time="0.1189723" result="Pass">
+        <output><![CDATA[[ERROR][08.06.2017 14:22:53][Thread 0011][akka://SqliteCurrentEventsByTagSpec/user/StreamSupervisor-23/Flow-0-0-actorPublisherSource-EventsByTag-pink-actorPublisherSource] To offset must be a positive number
+Parameter name: toOffset
+Cause: System.ArgumentException: To offset must be a positive number
+Parameter name: toOffset
+   at Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages..ctor(Int64 fromOffset, Int64 toOffset, Int64 max, String tag, IActorRef replyTo)
+   at Akka.Persistence.Query.Sql.AbstractEventsByTagPublisher.Replay()
+   at Akka.Persistence.Query.Sql.AbstractEventsByTagPublisher.<Idle>b__27_0()
+   at Akka.Case.With[TMessage](Action action)
+   at Akka.Persistence.Query.Sql.AbstractEventsByTagPublisher.Idle(Object message)
+   at Akka.Actor.ActorBase.AroundReceive(Receive receive, Object message)
+   at Akka.Streams.Actors.ActorPublisher`1.AroundReceive(Receive receive, Object message)
+   at Akka.Actor.ActorCell.ReceiveMessage(Object message)
+   at Akka.Actor.ActorCell.Invoke(Envelope envelope)
+]]></output>
+      </test>
+    </collection>
+    <collection total="6" passed="6" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec" time="4.433">
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec.Sql_query_EventsByTag_should_find_events_from_offset" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec" method="Sql_query_EventsByTag_should_find_events_from_offset" time="0.8285317" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:54][Thread 0007][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:54][Thread 0012][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:54][Thread 0012][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec.Sql_live_query_EventsByTag_should_find_new_events" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec" method="Sql_live_query_EventsByTag_should_find_new_events" time="1.0332413" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:55][Thread 0007][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:55][Thread 0330][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:55][Thread 0330][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec.Sql_query_EventsByTag_should_not_see_new_events_after_demand_request" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec" method="Sql_query_EventsByTag_should_not_see_new_events_after_demand_request" time="0.7949843" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:56][Thread 0007][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:56][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:56][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec.Sql_live_query_EventsByTag_should_find_events_from_offset" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec" method="Sql_live_query_EventsByTag_should_find_events_from_offset" time="1.157994" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:57][Thread 0007][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:57][Thread 0327][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:57][Thread 0327][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec.Sql_query_EventsByTag_should_find_existing_events" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec" method="Sql_query_EventsByTag_should_find_existing_events" time="0.5819655" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:58][Thread 0007][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:58][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:58][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec.Sql_query_EventsByTag_should_implement_standard_EventsByTagQuery" type="Akka.Persistence.Sqlite.Tests.Batching.BatchingSqliteEventsByTagSpec" method="Sql_query_EventsByTag_should_implement_standard_EventsByTagQuery" time="0.0359188" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:58][Thread 0007][ActorSystem(test)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:58][Thread 0328][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:58][Thread 0328][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+    <collection total="5" passed="5" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec" time="5.108">
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec.ReadJournal_AllPersistenceIds_should_only_deliver_what_requested_if_there_is_more_in_the_buffer" type="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec" method="ReadJournal_AllPersistenceIds_should_only_deliver_what_requested_if_there_is_more_in_the_buffer" time="2.0803859" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:55][Thread 0008][ActorSystem(SqlitePersistenceIdsSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:55][Thread 0330][EventStream] Shutting down: StandardOutLogger started
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec.ReadJournal_AllPersistenceIds_should_find_new_events_after_demand_request" type="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec" method="ReadJournal_AllPersistenceIds_should_find_new_events_after_demand_request" time="0.1731327" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:55][Thread 0008][ActorSystem(SqlitePersistenceIdsSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:55][Thread 0330][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:55][Thread 0330][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec.ReadJournal_AllPersistenceIds_should_find_new_events" type="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec" method="ReadJournal_AllPersistenceIds_should_find_new_events" time="0.0709432" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:55][Thread 0008][ActorSystem(SqlitePersistenceIdsSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:55][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:55][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec.ReadJournal_should_implement_IAllPersistenceIdsQuery" type="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec" method="ReadJournal_should_implement_IAllPersistenceIdsQuery" time="0.0308408" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:55][Thread 0008][ActorSystem(SqlitePersistenceIdsSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:55][Thread 0330][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:55][Thread 0330][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec.ReadJournal_AllPersistenceIds_should_deliver_persistenceId_only_once_if_there_are_multiple_events" type="Akka.Persistence.Sqlite.Tests.Query.SqlitePersistenceIdsSpec" method="ReadJournal_AllPersistenceIds_should_deliver_persistenceId_only_once_if_there_are_multiple_events" time="2.7528929" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:58][Thread 0008][ActorSystem(SqlitePersistenceIdsSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:58][Thread 0327][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:58][Thread 0327][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+    <collection total="4" passed="4" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec" time="9.232">
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec.ReadJournal_live_query_EventsByPersistenceId_should_find_new_events" type="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec" method="ReadJournal_live_query_EventsByPersistenceId_should_find_new_events" time="3.0616279" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:57][Thread 0010][ActorSystem(SqliteEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:57][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:57][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec.ReadJournal_should_implement_IEventsByPersistenceIdQuery" type="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec" method="ReadJournal_should_implement_IEventsByPersistenceIdQuery" time="0.037059" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:57][Thread 0010][ActorSystem(SqliteEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:57][Thread 0004][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:57][Thread 0004][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec.ReadJournal_live_query_EventsByPersistenceId_should_find_new_events_up_to_SequenceNr" type="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec" method="ReadJournal_live_query_EventsByPersistenceId_should_find_new_events_up_to_SequenceNr" time="3.0670864" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:23:00][Thread 0010][ActorSystem(SqliteEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:23:00][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:23:00][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec.ReadJournal_live_query_EventsByPersistenceId_should_find_new_events_after_demand_request" type="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByPersistenceIdSpec" method="ReadJournal_live_query_EventsByPersistenceId_should_find_new_events_after_demand_request" time="3.0659331" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:23:03][Thread 0010][ActorSystem(SqliteEventsByPersistenceIdSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:23:03][Thread 0330][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:23:03][Thread 0330][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+    <collection total="3" passed="1" failed="0" skipped="2" name="Test collection for Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByTagSpec" time="0.044">
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByTagSpec.ReadJournal_live_query_EventsByTag_should_find_events_from_offset" type="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByTagSpec" method="ReadJournal_live_query_EventsByTag_should_find_events_from_offset" time="0" result="Skip">
+        <reason><![CDATA[Not implemented yet]]></reason>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByTagSpec.ReadJournal_live_query_EventsByTag_should_find_new_events" type="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByTagSpec" method="ReadJournal_live_query_EventsByTag_should_find_new_events" time="0" result="Skip">
+        <reason><![CDATA[Not implemented yet]]></reason>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByTagSpec.ReadJournal_should_implement_IEventsByTagQuery" type="Akka.Persistence.Sqlite.Tests.Query.SqliteEventsByTagSpec" method="ReadJournal_should_implement_IEventsByTagQuery" time="0.0442173" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:58][Thread 0008][ActorSystem(SqliteEventsByTagSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:58][Thread 0328][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:58][Thread 0328][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+    <collection total="6" passed="6" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec" time="0.393">
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec.Journal_queried_on_PersistenceIdRange_returns_events_for_particular_persistent_ids" type="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec" method="Journal_queried_on_PersistenceIdRange_returns_events_for_particular_persistent_ids" time="0.104741" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec.Journal_queried_on_Timestamp_returns_events_occurred_before_To_value" type="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec" method="Journal_queried_on_Timestamp_returns_events_occurred_before_To_value" time="0.0647689" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec.Journal_queried_on_Manifest_returns_events_with_particular_manifest" type="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec" method="Journal_queried_on_Manifest_returns_events_with_particular_manifest" time="0.0544904" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec.Journal_queried_using_multiple_hints_should_apply_all_of_them" type="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec" method="Journal_queried_using_multiple_hints_should_apply_all_of_them" time="0.0617647" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec.Journal_queried_on_Timestamp_returns_events_occurred_after_or_equal_From_value" type="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec" method="Journal_queried_on_Timestamp_returns_events_occurred_after_or_equal_From_value" time="0.0543489" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec.Journal_queried_on_Timestamp_returns_events_occurred_between_both_range_values" type="Akka.Persistence.Sqlite.Tests.SqliteJournalQuerySpec" method="Journal_queried_on_Timestamp_returns_events_occurred_between_both_range_values" time="0.0532535" result="Pass" />
+    </collection>
+    <collection total="4" passed="4" failed="0" skipped="0" name="Test collection for Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec" time="0.531">
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec.ReadJournal_CurrentPersistenceIds_should_find_existing_events" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec" method="ReadJournal_CurrentPersistenceIds_should_find_existing_events" time="0.0797917" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:58][Thread 0008][ActorSystem(SqliteCurrentPersistenceIdsSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:58][Thread 0327][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:58][Thread 0327][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec.ReadJournal_should_implement_ICurrentEventsByPersistenceIdQuery" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec" method="ReadJournal_should_implement_ICurrentEventsByPersistenceIdQuery" time="0.0439307" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:58][Thread 0008][ActorSystem(SqliteCurrentPersistenceIdsSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:22:58][Thread 0327][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:22:58][Thread 0327][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec.ReadJournal_query_CurrentPersistenceIds_should_not_see_new_events_after_complete" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec" method="ReadJournal_query_CurrentPersistenceIds_should_not_see_new_events_after_complete" time="0.2977767" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:58][Thread 0008][ActorSystem(SqliteCurrentPersistenceIdsSpec)] System shutdown initiated
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec.ReadJournal_CurrentPersistenceIds_should_deliver_persistenceId_only_once" type="Akka.Persistence.Sqlite.Tests.Query.SqliteCurrentPersistenceIdsSpec" method="ReadJournal_CurrentPersistenceIds_should_deliver_persistenceId_only_once" time="0.1097167" result="Pass">
+        <output><![CDATA[[DEBUG][08.06.2017 14:22:58][Thread 0008][ActorSystem(SqliteCurrentPersistenceIdsSpec)] System shutdown initiated
+]]></output>
+      </test>
+    </collection>
+    <collection total="2" passed="1" failed="0" skipped="1" name="Test collection for Akka.Persistence.Sqlite.Tests.Serialization.SqliteJournalSerializationSpec" time="0.060">
+      <test name="Akka.Persistence.Sqlite.Tests.Serialization.SqliteJournalSerializationSpec.Journal_should_serialize_Persistent" type="Akka.Persistence.Sqlite.Tests.Serialization.SqliteJournalSerializationSpec" method="Journal_should_serialize_Persistent" time="0.0596095" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Serialization.SqliteJournalSerializationSpec.Journal_should_serialize_StateChangeEvent" type="Akka.Persistence.Sqlite.Tests.Serialization.SqliteJournalSerializationSpec" method="Journal_should_serialize_StateChangeEvent" time="0" result="Skip">
+        <reason><![CDATA[Not implemented yet]]></reason>
+      </test>
+    </collection>
+    <collection total="2" passed="1" failed="0" skipped="1" name="Test collection for Akka.Persistence.Sqlite.Tests.Serialization.SqliteSnapshotStoreSerializationSpec" time="0.396">
+      <test name="Akka.Persistence.Sqlite.Tests.Serialization.SqliteSnapshotStoreSerializationSpec.SnapshotStore_should_serialize_AtLeastOnceDeliverySnapshot" type="Akka.Persistence.Sqlite.Tests.Serialization.SqliteSnapshotStoreSerializationSpec" method="SnapshotStore_should_serialize_AtLeastOnceDeliverySnapshot" time="0.3956703" result="Pass" />
+      <test name="Akka.Persistence.Sqlite.Tests.Serialization.SqliteSnapshotStoreSerializationSpec.SnapshotStore_should_serialize_PersistentFSMSnapshot" type="Akka.Persistence.Sqlite.Tests.Serialization.SqliteSnapshotStoreSerializationSpec" method="SnapshotStore_should_serialize_PersistentFSMSnapshot" time="0" result="Skip">
+        <reason><![CDATA[Not implemented yet]]></reason>
+      </test>
+    </collection>
+    <collection total="5" passed="5" failed="0" skipped="0" name="Test collection for Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec" time="100.362">
+      <test name="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec.PersistenceActor_performance_must_measure_PersistAll" type="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec" method="PersistenceActor_performance_must_measure_PersistAll" time="9.8016295" result="Pass">
+        <output><![CDATA[PersistAll()-ing 10000 took 810,7066 ms
+PersistAll()-ing 10000 took 907,0766 ms
+PersistAll()-ing 10000 took 836,1525 ms
+PersistAll()-ing 10000 took 893,9246 ms
+PersistAll()-ing 10000 took 974,1083 ms
+PersistAll()-ing 10000 took 838,7288 ms
+PersistAll()-ing 10000 took 878,072 ms
+PersistAll()-ing 10000 took 861,0397 ms
+PersistAll()-ing 10000 took 867,1102 ms
+PersistAll()-ing 10000 took 909,9287 ms
+Average time: 877,6848 ms, 11393,6119208171 msg/sec
+[DEBUG][08.06.2017 14:23:03][Thread 0009][ActorSystem(SqliteJournalSpec)] System shutdown initiated
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec.PersistenceActor_performance_must_measure_PersistAllAsync" type="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec" method="PersistenceActor_performance_must_measure_PersistAllAsync" time="9.4101805" result="Pass">
+        <output><![CDATA[PersistAllAsync()-ing 10000 took 854,1892 ms
+PersistAllAsync()-ing 10000 took 771,5338 ms
+PersistAllAsync()-ing 10000 took 958,5189 ms
+PersistAllAsync()-ing 10000 took 813,091 ms
+PersistAllAsync()-ing 10000 took 857,8151 ms
+PersistAllAsync()-ing 10000 took 810,8843 ms
+PersistAllAsync()-ing 10000 took 815,9465 ms
+PersistAllAsync()-ing 10000 took 845,5443 ms
+PersistAllAsync()-ing 10000 took 901,5037 ms
+PersistAllAsync()-ing 10000 took 893,6707 ms
+Average time: 852,26975 ms, 11733,374321921 msg/sec
+[DEBUG][08.06.2017 14:23:12][Thread 0009][ActorSystem(SqliteJournalSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:23:12][Thread 0011][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:23:12][Thread 0011][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec.PersistenceActor_performance_must_measure_Recovering" type="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec" method="PersistenceActor_performance_must_measure_Recovering" time="7.6645953" result="Pass">
+        <output><![CDATA[Recovering 10000 took 456,9256 ms
+Recovering 10000 took 463,7658 ms
+Recovering 10000 took 464,2035 ms
+Recovering 10000 took 465,0802 ms
+Recovering 10000 took 464,0023 ms
+Recovering 10000 took 465,2127 ms
+Recovering 10000 took 456,016 ms
+Recovering 10000 took 451,0322 ms
+Recovering 10000 took 459,4762 ms
+Recovering 10000 took 459,7467 ms
+Average time: 460,54612 ms, 21713,3519657054 msg/sec
+[DEBUG][08.06.2017 14:23:20][Thread 0009][ActorSystem(SqliteJournalSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:23:20][Thread 0014][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:23:20][Thread 0014][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec.PersistenceActor_performance_must_measure_Persist" type="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec" method="PersistenceActor_performance_must_measure_Persist" time="40.2386495" result="Pass">
+        <output><![CDATA[Persist()-ing 10000 took 2688,1523 ms
+Persist()-ing 10000 took 2826,333 ms
+Persist()-ing 10000 took 3053,4842 ms
+Persist()-ing 10000 took 3249,9368 ms
+Persist()-ing 10000 took 3584,8273 ms
+Persist()-ing 10000 took 3992,9266 ms
+Persist()-ing 10000 took 4267,0892 ms
+Persist()-ing 10000 took 4350,0561 ms
+Persist()-ing 10000 took 4727,5757 ms
+Persist()-ing 10000 took 4920,6638 ms
+Average time: 3766,1045 ms, 2655,26354884736 msg/sec
+[DEBUG][08.06.2017 14:24:00][Thread 0009][ActorSystem(SqliteJournalSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:24:00][Thread 0005][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:24:00][Thread 0005][EventStream] All default loggers stopped
+]]></output>
+      </test>
+      <test name="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec.PersistenceActor_performance_must_measure_PersistAsync" type="Akka.Persistence.Redis.Tests.Performance.SqliteJournalPerfSpec" method="PersistenceActor_performance_must_measure_PersistAsync" time="33.2470189" result="Pass">
+        <output><![CDATA[PersistAsync()-ing 10000 took 2068,5351 ms
+PersistAsync()-ing 10000 took 2263,2183 ms
+PersistAsync()-ing 10000 took 2472,6731 ms
+PersistAsync()-ing 10000 took 2638,1598 ms
+PersistAsync()-ing 10000 took 3068,1912 ms
+PersistAsync()-ing 10000 took 3431,0589 ms
+PersistAsync()-ing 10000 took 3850,2143 ms
+PersistAsync()-ing 10000 took 3609,1992 ms
+PersistAsync()-ing 10000 took 3813,3323 ms
+PersistAsync()-ing 10000 took 4044,6993 ms
+Average time: 3125,92815 ms, 3199,04985660019 msg/sec
+[DEBUG][08.06.2017 14:24:33][Thread 0009][ActorSystem(SqliteJournalSpec)] System shutdown initiated
+[DEBUG][08.06.2017 14:24:33][Thread 0005][EventStream] Shutting down: StandardOutLogger started
+[DEBUG][08.06.2017 14:24:33][Thread 0005][EventStream] All default loggers stopped
+]]></output>
+      </test>
+    </collection>
+  </assembly>
+</assemblies>

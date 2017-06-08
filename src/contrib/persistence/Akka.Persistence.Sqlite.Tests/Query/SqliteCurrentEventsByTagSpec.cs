@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Query
 {
-    public class SqliteEventsByTagSpec : EventsByTagSource
+    public class SqliteCurrentEventsByTagSpec : CurrentEventsByTagSource
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
 
@@ -34,24 +34,30 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                 table-name = event_journal
                 metadata-table-name = journal_metadata
                 auto-initialize = on
-                connection-string = ""Filename=file:memdb-journal-eventsbytag-{id}.db;Mode=Memory;Cache=Shared""
+                connection-string = ""Filename=file:memdb-journal-currenteventsbytag-{id}.db;Mode=Memory;Cache=Shared""
                 refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
 
-        public SqliteEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(SqliteEventsByTagSpec), output)
+        public SqliteCurrentEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(SqliteCurrentEventsByTagSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
 
         [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_live_query_EventsByTag_should_find_new_events()
+        public override void ReadJournal_query_CurrentEventsByTag_should_find_existing_events()
+        {
+            
+        }
+
+        [Fact(Skip = "Not implemented yet")]
+        public override void ReadJournal_query_CurrentEventsByTag_should_find_events_from_offset()
         {
         }
 
         [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_live_query_EventsByTag_should_find_events_from_offset()
+        public override void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
         {
         }
     }

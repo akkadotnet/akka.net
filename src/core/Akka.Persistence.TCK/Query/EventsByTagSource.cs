@@ -12,6 +12,7 @@ using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
@@ -21,7 +22,8 @@ namespace Akka.Persistence.TCK.Query
 
         protected IReadJournal ReadJournal { get; set; }
 
-        protected EventsByTagSource(Config config) : base(config)
+        protected EventsByTagSource(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(config, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -33,7 +35,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_live_query_EventsByTag_should_find_new_events()
+        public virtual void ReadJournal_live_query_EventsByTag_should_find_new_events()
         {
             var queries = ReadJournal as IEventsByTagQuery;
 
@@ -63,7 +65,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public void ReadJournal_live_query_EventsByTag_should_find_events_from_offset()
+        public virtual void ReadJournal_live_query_EventsByTag_should_find_events_from_offset()
         {
             var queries = ReadJournal as IEventsByTagQuery;
 
