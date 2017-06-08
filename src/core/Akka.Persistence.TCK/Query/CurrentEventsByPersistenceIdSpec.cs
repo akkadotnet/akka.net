@@ -180,7 +180,7 @@ namespace Akka.Persistence.TCK.Query
 
         private IActorRef SetupEmpty(string persistenceId)
         {
-            return Sys.ActorOf(TestKit.Query.TestActor.Props(persistenceId));
+            return Sys.ActorOf(Query.TestActor.Props(persistenceId));
         }
 
         protected override void Dispose(bool disposing)
