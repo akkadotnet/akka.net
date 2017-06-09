@@ -275,5 +275,15 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static TcpExt TcpStream(this ActorSystem system) => system.WithExtension<TcpExt, Tcp>();
     }
+
+    public sealed class TcpIdleTimeoutException : TimeoutException
+    {
+        public TcpIdleTimeoutException(string message, TimeSpan duration) : base(message)
+        {
+            Duration = duration;
+        }
+
+        public TimeSpan Duration { get; }
+    }
 }
 #endif
