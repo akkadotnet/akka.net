@@ -105,11 +105,11 @@ Target "RunTests" (fun _ ->
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
                     TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -trait \"racy=racy\" -parallel none -teamcity -xml %s_sync_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+                (sprintf "xunit -trait \"racy=racy\" -parallel none -nobuild -teamcity -xml %s_sync_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     CreateDir outputTests
-    syncProjects |> Seq.iter (runSingleProject)
     parallelProjects |> Seq.iter (runSingleProjectParallel)
+    syncProjects |> Seq.iter (runSingleProject)
 )
 
 Target "MultiNodeTests" (fun _ ->
