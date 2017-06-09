@@ -84,6 +84,7 @@ Target "RunTests" (fun _ ->
         | _ -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
                   -- "./**/Akka.Cluster.Tools.Tests.csproj"
+                  -- "./**/Akka.Cluster.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
@@ -118,7 +119,8 @@ Target "RunTests" (fun _ ->
     
     // run the projects synchronous and with build
     let runRacyMonoProjects = match isWindows  with
-                              | false -> !! "./**/Akka.Cluster.Tools.Tests.csproj" |> Seq.iter (runSingleProject)
+                              | false -> !! "./**/Akka.Cluster.Tools.Tests.csproj"
+                                         ++ "./**/Akka.Cluster.Tests.csproj"  |> Seq.iter (runSingleProject)
                               | _ ->  ()
 
     runRacyMonoProjects 
