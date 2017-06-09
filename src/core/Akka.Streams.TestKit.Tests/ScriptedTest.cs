@@ -246,7 +246,7 @@ namespace Akka.Streams.TestKit.Tests
                     var idleRounds = 0;
                     while (true)
                     {
-                        if (idleRounds > 250) throw new Exception("Too many idle rounds");
+                        if (idleRounds > 500) throw new Exception("Too many idle rounds");
                         if (_currentScript.Completed)
                             break;
 
