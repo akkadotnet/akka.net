@@ -1772,6 +1772,11 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress = null, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = True, System.Nullable<System.TimeSpan> connectionTimeout = null, System.Nullable<System.TimeSpan> idleTimeout = null) { }
         public Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(string host, int port) { }
     }
+    public sealed class TcpIdleTimeoutException : System.TimeoutException
+    {
+        public TcpIdleTimeoutException(string message, System.TimeSpan duration) { }
+        public System.TimeSpan Duration { get; }
+    }
     public class static TcpStreamExtensions
     {
         public static Akka.Streams.Dsl.TcpExt TcpStream(this Akka.Actor.ActorSystem system) { }
