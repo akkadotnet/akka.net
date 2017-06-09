@@ -15,6 +15,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     public class TeamCityMessageSinkActor : TestCoordinatorEnabledMessageSink
     {
         private readonly ITeamCityWriter _teamCityWriter;
+        private IActorRef _teamCityTestSuiteWriterActor;
         public TeamCityMessageSinkActor(ITeamCityWriter teamCityWriter, bool useTestCoordinator) : base(useTestCoordinator)
         {
             _teamCityWriter = teamCityWriter;
@@ -37,45 +38,93 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void HandleNewSpec(BeginNewSpec newSpec)
         {
-            var teamCityTestSuiteActor =
-                Context.ActorOf(Props.Create(() => new TeamCityTestSuiteActor(_teamCityWriter)));
-            teamCityTestSuiteActor.Tell(newSpec);
+            _teamCityTestSuiteWriterActor =
+                Context.ActorOf(Props.Create(() => new TeamCityTestSuiteWriterActor(_teamCityWriter)));
+            _teamCityTestSuiteWriterActor.Tell(newSpec);
             base.HandleNewSpec(newSpec);
+        }
+
+        protected override void HandleRunnerMessage(LogMessageForTestRunner node)
+        {
+            _teamCityTestSuiteWriterActor.Tell(node);
         }
     }
 
-    public class TeamCityTestSuiteActor : ReceiveActor
+    public class TeamCityTestSuiteWriterActor : ReceiveActor
     {
         private readonly ITeamCityWriter _teamCityWriter;
         private ITeamCityTestsSubWriter _teamCityTestSuiteWriter;
-        public TeamCityTestSuiteActor(ITeamCityWriter teamCityWriter)
+        private IActorRef _teamCityFlowWriter;
+        public TeamCityTestSuiteWriterActor(ITeamCityWriter teamCityWriter)
         {
+            _teamCityWriter = teamCityWriter;
+
             Receive<BeginNewSpec>(msg => WriteTestSuiteStart(msg));
+            Receive<LogMessageForTestRunner>(msg => WriteTestStdOut(msg));
         }
 
         private void WriteTestSuiteStart(BeginNewSpec beginNewSpec)
         {
             _teamCityTestSuiteWriter =
                 _teamCityWriter.OpenTestSuite($"{beginNewSpec.ClassName}.{beginNewSpec.MethodName}");
+            _teamCityFlowWriter =
+                Context.ActorOf(Props.Create(() => new TeamCityTestFlowWriterActor(_teamCityTestSuiteWriter)));
+            _teamCityFlowWriter.Tell(beginNewSpec);
+        }
+
+        private void WriteTestStdOut(LogMessageForTestRunner msg)
+        {
+            _teamCityFlowWriter.Tell(msg);
         }
     }
 
-    public class TeamCityTestFlowWriter : ReceiveActor
+    public class TeamCityTestFlowWriterActor : ReceiveActor
     {
         private readonly ITeamCityTestsSubWriter _teamCityTestSuiteWriter;
+        private ITeamCityTestsSubWriter _teamCityFlowWriter;
+        private IActorRef _teamCityTestWriterActor;
 
-        public TeamCityTestFlowWriter(ITeamCityTestsSubWriter teamCityTestSuiteWriter)
+        public TeamCityTestFlowWriterActor(ITeamCityTestsSubWriter teamCityTestSuiteWriter)
         {
             _teamCityTestSuiteWriter = teamCityTestSuiteWriter;
 
             Receive<BeginNewSpec>(msg => WriteTestFlowStart(msg));
+            Receive<LogMessageForTestRunner>(msg => WriteTestStdOut(msg));
         }
 
         private void WriteTestFlowStart(BeginNewSpec beginNewSpec)
         {
-            
+            _teamCityFlowWriter =
+                _teamCityTestSuiteWriter.OpenFlow();
+            _teamCityTestWriterActor =
+                Context.ActorOf(Props.Create(() => new TeamCityTestWriterActor(_teamCityFlowWriter, beginNewSpec)));
+        }
+
+        private void WriteTestStdOut(LogMessageForTestRunner msg)
+        {
+            _teamCityTestWriterActor.Tell(msg);
         }
     }
+
+    public class TeamCityTestWriterActor : ReceiveActor
+    {
+        private readonly ITeamCityTestsSubWriter _teamCityFlowWriter;
+        private ITeamCityTestWriter _teamCityTestWriter;
+
+        public TeamCityTestWriterActor(ITeamCityTestsSubWriter teamCityFlowWriter, BeginNewSpec beginNewSpec)
+        {
+            _teamCityFlowWriter = teamCityFlowWriter;
+            _teamCityTestWriter = _teamCityFlowWriter.OpenTest($"{beginNewSpec.ClassName}.{beginNewSpec.MethodName}");
+
+            Receive<string>(msg => WriteTestStandardOut(msg));
+        }
+
+        private void WriteTestStandardOut(string stdOutMessage)
+        {
+            _teamCityTestWriter.WriteStdOutput(stdOutMessage);
+        }
+    }
+
 
     /// <summary>
     /// <see cref="IMessageSink"/> implementation that writes directly to the console.
