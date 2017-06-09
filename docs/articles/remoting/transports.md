@@ -38,7 +38,7 @@ Out of the box Akka.NET uses a socket-based transport built on top of the [DotNe
 > [!NOTE]
 > DotNetty supports both TCP and UDP, but currently only TCP support is included within Akka.NET. TCP is what most Akka.Remote and Akka.Cluster users use.
 
-To enable the DotNetty TCP transport, we need to add a section for it inside our `remote` section in [HOCON configuration](/articles/concepts/configuration.md):
+To enable the DotNetty TCP transport, we need to add a section for it inside our `remote` section in [HOCON configuration](xref:configuration):
 
 ```xml
 akka {  
