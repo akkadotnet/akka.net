@@ -16,13 +16,13 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public abstract class CurrentEventsByTagSource : Akka.TestKit.Xunit2.TestKit
+    public abstract class CurrentEventsByTagSpec : Akka.TestKit.Xunit2.TestKit
     {
         protected ActorMaterializer Materializer { get; }
 
         protected IReadJournal ReadJournal { get; set; }
 
-        protected CurrentEventsByTagSource(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+        protected CurrentEventsByTagSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
             : base(config, actorSystemName, output)
         {
             Materializer = Sys.Materializer();

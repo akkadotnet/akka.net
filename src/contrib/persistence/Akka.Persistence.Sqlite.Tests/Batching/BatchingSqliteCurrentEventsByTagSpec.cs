@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqliteEventsByTagSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -10,11 +10,12 @@ using Akka.Persistence.Query;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.TCK.Query;
 using Akka.Util.Internal;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Batching
 {
-    public class BatchingSqliteEventsByTagSpec : EventsByTagSpec
+    public class BatchingSqliteCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(200);
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
@@ -38,9 +39,19 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
 
-        public BatchingSqliteEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(BatchingSqliteEventsByTagSpec), output)
+        public BatchingSqliteCurrentEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(BatchingSqliteCurrentEventsByTagSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+        }
+
+        [Fact(Skip = "Not implemented yet")]
+        public override void ReadJournal_query_CurrentEventsByTag_should_find_existing_events()
+        {
+        }
+
+        [Fact(Skip = "Not implemented yet")]
+        public override void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
+        {
         }
     }
 }

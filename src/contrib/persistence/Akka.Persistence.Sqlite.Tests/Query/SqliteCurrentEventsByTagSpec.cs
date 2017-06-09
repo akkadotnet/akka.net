@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Query
 {
-    public class SqliteCurrentEventsByTagSpec : CurrentEventsByTagSource
+    public class SqliteCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
 
