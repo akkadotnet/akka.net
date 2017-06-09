@@ -83,33 +83,45 @@ Target "RunTests" (fun _ ->
         // Linux/Mono
         | _ -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/Akka.Cluster.Tools.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
                   -- "./**/Akka.Persistence.Tests.csproj"
                   -- "./**/Akka.API.Tests.csproj"
      
-    let syncProjects = !! "./**/Akka.Streams.Tests.csproj"
+     // run only the specs that are racy without building the project
+    let syncSpecs = !! "./**/Akka.Streams.Tests.csproj"
 
-    let runSingleProjectParallel project =
+
+    let runProject project trait parallel build postfix =
         DotNetCli.RunCommand
             (fun p -> 
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
                     TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -notrait \"racy=racy\" -parallel collections -teamcity -xml %s_parallel_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+                (sprintf "xunit %s -parallel %s %s -teamcity -xml %s_%s_xunit.xml" trait parallel build (outputTests @@ fileNameWithoutExt project) postfix )
+
+    let runParallelSpecs project =
+         runProject project "-notrait \"racy=racy\"" "collections" "" "parallel"
+
+    let runSyncSpecsWithoutBuild project =
+         runProject project "-trait \"racy=racy\"" "none" "-nobuild" "sync"
 
     let runSingleProject project =
-        DotNetCli.RunCommand
-            (fun p -> 
-                { p with 
-                    WorkingDir = (Directory.GetParent project).FullName
-                    TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -trait \"racy=racy\" -parallel none -nobuild -teamcity -xml %s_sync_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+         runProject project "" "none" "" "sync"
 
     CreateDir outputTests
-    parallelProjects |> Seq.iter (runSingleProjectParallel)
-    syncProjects |> Seq.iter (runSingleProject)
+
+    parallelProjects |> Seq.iter (runParallelSpecs)
+    syncSpecs |> Seq.iter (runSyncSpecsWithoutBuild)
+    
+    // run the projects synchronous and with build
+    let runRacyMonoProjects = match isWindows  with
+                              | false -> !! "./**/Akka.Cluster.Tools.Tests.csproj" |> Seq.iter (runSingleProject)
+                              | _ ->  ()
+
+    runRacyMonoProjects 
 )
 
 Target "MultiNodeTests" (fun _ ->
