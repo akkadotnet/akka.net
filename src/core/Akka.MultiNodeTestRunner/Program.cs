@@ -128,16 +128,12 @@ namespace Akka.MultiNodeTestRunner
             EnableAllSinks(assemblyName);
             PublishRunnerMessage(String.Format("Running MultiNodeTests for {0}", assemblyName));
 
-            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyName))
-            {
-            using (var discovery = new Discovery())
-            {
-                using (var writer = new TeamCityServiceMessages().CreateWriter(str => TeamCityLogger.Tell(str)))
-                {
-                using (var block = writer.OpenBlock(Path.GetFileNameWithoutExtension(assemblyName)))
-                {
-                using (var testSuite = block.OpenTestSuite(Path.GetFileNameWithoutExtension(assemblyName)))
-                {
+            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyName)) {
+            using (var discovery = new Discovery()) {
+                using (var writer = new TeamCityServiceMessages().CreateWriter(str => TeamCityLogger.Tell(str))) {
+                using (var block = writer.OpenBlock(Path.GetFileNameWithoutExtension(assemblyName))) {
+                using (var testSuite = block.OpenTestSuite(Path.GetFileNameWithoutExtension(assemblyName))) {
+
                     controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
 
@@ -211,7 +207,7 @@ namespace Akka.MultiNodeTestRunner
                                             fileActor.Tell(eventArgs.Data);
                                             if (TeamCityFormattingOn)
                                             {
-                                                //teamCityTest.WriteStdOutput(eventArgs.Data);
+                                                // teamCityTest.WriteStdOutput(eventArgs.Data); TODO: open flood gates
                                             }
                                         }
                                     };

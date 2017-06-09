@@ -7,141 +7,74 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
+using JetBrains.TeamCity.ServiceMessages;
+using JetBrains.TeamCity.ServiceMessages.Write.Special;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
     public class TeamCityMessageSinkActor : TestCoordinatorEnabledMessageSink
     {
-        public TeamCityMessageSinkActor(bool useTestCoordinator) : base(useTestCoordinator)
+        private readonly ITeamCityWriter _teamCityWriter;
+        public TeamCityMessageSinkActor(ITeamCityWriter teamCityWriter, bool useTestCoordinator) : base(useTestCoordinator)
         {
+            _teamCityWriter = teamCityWriter;
         }
-        #region Message handling
 
         protected override void AdditionalReceives()
         {
-        }
-
-        protected override void ReceiveFactData(FactData data)
-        {
-
-        }
-
-        protected override void HandleNodeSpecFail(NodeCompletedSpecWithFail nodeFail)
-        {
-            WriteSpecFail(nodeFail.NodeIndex, nodeFail.NodeRole, nodeFail.Message);
-
-            base.HandleNodeSpecFail(nodeFail);
-        }
-
-        protected override void HandleTestRunEnd(EndTestRun endTestRun)
-        {
-            WriteSpecMessage("Test run complete.");
-
-            base.HandleTestRunEnd(endTestRun);
+            throw new NotImplementedException();
         }
 
         protected override void HandleTestRunTree(TestRunTree tree)
         {
-            var passedSpecs = tree.Specs.Count(x => x.Passed.GetValueOrDefault(false));
-            WriteSpecMessage(
-                $"Test run completed in [{tree.Elapsed}] with {passedSpecs}/{tree.Specs.Count()} specs passed.");
+            throw new NotImplementedException();
+        }
+
+        protected override void ReceiveFactData(FactData data)
+        {
+            throw new NotImplementedException();
         }
 
         protected override void HandleNewSpec(BeginNewSpec newSpec)
         {
-            WriteSpecMessage($"##teamcity[testStarted name=\'{TeamCityEscape($"{newSpec.ClassName}.{newSpec.MethodName}")}\' flowId=\'{TeamCityEscape($"{newSpec.ClassName}.{newSpec.MethodName}")}\' captureStandardOutput=\'true\']");
-
+            var teamCityTestSuiteActor =
+                Context.ActorOf(Props.Create(() => new TeamCityTestSuiteActor(_teamCityWriter)));
+            teamCityTestSuiteActor.Tell(newSpec);
             base.HandleNewSpec(newSpec);
         }
+    }
 
-        protected override void HandleEndSpec(EndSpec endSpec)
+    public class TeamCityTestSuiteActor : ReceiveActor
+    {
+        private readonly ITeamCityWriter _teamCityWriter;
+        private ITeamCityTestsSubWriter _teamCityTestSuiteWriter;
+        public TeamCityTestSuiteActor(ITeamCityWriter teamCityWriter)
         {
-            if (endSpec.ClassName != null && endSpec.MethodName != null)
-            {
-                WriteSpecMessage(
-                    $"##teamcity[testFinished name=\'{TeamCityEscape($"{endSpec.ClassName}.{endSpec.MethodName}")}\' flowId=\'{TeamCityEscape($"{endSpec.ClassName}.{endSpec.MethodName}")}\']");
-            }
-            else
-            {
-                throw new ArgumentNullException(nameof(endSpec), "EndSpec message must have non-null ClassName and MethodName");
-            }
-
-            base.HandleEndSpec(endSpec);
+            Receive<BeginNewSpec>(msg => WriteTestSuiteStart(msg));
         }
 
-        protected override void HandleNodeMessageFragment(LogMessageFragmentForNode logMessage)
+        private void WriteTestSuiteStart(BeginNewSpec beginNewSpec)
         {
-            WriteNodeMessage(logMessage);
+            _teamCityTestSuiteWriter =
+                _teamCityWriter.OpenTestSuite($"{beginNewSpec.ClassName}.{beginNewSpec.MethodName}");
+        }
+    }
 
-            base.HandleNodeMessageFragment(logMessage);
+    public class TeamCityTestFlowWriter : ReceiveActor
+    {
+        private readonly ITeamCityTestsSubWriter _teamCityTestSuiteWriter;
+
+        public TeamCityTestFlowWriter(ITeamCityTestsSubWriter teamCityTestSuiteWriter)
+        {
+            _teamCityTestSuiteWriter = teamCityTestSuiteWriter;
+
+            Receive<BeginNewSpec>(msg => WriteTestFlowStart(msg));
         }
 
-        protected override void HandleRunnerMessage(LogMessageForTestRunner node)
+        private void WriteTestFlowStart(BeginNewSpec beginNewSpec)
         {
-            WriteRunnerMessage(node);
-
-            base.HandleRunnerMessage(node);
+            
         }
-
-        protected override void HandleNodeSpecPass(NodeCompletedSpecWithSuccess nodeSuccess)
-        {
-            WriteSpecPass(nodeSuccess.NodeIndex, nodeSuccess.NodeRole, nodeSuccess.Message);
-
-            base.HandleNodeSpecPass(nodeSuccess);
-        }
-
-        #endregion
-
-        #region Console output methods
-
-        /// <summary>
-        /// Used to print a spec status message (spec starting, finishing, failed, etc...)
-        /// </summary>
-        protected virtual void WriteSpecMessage(string message)
-        {
-            Console.WriteLine(message);
-        }
-
-        protected virtual void WriteSpecPass(int nodeIndex, string nodeRole, string message)
-        {
-            Console.WriteLine(
-                $"##teamcity[testStdOut name=\'{TeamCityEscape($"[NODE{nodeIndex}:{nodeRole}]")}\' out=\'{TeamCityEscape(message)}\'");
-        }
-
-        private void WriteSpecFail(int nodeIndex, string nodeRole, string message)
-        {
-            Console.WriteLine(
-                $"##teamcity[testFailed name=\'{TeamCityEscape($"[NODE{nodeIndex}:{nodeRole}]")}\' out=\'{TeamCityEscape(message)}\'");
-        }
-
-        private void WriteRunnerMessage(LogMessageForTestRunner nodeMessage)
-        {
-            Console.WriteLine(nodeMessage.ToString());
-        }
-
-        private void WriteNodeMessage(LogMessageFragmentForNode nodeMessage)
-        {
-            Console.WriteLine(nodeMessage.ToString());
-        }
-
-
-        private static string TeamCityEscape(string input)
-        {
-            if (string.IsNullOrEmpty(input))
-                return string.Empty;
-
-            return input.Replace("|", "||")
-                .Replace("'", "|'")
-                .Replace("\n", "|n")
-                .Replace("\r", "|r")
-                .Replace(char.ConvertFromUtf32(int.Parse("0086", NumberStyles.HexNumber)), "|x")
-                .Replace(char.ConvertFromUtf32(int.Parse("2028", NumberStyles.HexNumber)), "|l")
-                .Replace(char.ConvertFromUtf32(int.Parse("2029", NumberStyles.HexNumber)), "|p")
-                .Replace("[", "|[")
-                .Replace("]", "|]");
-        }
-
-        #endregion
     }
 
     /// <summary>
@@ -149,8 +82,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class TeamCityMessageSink : MessageSink
     {
-        public TeamCityMessageSink()
-            : base(Props.Create(() => new TeamCityMessageSinkActor(true)))
+        public TeamCityMessageSink(ITeamCityWriter teamCityWriter)
+            : base(Props.Create(() => new TeamCityMessageSinkActor(teamCityWriter, true)))
         {
         }
 
