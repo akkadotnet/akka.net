@@ -17,13 +17,13 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
 {
     public class BatchingSqliteCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
-        public static readonly AtomicCounter Counter = new AtomicCounter(200);
+        public static readonly AtomicCounter Counter = new AtomicCounter(0);
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
             akka.persistence.journal.sqlite {{
                 event-adapters {{
-                  color-tagger  = ""Akka.Persistence.Sql.TestKit.ColorTagger, Akka.Persistence.Sql.TestKit""
+                  color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
                 }}
                 event-adapter-bindings = {{
                   ""System.String"" = color-tagger
@@ -33,7 +33,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                 table-name = event_journal
                 metadata-table-name = journal_metadata
                 auto-initialize = on
-                connection-string = ""Datasource=memdb-journal-batch-{id}.db;Mode=Memory;Cache=Shared""
+                connection-string = ""Datasource=memdb-journal-batch-currenteventsbytag-{id}.db;Mode=Memory;Cache=Shared""
                 refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
@@ -42,16 +42,6 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
         public BatchingSqliteCurrentEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(BatchingSqliteCurrentEventsByTagSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-        }
-
-        [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_query_CurrentEventsByTag_should_find_existing_events()
-        {
-        }
-
-        [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
-        {
         }
     }
 }

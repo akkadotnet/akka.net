@@ -27,7 +27,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                 table-name = event_journal
                 metadata-table-name = journal_metadata
                 auto-initialize = on
-                connection-string = ""Datasource=memdb-journal-batch-{id}.db;Mode=Memory;Cache=Shared""
+                connection-string = ""Datasource=memdb-journal-batch-currentpersistenceids-{id}.db;Mode=Memory;Cache=Shared""
                 refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
@@ -37,11 +37,6 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
         public BatchingSqliteCurrentPersistenceIdsSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(BatchingSqliteCurrentPersistenceIdsSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-        }
-
-        [Fact(Skip = "Not implemented yet")]
-        public override void ReadJournal_query_CurrentPersistenceIds_should_not_see_new_events_after_complete()
-        {
         }
     }
 }
