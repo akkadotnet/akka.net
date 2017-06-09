@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
@@ -128,10 +127,7 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as RouterConfig);
-        }
+        public override bool Equals(object obj) => Equals(obj as RouterConfig);
     }
 
     /// <summary>
@@ -211,10 +207,7 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return Paths?.GetHashCode() ?? 0;
-        }
+        public override int GetHashCode() => Paths?.GetHashCode() ?? 0;
     }
 
     /// <summary>

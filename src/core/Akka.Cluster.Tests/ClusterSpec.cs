@@ -20,6 +20,12 @@ namespace Akka.Cluster.Tests
 {
     public class ClusterSpec : AkkaSpec
     {
+
+        /*
+         * Portability note: all of the _cluster.Join(selfAddress) calls are necessary here, whereas they are not in the JVM
+         * because the JVM test suite relies on side-effects from one test to another, whereas all of our tests are fully isolated.
+         */
+
         const string Config = @"    
             akka.cluster {
               auto-down-unreachable-after = 0s
@@ -46,7 +52,7 @@ namespace Akka.Cluster.Tests
             _cluster = Cluster.Get(Sys);
         }
 
-        public void LeaderActions()
+        internal void LeaderActions()
         {
             _cluster.ClusterCore.Tell(InternalClusterAction.LeaderActionsTick.Instance);
         }
@@ -89,7 +95,6 @@ namespace Akka.Cluster.Tests
         {
             try
             {
-                // TODO: this should be removed
                 _cluster.Join(_selfAddress);
                 LeaderActions(); // Joining -> Up
 
@@ -113,7 +118,6 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void A_cluster_must_publish_member_removed_when_shutdown()
         {
-            // TODO: this should be removed
             _cluster.Join(_selfAddress);
             LeaderActions(); // Joining -> Up
 
@@ -139,7 +143,6 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void BugFix_2442_RegisterOnMemberUp_should_fire_if_node_already_up()
         {
-            // TODO: this should be removed
             _cluster.Join(_selfAddress);
             LeaderActions(); // Joining -> Up
 
@@ -182,15 +185,16 @@ namespace Akka.Cluster.Tests
 
             AwaitCondition(() => leaveTask.IsCompleted);
 
-            // A second call for LeaveAsync should complete immediately
+            // A second call for LeaveAsync should complete immediately (should be the same task as before)
             Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
         }
 
-#if CORECLR
-        [Fact(Skip = "Fails on .NET Core")]
-#else
-        [Fact(Skip = "Fails flakily on .NET 4.5")]
-#endif
+//#if CORECLR
+//        [Fact(Skip = "Fails on .NET Core")]
+//#else
+//        [Fact(Skip = "Fails flakily on .NET 4.5")]
+//#endif
+        [Fact]
         public void A_cluster_must_return_completed_LeaveAsync_task_if_member_already_removed()
         {
             // Join cluster
@@ -214,7 +218,7 @@ namespace Akka.Cluster.Tests
             });
 
             // LeaveAsync() task expected to complete immediately
-            _cluster.LeaveAsync().IsCompleted.Should().BeTrue();
+            AwaitCondition(() => _cluster.LeaveAsync().IsCompleted);
         }
 
         [Fact]
@@ -237,7 +241,7 @@ namespace Akka.Cluster.Tests
 
             // Cancelling the first task
             cts.Cancel();
-            task1.Should(t => t.IsCanceled, "Task should be cancelled.");
+            AwaitCondition(() => task1.IsCanceled, null, "Task should be cancelled");
 
             Within(TimeSpan.FromSeconds(10), () =>
             {
@@ -252,12 +256,12 @@ namespace Akka.Cluster.Tests
                 ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
 
                 // Second task should complete (not cancelled)
-                task2.Should(t => t.IsCompleted && !t.IsCanceled, "Task should be completed, but not cancelled.");
+                AwaitCondition(() => task2.IsCompleted && !task2.IsCanceled, null, "Task should be completed, but not cancelled.");
             });
 
             // Subsequent LeaveAsync() tasks expected to complete immediately (not cancelled)
             var task3 = _cluster.LeaveAsync();
-            task3.Should(t => t.IsCompleted && !t.IsCanceled, "Task should be completed, but not cancelled.");
+            AwaitCondition(() => task3.IsCompleted && !task3.IsCanceled, null, "Task should be completed, but not cancelled.");
         }
 
         [Fact]

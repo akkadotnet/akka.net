@@ -4,7 +4,6 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if FSCHECK
 using System.Linq;
 using System.Text;
 using Akka.IO;
@@ -121,4 +120,3 @@ namespace Akka.Tests.Util
         }
     }
 }
-#endif

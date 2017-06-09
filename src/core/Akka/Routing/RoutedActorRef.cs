@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
@@ -49,19 +48,10 @@ namespace Akka.Routing
         /// <returns>TBD</returns>
         protected override ActorCell NewCell()
         {
-            var pool = Props.RouterConfig as Pool;
-            ActorCell cell = null;
-            if (pool != null)
-            {
-                if (pool.Resizer != null)
-                {
-                    cell = new ResizablePoolCell(System, this, Props, Dispatcher, _routeeProps, Supervisor, pool);
-                }
-            }
-            if (cell == null)
-            {
-                cell = new RoutedActorCell(System, this, Props, Dispatcher, _routeeProps, Supervisor);
-            }
+            ActorCell cell = Props.RouterConfig is Pool pool && pool.Resizer != null
+                ? new ResizablePoolCell(System, this, Props, Dispatcher, _routeeProps, Supervisor, pool)
+                : new RoutedActorCell(System, this, Props, Dispatcher, _routeeProps, Supervisor);
+
             cell.Init(false, MailboxType);
             return cell;
         }

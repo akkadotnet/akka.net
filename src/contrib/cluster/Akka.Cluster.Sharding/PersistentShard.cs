@@ -18,7 +18,7 @@ namespace Akka.Cluster.Sharding
     using Msg = Object;
 
     /// <summary>
-    /// This actor creates children entity actors on demand that it is told to be 
+    /// This actor creates children entity actors on demand that it is told to be
     /// responsible for. It is used when `rememberEntities` is enabled.
     /// </summary>
     public class PersistentShard : Shard
@@ -69,7 +69,46 @@ namespace Akka.Cluster.Sharding
 
         protected override bool ReceiveCommand(object message)
         {
-            return HandleCommand(message);
+            switch (message)
+            {
+                case SaveSnapshotSuccess m:
+                    Log.Debug("PersistentShard snapshot saved successfully");
+                    /*
+                    * delete old events but keep the latest around because
+                    *
+                    * it's not safe to delete all events immediate because snapshots are typically stored with a weaker consistency
+                    * level which means that a replay might "see" the deleted events before it sees the stored snapshot,
+                    * i.e. it will use an older snapshot and then not replay the full sequence of events
+                    *
+                    * for debugging if something goes wrong in production it's very useful to be able to inspect the events
+                    */
+                    var deleteToSequenceNr = m.Metadata.SequenceNr - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter;
+                    if (deleteToSequenceNr > 0)
+                    {
+                        DeleteMessages(deleteToSequenceNr);
+                    }
+                    break;
+                case SaveSnapshotFailure m:
+                    Log.Warning("PersistentShard snapshot failure: {0}", m.Cause.Message);
+                    break;
+                case DeleteMessagesSuccess m:
+                    Log.Debug("PersistentShard messages to {0} deleted successfully", m.ToSequenceNr);
+                    DeleteSnapshots(new SnapshotSelectionCriteria(m.ToSequenceNr - 1));
+                    break;
+
+                case DeleteMessagesFailure m:
+                    Log.Warning("PersistentShard messages to {0} deletion failure: {1}", m.ToSequenceNr, m.Cause.Message);
+                    break;
+                case DeleteSnapshotsSuccess m:
+                    Log.Debug("PersistentShard snapshots matching {0} deleted successfully", m.Criteria);
+                    break;
+                case DeleteSnapshotsFailure m:
+                    Log.Warning("PersistentShard snapshots matching {0} deletion failure: {1}", m.Criteria, m.Cause.Message);
+                    break;
+                default:
+                    return HandleCommand(message);
+            }
+            return true;
         }
 
         /// <summary>
@@ -182,7 +221,7 @@ namespace Akka.Cluster.Sharding
             else
                 child.Tell(payload, sender);
         }
-        
+
         private void RestartRememberedEntities()
         {
             RememberedEntitiesRecoveryStrategy.RecoverEntities(State.Entries).ForEach(scheduledRecovery =>
