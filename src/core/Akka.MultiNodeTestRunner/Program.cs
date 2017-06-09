@@ -134,9 +134,9 @@ namespace Akka.MultiNodeTestRunner
                 {
                     using (var teamCityWriter = new TeamCityServiceMessages().CreateWriter(str => TeamCityLogger.Tell(str)))
                     {
-                        using (var block = teamCityWriter.OpenBlock(assemblyName))
+                        using (var block = teamCityWriter.OpenBlock(Path.GetFileNameWithoutExtension(assemblyName)))
                         {
-                            using (var testClass = block.OpenTestSuite(assemblyName))
+                            using (var testClass = block.OpenTestSuite(Path.GetFileNameWithoutExtension(assemblyName)))
                             {
                                 controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                                 discovery.Finished.WaitOne();
