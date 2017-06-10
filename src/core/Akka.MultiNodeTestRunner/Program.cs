@@ -37,8 +37,6 @@ namespace Akka.MultiNodeTestRunner
 
         protected static IActorRef SinkCoordinator;
 
-        protected static IActorRef TeamCityLogger;
-
         /// <summary>
         /// file output directory
         /// </summary>
@@ -112,10 +110,12 @@ namespace Akka.MultiNodeTestRunner
 
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
             var teamCityFormattingOn = CommandLine.GetProperty("multinode.teamcity") ?? "false";
-            SinkCoordinator = TestRunSystem.ActorOf(Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn) ?
-                Props.Create(() => new SinkCoordinator(new[] { new TeamCityMessageSink(new TeamCityServiceMessages().CreateWriter(str => Console.WriteLine(str)), suiteName) })) : // mutes ConsoleMessageSinkActor
+            if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
+                throw new ArgumentException("Invalid argument provided for -Dteamcity");
+
+            SinkCoordinator = TestRunSystem.ActorOf(TeamCityFormattingOn ?
+                Props.Create(() => new SinkCoordinator(new[] { new TeamCityMessageSink(str => Console.WriteLine(str), suiteName) })) : // mutes ConsoleMessageSinkActor
                 Props.Create<SinkCoordinator>(), "sinkCoordinator");
-            TeamCityLogger = TestRunSystem.ActorOf(Props.Create<TeamCityLoggerActor>(TeamCityFormattingOn));
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
@@ -212,17 +212,7 @@ namespace Akka.MultiNodeTestRunner
                                 {
                                     ReportSpecPassFromExitCode(nodeIndex, nodeRole,
                                         closureTest.TestName);
-                                    //if (TeamCityFormattingOn)
-                                    //{
-                                    //    teamCityTest.WriteStdOutput(
-                                    //        $"[NODE{nodeIndex}:{nodeRole}][{closureTest.TestName}]: SPEC PASSED");
-                                    //}
                                 }
-                                //else
-                                //{
-                                //    teamCityTest.WriteStdOutput(
-                                //        $"[NODE{nodeIndex}:{nodeRole}][{closureTest.TestName}]: SPEC FAILED"); //TODO: add stack trace
-                                //}
                             };
 
                             process.Start();
@@ -278,7 +268,7 @@ namespace Akka.MultiNodeTestRunner
                     var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".json", now);
 
                     var jsonStoreProps = Props.Create(() =>
-                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, true));
+                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
 
                     return new FileSystemMessageSink(jsonStoreProps);
                 };
@@ -288,7 +278,7 @@ namespace Akka.MultiNodeTestRunner
                     var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".html", now);
 
                     var visualizerProps = Props.Create(() =>
-                        new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, true));
+                        new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
 
                     return new FileSystemMessageSink(visualizerProps);
                 };
