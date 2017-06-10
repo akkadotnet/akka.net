@@ -71,28 +71,24 @@ Target "Build" (fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "RunTests" (fun _ ->
-    let parallelProjects =
-        match isWindows with
-        // Windows
-        | true -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Persistence.Tests.csproj"                 
-        // Linux/Mono
-        | _ -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Cluster.Tools.Tests.csproj"
-                  -- "./**/Akka.Cluster.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
-                  -- "./**/Akka.Persistence.Tests.csproj"
-                  -- "./**/Akka.API.Tests.csproj"
-     
-     // run only the specs that are racy without building the project
+
+    let parallelProjects = !! "./**/core/**/*.Tests.csproj"
+                           ++ "./**/contrib/**/*.Tests.csproj"
+                           -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                           -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                           -- "./**/serializers/**/*Wire*.csproj"
+                           -- "./**/Akka.Persistence.Tests.csproj" 
+
     let syncSpecs = !! "./**/Akka.Streams.Tests.csproj"
+    
+    let monoProjects = !! "./**/core/**/*.Tests.csproj"
+                       ++ "./**/contrib/**/*.Tests.csproj"
+                       -- "./**/serializers/**/*Wire*.csproj"
+                       -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                       -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
+                       -- "./**/Akka.Persistence.Tests.csproj"
+                       -- "./**/Akka.API.Tests.csproj"
+                       
 
 
     let runProject project trait parallel build postfix =
@@ -113,17 +109,13 @@ Target "RunTests" (fun _ ->
          runProject project "" "none" "" "sync"
 
     CreateDir outputTests
+        
+    let run = match isWindows  with
+                              | true -> parallelProjects |> Seq.iter (runParallelSpecs)
+                                        syncSpecs |> Seq.iter (runSyncSpecsWithoutBuild)
+                              | _ ->    monoProjects |> Seq.iter (runSingleProject)
 
-    parallelProjects |> Seq.iter (runParallelSpecs)
-    syncSpecs |> Seq.iter (runSyncSpecsWithoutBuild)
-    
-    // run the projects synchronous and with build
-    let runRacyMonoProjects = match isWindows  with
-                              | false -> !! "./**/Akka.Cluster.Tools.Tests.csproj"
-                                         ++ "./**/Akka.Cluster.Tests.csproj"  |> Seq.iter (runSingleProject)
-                              | _ ->  ()
-
-    runRacyMonoProjects 
+    run 
 )
 
 Target "MultiNodeTests" (fun _ ->
