@@ -187,12 +187,12 @@ namespace Akka.Streams.Tests.Dsl
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<PoisonPill> message sent to StageActorRef\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<PoisonPill> message sent to StageActorRef\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 #else
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<PoisonPill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<PoisonPill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 #endif
             stageRef.Tell(Kill.Instance);
             warn = ExpectMsg<Warning>(TimeSpan.FromSeconds(1));
