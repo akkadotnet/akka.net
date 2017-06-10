@@ -174,4 +174,17 @@ namespace Akka.DistributedData
     /// it is the delta `D` that should be marked with this.
     /// </summary>
     public interface IRequireCausualDeliveryOfDeltas : IReplicatedDelta { }
+
+    /// <summary>
+    /// Some complex deltas grow in size for each update and above a configured
+    /// threshold such deltas are discarded and sent as full state instead. This
+    /// interface should be implemented by such deltas to define its size.
+    /// </summary>
+    public interface IReplicatedDeltaSize
+    {
+        /// <summary>
+        /// Returns delta size of target delta operation.
+        /// </summary>
+        int DeltaSize { get; }
+    }
 }

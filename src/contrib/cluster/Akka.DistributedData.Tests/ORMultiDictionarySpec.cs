@@ -113,21 +113,18 @@ namespace Akka.DistributedData.Tests
                 .AddItem(_node2, "b", "B2")
                 .RemoveItem(_node2, "b", "B2")
                 .AddItem(_node2, "d", "D2");
-
-            // merge both ways
-            var expected = ImmutableDictionary.CreateRange(new[]
-            {
-                new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A2")),
-                new KeyValuePair<string, IImmutableSet<string>>("b", ImmutableHashSet.Create("B1")),
-                new KeyValuePair<string, IImmutableSet<string>>("c", ImmutableHashSet.Create("C2")),
-                new KeyValuePair<string, IImmutableSet<string>>("d", ImmutableHashSet.Create("D1", "D2"))
-            });
-
+            
             var merged1 = m1.Merge(m2);
-            merged1.Entries.Should().BeEquivalentTo(expected);
+            merged1.Entries["a"].Should().BeEquivalentTo("A2");
+            merged1.Entries["b"].Should().BeEquivalentTo("B1");
+            merged1.Entries["c"].Should().BeEquivalentTo("C2");
+            merged1.Entries["d"].Should().BeEquivalentTo("D1", "D2");
 
             var merged2 = m2.Merge(m1);
-            merged2.Entries.Should().BeEquivalentTo(expected);
+            merged2.Entries["a"].Should().BeEquivalentTo("A2");
+            merged2.Entries["b"].Should().BeEquivalentTo("B1");
+            merged2.Entries["c"].Should().BeEquivalentTo("C2");
+            merged2.Entries["d"].Should().BeEquivalentTo("D1", "D2");
         }
 
         [Fact]
@@ -139,24 +136,18 @@ namespace Akka.DistributedData.Tests
             var m2 = ORMultiValueDictionary<string, string>.Empty
                 .AddItem(_node2, "b", "B2")
                 .Remove(_node2, "b");
-
-            // merge both ways
-            var expected = ImmutableDictionary.CreateRange(new[]
-            {
-                new KeyValuePair<string, IImmutableSet<string>>("b", ImmutableHashSet.Create("B1"))
-            });
-
+            
             var merged1 = m1.Merge(m2);
-            merged1.Entries.Should().BeEquivalentTo(expected);
+            merged1.Entries["b"].Should().BeEquivalentTo("B1");
 
             var merged2 = m2.Merge(m1);
-            merged2.Entries.Should().BeEquivalentTo(expected);
+            merged2.Entries["b"].Should().BeEquivalentTo("B1");
 
             var merged3 = m1.MergeDelta(m2.Delta);
-            merged3.Entries.Should().BeEquivalentTo(expected);
+            merged3.Entries["b"].Should().BeEquivalentTo("B1");
 
             var merged4 = m2.MergeDelta(m1.Delta);
-            merged4.Entries.Should().BeEquivalentTo(expected);
+            merged4.Entries["b"].Should().BeEquivalentTo("B1");
         }
 
         [Fact]
@@ -349,7 +340,7 @@ namespace Akka.DistributedData.Tests
             var m3 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
                 .SetItems(_node1, "a", ImmutableHashSet.Create("A"))
                 .SetItems(_node1, "b", ImmutableHashSet.Create("B"));
-            var m4 = m1.ResetDelta()
+            var m4 = m3.ResetDelta()
                 .SetItems(_node2, "b", ImmutableHashSet.Create("B2"))
                 .SetItems(_node2, "b", ImmutableHashSet.Create("B3"));
 

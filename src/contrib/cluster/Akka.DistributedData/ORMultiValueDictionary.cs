@@ -139,7 +139,7 @@ namespace Akka.DistributedData
             if (_withValueDeltas)
             {
                 var u = Underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, true, existing => existing.Clear(node));
-                return new ORMultiValueDictionary<TKey, TValue>(u.Remove(node, key), _withValueDeltas);
+                return new ORMultiValueDictionary<TKey, TValue>(u.RemoveKey(node, key), _withValueDeltas);
             }
             else
                 return new ORMultiValueDictionary<TKey, TValue>(Underlying.Remove(node, key), _withValueDeltas);

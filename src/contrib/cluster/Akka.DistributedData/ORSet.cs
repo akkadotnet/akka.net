@@ -550,24 +550,27 @@ namespace Akka.DistributedData
 
         public ORSet<T> MergeDelta(IDeltaOperation delta)
         {
-            if (delta is AddDeltaOperation) return DryMerge(((AddDeltaOperation)delta).Underlying, addDeltaOp: true);
-            else if (delta is RemoveDeltaOperation) return MergeRemoveDelta((RemoveDeltaOperation)delta);
-            else if (delta is FullStateDeltaOperation) return DryMerge(((FullStateDeltaOperation)delta).Underlying, addDeltaOp: false);
-            else if (delta is DeltaGroup)
+            if (delta == null) throw new ArgumentNullException();
+            switch (delta)
             {
-                var group = (DeltaGroup)delta;
-                var acc = this;
-                foreach (var op in group.Operations)
-                {
-                    if (op is AddDeltaOperation) acc = acc.DryMerge(((AddDeltaOperation)op).Underlying, addDeltaOp: true);
-                    else if (op is RemoveDeltaOperation) acc = acc.MergeRemoveDelta((RemoveDeltaOperation)op);
-                    else if (op is FullStateDeltaOperation) acc = acc.DryMerge(((RemoveDeltaOperation)op).Underlying, addDeltaOp: false);
-                    else throw new ArgumentException("DeltaGroup shouldn't be nested");
-                }
-
-                return acc;
+                case AddDeltaOperation op: return DryMerge(op.Underlying, addDeltaOp: true);
+                case RemoveDeltaOperation op: return MergeRemoveDelta(op);
+                case FullStateDeltaOperation op: return DryMerge(op.Underlying, addDeltaOp: false);
+                case DeltaGroup group:
+                    var acc = this;
+                    foreach (var operation in group.Operations)
+                    {
+                        switch (operation)
+                        {
+                            case AddDeltaOperation op: acc = acc.DryMerge(op.Underlying, addDeltaOp: true); break;
+                            case RemoveDeltaOperation op: acc = acc.MergeRemoveDelta(op); break;
+                            case FullStateDeltaOperation op: acc = acc.DryMerge(op.Underlying, addDeltaOp: false); break;
+                            default: throw new ArgumentException($"GroupDelta should not be nested");
+                        }
+                    }
+                    return acc;
+                default: throw new ArgumentException($"Cannot merge delta of type {delta.GetType()}", nameof(delta));
             }
-            else throw new ArgumentException($"Cannot merge delta of type {delta?.GetType()}", nameof(delta));
         }
 
         private ORSet<T> MergeRemoveDelta(RemoveDeltaOperation delta)

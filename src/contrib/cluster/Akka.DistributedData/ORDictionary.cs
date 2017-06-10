@@ -198,9 +198,10 @@ namespace Akka.DistributedData
             // with clearing the value (e.g. removing all elements if value is a set)
             // before removing the key - like e.g. ORMultiMap does
             var newKeys = KeySet.ResetDelta().Add(node, key);
-            var newValue = modify(oldValue);
             if (valueDeltas && oldValue is IDeltaReplicatedData)
             {
+                var deltaOldValue = (IDeltaReplicatedData)oldValue;
+                var newValue = modify((TValue)deltaOldValue.ResetDelta());
                 var newValueDelta = ((IDeltaReplicatedData)newValue).Delta;
                 if (newValueDelta != null && hasOldValue)
                 {
@@ -215,8 +216,9 @@ namespace Akka.DistributedData
             }
             else
             {
-                var delta = new PutDeltaOperation(KeySet.ResetDelta().Add(node, key).Delta, key, newValue);
-                return new ORDictionary<TKey, TValue>(KeySet.Add(node, key), ValueMap.SetItem(key, newValue), NewDelta(delta));
+                var newValue = modify(oldValue);
+                var delta = new PutDeltaOperation(newKeys.Delta, key, newValue);
+                return new ORDictionary<TKey, TValue>(newKeys, ValueMap.SetItem(key, newValue), NewDelta(delta));
             }
         }
 
@@ -400,6 +402,8 @@ namespace Akka.DistributedData
 
             public PutDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, TKey key, TValue value)
             {
+                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+
                 Underlying = underlying;
                 Key = key;
                 Value = value;
@@ -449,6 +453,8 @@ namespace Akka.DistributedData
 
             public UpdateDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, ImmutableDictionary<TKey, IReplicatedData> values)
             {
+                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+
                 Underlying = underlying;
                 Values = values;
             }
@@ -465,7 +471,7 @@ namespace Akka.DistributedData
                         IReplicatedData value;
                         if (this.Values.TryGetValue(entry.Key, out value))
                         {
-                            builder.Add(entry.Key, value.Merge(entry.Value));
+                            builder[entry.Key] = value.Merge(entry.Value);
                         }
                         else
                         {
@@ -473,7 +479,7 @@ namespace Akka.DistributedData
                         }
                     }
                     return new UpdateDeltaOperation(
-                        underlying: (ORSet<TKey>.IDeltaOperation)this.Underlying.Merge(update),
+                        underlying: (ORSet<TKey>.IDeltaOperation)this.Underlying.Merge(update.Underlying),
                         values: builder.ToImmutable());
                 }
                 else if ((put = other as PutDeltaOperation) != null && this.Values.Count == 1 && this.Values.ContainsKey(put.Key))
@@ -498,6 +504,8 @@ namespace Akka.DistributedData
         {
             public RemoveDeltaOperation(ORSet<TKey>.IDeltaOperation underlying)
             {
+                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+
                 Underlying = underlying;
             }
 
@@ -511,6 +519,8 @@ namespace Akka.DistributedData
 
             public RemoveKeyDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, TKey key)
             {
+                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+
                 Underlying = underlying;
                 Key = key;
             }
@@ -598,7 +608,11 @@ namespace Akka.DistributedData
 
             if (withValueDelta)
             {
-                tombstonedValues.AddRange(mergedValues);
+                foreach (var entry in mergedValues)
+                {
+                    // AddRange won't work in the face of repeated entries
+                    tombstonedValues[entry.Key] = entry.Value;
+                }
                 return new ORDictionary<TKey, TValue>(mergedKeys, tombstonedValues.ToImmutable());
             }
             else

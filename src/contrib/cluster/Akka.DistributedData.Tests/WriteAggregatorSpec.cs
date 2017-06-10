@@ -88,7 +88,7 @@ namespace Akka.DistributedData.Tests
         private readonly GSet<string> _data = GSet.Create("A", "B");
         private readonly WriteTo _writeThree = new WriteTo(3, TimeSpan.FromSeconds(3));
         private readonly WriteMajority _writeMajority = new WriteMajority(TimeSpan.FromSeconds(3));
-        private readonly WriteMajority _writeAll;
+        private readonly WriteAll _writeAll;
 
         private readonly ORSet<string> _fullState1;
         private readonly ORSet<string> _fullState2;
@@ -104,7 +104,7 @@ namespace Akka.DistributedData.Tests
             _fullState1 = ORSet<string>.Empty.Add(cluster, "a").Add(cluster, "b");
             _fullState2 = _fullState1.ResetDelta().Add(cluster, "c");
             _delta = new Delta(new DataEnvelope(_fullState2.Delta), 2L, 2L);
-            _writeAll = new WriteMajority(Dilated(TimeSpan.FromSeconds(3)));
+            _writeAll = new WriteAll(Dilated(TimeSpan.FromSeconds(3)));
         }
 
         [Fact]
@@ -200,7 +200,7 @@ namespace Akka.DistributedData.Tests
         {
             var testProbes = Probes();
             var testProbeRefs = testProbes.ToImmutableDictionary(kv => kv.Key, kv => kv.Value.Item2);
-            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _delta, _writeMajority, testProbeRefs, _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _delta, _writeAll, testProbeRefs, _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
 
             Watch(aggregator);
 
@@ -229,7 +229,7 @@ namespace Akka.DistributedData.Tests
         public void WriteAggregator_with_delta_must_timeout_when_less_than_required_ACKs()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _delta, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _delta, _writeAll, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
 
             Watch(aggregator);
 
@@ -344,7 +344,7 @@ namespace Akka.DistributedData.Tests
         private IImmutableDictionary<Address, Tuple<TestProbe, IActorRef>> Probes() =>
             _nodes.Select(address =>
                 {
-                    var probe = CreateTestProbe();
+                    var probe = CreateTestProbe(address.Host);
                     return new KeyValuePair<Address, Tuple<TestProbe, IActorRef>>(address,
                         Tuple.Create(probe, Sys.ActorOf(Props.Create(() => new WriteAckAdapter(probe.Ref)))));
                 })
