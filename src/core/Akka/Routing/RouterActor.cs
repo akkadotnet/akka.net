@@ -24,11 +24,8 @@ namespace Akka.Routing
         {
             get
             {
-                var routedActorCell = Context as RoutedActorCell;
-                if (routedActorCell != null)
-                    return routedActorCell;
-                else
-                    throw new ActorInitializationException($"Router actor can only be used in RoutedActorRef, not in {Context.GetType()}");
+                return Context is RoutedActorCell routedActorCell
+                    ? routedActorCell : throw new ActorInitializationException($"Router actor can only be used in RoutedActorRef, not in {Context.GetType()}");
             }
         }
 
@@ -47,30 +44,25 @@ namespace Akka.Routing
         /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
-            if (message is GetRoutees)
+            switch (message)
             {
-                Sender.Tell(new Routees(Cell.Router.Routees));
-            }
-            else if (message is AddRoutee)
-            {
-                var addRoutee = message as AddRoutee;
-                Cell.AddRoutee(addRoutee.Routee);
-            }
-            else if (message is RemoveRoutee)
-            {
-                var removeRoutee = message as RemoveRoutee;
-                Cell.RemoveRoutee(removeRoutee.Routee, stopChild: true);
-                StopIfAllRouteesRemoved();
-            }
-            else if (message is Terminated)
-            {
-                var terminated = message as Terminated;
-                Cell.RemoveRoutee(new ActorRefRoutee(terminated.ActorRef), stopChild: false);
-                StopIfAllRouteesRemoved();
-            }
-            else
-            {
-                RoutingLogicController?.Forward(message);
+                case GetRoutees getRoutees:
+                    Sender.Tell(new Routees(Cell.Router.Routees));
+                    break;
+                case AddRoutee addRoutee:
+                    Cell.AddRoutee(addRoutee.Routee);
+                    break;
+                case RemoveRoutee removeRoutee:
+                    Cell.RemoveRoutee(removeRoutee.Routee, stopChild: true);
+                    StopIfAllRouteesRemoved();
+                    break;
+                case Terminated terminated:
+                    Cell.RemoveRoutee(new ActorRefRoutee(terminated.ActorRef), stopChild: false);
+                    StopIfAllRouteesRemoved();
+                    break;
+                default:
+                    RoutingLogicController?.Forward(message);
+                    break;
             }
         }
 

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Reflection;
 
 namespace Akka.Actor
@@ -25,6 +26,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class TypedActor.
     /// </summary>
+    [Obsolete("TypedActor in its current shape will be removed in v1.5")]
     public abstract class TypedActor : ActorBase
     {
         /// <summary>

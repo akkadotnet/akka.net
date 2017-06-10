@@ -13,7 +13,7 @@ using Akka.Pattern;
 namespace Akka.Persistence.Snapshot
 {
     /// <summary>
-    /// TBD
+    /// Abstract snapshot store.
     /// </summary>
     public abstract class SnapshotStore : ActorBase
     {
@@ -43,11 +43,7 @@ namespace Akka.Persistence.Snapshot
                 config.GetTimeSpan("circuit-breaker.reset-timeout"));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected sealed override bool Receive(object message)
         {
             return ReceiveSnapshotStore(message) || ReceivePluginInternal(message);
@@ -55,31 +51,30 @@ namespace Akka.Persistence.Snapshot
 
         private bool ReceiveSnapshotStore(object message)
         {
-            if (message is LoadSnapshot)
-            {
-                var msg = (LoadSnapshot) message;
+            var senderPersistentActor = Sender; // Sender is PersistentActor
+            var self = Self; //Self MUST BE CLOSED OVER here, or the code below will be subject to race conditions
 
-                _breaker.WithCircuitBreaker(() => LoadAsync(msg.PersistenceId, msg.Criteria.Limit(msg.ToSequenceNr)))
-                    .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
-                        ? new LoadSnapshotResult(t.Result, msg.ToSequenceNr) as ISnapshotResponse
-                        : new LoadSnapshotFailed(t.Exception) as ISnapshotResponse, _continuationOptions)
-                    .PipeTo(Sender);
+            if (message is LoadSnapshot loadSnapshot)
+            {
+                _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
+                    .ContinueWith(t => t.IsCompleted
+                        ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
+                        : new LoadSnapshotFailed(t.Exception), _continuationOptions)
+                    .PipeTo(senderPersistentActor);
             }
-            else if (message is SaveSnapshot)
+            else if (message is SaveSnapshot saveSnapshot)
             {
-                var msg = (SaveSnapshot) message;
-                var metadata = new SnapshotMetadata(msg.Metadata.PersistenceId, msg.Metadata.SequenceNr, DateTime.UtcNow);
+                var metadata = new SnapshotMetadata(saveSnapshot.Metadata.PersistenceId, saveSnapshot.Metadata.SequenceNr, DateTime.UtcNow);
 
-                _breaker.WithCircuitBreaker(() => SaveAsync(metadata, msg.Snapshot))
-                    .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
-                        ? (object) new SaveSnapshotSuccess(metadata)
-                        : new SaveSnapshotFailure(msg.Metadata,
+                _breaker.WithCircuitBreaker(() => SaveAsync(metadata, saveSnapshot.Snapshot))
+                    .ContinueWith(t => t.IsCompleted
+                        ? new SaveSnapshotSuccess(metadata) as ISnapshotResponse
+                        : new SaveSnapshotFailure(saveSnapshot.Metadata,
                             t.IsFaulted
                                 ? TryUnwrapException(t.Exception)
                                 : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")),
                         _continuationOptions)
-                    .PipeTo(Self, Sender);
-
+                    .PipeTo(self, senderPersistentActor);
             }
             else if (message is SaveSnapshotSuccess)
             {
@@ -89,41 +84,37 @@ namespace Akka.Persistence.Snapshot
                 }
                 finally
                 {
-                    Sender.Tell(message); // Sender is PersistentActor
+                    senderPersistentActor.Tell(message);
                 }
             }
-            else if (message is SaveSnapshotFailure)
+            else if (message is SaveSnapshotFailure saveSnapshotFailure)
             {
-                var msg = (SaveSnapshotFailure) message;
                 try
                 {
                     ReceivePluginInternal(message);
-                    _breaker.WithCircuitBreaker(() => DeleteAsync(msg.Metadata));
+                    _breaker.WithCircuitBreaker(() => DeleteAsync(saveSnapshotFailure.Metadata));
                 }
                 finally
                 {
-                    Sender.Tell(message); // Sender is PersistentActor
+                    senderPersistentActor.Tell(message);
                 }
             }
-            else if (message is DeleteSnapshot)
+            else if (message is DeleteSnapshot deleteSnapshot)
             {
-                var msg = (DeleteSnapshot) message;
                 var eventStream = Context.System.EventStream;
-                var sender = Sender;
-                _breaker.WithCircuitBreaker(() => DeleteAsync(msg.Metadata))
-                    .ContinueWith(
-                        t =>
-                            !t.IsFaulted && !t.IsCanceled
-                                ? (object) new DeleteSnapshotSuccess(msg.Metadata)
-                                : new DeleteSnapshotFailure(msg.Metadata,
+                _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshot.Metadata))
+                    .ContinueWith(t => t.IsCompleted
+                                ? new DeleteSnapshotSuccess(deleteSnapshot.Metadata) as ISnapshotResponse
+                                : new DeleteSnapshotFailure(deleteSnapshot.Metadata,
                                     t.IsFaulted
                                         ? TryUnwrapException(t.Exception)
-                                        : new OperationCanceledException(
-                                            "DeleteAsync canceled, possibly due to timing out.")), _continuationOptions)
-                    .PipeTo(Self, sender)
+                                        : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
+                                _continuationOptions)
+                    .PipeTo(self, senderPersistentActor)
                     .ContinueWith(t =>
                     {
-                        if (_publish) eventStream.Publish(message);
+                        if (t.IsCompleted && _publish)
+                            eventStream.Publish(message);
                     }, _continuationOptions);
             }
             else if (message is DeleteSnapshotSuccess)
@@ -134,7 +125,7 @@ namespace Akka.Persistence.Snapshot
                 }
                 finally
                 {
-                    Sender.Tell(message); // Sender is PersistentActor
+                    senderPersistentActor.Tell(message);
                 }
             }
             else if (message is DeleteSnapshotFailure)
@@ -145,28 +136,25 @@ namespace Akka.Persistence.Snapshot
                 }
                 finally
                 {
-                    Sender.Tell(message); // Sender is PersistentActor
+                    senderPersistentActor.Tell(message);
                 }
             }
-            else if (message is DeleteSnapshots)
+            else if (message is DeleteSnapshots deleteSnapshots)
             {
-                var msg = (DeleteSnapshots) message;
                 var eventStream = Context.System.EventStream;
-                var sender = Sender;
-                _breaker.WithCircuitBreaker(() => DeleteAsync(msg.PersistenceId, msg.Criteria))
-                    .ContinueWith(
-                        t =>
-                            !t.IsFaulted && !t.IsCanceled
-                                ? (object) new DeleteSnapshotsSuccess(msg.Criteria)
-                                : new DeleteSnapshotsFailure(msg.Criteria,
+                _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria))
+                    .ContinueWith(t => t.IsCompleted
+                                ? new DeleteSnapshotsSuccess(deleteSnapshots.Criteria) as ISnapshotResponse
+                                : new DeleteSnapshotsFailure(deleteSnapshots.Criteria,
                                     t.IsFaulted
                                         ? TryUnwrapException(t.Exception)
-                                        : new OperationCanceledException(
-                                            "DeleteAsync canceled, possibly due to timing out.")), _continuationOptions)
-                    .PipeTo(Self, sender)
+                                        : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
+                                _continuationOptions)
+                    .PipeTo(self, senderPersistentActor)
                     .ContinueWith(t =>
                     {
-                        if (_publish) eventStream.Publish(message);
+                        if (t.IsCompleted && _publish)
+                            eventStream.Publish(message);
                     }, _continuationOptions);
             }
             else if (message is DeleteSnapshotsSuccess)
@@ -177,7 +165,7 @@ namespace Akka.Persistence.Snapshot
                 }
                 finally
                 {
-                    Sender.Tell(message); // Sender is PersistentActor
+                    senderPersistentActor.Tell(message);
                 }
             }
             else if (message is DeleteSnapshotsFailure)
@@ -188,7 +176,7 @@ namespace Akka.Persistence.Snapshot
                 }
                 finally
                 {
-                    Sender.Tell(message); // Sender is PersistentActor
+                    senderPersistentActor.Tell(message);
                 }
             }
             else return false;
@@ -208,46 +196,46 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <summary>
-        /// Asynchronously loads a snapshot.
+        /// Plugin API: Asynchronously loads a snapshot.
         /// 
         /// This call is protected with a circuit-breaker
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
+        /// <param name="persistenceId">Id of the persistent actor.</param>
+        /// <param name="criteria">Selection criteria for loading.</param>
         /// <returns>TBD</returns>
         protected abstract Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 
         /// <summary>
-        /// Asynchronously saves a snapshot.
+        /// Plugin API: Asynchronously saves a snapshot.
         /// 
         /// This call is protected with a circuit-breaker
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="snapshot">Snapshot.</param>
         /// <returns>TBD</returns>
         protected abstract Task SaveAsync(SnapshotMetadata metadata, object snapshot);
 
         /// <summary>
-        /// Deletes the snapshot identified by <paramref name="metadata"/>.
+        /// Plugin API: Deletes the snapshot identified by <paramref name="metadata"/>.
         /// 
         /// This call is protected with a circuit-breaker
         /// </summary>
-        /// <param name="metadata">TBD</param>
+        /// <param name="metadata">Snapshot metadata.</param>
         /// <returns>TBD</returns>
         protected abstract Task DeleteAsync(SnapshotMetadata metadata);
 
         /// <summary>
-        /// Deletes all snapshots matching provided <paramref name="criteria"/>.
+        /// Plugin API: Deletes all snapshots matching provided <paramref name="criteria"/>.
         /// 
         /// This call is protected with a circuit-breaker
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
+        /// <param name="persistenceId">Id of the persistent actor.</param>
+        /// <param name="criteria">Selection criteria for deleting.</param>
         /// <returns>TBD</returns>
         protected abstract Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 
         /// <summary>
-        /// Allows plugin implementers to use <see cref="PipeToSupport.PipeTo{T}"/> <see cref="ActorBase.Self"/>
+        /// Plugin API: Allows plugin implementers to use f.PipeTo(Self)
         /// and handle additional messages for implementing advanced features
         /// </summary>
         /// <param name="message">TBD</param>
