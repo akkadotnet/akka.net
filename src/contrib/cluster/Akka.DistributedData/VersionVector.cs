@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using Akka.Cluster;
 using Akka.Util.Internal;
@@ -210,7 +211,7 @@ namespace Akka.DistributedData
         }
     }
 
-    [Serializable]
+    [DebuggerDisplay("VersionVector({Node}->{Version})")]
     public sealed class SingleVersionVector : VersionVector
     {
         private sealed class Enumerator : IEnumerator<KeyValuePair<UniqueAddress, long>>

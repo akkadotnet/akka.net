@@ -117,7 +117,7 @@ namespace Akka.DistributedData
     ///     <item>
     ///         <term><see cref="WriteTo"/></term>
     ///         <description>
-    ///             The value will immediately be written to at least <see cref="WriteTo.N"/> replicas, including the local replica.
+    ///             The value will immediately be written to at least <see cref="WriteTo.Count"/> replicas, including the local replica.
     ///         </description>
     ///     </item>
     ///     <item>

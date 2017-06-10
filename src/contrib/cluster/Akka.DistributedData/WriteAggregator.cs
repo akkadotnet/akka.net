@@ -60,17 +60,17 @@ namespace Akka.DistributedData
 
         private int GetDoneWhenRemainingSize()
         {
-            if (_consistency is WriteTo) return Nodes.Count - (((WriteTo)_consistency).N - 1);
-            else if (_consistency is WriteAll) return 0;
-            else if (_consistency is WriteMajority)
+            switch (_consistency)
             {
-                var consistency = (WriteMajority)_consistency;
-                var N = Nodes.Count + 1;
-                var w = CalculateMajorityWithMinCapacity(consistency.MinCapacity, N);
-                return N - w;
+                case WriteTo write: return Nodes.Count - (write.Count - 1);
+                case WriteAll write: return 0;
+                case WriteMajority write:
+                    var n = Nodes.Count + 1;
+                    var w = CalculateMajorityWithMinCapacity(write.MinCapacity, n);
+                    return n - w;
+                case WriteLocal write: throw new ArgumentException("WriteAggregator does not support WriteLocal");
+                default: throw new ArgumentException("Invalid consistency level");
             }
-            else if (_consistency is WriteLocal) throw new ArgumentException("WriteAggregator does not support WriteLocal");
-            else throw new ArgumentException("Invalid consistency level");
         }
 
         protected virtual Address SenderAddress => Sender.Path.Address;
@@ -78,7 +78,11 @@ namespace Akka.DistributedData
         protected override void PreStart()
         {
             var msg = (object)_delta ?? _write;
-            foreach (var n in PrimaryNodes) Replica(n).Tell(msg);
+            foreach (var n in PrimaryNodes)
+            {
+                var replica = Replica(n);
+                replica.Tell(msg);
+            }
 
             if (IsDone) Reply(isTimeout: false);
         }
@@ -173,35 +177,35 @@ namespace Akka.DistributedData
 
     public sealed class WriteTo : IWriteConsistency, IEquatable<WriteTo>
     {
-        public int N { get; }
+        public int Count { get; }
 
         public TimeSpan Timeout { get; }
 
-        public WriteTo(int n, TimeSpan timeout)
+        public WriteTo(int count, TimeSpan timeout)
         {
-            if (n < 2) throw new ArgumentException("WriteTo requires n > 2, Use WriteLocal for n=1");
+            if (count < 2) throw new ArgumentException("WriteTo requires count > 2, Use WriteLocal for count=1");
 
-            N = n;
+            Count = count;
             Timeout = timeout;
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as WriteTo);
 
-        public override string ToString() => $"WriteTo({N}, timeout={Timeout})";
+        public override string ToString() => $"WriteTo({Count}, timeout={Timeout})";
 
         public bool Equals(WriteTo other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return N == other.N && Timeout.Equals(other.Timeout);
+            return Count == other.Count && Timeout.Equals(other.Timeout);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return (N * 397) ^ Timeout.GetHashCode();
+                return (Count * 397) ^ Timeout.GetHashCode();
             }
         }
     }
