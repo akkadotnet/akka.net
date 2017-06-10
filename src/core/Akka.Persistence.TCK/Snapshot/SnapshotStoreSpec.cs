@@ -14,7 +14,7 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TestKit.Snapshot
+namespace Akka.Persistence.TCK.Snapshot
 {
     /// <summary>
     /// This spec aims to verify custom <see cref="SnapshotStore"/> implementations. 

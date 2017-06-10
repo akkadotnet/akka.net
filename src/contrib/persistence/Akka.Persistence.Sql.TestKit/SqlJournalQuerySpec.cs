@@ -12,7 +12,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Persistence.Sql.Common.Queries;
-using Akka.Persistence.TestKit;
+using Akka.Persistence.TCK;
 using Xunit;
 using Xunit.Abstractions;
 using Query = Akka.Persistence.Sql.Common.Queries.Query;

@@ -6,10 +6,10 @@
 //-----------------------------------------------------------------------
 
 using Akka.Persistence.Journal;
-using Akka.Persistence.TestKit.Journal;
+using Akka.Persistence.TCK.Journal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TestKit.Tests
+namespace Akka.Persistence.TCK.Tests
 {
     public class MemoryJournalSpec : JournalSpec
     {
