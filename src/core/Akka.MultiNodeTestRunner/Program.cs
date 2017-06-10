@@ -110,9 +110,10 @@ namespace Akka.MultiNodeTestRunner
             OutputDirectory = CommandLine.GetProperty("multinode.output-directory") ?? string.Empty;
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
 
+            var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
             var teamCityFormattingOn = CommandLine.GetProperty("multinode.teamcity") ?? "false";
             SinkCoordinator = TestRunSystem.ActorOf(Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn) ?
-                Props.Create(() => new SinkCoordinator(new List<MessageSink>())) : // mutes ConsoleMessageSinkActor
+                Props.Create(() => new SinkCoordinator(new [] {new TeamCityMessageSink(new TeamCityServiceMessages().CreateWriter(str => Console.WriteLine(str)), suiteName) })) : // mutes ConsoleMessageSinkActor
                 Props.Create<SinkCoordinator>(), "sinkCoordinator");
             TeamCityLogger = TestRunSystem.ActorOf(Props.Create<TeamCityLoggerActor>(TeamCityFormattingOn));
 
@@ -131,8 +132,8 @@ namespace Akka.MultiNodeTestRunner
             using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyName)) {
             using (var discovery = new Discovery()) {
                 using (var writer = new TeamCityServiceMessages().CreateWriter(str => TeamCityLogger.Tell(str))) {
-                using (var block = writer.OpenBlock(Path.GetFileNameWithoutExtension(assemblyName))) {
-                using (var testSuite = block.OpenTestSuite(Path.GetFileNameWithoutExtension(assemblyName))) {
+                //using (var block = writer.OpenBlock(Path.GetFileNameWithoutExtension(assemblyName))) {
+                using (var testSuite = writer.OpenTestSuite(Path.GetFileNameWithoutExtension(assemblyName))) {
 
                     controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
@@ -253,7 +254,7 @@ namespace Akka.MultiNodeTestRunner
                         }
                     }
                 }
-                }
+                //}
                 }
             }
             }
