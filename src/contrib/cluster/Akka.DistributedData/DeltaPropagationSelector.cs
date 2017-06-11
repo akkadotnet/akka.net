@@ -18,6 +18,7 @@ namespace Akka.DistributedData
 
         public abstract int GossipInternalDivisor { get; }
         protected abstract ImmutableArray<Address> AllNodes { get; }
+        protected abstract int MaxDeltaSize { get; }
         protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, Tuple<IReplicatedData, long, long>> deltas);
 
         public long CurrentVersion(string key) => _deltaCounter.GetValueOrDefault(key, 0L);
@@ -103,6 +104,10 @@ namespace Akka.DistributedData
                                     while (e.MoveNext())
                                     {
                                         deltaGroup = deltaGroup.Merge(e.Current);
+                                        if (deltaGroup is IReplicatedDeltaSize s && s.DeltaSize > MaxDeltaSize)
+                                        {
+                                            deltaGroup = DeltaPropagation.NoDeltaPlaceholder;
+                                        }
                                     }
                                 }
 

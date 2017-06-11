@@ -416,12 +416,13 @@ namespace Akka.DistributedData
         {
         }
 
-        internal abstract class AtomicDeltaOperation : IDeltaOperation
+        internal abstract class AtomicDeltaOperation : IDeltaOperation, IReplicatedDeltaSize
         {
             public abstract ORSet<T> Underlying { get; }
             public abstract IReplicatedData Merge(IReplicatedData other);
 
             public IDeltaReplicatedData Zero => ORSet<T>.Empty;
+            public int DeltaSize => 1;
         }
 
         internal sealed class AddDeltaOperation : AtomicDeltaOperation
@@ -515,7 +516,7 @@ namespace Akka.DistributedData
             }
         }
 
-        internal sealed class DeltaGroup : IDeltaOperation
+        internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize
         {
             public ImmutableArray<IReplicatedData> Operations { get; }
 
@@ -546,6 +547,7 @@ namespace Akka.DistributedData
             }
 
             public IDeltaReplicatedData Zero => ORSet<T>.Empty;
+            public int DeltaSize => Operations.Length;
         }
 
         [NonSerialized]
