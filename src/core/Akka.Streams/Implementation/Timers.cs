@@ -478,7 +478,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class DelayInitial<T> : GraphStage<FlowShape<T, T>>
+    public sealed class DelayInitial<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
 
@@ -490,11 +490,11 @@ namespace Akka.Streams.Implementation
             public Logic(DelayInitial<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(_stage.In, this);
-                SetHandler(_stage.Out, this);
+                SetHandler(_stage.Inlet, this);
+                SetHandler(_stage.Outlet, this);
             }
 
-            public void OnPush() => Push(_stage.Out, Grab(_stage.In));
+            public void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
 
             public void OnUpstreamFinish() => CompleteStage();
 
@@ -503,7 +503,7 @@ namespace Akka.Streams.Implementation
             public void OnPull()
             {
                 if (_isOpen)
-                    Pull(_stage.In);
+                    Pull(_stage.Inlet);
             }
 
             public void OnDownstreamFinish() => CompleteStage();
@@ -511,8 +511,8 @@ namespace Akka.Streams.Implementation
             protected internal override void OnTimer(object timerKey)
             {
                 _isOpen = true;
-                if (IsAvailable(_stage.Out))
-                    Pull(_stage.In);
+                if (IsAvailable(_stage.Outlet))
+                    Pull(_stage.Inlet);
             }
 
             public override void PreStart()
@@ -530,34 +530,21 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         public readonly TimeSpan Delay;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("DelayInitial.in");
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Out = new Outlet<T>("DelayInitial.out");
+
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="delay">TBD</param>
-        public DelayInitial(TimeSpan delay)
+        public DelayInitial(TimeSpan delay) : base("DelayInitial")
         {
             Delay = delay;
-            Shape = new FlowShape<T, T>(In, Out);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.DelayInitial;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
 
         /// <summary>
         /// TBD
