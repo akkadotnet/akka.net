@@ -100,8 +100,8 @@ namespace Akka.DistributedData.Tests
         {
             var m1 = PNCounterDictionary<string>.Empty
                 .Increment(_node1, "a", 1)
-                .Increment(_node2, "b", 3)
-                .Increment(_node2, "c", 2);
+                .Increment(_node1, "b", 3)
+                .Increment(_node1, "c", 2);
             var m2 = PNCounterDictionary<string>.Empty.Increment(_node2, "c", 5);
 
             var expected = new Dictionary<string, BigInteger>

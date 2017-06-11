@@ -51,6 +51,8 @@ namespace Akka.DistributedData.Tests
             {
                 IActorRef replicator = null;
                 Receive<WriteAck>(ack => replicator?.Tell(ack));
+                Receive<WriteNack>(ack => replicator?.Tell(ack));
+                Receive<DeltaNack>(ack => replicator?.Tell(ack));
                 ReceiveAny(msg =>
                 {
                     replicator = Sender;
@@ -94,9 +96,14 @@ namespace Akka.DistributedData.Tests
         private readonly ORSet<string> _fullState2;
         private readonly Delta _delta;
 
-        public WriteAggregatorSpec(ITestOutputHelper output) : base(ConfigurationFactory.ParseString(@"
+        public WriteAggregatorSpec(ITestOutputHelper output) : base(ConfigurationFactory.ParseString($@"
+            akka.loglevel = DEBUG
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            akka.remote.dot-netty.tcp.port = 0"), "WriteAggregatorSpec", output)
+            akka.remote.dot-netty.tcp.port = 0
+            akka.cluster.distributed-data.durable.lmdb {{
+                dir = ""target/WriteAggregatorSpec-{DateTime.UtcNow.Ticks}-ddata""
+                map-size = 10MiB
+            }}"), "WriteAggregatorSpec", output)
         {
             _nodes = ImmutableHashSet.CreateRange(new[] {_nodeA, _nodeB, _nodeC, _nodeD});
 
@@ -216,7 +223,7 @@ namespace Akka.DistributedData.Tests
             // second round
             testProbes[_nodeA].Item1.ExpectMsg<Write>();
             testProbes[_nodeA].Item1.LastSender.Tell(WriteAck.Instance);
-            testProbes[_nodeD].Item1.ExpectMsg<DeltaPropagation>();
+            testProbes[_nodeD].Item1.ExpectMsg<Write>();
             testProbes[_nodeD].Item1.LastSender.Tell(WriteAck.Instance);
             testProbes[_nodeB].Item1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             testProbes[_nodeC].Item1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
@@ -297,7 +304,7 @@ namespace Akka.DistributedData.Tests
         public void Durable_WriteAggregator_must_reply_with_StoreFailure_when_too_many_nacks()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeThree, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, true));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, true));
             Watch(aggregator);
 
             probe.ExpectMsg<Write>();
@@ -318,7 +325,7 @@ namespace Akka.DistributedData.Tests
         public void Durable_WriteAggregator_must_timeout_when_less_than_required_ACKs()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeThree, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, true));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, true));
             Watch(aggregator);
 
             probe.ExpectMsg<Write>();
@@ -344,7 +351,7 @@ namespace Akka.DistributedData.Tests
         private IImmutableDictionary<Address, Tuple<TestProbe, IActorRef>> Probes() =>
             _nodes.Select(address =>
                 {
-                    var probe = CreateTestProbe(address.Host);
+                    var probe = CreateTestProbe("probe-" + address.Host);
                     return new KeyValuePair<Address, Tuple<TestProbe, IActorRef>>(address,
                         Tuple.Create(probe, Sys.ActorOf(Props.Create(() => new WriteAckAdapter(probe.Ref)))));
                 })

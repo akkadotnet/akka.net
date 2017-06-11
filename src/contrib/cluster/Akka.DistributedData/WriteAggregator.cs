@@ -95,7 +95,7 @@ namespace Akka.DistributedData
             })
             .With<WriteNack>(x =>
             {
-                _gotNackFrom = _gotNackFrom.Remove(SenderAddress);
+                _gotNackFrom = _gotNackFrom.Add(SenderAddress);
                 if (IsDone) Reply(isTimeout: false);
             })
             .With<DeltaNack>(_ =>
@@ -145,7 +145,7 @@ namespace Akka.DistributedData
             if (isSuccess && isDelete) reply = new DeleteSuccess(_key, _req);
             else if (isSuccess) reply = new UpdateSuccess(_key, _req);
             else if (isTimeoutOrNotEnoughNodes && isDelete) reply = new ReplicationDeleteFailure(_key);
-            else if (isTimeoutOrNotEnoughNodes) reply = new UpdateTimeout(_key, _req);
+            else if (isTimeoutOrNotEnoughNodes || !_durable) reply = new UpdateTimeout(_key, _req);
             else reply = new StoreFailure(_key, _req);
 
             _replyTo.Tell(reply, Context.Parent);

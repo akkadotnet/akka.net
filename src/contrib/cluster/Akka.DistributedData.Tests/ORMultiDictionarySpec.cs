@@ -599,85 +599,98 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void ORMultiDictionary_must_work_with_tombstones_for_ORMutliValueDictionary_WithValueDeltas_and_its_delta_delta_operations()
         {
-            // ORMultiMap.withValueDeltas has the following (public) interface:
-            // put - place (or replace) a value in a destructive way - no tombstone is created
-            //       this can be seen in the relevant delta: PutDeltaOp(AddDeltaOp(ORSet(a)),(a,ORSet()),ORMultiMapWithValueDeltasTag)
-            // remove - to avoid anomalies that ORMultiMap has, value for the key being removed is being cleared
-            //          before key removal, this can be seen in the following deltas created by the remove op (depending on situation):
-            //          DeltaGroup(Vector(PutDeltaOp(AddDeltaOp(ORSet(a)),(a,ORSet()),ORMultiMapWithValueDeltasTag), RemoveKeyDeltaOp(RemoveDeltaOp(ORSet(a)),a,ORMultiMapWithValueDeltasTag)))
-            //          DeltaGroup(Vector(UpdateDeltaOp(AddDeltaOp(ORSet(c)),Map(c -> FullStateDeltaOp(ORSet())),ORMultiMapWithValueDeltasTag), RemoveKeyDeltaOp(RemoveDeltaOp(ORSet(c)),c,ORMultiMapWithValueDeltasTag)))
-            //          after applying the remove operation the tombstone for the given map looks as follows: Map(a -> ORSet()) (or Map(c -> ORSet()) )
-            var m1 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
-                .SetItems(_node1, "a", ImmutableHashSet.Create("A"));
-            var m2 = m1.ResetDelta().Remove(_node1, "a");
+            {
+                // ORMultiMap.withValueDeltas has the following (public) interface:
+                // put - place (or replace) a value in a destructive way - no tombstone is created
+                //       this can be seen in the relevant delta: PutDeltaOp(AddDeltaOp(ORSet(a)),(a,ORSet()),ORMultiMapWithValueDeltasTag)
+                // remove - to avoid anomalies that ORMultiMap has, value for the key being removed is being cleared
+                //          before key removal, this can be seen in the following deltas created by the remove op (depending on situation):
+                //          DeltaGroup(Vector(PutDeltaOp(AddDeltaOp(ORSet(a)),(a,ORSet()),ORMultiMapWithValueDeltasTag), RemoveKeyDeltaOp(RemoveDeltaOp(ORSet(a)),a,ORMultiMapWithValueDeltasTag)))
+                //          DeltaGroup(Vector(UpdateDeltaOp(AddDeltaOp(ORSet(c)),Map(c -> FullStateDeltaOp(ORSet())),ORMultiMapWithValueDeltasTag), RemoveKeyDeltaOp(RemoveDeltaOp(ORSet(c)),c,ORMultiMapWithValueDeltasTag)))
+                //          after applying the remove operation the tombstone for the given map looks as follows: Map(a -> ORSet()) (or Map(c -> ORSet()) )
+                var m1 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+                    .SetItems(_node1, "a", ImmutableHashSet.Create("A"));
+                var m2 = m1.ResetDelta().Remove(_node1, "a");
 
-            var m3 = m1.MergeDelta(m2.Delta);
-            var m4 = m1.Merge(m2);
+                var m3 = m1.MergeDelta(m2.Delta);
+                var m4 = m1.Merge(m2);
 
-            m3.Underlying.ValueMap["a"].Elements.Should().BeEmpty(); // tombstone for 'a' - but we can probably optimize that away, read on
-            m4.Underlying.ValueMap["a"].Elements.Should().BeEmpty(); // tombstone for 'a' - but we can probably optimize that away, read on
+                m3.Underlying.ValueMap["a"].Elements.Should()
+                    .BeEmpty(); // tombstone for 'a' - but we can probably optimize that away, read on
+                m4.Underlying.ValueMap["a"].Elements.Should()
+                    .BeEmpty(); // tombstone for 'a' - but we can probably optimize that away, read on
 
-            var m5 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
-                .SetItems(_node1, "a", ImmutableHashSet.Create("A1"));
-            m3.MergeDelta(m5.Delta).Entries["a"].Should().BeEquivalentTo("A1");
-            m4.MergeDelta(m5.Delta).Entries["a"].Should().BeEquivalentTo("A1");
-            m4.Merge(m5).Entries["a"].Should().BeEquivalentTo("A1");
+                var m5 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+                    .SetItems(_node1, "a", ImmutableHashSet.Create("A1"));
+                m3.MergeDelta(m5.Delta).Entries["a"].Should().BeEquivalentTo("A1");
+                m4.MergeDelta(m5.Delta).Entries["a"].Should().BeEquivalentTo("A1");
+                m4.Merge(m5).Entries["a"].Should().BeEquivalentTo("A1");
+            }
 
-            // addBinding - add a binding for a certain value - no tombstone is created
-            //              this operation works through "updated" call of the underlying ORMap, that is not exposed
-            //              in the ORMultiMap interface
-            //              the side-effect of addBinding is that it can lead to anomalies with the standard "ORMultiMap"
+            {
+                // addBinding - add a binding for a certain value - no tombstone is created
+                //              this operation works through "updated" call of the underlying ORMap, that is not exposed
+                //              in the ORMultiMap interface
+                //              the side-effect of addBinding is that it can lead to anomalies with the standard "ORMultiMap"
 
-            // removeBinding - remove binding for a certain value, and if there are no more remaining elements, remove
-            //                 the now superfluous key, please note that for .withValueDeltas variant tombstone will be created
+                // removeBinding - remove binding for a certain value, and if there are no more remaining elements, remove
+                //                 the now superfluous key, please note that for .withValueDeltas variant tombstone will be created
 
-            var um1 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas.AddItem(_node1, "a", "A");
-            var um2 = um1.ResetDelta().RemoveItem(_node1, "a", "A");
+                var um1 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas.AddItem(_node1, "a", "A");
+                var um2 = um1.ResetDelta().RemoveItem(_node1, "a", "A");
 
-            var um3 = um1.MergeDelta(um2.Delta);
-            var um4 = um1.Merge(m2);
+                var um3 = um1.MergeDelta(um2.Delta);
+                var um4 = um1.Merge(um2);
 
-            um3.Underlying.ValueMap["a"].Should().BeEmpty(); // tombstone for 'a' - but we can probably optimize that away, read on
-            um4.Underlying.ValueMap["a"].Should().BeEmpty(); // tombstone for 'a' - but we can probably optimize that away, read on
+                um3.Underlying.ValueMap["a"].Should()
+                    .BeEmpty(); // tombstone for 'a' - but we can probably optimize that away, read on
+                um4.Underlying.ValueMap["a"].Should()
+                    .BeEmpty(); // tombstone for 'a' - but we can probably optimize that away, read on
 
-            var um5 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas.AddItem(_node1, "a", "A1");
-            um3.MergeDelta(um5.Delta).Entries["a"].Should().BeEquivalentTo("A1");
-            um4.MergeDelta(um5.Delta).Entries["a"].Should().BeEquivalentTo("A1");
-            um4.Merge(um5).Entries["a"].Should().BeEquivalentTo("A1");
+                var um5 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas.AddItem(_node1, "a", "A1");
+                um3.MergeDelta(um5.Delta).Entries["a"].Should().BeEquivalentTo("A1");
+                um4.MergeDelta(um5.Delta).Entries["a"].Should().BeEquivalentTo("A1");
+                um4.Merge(um5).Entries["a"].Should().BeEquivalentTo("A1");
+            }
 
-            // replaceBinding - that would first addBinding for new binding and then removeBinding for old binding
-            //                  so no tombstone would be created
+            {
+                // replaceBinding - that would first addBinding for new binding and then removeBinding for old binding
+                //                  so no tombstone would be created
 
-            // so the only option to create a tombstone with non-zero (!= Set() ) contents would be to call removeKey (not remove!)
-            // for the underlying ORMap (or have a removeKeyOp delta that does exactly that)
-            // but this is not possible in applications, as both remove and removeKey operations are API of internal ORMap
-            // and are not externally exposed in the ORMultiMap, and deltas are causal, so removeKeyOp delta cannot arise
-            // without previous delta containing 'clear' or 'put' operation setting the tombstone at Set()
-            // the example shown below cannot happen in practice
+                // so the only option to create a tombstone with non-zero (!= Set() ) contents would be to call removeKey (not remove!)
+                // for the underlying ORMap (or have a removeKeyOp delta that does exactly that)
+                // but this is not possible in applications, as both remove and removeKey operations are API of internal ORMap
+                // and are not externally exposed in the ORMultiMap, and deltas are causal, so removeKeyOp delta cannot arise
+                // without previous delta containing 'clear' or 'put' operation setting the tombstone at Set()
+                // the example shown below cannot happen in practice
 
-            var tm1 = new ORMultiValueDictionary<string, string>(
-                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas.AddItem(_node1, "a", "A1").Underlying.RemoveKey(_node1, "a"), true);
-            tm1.Underlying.ValueMap["a"].Elements.Should().BeEquivalentTo("A"); // tombstone
-            tm1.AddItem(_node1, "a", "A1").Entries["a"].Should().BeEquivalentTo("A", "A1");
+                var tm1 = new ORMultiValueDictionary<string, string>(
+                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas.AddItem(_node1, "a", "A").Underlying
+                        .RemoveKey(_node1, "a"), true);
+                tm1.Underlying.ValueMap["a"].Elements.Should().BeEquivalentTo("A"); // tombstone
+                tm1.AddItem(_node1, "a", "A1").Entries["a"].Should().BeEquivalentTo("A", "A1");
 
-            var tm2 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
-                .AddItem(_node1, "a", "A")
-                .ResetDelta()
-                .AddItem(_node1, "a", "A1");
-            tm1.MergeDelta(tm2.Delta).Entries["a"].Should().BeEquivalentTo("A", "A1");
-            tm1.Merge(tm2).Entries["a"].Should().BeEquivalentTo("A", "A1");
+                var tm2 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+                    .AddItem(_node1, "a", "A")
+                    .ResetDelta()
+                    .AddItem(_node1, "a", "A1");
+                tm1.MergeDelta(tm2.Delta).Entries["a"].Should().BeEquivalentTo("A", "A1");
+                tm1.Merge(tm2).Entries["a"].Should().BeEquivalentTo("A", "A1");
 
-            var tm3 = new ORMultiValueDictionary<string, string>(
-                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas.AddItem(_node1, "a", "A").Underlying.Remove(_node1, "a"), true);
-            tm3.Underlying.ContainsKey("a").Should().BeFalse(); // no tombstone, because remove not removeKey
-            tm3.MergeDelta(tm2.Delta).Entries.Should().BeEmpty(); // no tombstone - update delta could not be applied
-            tm3.Merge(tm2).Entries.Should().BeEmpty();
+                var tm3 = new ORMultiValueDictionary<string, string>(
+                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas.AddItem(_node1, "a", "A").Underlying
+                        .Remove(_node1, "a"), true);
+                tm3.Underlying.ContainsKey("a").Should().BeFalse(); // no tombstone, because remove not removeKey
+                tm3.MergeDelta(tm2.Delta).Entries.Should()
+                    .BeEmpty(); // no tombstone - update delta could not be applied
+                tm3.Merge(tm2).Entries.Should().BeEmpty();
 
-            // This situation gives us possibility of removing the impact of tombstones altogether, as the only valid value for tombstone
-            // created by means of either API call or application of delta propagation would be Set()
-            // then the tombstones being only empty sets can be entirely cleared up
-            // because the merge delta operation will use in that case the natural zero from the delta.
-            // Thus in case of valid API usage and normal operation of delta propagation no tombstones will be created.
+                // This situation gives us possibility of removing the impact of tombstones altogether, as the only valid value for tombstone
+                // created by means of either API call or application of delta propagation would be Set()
+                // then the tombstones being only empty sets can be entirely cleared up
+                // because the merge delta operation will use in that case the natural zero from the delta.
+                // Thus in case of valid API usage and normal operation of delta propagation no tombstones will be created.
+            }
         }
     }
 }
