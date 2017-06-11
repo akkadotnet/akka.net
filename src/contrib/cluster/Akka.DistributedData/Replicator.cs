@@ -338,6 +338,7 @@ namespace Akka.DistributedData
 
         private readonly DeltaPropagationSelector _deltaPropagationSelector;
         private readonly ICancelable _deltaPropagationTask;
+        private readonly int _maxDeltaSize;
 
         public Replicator(ReplicatorSettings settings)
         {
@@ -346,6 +347,7 @@ namespace Akka.DistributedData
             _selfAddress = _cluster.SelfAddress;
             _selfUniqueAddress = _cluster.SelfUniqueAddress;
             _log = Context.GetLogger();
+            _maxDeltaSize = settings.MaxDeltaSize;
 
             if (_cluster.IsTerminated) throw new ArgumentException("Cluster node must not be terminated");
             if (!string.IsNullOrEmpty(_settings.Role) && !_cluster.SelfRoles.Contains(_settings.Role))
@@ -1396,14 +1398,17 @@ namespace Akka.DistributedData
 
             public ReplicatorDeltaPropagationSelector(Replicator replicator)
             {
-                this._replicator = replicator;
+                _replicator = replicator;
             }
 
             public override int GossipInternalDivisor { get; } = 5;
 
+            protected override int MaxDeltaSize => _replicator._maxDeltaSize;
+
             // TODO optimize, by maintaining a sorted instance variable instead
             protected override ImmutableArray<Address> AllNodes =>
                 _replicator._nodes.Union(_replicator._weaklyUpNodes).Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
+
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, Tuple<IReplicatedData, long, long>> deltas)
             {
                 // Important to include the pruning state in the deltas. For example if the delta is based

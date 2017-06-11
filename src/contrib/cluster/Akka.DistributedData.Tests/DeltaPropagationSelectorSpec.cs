@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -32,6 +33,8 @@ namespace Akka.DistributedData.Tests
 
             public override int GossipInternalDivisor { get; } = 5;
             protected override ImmutableArray<Address> AllNodes { get; }
+            protected override int MaxDeltaSize => 10;
+
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, Tuple<IReplicatedData, long, long>> deltas) =>
                 new DeltaPropagation(selfUniqueAddress, false, deltas
                     .Select(kv => new KeyValuePair<string, Delta>(kv.Key, new Delta(new DataEnvelope(kv.Value.Item1), kv.Value.Item2, kv.Value.Item3)))
@@ -226,6 +229,28 @@ namespace Akka.DistributedData.Tests
             for (int i = 35; i < 40; i++) selector.NodeSliceSize(i).Should().Be(8);
             for (int i = 40; i < 45; i++) selector.NodeSliceSize(i).Should().Be(9);
             for (int i = 45; i < 200; i++) selector.NodeSliceSize(i).Should().Be(10);
+        }
+
+        [Fact]
+        public void DeltaPropagationSelector_must_discard_too_large_deltas()
+        {
+            var selector = new TestSelector2(selfUniqueAddress, nodes.Take(3).ToImmutableArray());
+            var data = PNCounterDictionary<string>.Empty;
+            for (int i = 1; i <= 1000; i++)
+            {
+                var d = data.ResetDelta().Increment(selfUniqueAddress, (i % 2).ToString(), 1);
+                selector.Update("A", d.Delta);
+                data = d;
+            }
+
+            var expected = new DeltaPropagation(selfUniqueAddress, false, new Dictionary<string, Delta>
+            {
+                { "A", new Delta(new DataEnvelope(DeltaPropagation.NoDeltaPlaceholder), 1L, 1000L) }
+            }.ToImmutableDictionary());
+            selector.CollectPropagations().Should().Equal(new Dictionary<Address, DeltaPropagation>
+            {
+                { nodes[0], expected }
+            });
         }
     }
 }
