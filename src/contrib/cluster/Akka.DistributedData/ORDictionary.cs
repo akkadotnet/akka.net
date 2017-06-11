@@ -597,7 +597,7 @@ namespace Akka.DistributedData
             var tombstonedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
             foreach (var entry in this.ValueMap)
             {
-                if (mergedKeys.Contains(entry.Key))
+                if (this.KeySet.Contains(entry.Key))
                     mergedValues.Add(entry);
                 else
                     tombstonedValues.Add(entry);
