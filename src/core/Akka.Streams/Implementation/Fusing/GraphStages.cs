@@ -304,6 +304,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private readonly TerminationWatcher<T> _stage;
             private readonly TaskCompletionSource<NotUsed> _finishPromise;
+            private bool _completedSignalled;
 
             public Logic(TerminationWatcher<T> stage, TaskCompletionSource<NotUsed> finishPromise) : base(stage.Shape)
             {
@@ -319,12 +320,14 @@ namespace Akka.Streams.Implementation.Fusing
             public override void OnUpstreamFinish()
             {
                 _finishPromise.TrySetResult(NotUsed.Instance);
+                _completedSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
                 _finishPromise.TrySetException(e);
+                _completedSignalled = true;
                 FailStage(e);
             }
 
@@ -333,14 +336,22 @@ namespace Akka.Streams.Implementation.Fusing
             public override void OnDownstreamFinish()
             {
                 _finishPromise.TrySetResult(NotUsed.Instance);
+                _completedSignalled = true;
                 CompleteStage();
+            }
+
+            public override void PostStop()
+            {
+                if (!_completedSignalled)
+                    _finishPromise.TrySetException(new AbruptStageTerminationException(this));
             }
         }
 
         #endregion
 
-        private readonly Inlet<T> _inlet = new Inlet<T>("terminationWatcher.in");
-        private readonly Outlet<T> _outlet = new Outlet<T>("terminationWatcher.out");
+        private readonly Inlet<T> _inlet = new Inlet<T>("TerminationWatcher.in");
+
+        private readonly Outlet<T> _outlet = new Outlet<T>("TerminationWatcher.out");
 
         private TerminationWatcher()
         {
@@ -455,6 +466,12 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 CompleteStage();
                 _monitor.Value = FlowMonitor.Finished.Instance;
+            }
+
+            public override void PostStop()
+            {
+                if (!(_monitor.State is FlowMonitor.Finished) && !(_monitor.State is FlowMonitor.Failed))
+                    _monitor.Value = new FlowMonitor.Failed(new AbruptStageTerminationException(this));
             }
 
             public override string ToString() => "MonitorFlowLogic";

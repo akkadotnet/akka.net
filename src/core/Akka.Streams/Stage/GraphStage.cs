@@ -416,8 +416,13 @@ namespace Akka.Streams.Stage
     ///    else (as such access would not be thread-safe)</para>
     ///  <para>* The lifecycle hooks <see cref="PreStart"/> and <see cref="PostStop"/></para>
     ///  <para>* Methods for performing stream processing actions, like pulling or pushing elements</para> 
-    ///  The stage logic is always stopped once all its input and output ports have been closed, i.e. it is not possible to
-    ///  keep the stage alive for further processing once it does not have any open ports.
+    /// The stage logic is completed once all its input and output ports have been closed. This can be changed by
+    /// setting <see cref="SetKeepGoing"/> to true.
+    /// <para />
+    /// The <see cref="PostStop"/> lifecycle hook on the logic itself is called once all ports are closed. This is the only tear down
+    /// callback that is guaranteed to happen, if the actor system or the materializer is terminated the handlers may never
+    /// see any callbacks to <see cref="InHandler.OnUpstreamFailure"/>, <see cref="InHandler.OnUpstreamFinish"/> or <see cref="OutHandler.OnDownstreamFinish"/>. 
+    /// Therefore stage resource cleanup should always be done in <see cref="PostStop"/>.
     /// </summary>
     public abstract class GraphStageLogic : IStageLogging
     {
@@ -1195,7 +1200,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Automatically invokes <see cref="Cancel"/> or <see cref="Complete"/> on all the input or output ports that have been called,
-        /// then stops the stage, then <see cref="PostStop"/> is called.
+        /// then marks the stage as stopped.
         /// </summary>
         public void CompleteStage()
         {
@@ -1217,7 +1222,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Automatically invokes <see cref="Cancel"/> or <see cref="Fail"/> on all the input or output ports that have been called,
-        /// then stops the stage, then <see cref="PostStop"/> is called.
+        /// then marks the stage as stopped.
         /// </summary>
         /// <param name="reason">TBD</param>
         public void FailStage(Exception reason)

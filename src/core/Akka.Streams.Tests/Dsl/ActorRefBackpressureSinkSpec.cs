@@ -229,5 +229,20 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(Attributes.CreateInputBuffer(0, 0));
             Source.Single(1).Invoking(s => s.RunWith(badSink, Materializer)).ShouldThrow<ArgumentException>();
         }
+
+        [Fact]
+        public void ActorBackpressurSink_should_signal_failure_on_abrupt_termination()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var probe = CreateTestProbe();
+            var sink = Sink.ActorRefWithAck<string>(probe.Ref, InitMessage, AckMessage, CompleteMessage)
+                .WithAttributes(Attributes.CreateInputBuffer(1, 1));
+
+            Source.Maybe<string>().To(sink).Run(materializer);
+
+            probe.ExpectMsg(InitMessage);
+            materializer.Shutdown();
+            probe.ExpectMsg<Status.Failure>();
+        }
     }
 }

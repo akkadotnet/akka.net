@@ -21,7 +21,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
     {
-#region internal classes
+        #region internal classes
 
         /// <summary>
         /// TBD
@@ -157,6 +157,7 @@ namespace Akka.Streams.Implementation.IO
         {
             private readonly InputStreamSinkStage _stage;
             private readonly Action<IAdapterToStageMessage> _callback;
+            private bool _completionSignalled;
 
             public Logic(InputStreamSinkStage stage) : base(stage.Shape)
             {
@@ -186,12 +187,14 @@ namespace Akka.Streams.Implementation.IO
             public override void OnUpstreamFinish()
             {
                 _stage._dataQueue.Add(Finished.Instance);
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception ex)
             {
                 _stage._dataQueue.Add(new Failed(ex));
+                _completionSignalled = true;
                 FailStage(ex);
             }
 
@@ -199,6 +202,12 @@ namespace Akka.Streams.Implementation.IO
             {
                 _stage._dataQueue.Add(Initialized.Instance);
                 Pull(_stage._in);
+            }
+
+            public override void PostStop()
+            {
+                if (!_completionSignalled)
+                    _stage._dataQueue.Add(new Failed(new AbruptStageTerminationException(this)));
             }
 
             public void WakeUp(IAdapterToStageMessage msg) => _callback(msg);
@@ -210,7 +219,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-#endregion
+        #endregion
 
         private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
@@ -352,7 +361,8 @@ namespace Akka.Streams.Implementation.IO
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            ExecuteIfNotClosed(() =>
+
+            NotUsed Deactivate()
             {
                 // at this point Subscriber may be already terminated
                 if (_isStageAlive)
@@ -360,7 +370,9 @@ namespace Akka.Streams.Implementation.IO
 
                 _isActive = false;
                 return NotUsed.Instance;
-            });
+            }
+
+            ExecuteIfNotClosed(Deactivate);
         }
 
         /// <summary>
@@ -409,7 +421,7 @@ namespace Akka.Streams.Implementation.IO
             if (offset + count > buffer.Length)
                 throw new ArgumentException("offset + count must be smaller or equal to the array length");
 
-            return ExecuteIfNotClosed(() =>
+            int Read()
             {
                 if (!_isStageAlive)
                     return 0;
@@ -438,7 +450,9 @@ namespace Akka.Streams.Implementation.IO
                 }
 
                 throw new IllegalStateException("message 'Initialized' must come first");
-            });
+            }
+
+            return ExecuteIfNotClosed(Read);
         }
 
         private T ExecuteIfNotClosed<T>(Func<T> f)
