@@ -20,7 +20,7 @@ namespace Akka.TestKit.Xunit.Internals
     /// <typeparam name="T">The type that is being compared.</typeparam>
     internal class AkkaAssertEqualityComparerAdapter<T> : IEqualityComparer
     {
-        readonly IEqualityComparer<T> innerComparer;
+        private readonly IEqualityComparer<T> _innerComparer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaAssertEqualityComparerAdapter{T}"/> class.
@@ -28,20 +28,14 @@ namespace Akka.TestKit.Xunit.Internals
         /// <param name="innerComparer">The comparer that is being adapted.</param>
         public AkkaAssertEqualityComparerAdapter(IEqualityComparer<T> innerComparer)
         {
-            this.innerComparer = innerComparer;
+            _innerComparer = innerComparer;
         }
 
         /// <inheritdoc/>
-        public new bool Equals(object x, object y)
-        {
-            return innerComparer.Equals((T)x, (T)y);
-        }
+        public new bool Equals(object x, object y) => _innerComparer.Equals((T)x, (T)y);
 
         /// <inheritdoc/>
-        public int GetHashCode(object obj)
-        {
-            throw new NotImplementedException();
-        }
+        public int GetHashCode(object obj) => throw new NotImplementedException();
     }
 }
 
