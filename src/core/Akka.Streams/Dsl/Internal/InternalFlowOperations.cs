@@ -888,7 +888,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Skip<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.Via(new Fusing.Drop<T>(n));
+            return flow.Via(new Fusing.Skip<T>(n));
         }
 
         /// <summary>
