@@ -4,12 +4,12 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
 using Akka.Configuration;
-using Akka.Persistence.Snapshot;
-using Akka.Persistence.TestKit.Snapshot;
+using Akka.Persistence.TCK.Snapshot;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TestKit.Tests
+namespace Akka.Persistence.TCK.Tests
 {
     public class MemorySnapshotStoreSpec : SnapshotStoreSpec
     {

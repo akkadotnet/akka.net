@@ -143,9 +143,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        protected SimpleLinearGraphStage()
+        protected SimpleLinearGraphStage(string name = null)
         {
-            var name = GetType().Name;
+            name = name ?? GetType().Name;
             Inlet = new Inlet<T>(name + ".in");
             Outlet = new Outlet<T>(name + ".out");
             Shape = new FlowShape<T, T>(Inlet, Outlet);
@@ -207,7 +207,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class Detacher<T> : GraphStage<FlowShape<T, T>>
+    public sealed class Detacher<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
         private sealed class Logic : InAndOutGraphStageLogic
@@ -260,33 +260,14 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> Inlet;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Outlet;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Detacher()
+        public Detacher() : base("Detacher")
         {
-            InitialAttributes = Attributes.CreateName("Detacher");
-            Inlet = new Inlet<T>("in");
-            Outlet = new Outlet<T>("out");
-            Shape = new FlowShape<T, T>(Inlet, Outlet);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected override Attributes InitialAttributes { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Detacher");
 
         /// <summary>
         /// TBD
