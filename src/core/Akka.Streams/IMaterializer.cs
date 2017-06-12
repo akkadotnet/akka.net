@@ -14,8 +14,6 @@ namespace Akka.Streams
     /// <summary>
     /// Materializer SPI (Service Provider Interface) 
     /// 
-    /// Binary compatibility is NOT guaranteed on materializer internals.
-    /// 
     /// Custom materializer implementations should be aware that the materializer SPI
     /// is not yet final and may change in patch releases of Akka. Please note that this
     /// does not impact end-users of Akka streams, only implementors of custom materializers,
