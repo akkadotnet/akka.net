@@ -2069,55 +2069,66 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
     [InternalApi]
-    public sealed class OnCompleted<TIn, TOut> : PushStage<TIn, TOut>
+    public sealed class OnCompleted<T> : GraphStage<FlowShape<T, NotUsed>>
     {
+        #region Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly OnCompleted<T> _stage;
+            private bool _completionSignalled;
+
+            public Logic(OnCompleted<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+            }
+
+            public override void OnPush() => Pull(_stage.In);
+
+            public override void OnPull() => Pull(_stage.In);
+
+            public override void OnUpstreamFinish()
+            {
+                _stage._success();
+                _completionSignalled = true;
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                _stage._failure(e);
+                _completionSignalled = true;
+                FailStage(e);
+            }
+
+            public override void PostStop()
+            {
+                if(_completionSignalled)
+                    _stage._failure(new AbruptStageTerminationException(this));
+            }
+        }
+
+        #endregion
+
         private readonly Action _success;
         private readonly Action<Exception> _failure;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="success">TBD</param>
-        /// <param name="failure">TBD</param>
         public OnCompleted(Action success, Action<Exception> failure)
         {
             _success = success;
             _failure = failure;
+
+            Shape = new FlowShape<T, NotUsed>(In, Out);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override ISyncDirective OnPush(TIn element, IContext<TOut> context) => context.Pull();
+        public Inlet<T> In { get;  } = new Inlet<T>("OnCompleted.in");
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<TOut> context)
-        {
-            _failure(cause);
-            return context.Fail(cause);
-        }
+        public Outlet<NotUsed> Out { get; } = new Outlet<NotUsed>("OnCompleted.out");
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
-        {
-            _success();
-            return context.Finish();
-        }
+        public override FlowShape<T, NotUsed> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>

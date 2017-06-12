@@ -364,6 +364,17 @@ namespace Akka.Streams.Tests.IO
             */
         }
 
+        [Fact]
+        public void InputStreamSink_should_throw_from_inputstream_read_if_terminated_abruptly()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var probe = this.CreatePublisherProbe<ByteString>();
+            var inputStream = Source.FromPublisher(probe).RunWith(StreamConverters.AsInputStream(), materializer);
+            materializer.Shutdown();
+
+            inputStream.Invoking(i => i.ReadByte()).ShouldThrow<IOException>();
+        }
+
         private static ByteString RandomByteString(int size)
         {
             var a = new byte[size];

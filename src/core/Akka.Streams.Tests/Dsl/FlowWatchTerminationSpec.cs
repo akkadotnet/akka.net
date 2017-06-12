@@ -130,5 +130,20 @@ namespace Akka.Streams.Tests.Dsl
                 //sinkProbe.ExpectNextN(new[] {2, 3, 4, 5}).ExpectComplete();
             }, Materializer);
         }
+
+        [Fact]
+        public void A_WatchTermination_must_fail_task_when_abruptly_terminated()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+
+            var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(materializer);
+            var p = t.Item1;
+            var task = t.Item2;
+
+            materializer.Shutdown();
+
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            task.Exception.Should().BeOfType<AbruptTerminationException>();
+        }
     }
 }
