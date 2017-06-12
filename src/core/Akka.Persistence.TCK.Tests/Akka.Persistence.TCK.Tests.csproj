@@ -2,13 +2,13 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Persistence.Tests</AssemblyTitle>
+    <AssemblyTitle>Akka.Persistence.TCK.Tests</AssemblyTitle>
     <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
   </PropertyGroup>
  
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj" />
   </ItemGroup>
 
   <ItemGroup>
