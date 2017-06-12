@@ -37,6 +37,16 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="subFlowFuser">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <param name="context">TBD</param>
         /// <param name="props">TBD</param>
         /// <returns>TBD</returns>
@@ -270,7 +280,7 @@ namespace Akka.Streams.Implementation
 
         private string CreateFlowName() => _flowNames.Next();
 
-        private Attributes InitialAttributes =>
+        private Attributes DefaultInitialAttributes =>
             Attributes.CreateInputBuffer(_settings.InitialInputBufferSize, _settings.MaxInputBufferSize)
                 .And(ActorAttributes.CreateDispatcher(_settings.Dispatcher))
                 .And(ActorAttributes.CreateSupervisionStrategy(_settings.SupervisionDecider));
@@ -325,7 +335,8 @@ namespace Akka.Streams.Implementation
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="runnable">TBD</param>
         /// <returns>TBD</returns>
-        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable) => Materialize(runnable, null);
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable) => Materialize(runnable, null,
+            DefaultInitialAttributes);
 
         /// <summary>
         /// TBD
@@ -333,9 +344,30 @@ namespace Akka.Streams.Implementation
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="runnable">TBD</param>
         /// <param name="subFlowFuser">TBD</param>
+        /// <returns>TBD</returns>
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser) 
+            => Materialize(runnable, subFlowFuser, DefaultInitialAttributes);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes) =>
+            Materialize(runnable, null, initialAttributes);
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="subFlowFuser">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
         /// <exception cref="IllegalStateException">TBD</exception>
         /// <returns>TBD</returns>
-        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser)
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes)
         {
             var runnableGraph = _settings.IsAutoFusing
                 ? Fusing.Fusing.Aggressive(runnable)
@@ -347,7 +379,7 @@ namespace Akka.Streams.Implementation
             if (StreamLayout.IsDebug)
                 StreamLayout.Validate(runnableGraph.Module);
 
-            var session = new ActorMaterializerSession(this, runnableGraph.Module, InitialAttributes, subFlowFuser);
+            var session = new ActorMaterializerSession(this, runnableGraph.Module, initialAttributes, subFlowFuser);
 
             var matVal = session.Materialize();
             return (TMat) matVal;
@@ -414,6 +446,16 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
             => _delegateMaterializer.Materialize(runnable, _registerShell);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="runnable">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes) =>
+            _delegateMaterializer.Materialize(runnable, _registerShell, initialAttributes);
 
         /// <summary>
         /// TBD
