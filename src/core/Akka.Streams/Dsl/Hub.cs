@@ -917,13 +917,29 @@ namespace Akka.Streams.Dsl
                 _tail++;
                 if (_activeConsumer == 0)
                 {
-                    var completeMessage = new HubCompleted();
-                    // Notify pending consumers and set tombstone
-                    var open = (Open) State.GetAndSet(new Closed());
-                    open.Registrations.ForEach(r => r.Callback(completeMessage));
-
                     // Existing consumers have already consumed all elements and will see completion status in the queue
                     CompleteStage();
+                }
+            }
+
+            public override void PostStop()
+            {
+                while (true)
+                {
+                    // Notify pending consumers and set tombstone
+                    if (State.Value is Open open)
+                    {
+                        if (State.CompareAndSet(open, new Closed()))
+                        {
+                            var completedMessage = new HubCompleted();
+                            foreach (var consumer in open.Registrations)
+                                consumer.Callback(completedMessage);
+                        }
+                        else
+                            continue;
+                    }
+                    // Already closed, ignore
+                    break;
                 }
             }
 
@@ -977,18 +993,18 @@ namespace Akka.Streams.Dsl
                 {
                     var callback = GetAsyncCallback<IConsumerEvent>(OnCommand);
 
-                    Action<Result<Action<IHubEvent>>> onHubReady = result =>
+                    void OnHubReady(Result<Action<IHubEvent>> result)
                     {
                         if (result.IsSuccess)
                         {
                             _hubCallback = result.Value;
-                            if(IsAvailable(_stage.Out) && _offsetInitialized)
+                            if (IsAvailable(_stage.Out) && _offsetInitialized)
                                 OnPull();
                             _hubCallback(RegistrationPending.Instance);
                         }
                         else
                             FailStage(result.Exception);
-                    };
+                    }
 
                     /*
                      * Note that there is a potential race here. First we add ourselves to the pending registrations, then
@@ -1017,7 +1033,7 @@ namespace Akka.Streams.Dsl
                             var newRegistrations = open.Registrations.Insert(0, new Consumer(_id, callback));
                             if (_stage._hubLogic.State.CompareAndSet(state, new Open(open.CallbackTask, newRegistrations)))
                             {
-                                var readyCallback = GetAsyncCallback(onHubReady);
+                                var readyCallback = GetAsyncCallback((Action<Result<Action<IHubEvent>>>)OnHubReady);
                                 open.CallbackTask.ContinueWith(t => readyCallback(Result.FromTask(t)));
                                 break;
                             }
