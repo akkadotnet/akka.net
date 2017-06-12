@@ -30,7 +30,7 @@ Param(
 )
 
 $FakeVersion = "4.61.2"
-$NBenchVersion = "1.0.1"
+$NBenchVersion = "1.0.3"
 $DotNetChannel = "preview";
 $DotNetVersion = "1.0.4";
 $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1";
@@ -118,7 +118,7 @@ if (!(Test-Path $FakeExePath)) {
 ###########################################################################
 
 # Make sure NBench Runner has been installed.
-$NBenchDllPath = Join-Path $ToolPath "NBench.Runner/lib/net45/NBench.Runner.exe"
+$NBenchDllPath = Join-Path $ToolPath "NBench.Runner/lib/net452/NBench.Runner.exe"
 if (!(Test-Path $NBenchDllPath)) {
     Write-Host "Installing NBench..."
     Invoke-Expression "&`"$NugetPath`" install NBench.Runner -ExcludeVersion -Version $NBenchVersion -OutputDirectory `"$ToolPath`"" | Out-Null;

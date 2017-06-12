@@ -133,15 +133,50 @@ Target "MultiNodeTests" (fun _ ->
 Target "NBench" <| fun _ ->
     CleanDir outputPerfTests
     // .NET Framework
-    let testSearchPath =
+    //let testSearchPathNet452 =
+    //    let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+    //    sprintf "src/**/bin/Release/net452/**/*%s*.Tests.Performance.dll" assemblyFilter
+
+    //let nbenchTestPathNet452 = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "net452" @@ "NBench.Runner*")
+    //let nbenchTestAssembliesNet452 = !! testSearchPathNet452
+    //printfn "Using NBench.Runner: %s" nbenchTestPathNet452
+
+    //let runNBenchNet452 assembly =
+    //    let spec = getBuildParam "spec"
+    //    let teamcityStr = (getBuildParam "teamcity")
+    //    let enableTeamCity = 
+    //        match teamcityStr with
+    //        | null -> false
+    //        | "" -> false
+    //        | _ -> bool.Parse teamcityStr
+
+    //    let args = StringBuilder()
+    //            |> append assembly
+    //            |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
+    //            |> append (sprintf "concurrent=\"%b\"" true)
+    //            |> append (sprintf "trace=\"%b\"" true)
+    //            |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
+    //            |> toText
+
+    //    let result = ExecProcess(fun info -> 
+    //        info.FileName <- nbenchTestPathNet452
+    //        info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPathNet452))
+    //        info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
+    //    if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPathNet452 args
+    
+    //nbenchTestAssembliesNet452 |> Seq.iter (runNBenchNet452)
+
+    // .NET Core
+    let testSearchPathNetCoreApp =
         let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
-        sprintf "src/**/bin/Release/**/*%s*.Tests.Performance.dll" assemblyFilter
+        sprintf "src/**/bin/Release/netcoreapp1.1/Akka.Tests.Performance.dll" // temporary
 
-    let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
-    let nbenchTestAssemblies = !! testSearchPath
-    printfn "Using NBench.Runner: %s" nbenchTestPath
+    let nbenchTestPathNetCoreApp = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner" @@ "lib" @@ "netcoreapp1.1" @@ "win7-x64")
+    let nbenchTestAssembliesNetCoreApp = !! testSearchPathNetCoreApp
+    nbenchTestAssembliesNetCoreApp |> Seq.iter log
+    printfn "Using NBench.Runner: %s" nbenchTestPathNetCoreApp
 
-    let runNBench assembly =
+    let runNBenchNetCoreApp assembly =
         let spec = getBuildParam "spec"
         let teamcityStr = (getBuildParam "teamcity")
         let enableTeamCity = 
@@ -159,12 +194,12 @@ Target "NBench" <| fun _ ->
                 |> toText
 
         let result = ExecProcess(fun info -> 
-            info.FileName <- nbenchTestPath
-            info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
+            info.FileName <- nbenchTestPathNetCoreApp
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPathNetCoreApp))
             info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
-        if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
+        if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPathNetCoreApp args
     
-    nbenchTestAssemblies |> Seq.iter (runNBench)
+    nbenchTestAssembliesNetCoreApp |> Seq.iter (runNBenchNetCoreApp)
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
