@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -82,9 +84,18 @@ namespace Akka.DistributedData
         /// Asynchronously returns list of locally known keys.
         /// </summary>
         /// <returns></returns>
-        public async Task<ImmutableHashSet<string>> GetKeysAsync()
+        public async Task<IImmutableSet<string>> GetKeysAsync(CancellationToken cancellation = default (CancellationToken))
         {
-            throw new NotImplementedException();
+            var response = await Replicator.Ask(Dsl.GetKeyIds, cancellation);
+            switch (response)
+            {
+                case GetKeysIdsResult success:
+                    return success.Keys;
+                case Status.Failure failure:
+                    ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                    return null;
+                default: throw new NotSupportedException("Unknown response type: " + response);
+            }
         }
 
         /// <summary>
@@ -100,10 +111,27 @@ namespace Akka.DistributedData
         /// <typeparam name="T">Replicated data type to get.</typeparam>
         /// <param name="key">Key under which a replicated data is stored.</param>
         /// <param name="consistency">A read consistency requested for this write.</param>
+        /// <param name="cancellation">Cancellation token used to cancel request prematurelly if needed.</param>
         /// <returns>A task which may return a replicated data value or throw an exception.</returns>
-        public async Task<T> GetAsync<T>(IKey<T> key, IReadConsistency consistency = null) where T : IReplicatedData<T>
+        public async Task<T> GetAsync<T>(IKey<T> key, IReadConsistency consistency = null, CancellationToken cancellation = default(CancellationToken)) 
+            where T : IReplicatedData<T>
         {
-            throw new NotImplementedException();
+            var id = Guid.NewGuid();
+            var response = await Replicator.Ask(Dsl.Get(key, consistency, id), cancellation);
+            switch (response)
+            {
+                case GetSuccess success:
+                    if (Equals(id, success.Request))
+                        return success.Get(key);
+                    else throw new NotSupportedException($"Received response id [{success.Request}] and request correlation id [{id}] are different.");
+                case NotFound notFound: throw new KeyNotFoundException($"No replicated data could be found under provided key [{key}]");
+                case DataDeleted deleted: throw new DataDeletedException($"Cannot retrieve data under key [{key}]. It has been permanently deleted and the key cannot be reused.");
+                case GetFailure failure: throw new TimeoutException($"Couldn't retrieve the data under key [{key}] within consistency constraints {consistency} and under provided timeout.");
+                case Status.Failure failure:
+                    ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                    return default(T);
+                default: throw new NotSupportedException("Unknown response type: " + response);
+            }
         }
 
         /// <summary>
@@ -121,10 +149,26 @@ namespace Akka.DistributedData
         /// <param name="key">Key under which a replicated data is stored.</param>
         /// <param name="replica">Value used to perform an update.</param>
         /// <param name="consistency">A write consistency requested for this write.</param>
+        /// <param name="cancellation">Cancellation token used to cancel request prematurelly if needed.</param>
         /// <returns>A task which may complete successfully if update was confirmed within provided consistency or throw an exception.</returns>
-        public async Task UpdateAsync<T>(IKey<T> key, T replica, IWriteConsistency consistency = null) where T : IReplicatedData<T>
+        public async Task UpdateAsync<T>(IKey<T> key, T replica, IWriteConsistency consistency = null, CancellationToken cancellation = default(CancellationToken)) 
+            where T : IReplicatedData<T>
         {
-            throw new NotImplementedException();
+            var id = Guid.NewGuid();
+            var response = await Replicator.Ask(Dsl.Update(key, replica, consistency, id, old => old.Merge(replica)), cancellation);
+            switch (response)
+            {
+                case UpdateSuccess success:
+                    if (Equals(id, success.Request))
+                        return;
+                    else throw new NotSupportedException($"Received response id [{success.Request}] and request correlation id [{id}] are different.");
+                case DataDeleted deleted: throw new DataDeletedException($"Cannot store data under key [{key}]. It has been permanently deleted and the key cannot be reused.");
+                case ModifyFailure failure: ExceptionDispatchInfo.Capture(failure.Cause).Throw(); return;
+                case StoreFailure failure: ExceptionDispatchInfo.Capture(failure.Cause).Throw(); return;
+                case UpdateTimeout timeout: throw new TimeoutException($"Couldn't confirm update of the data under key [{key}] within consistency constraints {consistency} and under provided timeout.");
+                case Status.Failure failure: ExceptionDispatchInfo.Capture(failure.Cause).Throw(); return;
+                default: throw new NotSupportedException("Unknown response type: " + response);
+            }
         }
 
         /// <summary>
@@ -140,10 +184,24 @@ namespace Akka.DistributedData
         /// <typeparam name="T">Replicated data type to update.</typeparam>
         /// <param name="key">Key under which a replicated data is stored.</param>
         /// <param name="consistency">A consistency level requested for this deletion.</param>
+        /// <param name="cancellation">Cancellation token used to cancel request prematurelly if needed.</param>
         /// <returns></returns>
-        public async Task DeleteAsync<T>(IKey<T> key, IWriteConsistency consistency = null) where T : IReplicatedData<T>
+        public async Task DeleteAsync<T>(IKey<T> key, IWriteConsistency consistency = null, CancellationToken cancellation = default(CancellationToken)) where T : IReplicatedData<T>
         {
-            throw new NotImplementedException();
+            var id = Guid.NewGuid();
+            var response = await Replicator.Ask(Dsl.Delete(key, consistency, id), cancellation);
+            switch (response)
+            {
+                case DeleteSuccess success:
+                    if (Equals(id, success.Request))
+                        return;
+                    else throw new NotSupportedException($"Received response id [{success.Request}] and request correlation id [{id}] are different.");
+                case ReplicationDeleteFailure failure: throw new TimeoutException($"Couldn't confirm deletion of the data under key [{key}] within consistency constraints {consistency} and under provided timeout.");
+                case StoreFailure failure: ExceptionDispatchInfo.Capture(failure.Cause).Throw(); return;
+                case DataDeleted deleted: throw new DataDeletedException($"Cannot store data under key [{key}]. It has been permanently deleted and the key cannot be reused.");
+                case Status.Failure failure: ExceptionDispatchInfo.Capture(failure.Cause).Throw(); return;
+                default: throw new NotSupportedException("Unknown response type: " + response);
+            }
         }
 
         #endregion
