@@ -649,7 +649,7 @@ namespace Akka.DistributedData.Tests
                 .MergeDelta(m1.Delta)
                 .MergeDelta(m2.Delta)
                 .MergeDelta(m3.Delta);
-            m4.Entries["a"].Value.Should().Be(new BigInteger(20));
+            m4.Entries["a"].Value.Should().Be(20UL);
         }
 
         [Fact]

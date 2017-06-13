@@ -90,7 +90,7 @@ namespace Akka.DistributedData
     /// <typeparam name="TKey">TBD</typeparam>
     /// <typeparam name="TValue">TBD</typeparam>
     [Serializable]
-    public sealed class LWWDictionary<TKey, TValue> :
+    public sealed partial class LWWDictionary<TKey, TValue> :
         IDeltaReplicatedData<LWWDictionary<TKey, TValue>, ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation>,
         IRemovedNodePruning<LWWDictionary<TKey, TValue>>,
         IReplicatedDataSerialization,

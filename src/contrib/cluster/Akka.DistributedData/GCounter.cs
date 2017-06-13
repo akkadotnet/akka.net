@@ -11,19 +11,18 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
-using Akka.Actor;
-using Akka.Util;
 
 namespace Akka.DistributedData
 {
     /// <summary>
-    /// TBD
+    /// A typed key for <see cref="GCounter"/> CRDT. Can be used to perform read/upsert/delete
+    /// operations on correlated data type.
     /// </summary>
     [Serializable]
     public sealed class GCounterKey : Key<GCounter>
     {
         /// <summary>
-        /// TBD
+        /// Creates a new instance of <see cref="GCounterKey"/> class.
         /// </summary>
         /// <param name="id">TBD</param>
         public GCounterKey(string id) : base(id) { }
@@ -54,12 +53,12 @@ namespace Akka.DistributedData
         IDeltaReplicatedData<GCounter, GCounter>,
         IReplicatedDelta
     {
-        private static readonly BigInteger Zero = new BigInteger(0);
+        private static readonly ulong Zero = 0UL;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IImmutableDictionary<UniqueAddress, BigInteger> State { get; }
+        public ImmutableDictionary<UniqueAddress, ulong> State { get; }
 
         /// <summary>
         /// TBD
@@ -69,7 +68,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// Current total value of the counter.
         /// </summary>
-        public BigInteger Value { get; }
+        public ulong Value { get; }
 
         [NonSerialized]
         private readonly GCounter _delta;
@@ -78,13 +77,13 @@ namespace Akka.DistributedData
         /// <summary>
         /// TBD
         /// </summary>
-        public GCounter() : this(ImmutableDictionary<UniqueAddress, BigInteger>.Empty) { }
+        public GCounter() : this(ImmutableDictionary<UniqueAddress, ulong>.Empty) { }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="state">TBD</param>
-        internal GCounter(IImmutableDictionary<UniqueAddress, BigInteger> state, GCounter delta = null)
+        internal GCounter(ImmutableDictionary<UniqueAddress, ulong> state, GCounter delta = null)
         {
             _delta = delta;
             State = state;
@@ -92,32 +91,12 @@ namespace Akka.DistributedData
         }
 
         public ImmutableHashSet<UniqueAddress> ModifiedByNodes => State.Keys.ToImmutableHashSet();
-
-        /// <summary>
-        /// Increment the counter by 1.
-        /// </summary>
-        public GCounter Increment(Cluster.Cluster node) => Increment(node.SelfUniqueAddress);
-
-        /// <summary>
-        /// Increment the counter by 1.
-        /// </summary>
-        public GCounter Increment(UniqueAddress node) => Increment(node, new BigInteger(1));
-
+        
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
-        public GCounter Increment(Cluster.Cluster node, ulong delta) => Increment(node.SelfUniqueAddress, delta);
-
-        /// <summary>
-        /// Increment the counter with the delta specified. The delta must be zero or positive.
-        /// </summary>
-        public GCounter Increment(UniqueAddress node, ulong delta) => Increment(node, new BigInteger(delta));
-
-        /// <summary>
-        /// Increment the counter with the delta specified. The delta must be zero or positive.
-        /// </summary>
-        public GCounter Increment(Cluster.Cluster node, BigInteger n) => Increment(node.SelfUniqueAddress, n);
-
+        public GCounter Increment(Cluster.Cluster node, ulong delta = 1) => Increment(node.SelfUniqueAddress, delta);
+        
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
@@ -126,15 +105,14 @@ namespace Akka.DistributedData
         /// This exception is thrown when the specified <paramref name="n"/> is less than zero.
         /// </exception>
         /// <returns>TBD</returns>
-        public GCounter Increment(UniqueAddress node, BigInteger n)
+        public GCounter Increment(UniqueAddress node, ulong n = 1)
         {
-            if (n < 0) throw new ArgumentException("Can't decrement a GCounter");
             if (n == 0) return this;
 
-            var nextValue = State.GetValueOrDefault(node, new BigInteger(0)) + n;
+            var nextValue = State.GetValueOrDefault(node, 0UL) + n;
             var newDelta = Delta == null
                 ? new GCounter(
-                    ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, BigInteger>(node, nextValue) }))
+                    ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, ulong>(node, nextValue) }))
                 : new GCounter(Delta.State.SetItem(node, nextValue));
 
             return AssignAncestor(new GCounter(State.SetItem(node, nextValue), newDelta));
@@ -164,8 +142,9 @@ namespace Akka.DistributedData
                 return new GCounter(merged);
             }
         }
-        public GCounter MergeDelta(GCounter delta) => Merge(delta);
 
+        public GCounter MergeDelta(GCounter delta) => Merge(delta);
+        
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((GCounter)delta);
@@ -192,7 +171,7 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public GCounter Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
-            BigInteger prunedNodeValue;
+            ulong prunedNodeValue;
             return State.TryGetValue(removedNode, out prunedNodeValue)
                 ? new GCounter(State.Remove(removedNode)).Increment(collapseInto, prunedNodeValue)
                 : this;
@@ -206,17 +185,10 @@ namespace Akka.DistributedData
         public GCounter PruningCleanup(UniqueAddress removedNode) => new GCounter(State.Remove(removedNode));
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return State.GetHashCode();
-        }
+        public override int GetHashCode() => State.GetHashCode();
 
         /// <inheritdoc/>
-        public int CompareTo(object obj)
-        {
-            if (obj is GCounter) return CompareTo((GCounter)obj);
-            return -1;
-        }
+        public int CompareTo(object obj) => obj is GCounter ? CompareTo((GCounter)obj) : -1;
 
         /// <inheritdoc/>
         public bool Equals(GCounter other)
@@ -241,11 +213,11 @@ namespace Akka.DistributedData
         public override string ToString() => $"GCounter({Value})";
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="Akka.DistributedData.GCounter" /> to <see cref="System.Numerics.BigInteger" />.
+        /// Performs an implicit conversion from <see cref="GCounter" /> to <see cref="ulong" />.
         /// </summary>
         /// <param name="counter">The counter to convert</param>
         /// <returns>The result of the conversion</returns>
-        public static implicit operator BigInteger(GCounter counter) => counter.Value;
+        public static implicit operator ulong(GCounter counter) => counter.Value;
 
         IDeltaReplicatedData IReplicatedDelta.Zero => GCounter.Empty;
     }
