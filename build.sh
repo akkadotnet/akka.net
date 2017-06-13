@@ -89,7 +89,7 @@ fi
 ###########################################################################
 # WORKAROUND FOR MONO
 ###########################################################################
-export FrameworkPathOverride=$(dirname $(which mono))/../lib/mono/4.5.2-api/
+export FrameworkPathOverride=/usr/lib/mono/4.5.2-api/
 
 ###########################################################################
 # RUN BUILD SCRIPT
