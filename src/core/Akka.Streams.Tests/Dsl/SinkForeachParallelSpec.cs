@@ -64,6 +64,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+		[Trait("racy", "racy")]
         public void A_ForeachParallel_must_not_run_more_functions_in_parallel_then_specified()
         {
             this.AssertAllStagesStopped(() =>

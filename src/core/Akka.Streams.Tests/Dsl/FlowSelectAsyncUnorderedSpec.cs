@@ -328,6 +328,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+		[Trait("racy","racy")]
         public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
         {
             this.AssertAllStagesStopped(() =>
