@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Configuration;
-using Akka.Persistence.TestKit.Snapshot;
+using Akka.Persistence.TCK.Snapshot;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
