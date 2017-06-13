@@ -35,8 +35,8 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Increment(_address2);
             var c6 = c5.Increment(_address2);
 
-            Assert.Equal(2, c6.Increments.State[_address1]);
-            Assert.Equal(3, c6.Increments.State[_address2]);
+            Assert.Equal(2UL, c6.Increments.State[_address1]);
+            Assert.Equal(3UL, c6.Increments.State[_address2]);
         }
 
         [Fact]
@@ -51,8 +51,8 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Decrement(_address2);
             var c6 = c5.Decrement(_address2);
 
-            Assert.Equal(2, c6.Decrements.State[_address1]);
-            Assert.Equal(3, c6.Decrements.State[_address2]);
+            Assert.Equal(2UL, c6.Decrements.State[_address1]);
+            Assert.Equal(3UL, c6.Decrements.State[_address2]);
         }
 
         [Fact]
@@ -66,8 +66,8 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Increment(_address2, 7);
             var c6 = c5.Increment(_address2);
 
-            Assert.Equal(7, c6.Increments.State[_address1]);
-            Assert.Equal(10, c6.Increments.State[_address2]);
+            Assert.Equal(7UL, c6.Increments.State[_address1]);
+            Assert.Equal(10UL, c6.Increments.State[_address2]);
         }
 
         [Fact]
@@ -81,8 +81,8 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Decrement(_address2, 7);
             var c6 = c5.Decrement(_address2);
 
-            Assert.Equal(7, c6.Decrements.State[_address1]);
-            Assert.Equal(10, c6.Decrements.State[_address2]);
+            Assert.Equal(7UL, c6.Decrements.State[_address1]);
+            Assert.Equal(10UL, c6.Decrements.State[_address2]);
         }
 
         [Fact]
@@ -145,14 +145,14 @@ namespace Akka.DistributedData.Tests
             Assert.Equal(1, (long)c26.Value);
 
             var merged1 = c16.Merge(c26);
-            Assert.Equal(9, merged1.Increments.Value);
-            Assert.Equal(5, merged1.Decrements.Value);
-            Assert.Equal(4, merged1.Value);
+            Assert.Equal(9UL, merged1.Increments.Value);
+            Assert.Equal(5UL, merged1.Decrements.Value);
+            Assert.Equal(4UL, merged1.Value);
 
             var merged2 = c26.Merge(c16);
-            Assert.Equal(9, merged2.Increments.Value);
-            Assert.Equal(5, merged2.Decrements.Value);
-            Assert.Equal(4, merged2.Value);
+            Assert.Equal(9UL, merged2.Increments.Value);
+            Assert.Equal(5UL, merged2.Decrements.Value);
+            Assert.Equal(4UL, merged2.Value);
         }
 
         [Fact]

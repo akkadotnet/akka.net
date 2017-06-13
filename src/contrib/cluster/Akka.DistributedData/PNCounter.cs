@@ -8,10 +8,7 @@
 using Akka.Cluster;
 using System;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Numerics;
-using Akka.Actor;
-using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -30,7 +27,7 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed class PNCounter :
+    public sealed partial class PNCounter :
         IDeltaReplicatedData<PNCounter, PNCounter>,
         IRemovedNodePruning<PNCounter>,
         IReplicatedDataSerialization,
@@ -39,7 +36,7 @@ namespace Akka.DistributedData
     {
         public static readonly PNCounter Empty = new PNCounter();
 
-        public BigInteger Value => Increments.Value - Decrements.Value;
+        public BigInteger Value => new BigInteger(Increments.Value) - new BigInteger(Decrements.Value);
 
         public GCounter Increments { get; }
 
@@ -57,58 +54,30 @@ namespace Akka.DistributedData
         /// Increment the counter with the delta specified.
         /// If the delta is negative then it will decrement instead of increment.
         /// </summary>
-        public PNCounter Increment(Cluster.Cluster node, long delta = 1) =>
-            Increment(node.SelfUniqueAddress, delta);
+        public PNCounter Increment(Cluster.Cluster node, long delta = 1) => Increment(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Increment the counter with the delta specified.
         /// If the delta is negative then it will decrement instead of increment.
         /// </summary>
-        public PNCounter Increment(UniqueAddress address, long delta = 1) =>
-            Increment(address, new BigInteger(delta));
+        public PNCounter Increment(UniqueAddress address, long delta = 1) => Change(address, delta);
 
         /// <summary>
         /// Decrement the counter with the delta specified.
         /// If the delta is negative then it will increment instead of decrement.
         /// </summary>
-        public PNCounter Decrement(Cluster.Cluster node, long delta = 1) =>
-            Decrement(node.SelfUniqueAddress, delta);
+        public PNCounter Decrement(Cluster.Cluster node, long delta = 1) => Decrement(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Decrement the counter with the delta specified.
         /// If the delta is negative then it will increment instead of decrement.
         /// </summary>
-        public PNCounter Decrement(UniqueAddress address, long delta = 1) =>
-            Decrement(address, new BigInteger(delta));
+        public PNCounter Decrement(UniqueAddress address, long delta = 1) => Change(address, -delta);
 
-        /// <summary>
-        /// Increment the counter with the delta specified.
-        /// If the delta is negative then it will decrement instead of increment.
-        /// </summary>
-        public PNCounter Increment(Cluster.Cluster node, BigInteger delta) => Increment(node.SelfUniqueAddress, delta);
-
-        /// <summary>
-        /// Increment the counter with the delta specified.
-        /// If the delta is negative then it will decrement instead of increment.
-        /// </summary>
-        public PNCounter Increment(UniqueAddress address, BigInteger delta) => Change(address, delta);
-
-        /// <summary>
-        /// Decrement the counter with the delta specified.
-        /// If the delta is negative then it will increment instead of decrement.
-        /// </summary>
-        public PNCounter Decrement(Cluster.Cluster node, BigInteger delta) => Decrement(node.SelfUniqueAddress, delta);
-
-        /// <summary>
-        /// Decrement the counter with the delta specified.
-        /// If the delta is negative then it will increment instead of decrement.
-        /// </summary>
-        public PNCounter Decrement(UniqueAddress address, BigInteger delta) => Change(address, -delta);
-
-        private PNCounter Change(UniqueAddress key, BigInteger delta)
+        private PNCounter Change(UniqueAddress key, long delta)
         {
-            if (delta > 0) return new PNCounter(Increments.Increment(key, delta), Decrements);
-            if (delta < 0) return new PNCounter(Increments, Decrements.Increment(key, -delta));
+            if (delta > 0) return new PNCounter(Increments.Increment(key, (ulong)delta), Decrements);
+            if (delta < 0) return new PNCounter(Increments, Decrements.Increment(key, (ulong)(-delta)));
 
             return this;
         }

@@ -12,8 +12,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using Akka.Actor;
-using Akka.Util;
 using UniqueAddress = Akka.Cluster.UniqueAddress;
 
 namespace Akka.DistributedData
@@ -23,7 +21,7 @@ namespace Akka.DistributedData
     /// with <see cref="PNCounter"/> values. 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
-    public class PNCounterDictionary<TKey> :
+    public sealed partial class PNCounterDictionary<TKey> :
         IDeltaReplicatedData<PNCounterDictionary<TKey>, ORDictionary<TKey, PNCounter>.IDeltaOperation>,
         IRemovedNodePruning<PNCounterDictionary<TKey>>,
         IReplicatedDataSerialization,

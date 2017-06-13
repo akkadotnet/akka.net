@@ -11,10 +11,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using Akka.Actor;
 using Akka.Cluster;
 using Akka.Pattern;
-using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -45,7 +43,7 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public class ORDictionary<TKey, TValue> :
+    public sealed partial class ORDictionary<TKey, TValue> :
         IEnumerable<KeyValuePair<TKey, TValue>>,
         IRemovedNodePruning<ORDictionary<TKey, TValue>>,
         IEquatable<ORDictionary<TKey, TValue>>,

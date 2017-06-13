@@ -10,7 +10,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Security;
 using System.Text;
 using Akka.Cluster;
 using Akka.Util.Internal;
@@ -103,7 +102,7 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public class ORSet<T> :
+    public sealed partial class ORSet<T> :
         FastMerge<ORSet<T>>,
         IORSet,
         IReplicatedDataSerialization,
