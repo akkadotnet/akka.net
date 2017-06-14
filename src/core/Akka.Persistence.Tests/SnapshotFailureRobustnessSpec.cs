@@ -198,7 +198,7 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
         {
         }
 
-        [Fact(Skip = "Failing on NetCore/Linux")]
+        [Fact]
         public void PersistentActor_with_a_failing_snapshot_should_recover_state_starting_from_the_most_recent_complete_snapshot()
         {
             var spref = Sys.ActorOf(Props.Create(() => new SaveSnapshotTestActor(Name, TestActor)));
@@ -229,7 +229,7 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
             }
         }
 
-        [Fact(Skip = "Failing on NetCore/Linux")]
+        [Fact]
         public void PersistentActor_with_a_failing_snapshot_should_fail_recovery_and_stop_actor_when_no_snapshot_could_be_loaded()
         {
             var spref = Sys.ActorOf(Props.Create(() => new SaveSnapshotTestActor(Name, TestActor)));
