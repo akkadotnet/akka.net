@@ -279,6 +279,8 @@ namespace Akka.Persistence.Snapshot
                 .Select(ExtractSnapshotMetadata)
                 .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
 
+            snapshots.Sort(SnapshotMetadata.Comparer);
+
             return snapshots;
         }
 
