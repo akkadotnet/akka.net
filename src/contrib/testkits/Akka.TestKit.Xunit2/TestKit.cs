@@ -7,7 +7,6 @@
 
 using System;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Xunit2.Internals;
@@ -16,76 +15,84 @@ using Xunit.Abstractions;
 namespace Akka.TestKit.Xunit2
 {
     /// <summary>
-    /// TestKit for xUnit.
+    /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
+    /// as its testing framework.
     /// </summary>
     public class TestKit : TestKitBase , IDisposable
     {
-        private static readonly XunitAssertions _assertions=new XunitAssertions();
         private bool _isDisposed; //Automatically initialized to false;
 
+        /// <summary>
+        /// The provider used to write test output.
+        /// </summary>
         protected readonly ITestOutputHelper Output;
 
         /// <summary>
-        /// Create a new instance of the <see cref="TestKit"/> for xUnit class.
-        /// If no <paramref name="system"/> is passed in, a new system 
-        /// with <see cref="DefaultConfig"/> will be created.
+        /// <para>
+        /// Initializes a new instance of the <see cref="TestKit"/> class.
+        /// </para>
+        /// <para>
+        /// If no <paramref name="system"/> is passed in, a new system with
+        /// <see cref="DefaultConfig"/> will be created.
+        /// </para>
         /// </summary>
-        /// <param name="system">Optional: The actor system.</param>
-        /// <param name="output">TBD</param>
+        /// <param name="system">The actor system to use for testing. The default value is <see langword="null"/>.</param>
+        /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
         public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
-            : base(_assertions, system)
+            : base(Assertions, system)
         {
             Output = output;
             InitializeLogger(Sys);
         }
 
         /// <summary>
-        /// Create a new instance of the <see cref="TestKit"/> for xUnit class.
-        /// A new system with the specified configuration will be created.
+        /// Initializes a new instance of the <see cref="TestKit"/> class.
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
-        /// <param name="actorSystemName">Optional: the name of the system. Default: "test"</param>
-        /// <param name="output">TBD</param>
+        /// <param name="actorSystemName">The name of the system. The default name is "test".</param>
+        /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
         public TestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(_assertions, config, actorSystemName)
+            : base(Assertions, config, actorSystemName)
         {
             Output = output;
             InitializeLogger(Sys);
         }
 
-
         /// <summary>
-        /// Create a new instance of the <see cref="TestKit"/> for xUnit class.
-        /// A new system with the specified configuration will be created.
+        /// Initializes a new instance of the <see cref="TestKit"/> class.
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
-        /// <param name="output">TBD</param>
-        public TestKit(string config, ITestOutputHelper output = null) : base(_assertions, ConfigurationFactory.ParseString(config))
+        /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
+        public TestKit(string config, ITestOutputHelper output = null)
+            : base(Assertions, ConfigurationFactory.ParseString(config))
         {
             Output = output;
             InitializeLogger(Sys);
         }
 
         /// <summary>
-        /// TBD
+        /// A configuration that has just the default log settings enabled. The default settings can be found in
+        /// <a href="https://github.com/akkadotnet/akka.net/blob/master/src/core/Akka.TestKit/Internal/Reference.conf">Akka.TestKit.Internal.Reference.conf</a>.
         /// </summary>
-        public new static Config DefaultConfig { get { return TestKitBase.DefaultConfig; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public new static Config FullDebugConfig { get { return TestKitBase.FullDebugConfig; } }
+        public new static Config DefaultConfig => TestKitBase.DefaultConfig;
 
         /// <summary>
-        /// TBD
+        /// A configuration that has all log settings enabled
         /// </summary>
-        protected static XunitAssertions Assertions { get { return _assertions; } }
-
+        public new static Config FullDebugConfig => TestKitBase.FullDebugConfig;
 
         /// <summary>
-        /// This method is called when a test ends. 
-        /// <remarks>If you override this, make sure you either call 
-        /// base.AfterTest() or <see cref="TestKitBase.Shutdown(System.Nullable{System.TimeSpan},bool)">TestKitBase.Shutdown</see> to shut down
-        /// the system. Otherwise you'll leak memory.
+        /// Commonly used assertions used throughout the testkit.
+        /// </summary>
+        protected static XunitAssertions Assertions { get; } = new XunitAssertions();
+
+        /// <summary>
+        /// This method is called when a test ends.
+        /// 
+        /// <remarks>
+        /// If you override this, then make sure you either call base.AfterTest() or
+        /// <see cref="TestKitBase.Shutdown(System.Nullable{System.TimeSpan},bool)">TestKitBase.Shutdown</see>
+        /// to shut down the system. Otherwise a memory leak will occur.
         /// </remarks>
         /// </summary>
         protected virtual void AfterAll()
@@ -93,25 +100,10 @@ namespace Akka.TestKit.Xunit2
             Shutdown();
         }
 
-
-        // Dispose ------------------------------------------------------------
-
-        //Destructor:
-        //~TestKit() 
-        //{
-        //    // Finalizer calls Dispose(false)
-        //    Dispose(false);
-        //}
-
-        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            //Take this object off the finalization queue and prevent finalization code for this object
-            //from executing a second time.
-            GC.SuppressFinalize(this);
-        }
-
+        /// <summary>
+        /// Initializes a new <see cref="TestOutputLogger"/> used to log messages.
+        /// </summary>
+        /// <param name="system">The actor system used to attach the logger</param>
         protected void InitializeLogger(ActorSystem system)
         {
             if (Output != null)
@@ -122,11 +114,24 @@ namespace Akka.TestKit.Xunit2
             }
         }
 
-        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
-        /// user's code. Managed and unmanaged resources will be disposed.<br />
-        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
-        /// unmanaged resources can be disposed.</param>
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            //Take this object off the finalization queue and prevent finalization code for this object
+            //from executing a second time.
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        /// <param name="disposing">
+        /// if set to <c>true</c> the method has been called directly or indirectly by a  user's code.
+        /// Managed and unmanaged resources will be disposed.<br /> if set to <c>false</c> the method
+        /// has been called by the runtime from inside the finalizer and only unmanaged resources can
+        ///  be disposed.
+        /// </param>
         protected virtual void Dispose(bool disposing)
         {
             // If disposing equals false, the method has been called by the
@@ -136,18 +141,14 @@ namespace Akka.TestKit.Xunit2
             try
             {
                 //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed)
+                if(!_isDisposed && disposing)
                 {
-                    if(disposing)
-                    {
-                        AfterAll();                        
-                    }
+                    AfterAll();
                 }
                 _isDisposed = true;
             }
             finally
             {
-                // base.dispose(disposing);
             }
         }
     }
