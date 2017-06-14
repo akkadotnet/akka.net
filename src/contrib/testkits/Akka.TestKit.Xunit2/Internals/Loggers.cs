@@ -12,14 +12,14 @@ using Xunit.Abstractions;
 namespace Akka.TestKit.Xunit2.Internals
 {
     /// <summary>
-    /// TBD
+    /// This class represents an actor that logs output from tests using an <see cref="ITestOutputHelper"/> provider.
     /// </summary>
     public class TestOutputLogger : ReceiveActor
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="TestOutputLogger"/> class.
         /// </summary>
-        /// <param name="output">TBD</param>
+        /// <param name="output">The provider used to write test output.</param>
         public TestOutputLogger(ITestOutputHelper output)
         {
             Receive<Debug>(e => output.WriteLine(e.ToString()));
