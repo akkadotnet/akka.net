@@ -198,15 +198,15 @@ namespace Akka.Streams.Tests.Dsl
             warn = ExpectMsg<Warning>(TimeSpan.FromSeconds(1));
 
 #if CORECLR
- warn.Message.ToString()
+            warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<Kill> message sent to StageActorRef\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<Kill> message sent to StageActorRef\\(akka\\://AkkaSpec/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 #else
             warn.Message.ToString()
                 .Should()
                 .MatchRegex(
-                    "<Kill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+                    "<Kill> message sent to StageActorRef\\(akka\\://StageActorRefSpec-[0-9]+/user/StreamSupervisor-[0-9]+/StageActorRef-[0-9]+\\) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
 #endif
 
             source.SetResult(2);
