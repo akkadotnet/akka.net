@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Akka.Persistence.Tests
 {
-    public abstract class SnapshotFailureRobustnessSpec : PersistenceSpec
+    public class SnapshotFailureRobustnessSpec : PersistenceSpec
     {
         public class Cmd
         {
