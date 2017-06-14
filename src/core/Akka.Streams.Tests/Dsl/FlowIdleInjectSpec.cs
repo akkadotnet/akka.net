@@ -46,6 +46,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        [Trait("racy", "racy")]
         public void KeepAlive_must_emit_elements_periodically_after_silent_periods()
         {
             this.AssertAllStagesStopped(() =>
