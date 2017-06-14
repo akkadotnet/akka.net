@@ -705,7 +705,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 });
         }
 
-        public class Doubler<T> : GraphStage<FlowShape<T, T>>
+        public class Doubler<T> : SimpleLinearGraphStage<T>
         {
             #region Logic
 
@@ -738,18 +738,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 }
             }
             #endregion
-
-            public Doubler()
-            {
-                Shape = new FlowShape<T, T>(new Inlet<T>("Doubler.in"), new Outlet<T>("Doubler.out"));
-            }
-
-            public override FlowShape<T, T> Shape { get; }
-
+            
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
-        public class KeepGoing<T> : GraphStage<FlowShape<T, T>>
+        public class KeepGoing<T> : SimpleLinearGraphStage<T>
         {
             #region Logic
 
@@ -777,13 +770,6 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 }
             }
             #endregion
-
-            public KeepGoing()
-            {
-                Shape = new FlowShape<T, T>(new Inlet<T>("KeepGoing.in"), new Outlet<T>("KeepGoing.out"));
-            }
-
-            public override FlowShape<T, T> Shape { get; }
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }

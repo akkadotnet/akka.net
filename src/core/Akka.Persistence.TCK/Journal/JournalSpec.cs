@@ -16,7 +16,7 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TestKit.Journal
+namespace Akka.Persistence.TCK.Journal
 {
     public abstract class JournalSpec : PluginSpec
     {
@@ -128,21 +128,6 @@ namespace Akka.Persistence.TestKit.Journal
 
             return messages;
         }
-
-#if !CORECLR
-        /// <summary>
-        /// JSON serializer should fail on this
-        /// </summary>
-        private class NotSerializableEvent : ISerializable
-        {
-            public NotSerializableEvent(bool foo) { }
-
-            public void GetObjectData(SerializationInfo info, StreamingContext context)
-            {
-                throw new NotImplementedException();
-            }
-        }
-#endif
 
         [Fact]
         public void Journal_should_replay_all_messages()
@@ -278,6 +263,19 @@ namespace Akka.Persistence.TestKit.Journal
         }
 
 #if !CORECLR
+        /// <summary>
+        /// JSON serializer should fail on this
+        /// </summary>
+        private class NotSerializableEvent : ISerializable
+        {
+            public NotSerializableEvent(bool foo) { }
+
+            public void GetObjectData(SerializationInfo info, StreamingContext context)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         [Fact]
         public void Journal_optionally_may_reject_non_serializable_events()
         {

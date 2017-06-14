@@ -20,6 +20,58 @@
     <PackageReference Include="System.Reflection.TypeExtensions" version="4.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="CodeGen\Dsl\GraphApply.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>GraphApply.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\Dsl\GraphApply.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>GraphApply.tt</DependentUpon>
+    </Compile>
+    <None Update="CodeGen\Dsl\UnzipWith.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>UnzipWith.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\Dsl\UnzipWith.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>UnzipWith.tt</DependentUpon>
+    </Compile>
+    <None Update="CodeGen\Dsl\ZipWith.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ZipWith.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\Dsl\ZipWith.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ZipWith.tt</DependentUpon>
+    </Compile>
+    <None Update="CodeGen\FanInShape.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FanInShape.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\FanInShape.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>FanInShape.tt</DependentUpon>
+    </Compile>
+    <None Update="CodeGen\FanOutShape.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FanOutShape.cs</LastGenOutput>
+    </None>
+    <Compile Update="CodeGen\FanOutShape.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>FanOutShape.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SERIALIZATION;CLONEABLE;AKKAIO</DefineConstants>
   </PropertyGroup>

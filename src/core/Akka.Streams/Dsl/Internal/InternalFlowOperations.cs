@@ -858,7 +858,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Skip<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.Via(new Fusing.Drop<T>(n));
+            return flow.Via(new Fusing.Skip<T>(n));
         }
 
         /// <summary>
@@ -1123,7 +1123,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static IFlow<T, TMat> Buffer<T, TMat>(this IFlow<T, TMat> flow, int size, OverflowStrategy strategy)
         {
-            return flow.AndThen(new Buffer<T>(size, strategy));
+            return flow.Via(new Fusing.Buffer<T>(size, strategy));
         }
 
         /// <summary>

@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
+using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -224,6 +225,69 @@ namespace Akka.Streams.Tests.Dsl
             var elems = p.Within(TimeSpan.FromSeconds(1), () => Enumerable.Range(1, noOfSources * 10).Select(_ => p.RequestNext()).ToArray());
             p.ExpectComplete();
             elems.ShouldAllBeEquivalentTo(Enumerable.Range(0, noOfSources * 10));
+        }
+
+        private sealed class AttibutesSourceStage : GraphStage<SourceShape<Attributes>>
+        {
+            #region Logic
+
+            private sealed class Logic : OutGraphStageLogic
+            {
+                private readonly AttibutesSourceStage _stage;
+                private readonly Attributes _inheritedAttributes;
+
+                public Logic(AttibutesSourceStage stage, Attributes inheritedAttributes) : base(stage.Shape)
+                {
+                    _stage = stage;
+                    _inheritedAttributes = inheritedAttributes;
+
+                    SetHandler(stage.Out, this);
+                }
+
+                public override void OnPull()
+                {
+                    Push(_stage.Out, _inheritedAttributes);
+                    CompleteStage();
+                }
+            }
+
+            #endregion
+
+
+            public AttibutesSourceStage()
+            {
+                Shape = new SourceShape<Attributes>(Out);
+            }
+
+            private Outlet<Attributes> Out { get; } = new Outlet<Attributes>("AttributesSource.out");
+
+            public override SourceShape<Attributes> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+        }
+
+        [Fact]
+        public void A_FlattenMerge_must_propagate_attributes_to_inner_stream()
+        {
+            var attributesSource = Source.FromGraph(new AttibutesSourceStage());
+
+            this.AssertAllStagesStopped(() =>
+            {
+                var task = Source.Single(attributesSource.AddAttributes(Attributes.CreateName("inner")))
+                    .MergeMany(1, x => x)
+                    .AddAttributes(Attributes.CreateName("outer"))
+                    .RunWith(Sink.First<Attributes>(), Materializer);
+
+                var attributes = task.AwaitResult().AttributeList.ToList();
+                var innerName = new Attributes.Name("inner");
+                var outerName = new Attributes.Name("outer");
+
+                attributes.Should().Contain(innerName);
+                attributes.Should().Contain(outerName);
+                attributes.IndexOf(outerName).Should().BeLessThan(attributes.IndexOf(innerName));
+
+            }, Materializer);
+
         }
     }
 }
