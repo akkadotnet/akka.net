@@ -79,13 +79,13 @@ Target "RunTests" (fun _ ->
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Persistence.Tests.csproj"                 
+                  -- "./**/Akka.Persistence.Tests.csproj"
         // Linux/Mono
         | _ -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/Akka.Persistence.Tests.csproj"
                   -- "./**/Akka.API.Tests.csproj"
 
@@ -116,6 +116,7 @@ Target "MultiNodeTests" (fun _ ->
 
         let args = StringBuilder()
                 |> append assembly
+                |> append "-Dmultinode.teamcity=true"
                 |> append "-Dmultinode.enable-filesink=on"
                 |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                 |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
