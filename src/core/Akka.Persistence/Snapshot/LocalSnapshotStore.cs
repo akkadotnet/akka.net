@@ -278,6 +278,7 @@ namespace Akka.Persistence.Snapshot
                 .EnumerateFiles("snapshot-" + Uri.EscapeDataString(persistenceId) + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
                 .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
+            snapshots.Sort(SnapshotMetadata.Comparer);
 
             return snapshots;
         }
