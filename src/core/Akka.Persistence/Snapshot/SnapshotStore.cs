@@ -57,7 +57,7 @@ namespace Akka.Persistence.Snapshot
             if (message is LoadSnapshot loadSnapshot)
             {
                 _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
-                    .ContinueWith(t => t.IsCompleted
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                         ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
                         : new LoadSnapshotFailed(t.Exception), _continuationOptions)
                     .PipeTo(senderPersistentActor);
@@ -67,7 +67,7 @@ namespace Akka.Persistence.Snapshot
                 var metadata = new SnapshotMetadata(saveSnapshot.Metadata.PersistenceId, saveSnapshot.Metadata.SequenceNr, DateTime.UtcNow);
 
                 _breaker.WithCircuitBreaker(() => SaveAsync(metadata, saveSnapshot.Snapshot))
-                    .ContinueWith(t => t.IsCompleted
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                         ? new SaveSnapshotSuccess(metadata) as ISnapshotResponse
                         : new SaveSnapshotFailure(saveSnapshot.Metadata,
                             t.IsFaulted
@@ -103,7 +103,7 @@ namespace Akka.Persistence.Snapshot
             {
                 var eventStream = Context.System.EventStream;
                 _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshot.Metadata))
-                    .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                                 ? new DeleteSnapshotSuccess(deleteSnapshot.Metadata) as ISnapshotResponse
                                 : new DeleteSnapshotFailure(deleteSnapshot.Metadata,
                                     t.IsFaulted
@@ -143,7 +143,7 @@ namespace Akka.Persistence.Snapshot
             {
                 var eventStream = Context.System.EventStream;
                 _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria))
-                    .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                                 ? new DeleteSnapshotsSuccess(deleteSnapshots.Criteria) as ISnapshotResponse
                                 : new DeleteSnapshotsFailure(deleteSnapshots.Criteria,
                                     t.IsFaulted
