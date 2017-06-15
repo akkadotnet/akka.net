@@ -103,7 +103,7 @@ namespace Akka.Persistence.Snapshot
             {
                 var eventStream = Context.System.EventStream;
                 _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshot.Metadata))
-                    .ContinueWith(t => t.IsCompleted
+                    .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
                                 ? new DeleteSnapshotSuccess(deleteSnapshot.Metadata) as ISnapshotResponse
                                 : new DeleteSnapshotFailure(deleteSnapshot.Metadata,
                                     t.IsFaulted
@@ -113,7 +113,7 @@ namespace Akka.Persistence.Snapshot
                     .PipeTo(self, senderPersistentActor)
                     .ContinueWith(t =>
                     {
-                        if (t.IsCompleted && _publish)
+                        if (_publish)
                             eventStream.Publish(message);
                     }, _continuationOptions);
             }
@@ -143,7 +143,7 @@ namespace Akka.Persistence.Snapshot
             {
                 var eventStream = Context.System.EventStream;
                 _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria))
-                    .ContinueWith(t => t.IsCompleted
+                    .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
                                 ? new DeleteSnapshotsSuccess(deleteSnapshots.Criteria) as ISnapshotResponse
                                 : new DeleteSnapshotsFailure(deleteSnapshots.Criteria,
                                     t.IsFaulted
@@ -153,7 +153,7 @@ namespace Akka.Persistence.Snapshot
                     .PipeTo(self, senderPersistentActor)
                     .ContinueWith(t =>
                     {
-                        if (t.IsCompleted && _publish)
+                        if (_publish)
                             eventStream.Publish(message);
                     }, _continuationOptions);
             }
