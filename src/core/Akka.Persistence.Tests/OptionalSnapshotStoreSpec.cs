@@ -70,7 +70,7 @@ namespace Akka.Persistence.Tests
         {
         }
         
-        [Fact]
+        [Fact(Skip = "Temporarily skipped")]
         public void Persistence_extension_should_fail_if_PersistentActor_tries_to_SaveSnapshot_without_snapshot_store_available()
         {
             var pref = Sys.ActorOf(Props.Create(() => new AnyPersistentActor(Name)));
