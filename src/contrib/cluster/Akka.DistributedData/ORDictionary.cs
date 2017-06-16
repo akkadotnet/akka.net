@@ -373,7 +373,7 @@ namespace Akka.DistributedData
 
         #region delta operations
 
-        public interface IDeltaOperation : IReplicatedDelta, IRequireCausualDeliveryOfDeltas, IReplicatedDataSerialization
+        public interface IDeltaOperation : IReplicatedDelta, IRequireCausualDeliveryOfDeltas, IReplicatedDataSerialization, IEquatable<IDeltaOperation>
         {
         }
 
@@ -395,6 +395,16 @@ namespace Akka.DistributedData
 
             public IDeltaReplicatedData Zero => ORDictionary<TKey, TValue>.Empty;
             public int DeltaSize => 1;
+
+            public abstract bool Equals(IDeltaOperation op);
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((IDeltaOperation)obj);
+            }
         }
 
         internal sealed class PutDeltaOperation : AtomicDeltaOperation
@@ -445,6 +455,28 @@ namespace Akka.DistributedData
                     builder.Add(this);
                     builder.AddRange(((DeltaGroup)other).Operations);
                     return new DeltaGroup(builder.ToImmutable());
+                }
+            }
+
+            public override bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is PutDeltaOperation put)
+                {
+                    return Equals(Key, put.Key) && Equals(Value, put.Value) && Underlying.Equals(put.Underlying);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = Underlying.GetHashCode();
+                    hash = (hash * 397) ^ Key.GetHashCode();
+                    hash = (hash * 397) ^ Value.GetHashCode();
+                    return hash;
                 }
             }
         }
@@ -501,6 +533,31 @@ namespace Akka.DistributedData
                     return new DeltaGroup(builder.ToImmutable());
                 }
             }
+
+            public override bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is UpdateDeltaOperation update)
+                {
+                    return Underlying.Equals(update.Underlying) && Values.SequenceEqual(update.Values);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = Underlying.GetHashCode();
+                    foreach (var data in Values)
+                    {
+                        hash = (hash * 397) ^ data.Key.GetHashCode();
+                        hash = (hash * 397) ^ data.Value.GetHashCode();
+                    }
+                    return hash;
+                }
+            }
         }
 
         internal sealed class RemoveDeltaOperation : AtomicDeltaOperation
@@ -513,6 +570,19 @@ namespace Akka.DistributedData
             }
 
             public override ORSet<TKey>.IDeltaOperation Underlying { get; }
+
+            public override bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is RemoveDeltaOperation remove)
+                {
+                    return Underlying.Equals(remove.Underlying);
+                }
+                return false;
+            }
+
+            public override int GetHashCode() => Underlying.GetHashCode();
         }
 
         internal sealed class RemoveKeyDeltaOperation : AtomicDeltaOperation
@@ -527,15 +597,36 @@ namespace Akka.DistributedData
                 Underlying = underlying;
                 Key = key;
             }
+
+            public override bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is RemoveKeyDeltaOperation remove)
+                {
+                    return Equals(Key, remove.Key) && Underlying.Equals(remove.Underlying);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = Underlying.GetHashCode();
+                    hash = (hash * 397) ^ Key.GetHashCode();
+                    return hash;
+                }
+            }
         }
 
         internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize
         {
-            public readonly ImmutableArray<IDeltaOperation> Operations;
+            public readonly IDeltaOperation[] Operations;
 
-            public DeltaGroup(ImmutableArray<IDeltaOperation> operations)
+            public DeltaGroup(IEnumerable<IDeltaOperation> operations)
             {
-                this.Operations = operations;
+                this.Operations = operations.ToArray();
             }
 
             public IReplicatedData Merge(IReplicatedData other)
@@ -547,34 +638,60 @@ namespace Akka.DistributedData
                     var last = Operations[lastIndex];
                     if (last is PutDeltaOperation || last is UpdateDeltaOperation)
                     {
-                        var builder = this.Operations.ToBuilder();
+                        var builder = this.Operations.ToList();
                         var merged = (IDeltaOperation)last.Merge(atomic);
                         if (merged is AtomicDeltaOperation)
                         {
                             builder[lastIndex] = merged;
-                            return new DeltaGroup(builder.ToImmutable());
+                            return new DeltaGroup(builder);
                         }
                         else
                         {
                             builder.RemoveAt(lastIndex);
                             builder.AddRange(((DeltaGroup)merged).Operations);
-                            return new DeltaGroup(builder.ToImmutable());
+                            return new DeltaGroup(builder);
                         }
                     }
                     else
                     {
-                        return new DeltaGroup(Operations.Add(atomic));
+                        return new DeltaGroup(Operations.Union(new[]{atomic}));
                     }
                 }
                 else
                 {
                     var group = (DeltaGroup)other;
-                    return new DeltaGroup(this.Operations.AddRange(group.Operations));
+                    return new DeltaGroup(this.Operations.Union(group.Operations));
                 }
             }
 
             public IDeltaReplicatedData Zero => ((IReplicatedDelta)Operations.FirstOrDefault())?.Zero;
             public int DeltaSize => Operations.Length;
+
+            public override bool Equals(object obj) => obj is IDeltaOperation && Equals((IDeltaOperation)obj);
+
+            public bool Equals(IDeltaOperation op)
+            {
+                if (ReferenceEquals(null, op)) return false;
+                if (ReferenceEquals(this, op)) return true;
+                if (op is DeltaGroup group)
+                {
+                    return Operations.SequenceEqual(group.Operations);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = 0;
+                    foreach (var op in Operations)
+                    {
+                        hash = (hash * 397) ^ op.GetHashCode();
+                    }
+                    return hash;
+                }
+            }
         }
 
         [NonSerialized]
