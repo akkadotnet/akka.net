@@ -75,6 +75,16 @@ namespace Akka.DistributedData.Tests.Serialization
         }
 
         [Fact]
+        public void ReplicatedDataSerializer_should_serialize_ORSet_delta()
+        {
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").Delta);
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").ResetDelta().Remove(_address2, "a").Delta);
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").Remove(_address2, "a").Delta);
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").ResetDelta().Clear(_address2).Delta);
+            CheckSerialization(ORSet<string>.Empty.Add(_address1, "a").Clear(_address2).Delta);
+        }
+
+        [Fact]
         public void ReplicatedDataSerializer_should_serialize_Flag()
         {
             CheckSerialization(Flag.False);
@@ -129,6 +139,37 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty);
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty.SetItem(_address1, "a", GSet.Create("A")));
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty.SetItem(_address1, "a", GSet.Create("A")).SetItem(_address2, "b", GSet.Create("B")));
+        }
+
+        [Fact]
+        public void ReplicatedDataSerializer_should_serialize_ORDictionary_delta()
+        {
+            CheckSerialization(ORDictionary<string, GSet<string>>.Empty
+                .SetItem(_address1, "a", GSet.Create("A"))
+                .SetItem(_address2, "b", GSet.Create("B"))
+                .Delta);
+
+            CheckSerialization(ORDictionary<string, GSet<string>>.Empty
+                .SetItem(_address1, "a", GSet.Create("A"))
+                .ResetDelta()
+                .Remove(_address2, "a")
+                .Delta);
+
+            CheckSerialization(ORDictionary<string, GSet<string>>.Empty
+                .SetItem(_address1, "a", GSet.Create("A"))
+                .Remove(_address2, "a")
+                .Delta);
+
+            CheckSerialization(ORDictionary<string, ORSet<string>>.Empty
+                .SetItem(_address1, "a", ORSet.Create(_address1, "A"))
+                .SetItem(_address2, "b", ORSet.Create(_address2, "B"))
+                .AddOrUpdate(_address1, "a", ORSet<string>.Empty, old => old.Add(_address1, "C"))
+                .Delta);
+
+            CheckSerialization(ORDictionary<string, ORSet<string>>.Empty
+                .ResetDelta()
+                .AddOrUpdate(_address1, "a", ORSet<string>.Empty, old => old.Add(_address1, "C"))
+                .Delta);
         }
 
         [Fact]
