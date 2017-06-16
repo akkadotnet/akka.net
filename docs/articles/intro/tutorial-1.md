@@ -226,4 +226,3 @@ In the following chapters we will grow the application step-by-step:
  1. We will create the representation for a device
  2. We create the device management component
  3. We add query capabilities to device groups
- 4. We add the dashboard component
