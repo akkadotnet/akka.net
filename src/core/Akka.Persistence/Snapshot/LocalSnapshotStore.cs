@@ -201,9 +201,13 @@ namespace Akka.Persistence.Snapshot
             {
                 Serialize(stream, new Serialization.Snapshot(snapshot));
             });
-            tempFile.MoveTo(GetSnapshotFileForWrite(metadata).FullName);
+		    var newName = GetSnapshotFileForWrite(metadata);
+			if (File.Exists(newName.FullName))
+			{
+				File.Delete(newName.FullName);
+			}
+			tempFile.MoveTo(newName.FullName);
         }
-
 
         private Serialization.Snapshot Deserialize(Stream stream)
         {
