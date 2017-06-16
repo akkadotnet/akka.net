@@ -134,13 +134,17 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract IMaterializer WithNamePrefix(string namePrefix);
 
+        /// <inheritdoc />
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable);
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="runnable">TBD</param>
+        /// <param name="initialAttributes">TBD</param>
         /// <returns>TBD</returns>
-        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable);
+        public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes);
 
         /// <summary>
         /// TBD

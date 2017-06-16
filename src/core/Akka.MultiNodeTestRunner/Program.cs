@@ -19,8 +19,11 @@ using Akka.Event;
 using Akka.IO;
 using Akka.MultiNodeTestRunner.Shared;
 using Akka.MultiNodeTestRunner.Shared.Persistence;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
+using JetBrains.TeamCity.ServiceMessages.Write.Special;
+using JetBrains.TeamCity.ServiceMessages.Write.Special.Impl;
 using Xunit;
 
 namespace Akka.MultiNodeTestRunner
@@ -38,6 +41,8 @@ namespace Akka.MultiNodeTestRunner
         /// file output directory
         /// </summary>
         protected static string OutputDirectory;
+
+        protected static bool TeamCityFormattingOn;
 
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
@@ -102,8 +107,15 @@ namespace Akka.MultiNodeTestRunner
         {
             OutputDirectory = CommandLine.GetProperty("multinode.output-directory") ?? string.Empty;
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
-            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
+            var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
+            var teamCityFormattingOn = CommandLine.GetProperty("multinode.teamcity") ?? "false";
+            if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
+                throw new ArgumentException("Invalid argument provided for -Dteamcity");
+
+            SinkCoordinator = TestRunSystem.ActorOf(TeamCityFormattingOn ?
+                Props.Create(() => new SinkCoordinator(new[] { new TeamCityMessageSink(str => Console.WriteLine(str), suiteName) })) : // mutes ConsoleMessageSinkActor
+                Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
@@ -124,24 +136,28 @@ namespace Akka.MultiNodeTestRunner
                     controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
 
-                    foreach(var test in discovery.Tests.Reverse())
+                    foreach (var test in discovery.Tests.Reverse())
                     {
                         if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
                         {
-                            PublishRunnerMessage(string.Format("Skipping test {0}. Reason - {1}", test.Value.First().MethodName, test.Value.First().SkipReason));
+                            PublishRunnerMessage(string.Format("Skipping test {0}. Reason - {1}",
+                                test.Value.First().MethodName, test.Value.First().SkipReason));
                             continue;
                         }
 
-                        if(!string.IsNullOrWhiteSpace(specName) && CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName, specName, CompareOptions.IgnoreCase) < 0)
+                        if (!string.IsNullOrWhiteSpace(specName) &&
+                            CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName,
+                                specName,
+                                CompareOptions.IgnoreCase) < 0)
                         {
                             PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
                             continue;
                         }
-                            
-
-                        PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
                         var processes = new List<Process>();
+
+                        PublishRunnerMessage(string.Format("Starting test {0}",
+                            test.Value.First().MethodName));
 
                         StartNewSpec(test.Value);
                         foreach (var nodeTest in test.Value)
@@ -154,35 +170,56 @@ namespace Akka.MultiNodeTestRunner
                             process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
                             process.StartInfo.Arguments =
                                 $@"-Dmultinode.test-assembly=""{assemblyName}"" -Dmultinode.test-class=""{
-                                    nodeTest.TypeName}"" -Dmultinode.test-method=""{nodeTest.MethodName
-                                    }"" -Dmultinode.max-nodes={test.Value.Count} -Dmultinode.server-host=""{"localhost"
-                                    }"" -Dmultinode.host=""{"localhost"}"" -Dmultinode.index={nodeTest.Node - 1
-                                    } -Dmultinode.role=""{nodeTest.Role
-                                    }"" -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={listenPort}";
+                                        nodeTest.TypeName
+                                    }"" -Dmultinode.test-method=""{
+                                        nodeTest.MethodName
+                                    }"" -Dmultinode.max-nodes={
+                                        test.Value.Count
+                                    } -Dmultinode.server-host=""{"localhost"}"" -Dmultinode.host=""{
+                                        "localhost"
+                                    }"" -Dmultinode.index={nodeTest.Node - 1} -Dmultinode.role=""{
+                                        nodeTest.Role
+                                    }"" -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={
+                                        listenPort
+                                    }";
                             var nodeIndex = nodeTest.Node;
                             var nodeRole = nodeTest.Role;
                             //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
-                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
-                            var logFilePath = Path.Combine(folder.FullName, "node" + nodeIndex + "__" + nodeRole + ".txt");
+                            var folder =
+                                Directory.CreateDirectory(Path.Combine(OutputDirectory,
+                                    nodeTest.TestName));
+                            var logFilePath =
+                                Path.Combine(folder.FullName,
+                                    "node" + nodeIndex + "__" + nodeRole + ".txt");
                             var fileActor =
-                                TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
+                                TestRunSystem.ActorOf(
+                                    Props.Create(() => new FileSystemAppenderActor(logFilePath)));
                             process.OutputDataReceived += (sender, eventArgs) =>
                             {
-                                if(eventArgs?.Data != null)
+                                if (eventArgs?.Data != null)
+                                {
                                     fileActor.Tell(eventArgs.Data);
+                                    if (TeamCityFormattingOn)
+                                    {
+                                        // teamCityTest.WriteStdOutput(eventArgs.Data); TODO: open flood gates
+                                    }
+                                }
                             };
                             var closureTest = nodeTest;
                             process.Exited += (sender, eventArgs) =>
                             {
                                 if (process.ExitCode == 0)
                                 {
-                                    ReportSpecPassFromExitCode(nodeIndex, nodeRole, closureTest.TestName);
+                                    ReportSpecPassFromExitCode(nodeIndex, nodeRole,
+                                        closureTest.TestName);
                                 }
                             };
-                            
+
                             process.Start();
                             process.BeginOutputReadLine();
-                            PublishRunnerMessage(string.Format("Started node {0} : {1} on pid {2}", nodeIndex, nodeRole, process.Id));
+                            PublishRunnerMessage(string.Format("Started node {0} : {1} on pid {2}",
+                                nodeIndex,
+                                nodeRole, process.Id));
                         }
 
                         foreach (var process in processes)
@@ -192,9 +229,12 @@ namespace Akka.MultiNodeTestRunner
                             process.Close();
                         }
 
-                        PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
+                        PublishRunnerMessage(
+                            "Waiting 3 seconds for all messages from all processes to be collected.");
                         Thread.Sleep(TimeSpan.FromSeconds(3));
-                        FinishSpec();
+                        FinishSpec(test.Value);
+
+
                     }
                 }
             }
@@ -202,7 +242,7 @@ namespace Akka.MultiNodeTestRunner
             PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
             Thread.Sleep(TimeSpan.FromSeconds(5));
             CloseAllSinks();
-            
+
             //Block until all Sinks have been terminated.
             TestRunSystem.WhenTerminated.Wait(TimeSpan.FromMinutes(1));
 
@@ -228,7 +268,7 @@ namespace Akka.MultiNodeTestRunner
                     var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".json", now);
 
                     var jsonStoreProps = Props.Create(() =>
-                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, true));
+                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
 
                     return new FileSystemMessageSink(jsonStoreProps);
                 };
@@ -238,7 +278,7 @@ namespace Akka.MultiNodeTestRunner
                     var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".html", now);
 
                     var visualizerProps = Props.Create(() =>
-                        new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, true));
+                        new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
 
                     return new FileSystemMessageSink(visualizerProps);
                 };
@@ -266,9 +306,10 @@ namespace Akka.MultiNodeTestRunner
             SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, nodeRole, testName + " passed."));
         }
 
-        static void FinishSpec()
+        static void FinishSpec(IList<NodeTest> tests)
         {
-           SinkCoordinator.Tell(new EndSpec());
+            var spec = tests.First();
+            SinkCoordinator.Tell(new EndSpec(spec.TestName, spec.MethodName));
         }
 
         static void PublishRunnerMessage(string message)

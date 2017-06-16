@@ -14,8 +14,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Tests
 {
-    // FIXME
-    public abstract class LocalSnapshotStoreSpec : SnapshotStoreSpec
+    public class LocalSnapshotStoreSpec : SnapshotStoreSpec
     {
         private readonly string _path;
         public LocalSnapshotStoreSpec(ITestOutputHelper output) 
