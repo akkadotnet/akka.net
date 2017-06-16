@@ -206,6 +206,24 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
             ExpectMsg(1L);
             spref.Tell(new Cmd("kablama"));
             ExpectMsg(2L);
+            // var filter = EventFilter.Error(start: "Error loading snapshot").Mute(); // TODO for some reason filtering doesn't work
+            Sys.EventStream.Subscribe(TestActor, typeof (Error));
+            try
+            {
+                var lpref = Sys.ActorOf(Props.Create(() => new LoadSnapshotTestActor(Name, TestActor)));
+                ExpectMsg<Error>(m => m.Message.ToString().StartsWith("Error loading snapshot"));
+                ExpectMsg<SnapshotOffer>(m => m.Metadata.PersistenceId.Equals(persistenceId) &&
+                                              m.Metadata.SequenceNr == 1 && m.Metadata.Timestamp > SnapshotMetadata.TimestampNotSpecified &&
+                                              m.Snapshot.Equals("blahonga"));
+                ExpectMsg("kablama-2");
+                ExpectMsg<RecoveryCompleted>();
+                ExpectNoMsg(1.Seconds());
+            }
+            finally
+            {
+                Sys.EventStream.Unsubscribe(TestActor, typeof (Error));
+                //filter.Unmute();
+            }
         }
 
         [Fact]
