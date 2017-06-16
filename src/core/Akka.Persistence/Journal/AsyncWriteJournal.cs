@@ -216,7 +216,7 @@ namespace Akka.Persistence.Journal
         {
             var eventStream = Context.System.EventStream;
             _breaker.WithCircuitBreaker(() => DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr))
-                .ContinueWith(t => t.IsCompleted
+                .ContinueWith(t => !t.IsFaulted && !t.IsCanceled
                         ? new DeleteMessagesSuccess(message.ToSequenceNr) as object
                         : new DeleteMessagesFailure(
                             t.IsFaulted
@@ -228,7 +228,7 @@ namespace Akka.Persistence.Journal
                 .PipeTo(message.PersistentActor)
                 .ContinueWith(t =>
                 {
-                    if (t.IsCompleted && CanPublish)
+                    if (!t.IsFaulted && !t.IsCanceled && CanPublish)
                         eventStream.Publish(message);
                 }, _continuationOptions);
         }
@@ -248,7 +248,7 @@ namespace Akka.Persistence.Journal
             _breaker.WithCircuitBreaker(() => ReadHighestSequenceNrAsync(message.PersistenceId, readHighestSequenceNrFrom))
                 .ContinueWith(t =>
                 {
-                    if (t.IsCompleted)
+                    if (!t.IsFaulted && !t.IsCanceled)
                     {
                         var highSequenceNr = t.Result;
                         var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
@@ -273,7 +273,7 @@ namespace Akka.Persistence.Journal
                             })
                             .ContinueWith(replayTask =>
                             {
-                                if (replayTask.IsCompleted)
+                                if (!replayTask.IsFaulted && !replayTask.IsCanceled)
                                     promise.SetResult(highSequenceNr);
                                 else
                                     promise.SetException(replayTask.IsFaulted
@@ -290,13 +290,13 @@ namespace Akka.Persistence.Journal
                     }
                 }, _continuationOptions);
             promise.Task
-                .ContinueWith(t => t.IsCompleted
+                .ContinueWith(t => !t.IsFaulted
                     ? new RecoverySuccess(t.Result) as IJournalResponse
                     : new ReplayMessagesFailure(TryUnwrapException(t.Exception)), _continuationOptions)
                 .PipeTo(replyTo)
                 .ContinueWith(t =>
                 {
-                    if (t.IsCompleted && CanPublish) eventStream.Publish(message);
+                    if (!t.IsFaulted && CanPublish) eventStream.Publish(message);
                 }, _continuationOptions);
         }
 
