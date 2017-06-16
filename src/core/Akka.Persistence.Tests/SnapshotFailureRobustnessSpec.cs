@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -161,11 +162,7 @@ namespace Akka.Persistence.Tests
                 {
                     var bytes = Encoding.UTF8.GetBytes("b0rk");
                     var tempFile = WithOutputStream(metadata, stream => stream.Write(bytes, 0, bytes.Length));
-                    var newTempFileName = GetSnapshotFileForWrite(metadata, ".tmp");
-                    if (tempFile != newTempFileName)
-                    {
-                        tempFile.MoveTo(newTempFileName.FullName);
-                    }
+					tempFile.MoveTo(GetSnapshotFileForWrite(metadata, "").FullName);
                 }
                 else base.Save(metadata, payload);
             }
@@ -229,7 +226,7 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
             }
         }
 
-        [Fact(Skip = "Temporarily skipped")]
+        [Fact]
         public void PersistentActor_with_a_failing_snapshot_should_fail_recovery_and_stop_actor_when_no_snapshot_could_be_loaded()
         {
             var spref = Sys.ActorOf(Props.Create(() => new SaveSnapshotTestActor(Name, TestActor)));
@@ -264,7 +261,7 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
             }
         }
 
-        [Fact(Skip = "Temporarily skipped")]
+        [Fact]
         public void PersistentActor_with_a_failing_snapshot_should_receive_failure_message_when_deleting_a_single_snapshot_fails()
         {
             var pref = Sys.ActorOf(Props.Create(() => new DeleteSnapshotTestActor(Name, TestActor)));
@@ -279,7 +276,7 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
                                           m.Cause.Message.Contains("Failed to delete"));
         }
 
-        [Fact(Skip = "Temporarily skipped")]
+        [Fact]
         public void PersistentActor_with_a_failing_snapshot_should_receive_failure_message_when_bulk_deleting_snapshots_fails()
         {
             var pref = Sys.ActorOf(Props.Create(() => new DeleteSnapshotTestActor(Name, TestActor)));
