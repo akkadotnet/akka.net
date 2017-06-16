@@ -490,6 +490,27 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void BroadcastHub_must_remember_completion_for_materialisations_after_completion()
+        {
+            var t = this.SourceProbe<NotUsed>()
+                .ToMaterialized(BroadcastHub.Sink<NotUsed>(), Keep.Both)
+                .Run(Materializer);
+            var sourceProbe = t.Item1;
+            var source = t.Item2;
+            var sinkProbe = source.RunWith(this.SinkProbe<NotUsed>(), Materializer);
+
+            sourceProbe.SendComplete();
+
+            sinkProbe.Request(1).ExpectComplete();
+
+            // Materialize a second time. There was a race here, where we managed to enqueue our Source registration just
+            // immediately before the Hub shut down.
+            var sink2Probe = source.RunWith(this.SinkProbe<NotUsed>(), Materializer);
+
+            sink2Probe.Request(1).ExpectComplete();
+        }
+
+        [Fact]
         public void BroadcastHub_must_properly_signal_error_to_consumers()
         {
             this.AssertAllStagesStopped(() =>

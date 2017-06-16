@@ -506,35 +506,6 @@ namespace Akka.Streams.Implementation.Stages
     /// <summary>
     /// TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    public sealed class Buffer<T> : SymbolicStage<T, T>
-    {
-        private readonly int _size;
-        private readonly OverflowStrategy _overflowStrategy;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="size">TBD</param>
-        /// <param name="overflowStrategy">TBD</param>
-        /// <param name="attributes">TBD</param>
-        public Buffer(int size, OverflowStrategy overflowStrategy, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Buffer)
-        {
-            _size = size;
-            _overflowStrategy = overflowStrategy;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="effectiveAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Buffer<T>(_size, _overflowStrategy);
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     public sealed class FirstOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
     {

@@ -203,3 +203,4 @@ tools/
 build/
 .nuget/
 .dotnet/
+launchSettings.json
