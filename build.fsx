@@ -77,7 +77,6 @@ Target "RunTests" (fun _ ->
                            -- "./**/Akka.Remote.TestKit.Tests.csproj"
                            -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                            -- "./**/serializers/**/*Wire*.csproj"
-                           -- "./**/Akka.Persistence.Tests.csproj" 
 
     let syncSpecs = !! "./**/Akka.Streams.Tests.csproj"
     
@@ -85,8 +84,7 @@ Target "RunTests" (fun _ ->
                        ++ "./**/contrib/**/*.Tests.csproj"
                        -- "./**/serializers/**/*Wire*.csproj"
                        -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                       -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
-                       -- "./**/Akka.Persistence.Tests.csproj"
+                       -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                        -- "./**/Akka.API.Tests.csproj"
                        
 
