@@ -67,7 +67,7 @@ namespace Akka.Persistence.Snapshot
                 var metadata = new SnapshotMetadata(saveSnapshot.Metadata.PersistenceId, saveSnapshot.Metadata.SequenceNr, DateTime.UtcNow);
 
                 _breaker.WithCircuitBreaker(() => SaveAsync(metadata, saveSnapshot.Snapshot))
-                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                    .ContinueWith(t => t.IsCompleted
                         ? new SaveSnapshotSuccess(metadata) as ISnapshotResponse
                         : new SaveSnapshotFailure(saveSnapshot.Metadata,
                             t.IsFaulted
