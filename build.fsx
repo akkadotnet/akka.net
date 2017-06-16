@@ -21,7 +21,7 @@ let outputTests = __SOURCE_DIRECTORY__ @@ "TestResults"
 let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
-let outputMultiNode = output @@ "multinode"
+let outputMultiNode = outputTests @@ "multinode"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
