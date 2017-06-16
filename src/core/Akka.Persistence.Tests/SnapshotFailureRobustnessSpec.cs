@@ -162,7 +162,7 @@ namespace Akka.Persistence.Tests
                     var bytes = Encoding.UTF8.GetBytes("b0rk");
                     var tempFile = WithOutputStream(metadata, stream => stream.Write(bytes, 0, bytes.Length));
                     var newTempFileName = GetSnapshotFileForWrite(metadata, ".tmp");
-                    if (tempFile != newTempFileName)
+                    if (!tempFile.FullName.Equals(newTempFileName.FullName))
                     {
                         tempFile.MoveTo(newTempFileName.FullName);
                     }
