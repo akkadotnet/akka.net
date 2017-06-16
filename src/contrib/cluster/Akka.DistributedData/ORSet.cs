@@ -214,7 +214,7 @@ namespace Akka.DistributedData
         {
             ElementsMap = elementsMap;
             _versionVector = versionVector;
-            _delta = delta;
+            _syncRoot = delta;
         }
 
         public IImmutableSet<T> Elements => ElementsMap.Keys.ToImmutableHashSet();
@@ -411,7 +411,7 @@ namespace Akka.DistributedData
 
         #region delta replication
 
-        public interface IDeltaOperation : IReplicatedDelta, IRequireCausualDeliveryOfDeltas
+        public interface IDeltaOperation : IReplicatedDelta, IRequireCausualDeliveryOfDeltas, IReplicatedDataSerialization, IEquatable<IDeltaOperation>
         {
         }
 
@@ -422,6 +422,27 @@ namespace Akka.DistributedData
 
             public IDeltaReplicatedData Zero => ORSet<T>.Empty;
             public int DeltaSize => 1;
+
+            public bool Equals(IDeltaOperation other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                if (other is AtomicDeltaOperation op)
+                {
+                    return Underlying.Equals(op.Underlying);
+                }
+                return false;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((AtomicDeltaOperation)obj);
+            }
+
+            public override int GetHashCode() => GetType().GetHashCode() ^ Underlying.GetHashCode();
         }
 
         internal sealed class AddDeltaOperation : AtomicDeltaOperation
@@ -547,12 +568,43 @@ namespace Akka.DistributedData
 
             public IDeltaReplicatedData Zero => ORSet<T>.Empty;
             public int DeltaSize => Operations.Length;
+
+            public bool Equals(IDeltaOperation other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                if (other is DeltaGroup group)
+                {
+                    return Operations.SequenceEqual(group.Operations);
+                }
+                return false;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is DeltaGroup && Equals((DeltaGroup)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                var hash = 0;
+                unchecked
+                {
+                    foreach (var op in Operations)
+                    {
+                        hash = (hash * 297) ^ op.GetHashCode();
+                    }
+                    return hash;
+                }
+            }
         }
 
         [NonSerialized]
-        private readonly IDeltaOperation _delta;
+        private readonly IDeltaOperation _syncRoot; //HACK: we need to ignore this field during serialization. This is the only way to do so on Hyperion on .NET Core
 
-        public IDeltaOperation Delta => _delta;
+        public IDeltaOperation Delta => _syncRoot;
 
         public ORSet<T> MergeDelta(IDeltaOperation delta)
         {

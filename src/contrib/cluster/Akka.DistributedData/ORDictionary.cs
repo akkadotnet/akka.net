@@ -43,7 +43,7 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed partial class ORDictionary<TKey, TValue> :
+    public sealed class ORDictionary<TKey, TValue> :
         IEnumerable<KeyValuePair<TKey, TValue>>,
         IRemovedNodePruning<ORDictionary<TKey, TValue>>,
         IEquatable<ORDictionary<TKey, TValue>>,
@@ -73,7 +73,7 @@ namespace Akka.DistributedData
         {
             KeySet = keySet;
             ValueMap = valueMap;
-            _delta = delta;
+            _syncRoot = delta;
         }
 
         /// <summary>
@@ -373,7 +373,7 @@ namespace Akka.DistributedData
 
         #region delta operations
 
-        public interface IDeltaOperation : IReplicatedDelta, IRequireCausualDeliveryOfDeltas
+        public interface IDeltaOperation : IReplicatedDelta, IRequireCausualDeliveryOfDeltas, IReplicatedDataSerialization
         {
         }
 
@@ -578,12 +578,12 @@ namespace Akka.DistributedData
         }
 
         [NonSerialized]
-        private readonly IDeltaOperation _delta;
-        public IDeltaOperation Delta => _delta;
+        private readonly IDeltaOperation _syncRoot; //HACK: we need to ignore this field during serialization. This is the only way to do so on Hyperion on .NET Core
+        public IDeltaOperation Delta => _syncRoot;
 
         public ORDictionary<TKey, TValue> ResetDelta()
         {
-            return _delta == null ? this : new ORDictionary<TKey, TValue>(KeySet.ResetDelta(), ValueMap);
+            return _syncRoot == null ? this : new ORDictionary<TKey, TValue>(KeySet.ResetDelta(), ValueMap);
         }
 
         public ORDictionary<TKey, TValue> MergeDelta(IDeltaOperation delta)

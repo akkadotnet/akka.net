@@ -99,7 +99,7 @@ namespace Akka.DistributedData
         public GSet(IImmutableSet<T> elements, GSet<T> delta)
         {
             Elements = elements;
-            _delta = delta;
+            _syncRoot = delta;
         }
 
         /// <summary>
@@ -201,9 +201,9 @@ namespace Akka.DistributedData
         }
 
         [NonSerialized]
-        private readonly GSet<T> _delta;
+        private readonly GSet<T> _syncRoot; //HACK: we need to ignore this field during serialization. This is the only way to do so on Hyperion on .NET Core
 
-        public GSet<T> Delta => _delta;
+        public GSet<T> Delta => _syncRoot;
         public GSet<T> MergeDelta(GSet<T> delta) => Merge(delta);
 
         public GSet<T> ResetDelta() => Delta == null ? this : AssignAncestor(new GSet<T>(Elements));

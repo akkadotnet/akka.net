@@ -71,8 +71,8 @@ namespace Akka.DistributedData
         public ulong Value { get; }
 
         [NonSerialized]
-        private readonly GCounter _delta;
-        public GCounter Delta => _delta;
+        private readonly GCounter _syncRoot; //HACK: we need to ignore this field during serialization. This is the only way to do so on Hyperion on .NET Core
+        public GCounter Delta => _syncRoot;
 
         /// <summary>
         /// TBD
@@ -85,7 +85,7 @@ namespace Akka.DistributedData
         /// <param name="state">TBD</param>
         internal GCounter(ImmutableDictionary<UniqueAddress, ulong> state, GCounter delta = null)
         {
-            _delta = delta;
+            _syncRoot = delta;
             State = state;
             Value = State.Aggregate(Zero, (v, acc) => v + acc.Value);
         }
