@@ -387,7 +387,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     ExpectMsg(2);
                     r.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>(m => m.Regions.Length == 1 && m.Regions[0].Equals(Cluster.SelfAddress));
+                    ExpectMsg<CurrentRegions>(m => m.Regions.Count == 1 && m.Regions.Contains(Cluster.SelfAddress));
                 }, _first);
 
                 EnterBarrier("after-2");
@@ -449,9 +449,9 @@ namespace Akka.Cluster.Sharding.Tests
                     Assert.Equal(r.Path / "2" / "2", LastSender.Path);
 
                     r.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>(x => x.Regions.Length == 2
-                                                   && x.Regions[0].Equals(Cluster.SelfAddress)
-                                                   && x.Regions[1].Equals(Node(_first).Address));
+                    ExpectMsg<CurrentRegions>(x => x.Regions.Count == 2
+                                                   && x.Regions.Contains(Cluster.SelfAddress)
+                                                   && x.Regions.Contains(Node(_first).Address));
                 }, _second);
                 EnterBarrier("after-3");
             });

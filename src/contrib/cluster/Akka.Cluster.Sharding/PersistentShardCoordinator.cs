@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence;
+using System.Threading.Tasks;
 
 namespace Akka.Cluster.Sharding
 {
@@ -53,11 +54,14 @@ namespace Akka.Cluster.Sharding
             /// </summary>
             public readonly IImmutableSet<ShardId> UnallocatedShards;
 
+            public readonly bool RememberEntities;
+
             private State() : this(
                 shards: ImmutableDictionary<ShardId, IActorRef>.Empty,
                 regions: ImmutableDictionary<IActorRef, IImmutableList<ShardId>>.Empty,
                 regionProxies: ImmutableHashSet<IActorRef>.Empty,
-                unallocatedShards: ImmutableHashSet<ShardId>.Empty)
+                unallocatedShards: ImmutableHashSet<ShardId>.Empty,
+                rememberEntities: false)
             { }
 
             /// <summary>
@@ -67,16 +71,43 @@ namespace Akka.Cluster.Sharding
             /// <param name="regions">TBD</param>
             /// <param name="regionProxies">TBD</param>
             /// <param name="unallocatedShards">TBD</param>
+            /// <param name="rememberEntities">TBD</param>
             public State(
                 IImmutableDictionary<ShardId, IActorRef> shards,
                 IImmutableDictionary<IActorRef, IImmutableList<ShardId>> regions,
                 IImmutableSet<IActorRef> regionProxies,
-                IImmutableSet<ShardId> unallocatedShards)
+                IImmutableSet<ShardId> unallocatedShards,
+                bool rememberEntities = false)
             {
                 Shards = shards;
                 Regions = regions;
                 RegionProxies = regionProxies;
                 UnallocatedShards = unallocatedShards;
+                RememberEntities = rememberEntities;
+            }
+
+            public State WithRememberEntities(bool enabled)
+            {
+                if (enabled)
+                    return Copy(rememberEntities: enabled);
+                else
+                    return Copy(unallocatedShards: ImmutableHashSet<ShardId>.Empty, rememberEntities: enabled);
+            }
+
+            public bool IsEmpty
+            {
+                get
+                {
+                    return Shards.Count == 0 && Regions.Count == 0 && RegionProxies.Count == 0;
+                }
+            }
+
+            public IImmutableSet<ShardId> AllShards
+            {
+                get
+                {
+                    return Shards.Keys.Union(UnallocatedShards).ToImmutableHashSet();
+                }
             }
 
             /// <summary>
@@ -109,19 +140,20 @@ namespace Akka.Cluster.Sharding
                 {
                     var message = e as ShardRegionTerminated;
                     if (!Regions.TryGetValue(message.Region, out var shardRegions))
-                        throw new ArgumentException($"Region {message.Region} not registered", nameof(e));
+                        throw new ArgumentException($"Terminated region {message.Region} not registered", nameof(e));
 
+                    var newUnallocatedShards = RememberEntities ? UnallocatedShards.Union(shardRegions) : UnallocatedShards;
                     return Copy(
                         regions: Regions.Remove(message.Region),
                         shards: Shards.RemoveRange(shardRegions),
-                        unallocatedShards: shardRegions.Aggregate(UnallocatedShards, (set, shard) => set.Add(shard)));
+                        unallocatedShards: newUnallocatedShards);
                 }
 
                 if (e is ShardRegionProxyTerminated)
                 {
                     var message = e as ShardRegionProxyTerminated;
                     if (!RegionProxies.Contains(message.RegionProxy))
-                        throw new ArgumentException($"Region proxy {message.RegionProxy} not registered", nameof(e));
+                        throw new ArgumentException($"Terminated region proxy {message.RegionProxy} not registered", nameof(e));
 
                     return Copy(regionProxies: RegionProxies.Remove(message.RegionProxy));
                 }
@@ -134,10 +166,11 @@ namespace Akka.Cluster.Sharding
                     if (Shards.ContainsKey(message.Shard))
                         throw new ArgumentException($"Shard {message.Shard} is already allocated", nameof(e));
 
+                    var newUnallocatedShards = RememberEntities ? UnallocatedShards.Remove(message.Shard) : UnallocatedShards;
                     return Copy(
                         shards: Shards.SetItem(message.Shard, message.Region),
                         regions: Regions.SetItem(message.Region, shardRegions.Add(message.Shard)),
-                        unallocatedShards: UnallocatedShards.Remove(message.Shard));
+                        unallocatedShards: newUnallocatedShards);
                 }
 
                 if (e is ShardHomeDeallocated)
@@ -148,10 +181,11 @@ namespace Akka.Cluster.Sharding
                     if (!Regions.TryGetValue(region, out var shardRegions))
                         throw new ArgumentException($"Region {region} for shard {message.Shard} not registered", nameof(e));
 
+                    var newUnallocatedShards = RememberEntities ? UnallocatedShards.Add(message.Shard) : UnallocatedShards;
                     return Copy(
                         shards: Shards.Remove(message.Shard),
                         regions: Regions.SetItem(region, shardRegions.Where(s => s != message.Shard).ToImmutableList()),
-                        unallocatedShards: UnallocatedShards.Add(message.Shard));
+                        unallocatedShards: newUnallocatedShards);
                 }
 
                 return this;
@@ -164,15 +198,17 @@ namespace Akka.Cluster.Sharding
             /// <param name="regions">TBD</param>
             /// <param name="regionProxies">TBD</param>
             /// <param name="unallocatedShards">TBD</param>
+            /// <param name="rememberEntities">TBD</param>
             /// <returns>TBD</returns>
             public State Copy(IImmutableDictionary<ShardId, IActorRef> shards = null,
                 IImmutableDictionary<IActorRef, IImmutableList<ShardId>> regions = null,
                 IImmutableSet<IActorRef> regionProxies = null,
-                IImmutableSet<ShardId> unallocatedShards = null)
+                IImmutableSet<ShardId> unallocatedShards = null,
+                bool? rememberEntities = null)
             {
-                if (shards == null && regions == null && regionProxies == null && unallocatedShards == null) return this;
+                if (shards == null && regions == null && regionProxies == null && unallocatedShards == null && rememberEntities == null) return this;
 
-                return new State(shards ?? Shards, regions ?? Regions, regionProxies ?? RegionProxies, unallocatedShards ?? UnallocatedShards);
+                return new State(shards ?? Shards, regions ?? Regions, regionProxies ?? RegionProxies, unallocatedShards ?? UnallocatedShards, rememberEntities ?? RememberEntities);
             }
 
             #region Equals
@@ -188,7 +224,8 @@ namespace Akka.Cluster.Sharding
                 return Shards.SequenceEqual(other.Shards)
                     && Regions.Keys.SequenceEqual(other.Regions.Keys)
                     && RegionProxies.SequenceEqual(other.RegionProxies)
-                    && UnallocatedShards.SequenceEqual(other.UnallocatedShards);
+                    && UnallocatedShards.SequenceEqual(other.UnallocatedShards)
+                    && RememberEntities.Equals(other.RememberEntities);
             }
 
             /// <inheritdoc/>
@@ -246,7 +283,12 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly TimeSpan DownRemovalMargin;
+        public readonly TimeSpan RemovalMargin;
+
+        public readonly int MinMembers;
+
+        private bool allRegionsRegistered = false;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -269,8 +311,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly ICancelable _rebalanceTask;
 
-        private int _persistCount = 0;
-        private State _currentState = State.Empty;
+        private State _currentState;
 
         /// <summary>
         /// TBD
@@ -282,8 +323,16 @@ namespace Akka.Cluster.Sharding
         {
             TypeName = typeName;
             Settings = settings;
+
+            _currentState = State.Empty.WithRememberEntities(settings.RememberEntities);
+
             AllocationStrategy = allocationStrategy;
-            DownRemovalMargin = Cluster.DowningProvider.DownRemovalMargin;
+            RemovalMargin = Cluster.DowningProvider.DownRemovalMargin;
+
+            if (string.IsNullOrEmpty(settings.Role))
+                MinMembers = Cluster.Settings.MinNrOfMembers;
+            else
+                MinMembers = Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, Cluster.Settings.MinNrOfMembers);
 
             JournalPluginId = Settings.JournalPluginId;
             SnapshotPluginId = Settings.SnapshotPluginId;
@@ -293,11 +342,6 @@ namespace Akka.Cluster.Sharding
             Cluster.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
         }
 
-        private ILoggingAdapter _log;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
         /// <summary>
         /// TBD
         /// </summary>
@@ -335,9 +379,10 @@ namespace Akka.Cluster.Sharding
             else if (message is ShardStarted) HandleShardStated(message as ShardStarted);
             else if (message is ResendShardHost) HandleResendShardHost(message as ResendShardHost);
             else if (message is RebalanceTick) HandleRebalanceTick();
-            else if (message is RebalanceResult) ContinueRebalance(((RebalanceResult)message).Shards.ToImmutableHashSet());
+            else if (message is RebalanceResult) ContinueRebalance(((RebalanceResult)message).Shards);
             else if (message is RebalanceDone) HandleRebalanceDone(message as RebalanceDone);
             else if (message is GracefulShutdownRequest) HandleGracefulShutdownRequest(message as GracefulShutdownRequest);
+            else if (message is GetClusterShardingStats) HandleGetClusterShardingStats(message as GetClusterShardingStats);
             else if (message is ShardHome)
             {
                 // On rebalance, we send ourselves a GetShardHome message to reallocate a
@@ -354,7 +399,7 @@ namespace Akka.Cluster.Sharding
             {
                 var regions = _currentState.Regions.Keys
                     .Select(region => string.IsNullOrEmpty(region.Path.Address.Host) ? Cluster.SelfAddress : region.Path.Address)
-                    .ToArray();
+                    .ToImmutableHashSet();
                 Sender.Tell(new CurrentRegions(regions));
             }
             else if (message is ClusterEvent.CurrentClusterState)
@@ -365,20 +410,22 @@ namespace Akka.Cluster.Sharding
             return true;
         }
 
-        private void AllocateShardHomes()
+        private void AllocateShardHomesForRememberEntities()
         {
-            foreach (var unallocatedShard in _currentState.UnallocatedShards)
+            if (Settings.RememberEntities && _currentState.UnallocatedShards.Count > 0)
             {
-                Self.Tell(new GetShardHome(unallocatedShard));
+                foreach (var unallocatedShard in _currentState.UnallocatedShards)
+                {
+                    Self.Tell(new GetShardHome(unallocatedShard));
+                }
             }
         }
 
         private void SendHostShardMessage(String shard, IActorRef region)
         {
             region.Tell(new HostShard(shard));
-            var cancelable = new Cancelable(Context.System.Scheduler);
-            Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.ShardStartTimeout, Self, new ResendShardHost(shard, region), Self, cancelable);
-            _unAckedHostShards = _unAckedHostShards.SetItem(shard, cancelable);
+            var cancel = Context.System.Scheduler.ScheduleTellOnceCancelable(Settings.TunningParameters.ShardStartTimeout, Self, new ResendShardHost(shard, region), Self);
+            _unAckedHostShards = _unAckedHostShards.SetItem(shard, cancel);
         }
 
         /// <summary>
@@ -389,7 +436,7 @@ namespace Akka.Cluster.Sharding
             foreach (var entry in _currentState.Shards)
                 SendHostShardMessage(entry.Key, entry.Value);
 
-            AllocateShardHomes();
+            AllocateShardHomesForRememberEntities();
         }
 
         private void WatchStateActors()
@@ -403,7 +450,7 @@ namespace Akka.Cluster.Sharding
             foreach (var entry in _currentState.Regions)
             {
                 var a = entry.Key.Path.Address;
-                if ((string.IsNullOrEmpty(a.Host) && a.Port == null) || nodes.Contains(a))
+                if (a.HasLocalScope || nodes.Contains(a))
                     Context.Watch(entry.Key);
                 else
                     RegionTerminated(entry.Key);    // not part of the cluster
@@ -412,7 +459,7 @@ namespace Akka.Cluster.Sharding
             foreach (var proxy in _currentState.RegionProxies)
             {
                 var a = proxy.Path.Address;
-                if ((string.IsNullOrEmpty(a.Host) && a.Port == null) || nodes.Contains(a))
+                if (a.HasLocalScope || nodes.Contains(a))
                     Context.Watch(proxy);
                 else
                     RegionTerminated(proxy);        // not part of the cluster
@@ -433,9 +480,9 @@ namespace Akka.Cluster.Sharding
                 var terminatedRef = terminated.ActorRef;
                 if (_currentState.Regions.ContainsKey(terminatedRef))
                 {
-                    if (DownRemovalMargin != TimeSpan.Zero && terminated.AddressTerminated && _aliveRegions.Contains(terminatedRef))
+                    if (RemovalMargin != TimeSpan.Zero && terminated.AddressTerminated && _aliveRegions.Contains(terminatedRef))
                     {
-                        Context.System.Scheduler.ScheduleTellOnce(DownRemovalMargin, Self, new DelayedShardRegionTerminated(terminatedRef), Self);
+                        Context.System.Scheduler.ScheduleTellOnce(RemovalMargin, Self, new DelayedShardRegionTerminated(terminatedRef), Self);
                         _regionTerminationInProgress = _regionTerminationInProgress.Add(terminatedRef);
                     }
                     else
@@ -476,7 +523,7 @@ namespace Akka.Cluster.Sharding
                     {
                         _currentState = _currentState.Updated(e);
                         Log.Debug("Shard [{0}] deallocated", e.Shard);
-                        AllocateShardHomes();
+                        AllocateShardHomesForRememberEntities();
                     });
                 else
                     // rebalance not completed, graceful shutdown will be retried
@@ -494,7 +541,7 @@ namespace Akka.Cluster.Sharding
                 else
                     shardsTask.ContinueWith(t => !(t.IsFaulted || t.IsCanceled)
                         ? new RebalanceResult(t.Result)
-                        : new RebalanceResult(Enumerable.Empty<ShardId>()))
+                        : new RebalanceResult(ImmutableHashSet<ShardId>.Empty))
                     .PipeTo(Self);
             }
         }
@@ -526,8 +573,16 @@ namespace Akka.Cluster.Sharding
         private void HandleGetShardHome(GetShardHome getShardHome)
         {
             var shard = getShardHome.Shard;
-            if (!_rebalanceInProgress.Contains(shard))
+
+            if (_rebalanceInProgress.Contains(shard))
             {
+                Log.Debug("GetShardHome [{0}] request ignored, because rebalance is in progress for this shard.", shard);
+            }
+            else if (!HasAllRegionsRegistered())
+            {
+                Log.Debug("GetShardHome [{0}] request ignored, because not all regions have registered yet.", shard);
+            }
+            else {
                 if (_currentState.Shards.TryGetValue(shard, out var region))
                 {
                     if (_regionTerminationInProgress.Contains(region))
@@ -556,11 +611,23 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        private bool HasAllRegionsRegistered()
+        {
+            // the check is only for startup, i.e. once all have registered we don't check more
+            if (allRegionsRegistered)
+                return true;
+            else
+            {
+                allRegionsRegistered = _aliveRegions.Count >= MinMembers;
+                return allRegionsRegistered;
+            }
+        }
+
         private void RegionTerminated(IActorRef terminatedRef)
         {
             if (_currentState.Regions.TryGetValue(terminatedRef, out var shards))
             {
-                Log.Debug("Shard region terminated: [{0}]", terminatedRef);
+                Log.Debug("ShardRegion terminated: [{0}]", terminatedRef);
                 foreach (var shard in shards)
                     Self.Tell(new GetShardHome(shard));
 
@@ -569,7 +636,8 @@ namespace Akka.Cluster.Sharding
                     _currentState = _currentState.Updated(e);
                     _gracefullShutdownInProgress = _gracefullShutdownInProgress.Remove(terminatedRef);
                     _regionTerminationInProgress = _regionTerminationInProgress.Remove(terminatedRef);
-                    AllocateShardHomes();
+                    _aliveRegions = _aliveRegions.Remove(terminatedRef);
+                    AllocateShardHomesForRememberEntities();
                 });
             }
         }
@@ -586,9 +654,9 @@ namespace Akka.Cluster.Sharding
         private void HandleRegisterProxy(RegisterProxy registerProxy)
         {
             var proxy = registerProxy.ShardRegionProxy;
-            Log.Debug("Shard region proxy registered: [{0}]", proxy);
+            Log.Debug("ShardRegion proxy registered: [{0}]", proxy);
             if (_currentState.RegionProxies.Contains(proxy))
-                Sender.Tell(new RegisterAck(Self));
+                proxy.Tell(new RegisterAck(Self));
             else
             {
                 var context = Context;
@@ -607,11 +675,14 @@ namespace Akka.Cluster.Sharding
             var region = message.ShardRegion;
             if (IsMember(region))
             {
-                Log.Debug("Shard region registered: [{0}]", region);
+                Log.Debug("ShardRegion registered: [{0}]", region);
                 _aliveRegions = _aliveRegions.Add(region);
 
                 if (_currentState.Regions.ContainsKey(region))
-                    Sender.Tell(new RegisterAck(Self));
+                {
+                    region.Tell(new RegisterAck(Self));
+                    AllocateShardHomesForRememberEntities();
+                }
                 else
                 {
                     var context = Context;
@@ -620,22 +691,45 @@ namespace Akka.Cluster.Sharding
                     _gracefullShutdownInProgress = _gracefullShutdownInProgress.Remove(region);
                     Update(new ShardRegionRegistered(region), e =>
                     {
-                        var isFirstRegion = _currentState.Regions.Count == 0;
                         _currentState = _currentState.Updated(e);
                         context.Watch(region);
                         region.Tell(new RegisterAck(self));
 
-                        if (isFirstRegion) AllocateShardHomes();
+                        AllocateShardHomesForRememberEntities();
                     });
                 }
             }
             else Log.Debug("ShardRegion [{0}] was not registered since the coordinator currently does not know about a node of that region", region);
         }
 
+        private void HandleGetClusterShardingStats(GetClusterShardingStats message)
+        {
+            var sender = Sender;
+            Task.WhenAll(
+                _aliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => Tuple.Create(regionActor, r.Result)))
+                ).ContinueWith(allRegionStats =>
+                {
+                    if(allRegionStats.IsFaulted || allRegionStats.IsCanceled)
+                    {
+                        return new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty);
+                    }
+                    else
+                    {
+                        var regions = allRegionStats.Result.ToImmutableDictionary(i => {
+                            Address regionAddress = i.Item1.Path.Address;
+                            Address address = (regionAddress.HasLocalScope && regionAddress.System == Cluster.SelfAddress.System) ? Cluster.SelfAddress : regionAddress;
+                            return address;
+                        }, j => j.Item2);
+
+                        return new ClusterShardingStats(regions);
+                    }
+                }).PipeTo(sender);
+        }
+
+
         private void SaveSnapshotIfNeeded()
         {
-            _persistCount++;
-            if (_persistCount % Settings.TunningParameters.SnapshotAfter == 0)
+            if (LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
                 SaveSnapshot(_currentState);
@@ -742,19 +836,18 @@ namespace Akka.Cluster.Sharding
                 if (state != null)
                 {
                     Log.Debug("ReceiveRecover SnapshotOffer {0}", state);
-
+                    _currentState = state.WithRememberEntities(Settings.RememberEntities);
                     // Old versions of the state object may not have unallocatedShard set,
                     // thus it will be null.
                     if (state.UnallocatedShards == null)
-                        _currentState = state.Copy(unallocatedShards: ImmutableHashSet<ShardId>.Empty);
-                    else
-                        _currentState = state;
+                        _currentState = _currentState.Copy(unallocatedShards: ImmutableHashSet<ShardId>.Empty);
 
                     return true;
                 }
             }
             else if (message is RecoveryCompleted)
             {
+                _currentState = _currentState.WithRememberEntities(Settings.RememberEntities);
                 WatchStateActors();
                 return true;
             }

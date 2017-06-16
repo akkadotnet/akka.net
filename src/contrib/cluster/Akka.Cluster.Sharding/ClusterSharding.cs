@@ -88,7 +88,12 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public virtual string ShardId(object message)
         {
-            return (Math.Abs(EntityId(message).GetHashCode())%MaxNumberOfShards).ToString();
+            EntityId id;
+            if (message is ShardRegion.StartEntity se)
+                id = se.EntityId;
+            else
+                id = EntityId(message);
+            return (Math.Abs(id.GetHashCode())%MaxNumberOfShards).ToString();
         }
     }
 
@@ -687,17 +692,6 @@ namespace Akka.Cluster.Sharding
     public delegate ShardId ShardResolver(Msg message);
 
     /// <summary>
-    /// TBD
-    /// </summary>
-    public static class ShardResolvers
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly ShardResolver Default = msg => (ShardId)msg;
-    }
-
-    /// <summary>
     /// Interface of the partial function used by the <see cref="ShardRegion"/> to
     /// extract the entity id and the message to send to the entity from an
     /// incoming message. The implementation is application specific.
@@ -859,13 +853,12 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is PersistentShardCoordinator.BeginHandOffAck)
+            if (message is PersistentShardCoordinator.BeginHandOffAck hoa && _shard == hoa.Shard)
             {
-                var shard = ((PersistentShardCoordinator.BeginHandOffAck)message).Shard;
                 _remaining.Remove(Sender);
                 if (_remaining.Count == 0)
                 {
-                    _from.Tell(new PersistentShardCoordinator.HandOff(shard));
+                    _from.Tell(new PersistentShardCoordinator.HandOff(hoa.Shard));
                     Context.Become(StoppingShard);
                 }
             }
@@ -879,7 +872,10 @@ namespace Akka.Cluster.Sharding
 
         private bool StoppingShard(object message)
         {
-            if (message is PersistentShardCoordinator.ShardStopped) Done(true);
+            if (message is PersistentShardCoordinator.ShardStopped ms && _shard == ms.Shard)
+            {
+                Done(true);
+            }
             else if (message is ReceiveTimeout) Done(false);
             else return false;
             return true;
