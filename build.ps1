@@ -30,7 +30,7 @@ Param(
 )
 
 $FakeVersion = "4.61.2"
-$NBenchVersion = "1.0.3"
+$NBenchVersion = "1.0.4"
 $DotNetChannel = "preview";
 $DotNetVersion = "1.0.4";
 $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1";
@@ -117,14 +117,17 @@ if (!(Test-Path $FakeExePath)) {
 # INSTALL NBench Runner
 ###########################################################################
 
-# Make sure NBench Runner has been installed.
-$NBenchDllPath = Join-Path $ToolPath "NBench.Runner/lib/net452/NBench.Runner.exe"
-if (!(Test-Path $NBenchDllPath)) {
-    Write-Host "Installing NBench..."
-    Invoke-Expression "&`"$NugetPath`" install NBench.Runner -ExcludeVersion -Version $NBenchVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
-    if ($LASTEXITCODE -ne 0) {
-        Throw "An error occured while restoring NBench.Runner from NuGet."
-    }
+# 41 MB download so only download when running PerfTests
+if ($ScriptArgs -eq "NBench") {
+	# Make sure NBench Runner has been installed.
+	$NBenchDllPath = Join-Path $ToolPath "NBench.Runner/lib/net452/NBench.Runner.exe"
+	if (!(Test-Path $NBenchDllPath)) {
+		Write-Host "Installing NBench..."
+		Invoke-Expression "&`"$NugetPath`" install NBench.Runner -ExcludeVersion -Version $NBenchVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
+		if ($LASTEXITCODE -ne 0) {
+			Throw "An error occured while restoring NBench.Runner from NuGet."
+		}
+	}
 }
 
 ###########################################################################
