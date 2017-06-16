@@ -23,7 +23,6 @@ namespace Akka.Actor
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
-    [DebuggerDisplay("{Protocol}://{System}@{Host}:{Port}/")]
     public sealed class Address : IEquatable<Address>, ISurrogated
 #if CLONEABLE
         , ICloneable
