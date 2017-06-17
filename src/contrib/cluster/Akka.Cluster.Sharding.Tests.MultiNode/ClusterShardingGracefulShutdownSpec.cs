@@ -15,38 +15,31 @@ using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
 using Xunit;
+using System.Collections.Immutable;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingGracefulShutdownSpecConfig : MultiNodeConfig
     {
+        public RoleName First { get; private set; }
+
+        public RoleName Second { get; private set; }
+
         public ClusterShardingGracefulShutdownSpecConfig()
         {
-            var first = Role("first");
-            var second = Role("second");
+            First = Role("first");
+            Second = Role("second");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider""
-                akka.remote.log-remote-lifecycle-events = off
-                akka.persistence.journal.plugin = ""Akka.Persistence.Journal.in-mem""
-                akka.persistence.journal.in-mem {
-                  timeout = 5s
-                  store {
-                    native = off
-                    dir = ""target/journal-ClusterShardingGracefulShutdownSpec""
-                  }
-                }
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-                akka.persistence.snapshot-store.local.dir = ""target/snapshots-ClusterShardingGracefulShutdownSpec""
-            ");
+            CommonConfig = DebugConfig(false)
+                .WithFallback(ConfigurationFactory.ParseString(@"
+                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+            "))
+            .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
 
-    public class ClusterShardingGracefulShutdownNode1 : ClusterShardingGracefulShutdownSpec { }
-    public class ClusterShardingGracefulShutdownNode2 : ClusterShardingGracefulShutdownSpec { }
-
-    public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
+    public class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -75,41 +68,21 @@ namespace Akka.Cluster.Sharding.Tests
 
         private readonly Lazy<IActorRef> _region;
 
-        private readonly DirectoryInfo[] _storageLocations;
-        private readonly RoleName _first;
-        private readonly RoleName _second;
+        private readonly ClusterShardingGracefulShutdownSpecConfig _config;
 
-        protected ClusterShardingGracefulShutdownSpec() : base(new ClusterShardingGracefulShutdownSpecConfig())
+        public ClusterShardingGracefulShutdownSpec()
+            : this(new ClusterShardingGracefulShutdownSpecConfig())
         {
-            _storageLocations = new[]
-            {
-                "akka.persistence.journal.leveldb.dir",
-                "akka.persistence.journal.leveldb-shared.store.dir",
-                "akka.persistence.snapshot-store.local.dir"
-            }.Select(s => new DirectoryInfo(Sys.Settings.Config.GetString(s))).ToArray();
+        }
+
+        protected ClusterShardingGracefulShutdownSpec(ClusterShardingGracefulShutdownSpecConfig config)
+            : base(config)
+        {
+            _config = config;
+
 
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
 
-            _first = new RoleName("first");
-            _second = new RoleName("second");
-        }
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
-            RunOn(() =>
-            {
-                foreach (var location in _storageLocations) if (location.Exists) location.Delete();
-            }, _first);
-        }
-
-        protected override void AfterTermination()
-        {
-            base.AfterTermination();
-            RunOn(() =>
-            {
-                foreach (var location in _storageLocations) if (location.Exists) location.Delete();
-            }, _first);
         }
 
         #endregion
@@ -118,7 +91,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             RunOn(() =>
             {
-                Cluster.Join(Node(to).Address);
+                Cluster.Join(GetAddress(to));
                 StartSharding();
             }, from);
             EnterBarrier(from.Name + "-joined");
@@ -137,33 +110,38 @@ namespace Akka.Cluster.Sharding.Tests
                 handOffStopMessage: StopEntity.Instance);
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void ClusterSharding_should_setup_shared_journal()
+        [MultiNodeFact]
+        public void ClusterShardingGracefulShutdownSpecs()
         {
-            // start the Persistence extension
-            Persistence.Persistence.Instance.Apply(Sys);
-            RunOn(() =>
-            {
-                Sys.ActorOf(Props.Create<MemoryJournal>(), "store");
-            }, _first);
-            EnterBarrier("persistence-started");
-
-            RunOn(() =>
-            {
-                Sys.ActorSelection(Node(_first) / "user" / "store").Tell(new Identify(null));
-                var sharedStore = ExpectMsg<ActorIdentity>().Subject;
-                //TODO: SharedLeveldbJournal.setStore(sharedStore, system)
-            }, _first, _second);
-            EnterBarrier("after-1");
+            ClusterSharding_should_start_some_shards_in_both_regions();
+            ClusterSharding_should_gracefully_shutdown_a_region();
+            ClusterSharding_should_gracefully_shutdown_empty_region();
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact()]
+        //public void ClusterSharding_should_setup_shared_journal()
+        //{
+        //    // start the Persistence extension
+        //    Persistence.Persistence.Instance.Apply(Sys);
+        //    RunOn(() =>
+        //    {
+        //        Sys.ActorOf(Props.Create<MemoryJournal>(), "store");
+        //    }, _config.First);
+        //    EnterBarrier("persistence-started");
+
+        //    RunOn(() =>
+        //    {
+        //        Sys.ActorSelection(Node(_config.First) / "user" / "store").Tell(new Identify(null));
+        //        var sharedStore = ExpectMsg<ActorIdentity>().Subject;
+        //        //TODO: SharedLeveldbJournal.setStore(sharedStore, system)
+        //    }, _config.First, _config.Second);
+        //    EnterBarrier("after-1");
+        //}
+
         public void ClusterSharding_should_start_some_shards_in_both_regions()
         {
-            ClusterSharding_should_setup_shared_journal();
-
-            Join(_first, _first);
-            Join(_second, _first);
+            Join(_config.First, _config.First);
+            Join(_config.Second, _config.First);
 
             AwaitAssert(() =>
             {
@@ -175,33 +153,33 @@ namespace Akka.Cluster.Sharding.Tests
                         probe.ExpectMsg(n, TimeSpan.FromSeconds(1));
                         return probe.LastSender.Path.Address;
                     })
-                    .ToArray();
+                    .ToImmutableHashSet();
 
-                Assert.Equal(2, regionAddresses.Length);
+                Assert.Equal(2, regionAddresses.Count);
             });
             EnterBarrier("after-2");
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_gracefully_shutdown_a_region()
         {
-            ClusterSharding_should_start_some_shards_in_both_regions();
-
             RunOn(() =>
             {
                 _region.Value.Tell(GracefulShutdown.Instance);
-            }, _second);
+            }, _config.Second);
 
             RunOn(() =>
             {
-                var probe = CreateTestProbe();
-                for (int i = 1; i <= 200; i++)
+                AwaitAssert(() =>
                 {
-                    _region.Value.Tell(i, probe.Ref);
-                    probe.ExpectMsg(i, TimeSpan.FromSeconds(1));
-                    Assert.Equal(_region.Value.Path / i.ToString() / i.ToString(), probe.LastSender.Path);
-                }
-            }, _first);
+                    var probe = CreateTestProbe();
+                    for (int i = 1; i <= 200; i++)
+                    {
+                        _region.Value.Tell(i, probe.Ref);
+                        probe.ExpectMsg(i, TimeSpan.FromSeconds(1));
+                        Assert.Equal(_region.Value.Path / i.ToString() / i.ToString(), probe.LastSender.Path);
+                    }
+                });
+            }, _config.First);
             EnterBarrier("handoff-completed");
 
             RunOn(() =>
@@ -209,8 +187,28 @@ namespace Akka.Cluster.Sharding.Tests
                 var region = _region.Value;
                 Watch(region);
                 ExpectTerminated(region);
-            }, _second);
+            }, _config.Second);
             EnterBarrier("after-3");
+        }
+
+        public void ClusterSharding_should_gracefully_shutdown_empty_region()
+        {
+            RunOn(() =>
+            {
+                var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
+                var regionEmpty = ClusterSharding.Get(Sys).Start(
+                    typeName: "EntityEmpty",
+                    entityProps: Props.Create<Entity>(),
+                    settings: ClusterShardingSettings.Create(Sys),
+                    idExtractor: extractEntityId,
+                    shardResolver: extractShardId,
+                    allocationStrategy: allocationStrategy,
+                    handOffStopMessage: StopEntity.Instance);
+
+                Watch(regionEmpty);
+                regionEmpty.Tell(GracefulShutdown.Instance);
+                ExpectTerminated(regionEmpty);
+            }, _config.First);
         }
     }
 }
