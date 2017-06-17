@@ -46,7 +46,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_should_reallocate_from_region_with_most_number_of_shards()
+        public void LeastShardAllocationStrategy_should_rebalance_from_region_with_most_number_of_shards()
         {
             var allocations = new Dictionary<IActorRef, IImmutableList<string>>
             {
@@ -57,20 +57,35 @@ namespace Akka.Cluster.Sharding.Tests
 
             // so far regionB has 2 shards and regionC has 0 shards, but the diff is less than rebalanceThreshold
             var r1 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
-            Assert.Equal(r1.Count, 0);
+            Assert.Equal(0, r1.Count);
 
             allocations = allocations.SetItem(_regionB, new[] { "shard2", "shard3", "shard4" }.ToImmutableList());
             var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
-            Assert.Equal(r2.Count, 1);
-            Assert.Equal(r2.First(), "shard2");
+            Assert.True(r2.SetEquals(new[] { "shard2", "shard3" }));
 
             var r3 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard4")).Result;
-            Assert.Equal(r3.Count, 0);
+            Assert.Equal(0, r3.Count);
 
             allocations = allocations.SetItem(_regionA, new[] { "shard1", "shard5", "shard6" }.ToImmutableList());
             var r4 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard1")).Result;
-            Assert.Equal(r4.Count, 1);
-            Assert.Equal(r2.First(), "shard2");
+            Assert.True(r4.SetEquals(new[] { "shard2" }));
+        }
+
+        [Fact]
+        public void LeastShardAllocationStrategy_should_rebalance_multiple_shards_if_max_simultaneous_rebalances_is_not_exceeded()
+        {
+            var allocations = new Dictionary<IActorRef, IImmutableList<string>>
+            {
+                {_regionA, new []{"shard1"}.ToImmutableList() },
+                {_regionB, new []{ "shard2", "shard3", "shard4", "shard5", "shard6" }.ToImmutableList() },
+                {_regionC, ImmutableList<string>.Empty}
+            }.ToImmutableDictionary();
+
+            var r1 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
+            Assert.True(r1.SetEquals(new[] { "shard2", "shard3" }));
+
+            var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard2").Add("shard3")).Result;
+            Assert.Equal(0, r2.Count);
         }
 
         [Fact]
@@ -84,11 +99,10 @@ namespace Akka.Cluster.Sharding.Tests
             }.ToImmutableDictionary();
 
             var r1 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard2")).Result;
-            Assert.Equal(r1.Count, 1);
-            Assert.Equal(r1.First(), "shard3");
+            Assert.True(r1.SetEquals(new[] { "shard3" }));
 
             var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard2").Add("shard3")).Result;
-            Assert.Equal(r2.Count, 0);
+            Assert.Equal(0, r2.Count);
         }
     }
 }

@@ -83,6 +83,30 @@ namespace Akka.Cluster.Sharding
             {
                 EntityId = entityId;
             }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                var other = obj as StartEntity;
+
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return EntityId.Equals(other.EntityId);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return EntityId?.GetHashCode() ?? 0;
+                }
+            }
+
+            #endregion
         }
 
         /// <summary>
@@ -111,6 +135,33 @@ namespace Akka.Cluster.Sharding
                 EntityId = entityId;
                 ShardId = shardId;
             }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                var other = obj as StartEntityAck;
+
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return EntityId.Equals(other.EntityId)
+                    && ShardId.Equals(other.ShardId);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = EntityId?.GetHashCode() ?? 0;
+                    hashCode = (hashCode * 397) ^ (ShardId?.GetHashCode() ?? 0);
+                    return hashCode;
+                }
+            }
+
+            #endregion
         }
 
         #endregion
