@@ -8,7 +8,7 @@ The basic idea behind Event Sourcing is quite simple. A persistent actor receive
 
 Akka persistence supports event sourcing with the `UntypedPersistentActor` abstract class. An actor that extends this class uses the persist method to persist and handle events. The behavior of an `UntypedPersistentActor` is defined by implementing `OnRecover` and `OnCommand` methods. This is demonstrated in the following example.
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/PersistentActor.cs?range=9-101)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/PersistentActor.cs?range=9-101)]
 The example defines two data types, `Cmd` and `Evt` to represent commands and events, respectively. The state of the `PersistentActor` is a list of persisted event data contained in `ExampleState`.
 
 The persistent actor's `OnRecover` method defines how state is updated during recovery by handling `Evt` and `SnapshotOffer` messages. The persistent actor's `OnCommand` method is a command handler. In this example, a command is handled by generating two events which are then persisted and handled. Events are persisted by calling `Persist` with an event (or a sequence of events) as first argument and an event handler as second argument.
@@ -129,7 +129,7 @@ In the below example, the event callbacks may be called "at any time", even afte
 > [!NOTE]
 > In order to implement the pattern known as "command sourcing" simply `PersistAsync` all incoming messages right away and handle them in the callback.
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/PersistAsync.cs?range=8-45)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/PersistAsync.cs?range=8-45)]
 
 > [!WARNING]
 > The callback will not be invoked if the actor is restarted (or stopped) in between the call to `PersistAsync` and the journal has confirmed the write.
@@ -139,7 +139,7 @@ Sometimes when working with `PersistAsync` or `Persist` you may find that it wou
 
 Using this method is very similar to the persist family of methods, yet it does **not** persist the passed in event. It will be kept in memory and used when invoking the handler.
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/Defer.cs?range=8-27)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/Defer.cs?range=8-27)]
 
 Notice that the `Sender` is safe to access in the handler callback, and will be pointing to the original sender of the command for which this `DeferAsync` handler was called.
 
@@ -161,7 +161,7 @@ persistentActor.tell("b");
 ```
 
 You can also call `DeferAsync` with `Persist`.
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/DeferWithPersist.cs?range=8-27)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/DeferWithPersist.cs?range=8-27)]
 
 > [!WARNING]
 > The callback will not be invoked if the actor is restarted (or stopped) in between the call to `DeferAsync` and the journal has processed and confirmed all preceding writes..
@@ -172,21 +172,21 @@ It is possible to call `Persist` and `PersistAsync` inside their respective call
 
 In general it is encouraged to create command handlers which do not need to resort to nested event persisting, however there are situations where it may be useful. It is important to understand the ordering of callback execution in those situations, as well as their implication on the stashing behaviour (that persist enforces). In the following example two persist calls are issued, and each of them issues another persist inside its callback:
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/NestedPersists.cs?range=8-36)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/NestedPersists.cs?range=8-36)]
 
 When sending two commands to this `UntypedPersistentActor`, the persist handlers will be executed in the following order:
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/NestedPersists.cs?range=43-57)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/NestedPersists.cs?range=43-57)]
 
 First the "outer layer" of persist calls is issued and their callbacks are applied. After these have successfully completed, the inner callbacks will be invoked (once the events they are persisting have been confirmed to be persisted by the journal). Only after all these handlers have been successfully invoked will the next command be delivered to the persistent Actor. In other words, the stashing of incoming commands that is guaranteed by initially calling `Persist` on the outer layer is extended until all nested persist callbacks have been handled.
 
 It is also possible to nest `PersistAsync` calls, using the same pattern:
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/NestedPersistsAsync.cs?range=8-36)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/NestedPersistsAsync.cs?range=8-36)]
 
 In this case no stashing is happening, yet events are still persisted and callbacks are executed in the expected order:
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/NestedPersistsAsync.cs?range=43-60)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/NestedPersistsAsync.cs?range=43-60)]
 
 While it is possible to nest mixed `Persist` and `PersistAsync` with keeping their respective semantics it is not a recommended practice, as it may lead to overly complex nesting.
 
@@ -267,9 +267,9 @@ This can be dangerous when used with `UntypedPersistentActor` due to the fact th
 
 The example below highlights how messages arrive in the Actor's mailbox and how they interact with its internal stashing mechanism when `Persist()` is used. Notice the early stop behaviour that occurs when `PoisonPill` is used:
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/AvoidPoisonPill.cs?range=9-35)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/AvoidPoisonPill.cs?range=9-35)]
 
-[!code-csharp[Main](../../examples/Persistence/PersistentActor/AvoidPoisonPill.cs?range=42-68)]
+[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/AvoidPoisonPill.cs?range=42-68)]
 
 ## Replay filter
 There could be cases where event streams are corrupted and multiple writers (i.e. multiple persistent actor instances) journaled different messages with the same sequence number. In such a case, you can configure how you filter replayed messages from multiple writers, upon recovery.

@@ -6,11 +6,33 @@ using Akka.Pattern;
 
 namespace DocsExamples.Utilities.CircuitBreakers
 {
+	#region circuit-breaker-usage
     public class DangerousActor : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         public DangerousActor()
+        {
+            var breaker = new CircuitBreaker(
+                    maxFailures: 5,
+                    callTimeout: TimeSpan.FromSeconds(10),
+                    resetTimeout: TimeSpan.FromMinutes(1))
+                .OnOpen(NotifyMeOnOpen);
+        }
+
+        private void NotifyMeOnOpen()
+        {
+            _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
+        }
+    }
+    #endregion
+
+    #region call-protection
+    public class DangerousActorCallProtection : ReceiveActor
+    {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        public DangerousActorCallProtection()
         {
             var breaker = new CircuitBreaker(
                     maxFailures: 5,
@@ -36,4 +58,5 @@ namespace DocsExamples.Utilities.CircuitBreakers
             _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
         }
     }
+    #endregion
 }
