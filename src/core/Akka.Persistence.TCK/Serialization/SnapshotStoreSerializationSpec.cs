@@ -8,11 +8,8 @@ using System;
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
-<<<<<<< HEAD
 using Akka.Persistence.Fsm;
-=======
 using Akka.Serialization;
->>>>>>> improved serialization tests in Persistence TCK
 using Xunit;
 using Xunit.Abstractions;
 using Akka.Util.Internal;

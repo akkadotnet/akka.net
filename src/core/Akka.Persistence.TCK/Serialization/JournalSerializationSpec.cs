@@ -10,12 +10,9 @@ using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
-<<<<<<< HEAD
 using Akka.Persistence.Fsm;
-=======
 using Akka.Persistence.Journal;
 using Akka.Serialization;
->>>>>>> improved serialization tests in Persistence TCK
 using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
