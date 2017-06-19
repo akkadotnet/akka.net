@@ -93,7 +93,7 @@ Target "RunTests" (fun _ ->
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
                     TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -parallel none -teamcity --no-appdomain -c Release -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+                (sprintf "xunit -parallel none -teamcity --noappdomain -c Release -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
