@@ -541,7 +541,7 @@ namespace Akka.Cluster.Sharding
                 else
                     shardsTask.ContinueWith(t => !(t.IsFaulted || t.IsCanceled)
                         ? new RebalanceResult(t.Result)
-                        : new RebalanceResult(ImmutableHashSet<ShardId>.Empty))
+                        : new RebalanceResult(ImmutableHashSet<ShardId>.Empty), TaskContinuationOptions.ExecuteSynchronously)
                     .PipeTo(Self);
             }
         }
@@ -604,7 +604,7 @@ namespace Akka.Cluster.Sharding
                         else
                             regionTask.ContinueWith(t => !(t.IsFaulted || t.IsCanceled)
                                 ? new AllocateShardResult(shard, t.Result, getShardHomeSender)
-                                : new AllocateShardResult(shard, null, getShardHomeSender))
+                                : new AllocateShardResult(shard, null, getShardHomeSender), TaskContinuationOptions.ExecuteSynchronously)
                             .PipeTo(Self);
                     }
                 }
@@ -706,10 +706,10 @@ namespace Akka.Cluster.Sharding
         {
             var sender = Sender;
             Task.WhenAll(
-                _aliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => Tuple.Create(regionActor, r.Result)))
+                _aliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => Tuple.Create(regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously))
                 ).ContinueWith(allRegionStats =>
                 {
-                    if(allRegionStats.IsFaulted || allRegionStats.IsCanceled)
+                    if (allRegionStats.IsFaulted || allRegionStats.IsCanceled)
                     {
                         return new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty);
                     }
@@ -723,7 +723,7 @@ namespace Akka.Cluster.Sharding
 
                         return new ClusterShardingStats(regions);
                     }
-                }).PipeTo(sender);
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(sender);
         }
 
 

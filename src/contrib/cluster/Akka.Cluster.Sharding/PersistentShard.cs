@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Persistence;
 using Akka.Util.Internal;
+using System.Threading.Tasks;
 
 namespace Akka.Cluster.Sharding
 {
@@ -282,7 +283,7 @@ namespace Akka.Cluster.Sharding
         private void RestartRememberedEntities()
         {
             RememberedEntitiesRecoveryStrategy.RecoverEntities(State.Entries).ForEach(scheduledRecovery =>
-                scheduledRecovery.ContinueWith(t => new RestartEntities(t.Result)).PipeTo(_context.Self));
+                scheduledRecovery.ContinueWith(t => new RestartEntities(t.Result), TaskContinuationOptions.ExecuteSynchronously).PipeTo(_context.Self));
         }
     }
 }

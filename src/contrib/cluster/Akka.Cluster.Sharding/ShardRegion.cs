@@ -69,7 +69,7 @@ namespace Akka.Cluster.Sharding
         /// the message *must* be handled by the shard id extractor.
         /// </summary>
         [Serializable]
-        public sealed class StartEntity: IClusterShardingSerializable
+        public sealed class StartEntity : IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -463,7 +463,8 @@ namespace Akka.Cluster.Sharding
             else if (message is RestartShard) DeliverMessage(message, Sender);
             else if (message is StartEntity) DeliverStartEntity(message, Sender);
             else if (IdExtractor(message) != null) DeliverMessage(message, Sender);
-            else {
+            else
+            {
                 Log.Warning("Message does not have an extractor defined in shard [{0}] so it was ignored: {1}", TypeName, message);
                 return false;
             }
@@ -514,7 +515,8 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    if (!ShardBuffers.TryGetValue(shardId, out var buffer)) {
+                    if (!ShardBuffers.TryGetValue(shardId, out var buffer))
+                    {
                         buffer = ImmutableList<KeyValuePair<object, IActorRef>>.Empty;
                         Log.Debug("Request shard [{0}] home", shardId);
                         if (_coordinator != null)
@@ -642,11 +644,14 @@ namespace Akka.Cluster.Sharding
                 else Sender.Tell(new CurrentRegions(ImmutableHashSet<Address>.Empty));
             }
             else if (query is GetShardRegionState) ReplyToRegionStateQuery(Sender);
-            else if(query is GetShardRegionStats) ReplyToRegionStatsQuery(Sender);
+            else if (query is GetShardRegionStats) ReplyToRegionStatsQuery(Sender);
             else if (query is GetClusterShardingStats)
             {
-                if(_coordinator != null) _coordinator.Tell(new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty));
-            } 
+                if (_coordinator != null)
+                    _coordinator.Forward(query);
+                else
+                    Sender.Tell(new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty));
+            }
             else Unhandled(query);
         }
 
@@ -669,7 +674,7 @@ namespace Akka.Cluster.Sharding
         private Task<Tuple<ShardId, T>[]> AskAllShardsAsync<T>(object message)
         {
             var timeout = TimeSpan.FromSeconds(3);
-            var tasks = Shards.Select(entity => entity.Value.Ask<T>(message, timeout).ContinueWith(t => Tuple.Create(entity.Key, t.Result)));
+            var tasks = Shards.Select(entity => entity.Value.Ask<T>(message, timeout).ContinueWith(t => Tuple.Create(entity.Key, t.Result), TaskContinuationOptions.ExecuteSynchronously));
             return Task.WhenAll(tasks);
         }
 
@@ -686,7 +691,7 @@ namespace Akka.Cluster.Sharding
 
         private void TryCompleteGracefulShutdown()
         {
-            if(GracefulShutdownInProgress && Shards.Count == 0 && ShardBuffers.Count == 0)
+            if (GracefulShutdownInProgress && Shards.Count == 0 && ShardBuffers.Count == 0)
                 Context.Stop(Self);     // all shards have been rebalanced, complete graceful shutdown
         }
 
@@ -885,7 +890,7 @@ namespace Akka.Cluster.Sharding
                 else if (MatchingRole(m))
                     ChangeMembers(MembersByAge.Remove(m));
             }
-            else if(e is ClusterEvent.IMemberEvent)
+            else if (e is ClusterEvent.IMemberEvent)
             {
                 // these are expected, no need to warn about them
             }
