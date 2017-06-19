@@ -32,10 +32,30 @@ namespace Akka.Cluster.Sharding.Tests
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-            "))
-            .WithFallback(MultiNodeClusterSpec.ClusterConfig());
+                    akka.actor {
+                        serializers {
+                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                        }
+                        serialization-bindings {
+                            ""System.Object"" = hyperion
+                        }
+                    }
+
+                    akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+                    akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
+
+                    akka.persistence.journal.MemoryJournal {
+                        class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    }
+
+                    akka.persistence.journal.memory-journal-shared {
+                        class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                        timeout = 5s
+                    }
+                "))
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
 
@@ -80,9 +100,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             _config = config;
 
-
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
-
         }
 
         #endregion
@@ -110,105 +128,126 @@ namespace Akka.Cluster.Sharding.Tests
                 handOffStopMessage: StopEntity.Instance);
         }
 
-        [MultiNodeFact]
+        //[MultiNodeFact]
         public void ClusterShardingGracefulShutdownSpecs()
         {
+            ClusterSharding_should_setup_shared_journal();
             ClusterSharding_should_start_some_shards_in_both_regions();
             ClusterSharding_should_gracefully_shutdown_a_region();
             ClusterSharding_should_gracefully_shutdown_empty_region();
         }
 
-        //[MultiNodeFact()]
-        //public void ClusterSharding_should_setup_shared_journal()
-        //{
-        //    // start the Persistence extension
-        //    Persistence.Persistence.Instance.Apply(Sys);
-        //    RunOn(() =>
-        //    {
-        //        Sys.ActorOf(Props.Create<MemoryJournal>(), "store");
-        //    }, _config.First);
-        //    EnterBarrier("persistence-started");
+        public void ClusterSharding_should_setup_shared_journal()
+        {
+            // start the Persistence extension
+            Persistence.Persistence.Instance.Apply(Sys);
+            RunOn(() =>
+            {
+                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
+            }, _config.First);
+            EnterBarrier("persistence-started");
 
-        //    RunOn(() =>
-        //    {
-        //        Sys.ActorSelection(Node(_config.First) / "user" / "store").Tell(new Identify(null));
-        //        var sharedStore = ExpectMsg<ActorIdentity>().Subject;
-        //        //TODO: SharedLeveldbJournal.setStore(sharedStore, system)
-        //    }, _config.First, _config.Second);
-        //    EnterBarrier("after-1");
-        //}
+            RunOn(() =>
+            {
+                Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
+                var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
+                Assert.NotNull(sharedStore);
+
+                MemoryJournalShared.SetStore(sharedStore, Sys);
+            }, _config.First, _config.Second);
+            EnterBarrier("after-1");
+
+            RunOn(() =>
+            {
+                //check persistence running
+                var probe = CreateTestProbe();
+                var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
+                journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
+                probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
+            }, _config.First, _config.Second);
+            EnterBarrier("after-1-test");
+        }
 
         public void ClusterSharding_should_start_some_shards_in_both_regions()
         {
-            Join(_config.First, _config.First);
-            Join(_config.Second, _config.First);
-
-            AwaitAssert(() =>
+            Within(TimeSpan.FromSeconds(30), () =>
             {
-                var probe = CreateTestProbe();
-                var regionAddresses = Enumerable.Range(1, 100)
-                    .Select(n =>
-                    {
-                        _region.Value.Tell(n, probe.Ref);
-                        probe.ExpectMsg(n, TimeSpan.FromSeconds(1));
-                        return probe.LastSender.Path.Address;
-                    })
-                    .ToImmutableHashSet();
+                Join(_config.First, _config.First);
+                Join(_config.Second, _config.First);
 
-                Assert.Equal(2, regionAddresses.Count);
+                AwaitAssert(() =>
+                {
+                    var probe = CreateTestProbe();
+                    var regionAddresses = Enumerable.Range(1, 100)
+                        .Select(n =>
+                        {
+                            _region.Value.Tell(n, probe.Ref);
+                            probe.ExpectMsg(n, TimeSpan.FromSeconds(1));
+                            return probe.LastSender.Path.Address;
+                        })
+                        .ToImmutableHashSet();
+
+                    Assert.Equal(2, regionAddresses.Count);
+                });
+                EnterBarrier("after-2");
             });
-            EnterBarrier("after-2");
         }
 
         public void ClusterSharding_should_gracefully_shutdown_a_region()
         {
-            RunOn(() =>
+            Within(TimeSpan.FromSeconds(30), () =>
             {
-                _region.Value.Tell(GracefulShutdown.Instance);
-            }, _config.Second);
-
-            RunOn(() =>
-            {
-                AwaitAssert(() =>
+                RunOn(() =>
                 {
-                    var probe = CreateTestProbe();
-                    for (int i = 1; i <= 200; i++)
-                    {
-                        _region.Value.Tell(i, probe.Ref);
-                        probe.ExpectMsg(i, TimeSpan.FromSeconds(1));
-                        Assert.Equal(_region.Value.Path / i.ToString() / i.ToString(), probe.LastSender.Path);
-                    }
-                });
-            }, _config.First);
-            EnterBarrier("handoff-completed");
+                    _region.Value.Tell(GracefulShutdown.Instance);
+                }, _config.Second);
 
-            RunOn(() =>
-            {
-                var region = _region.Value;
-                Watch(region);
-                ExpectTerminated(region);
-            }, _config.Second);
-            EnterBarrier("after-3");
+                RunOn(() =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        var probe = CreateTestProbe();
+                        for (int i = 1; i <= 200; i++)
+                        {
+                            _region.Value.Tell(i, probe.Ref);
+                            probe.ExpectMsg(i, TimeSpan.FromSeconds(1));
+                            Assert.Equal(_region.Value.Path / i.ToString() / i.ToString(), probe.LastSender.Path);
+                        }
+                    });
+                }, _config.First);
+                EnterBarrier("handoff-completed");
+
+                RunOn(() =>
+                {
+                    var region = _region.Value;
+                    Watch(region);
+                    ExpectTerminated(region);
+                }, _config.Second);
+                EnterBarrier("after-3");
+            });
         }
 
         public void ClusterSharding_should_gracefully_shutdown_empty_region()
         {
-            RunOn(() =>
+            Within(TimeSpan.FromSeconds(30), () =>
             {
-                var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
-                var regionEmpty = ClusterSharding.Get(Sys).Start(
-                    typeName: "EntityEmpty",
-                    entityProps: Props.Create<Entity>(),
-                    settings: ClusterShardingSettings.Create(Sys),
-                    idExtractor: extractEntityId,
-                    shardResolver: extractShardId,
-                    allocationStrategy: allocationStrategy,
-                    handOffStopMessage: StopEntity.Instance);
+                RunOn(() =>
+                {
+                    var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
+                    var regionEmpty = ClusterSharding.Get(Sys).Start(
+                        typeName: "EntityEmpty",
+                        entityProps: Props.Create<Entity>(),
+                        settings: ClusterShardingSettings.Create(Sys),
+                        idExtractor: extractEntityId,
+                        shardResolver: extractShardId,
+                        allocationStrategy: allocationStrategy,
+                        handOffStopMessage: StopEntity.Instance);
 
-                Watch(regionEmpty);
-                regionEmpty.Tell(GracefulShutdown.Instance);
-                ExpectTerminated(regionEmpty);
-            }, _config.First);
+                    Watch(regionEmpty);
+                    regionEmpty.Tell(GracefulShutdown.Instance);
+                    ExpectTerminated(regionEmpty);
+                }, _config.First);
+            });
         }
     }
 }
