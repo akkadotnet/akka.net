@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.Cluster.Tools.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
   </PropertyGroup>
- 
+
   <ItemGroup>
     <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
