@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class MemoryJournalShared : AsyncWriteProxy
+    public class MemoryJournalShared : AsyncWriteProxyEx
     {
         public override TimeSpan Timeout { get; }
 

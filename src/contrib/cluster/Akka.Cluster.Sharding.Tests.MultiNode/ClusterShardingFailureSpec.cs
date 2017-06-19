@@ -180,7 +180,7 @@ namespace Akka.Cluster.Sharding.Tests
                 shardResolver: extractShardId);
         }
 
-        //[MultiNodeFact]
+        [MultiNodeFact]
         public void ClusterSharding_with_flaky_journal_network_specs()
         {
             ClusterSharding_with_flaky_journal_network_should_setup_shared_journal();

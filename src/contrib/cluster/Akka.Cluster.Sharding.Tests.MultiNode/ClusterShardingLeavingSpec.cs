@@ -172,12 +172,13 @@ namespace Akka.Cluster.Sharding.Tests
                 shardResolver: extractShardId);
         }
 
-        //[MultiNodeFact]
+        [MultiNodeFact]
         public void ClusterSharding_with_leaving_member_specs()
         {
             ClusterSharding_with_leaving_member_should_setup_shared_journal();
             ClusterSharding_with_leaving_member_should_join_cluster();
             ClusterSharding_with_leaving_member_should_initialize_shards();
+            ClusterSharding_with_leaving_member_should__recover_after_leaving_coordinator_node();
         }
 
         public void ClusterSharding_with_leaving_member_should_setup_shared_journal()

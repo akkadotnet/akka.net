@@ -86,7 +86,7 @@ namespace Akka.Cluster.Sharding.Tests
     /// <summary>
     /// A journal that delegates actual storage to a target actor. For testing only.
     /// </summary>
-    public abstract class AsyncWriteProxy : AsyncWriteJournal, IWithUnboundedStash
+    public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash
     {
         private bool _isInitialized;
         private bool _isInitTimedOut;
@@ -95,7 +95,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// <summary>
         /// TBD
         /// </summary>
-        protected AsyncWriteProxy()
+        protected AsyncWriteProxyEx()
         {
             _isInitialized = false;
             _isInitTimedOut = false;
@@ -210,9 +210,6 @@ namespace Akka.Cluster.Sharding.Tests
             }, TaskContinuationOptions.ExecuteSynchronously);
 
             return result.Task;
-
-
-            //return _store.AskEx(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout);
         }
 
         /// <summary>
@@ -255,18 +252,21 @@ namespace Akka.Cluster.Sharding.Tests
             if (_store == null)
                 return StoreNotInitialized<long>();
 
-            return _store.AskEx<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout)
+            var result = new TaskCompletionSource<long>();
+
+            _store.AskEx<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout)
                 .ContinueWith(t =>
                 {
-                    if (t.IsCanceled || t.IsFaulted)
-                        return 0L;
-
-                    if (t.Result is RecoverySuccess rs)
-                    {
-                        return rs.HighestSequenceNr;
-                    }
-                    return 0L;
-                }/*, TaskContinuationOptions.OnlyOnRanToCompletion*/, TaskContinuationOptions.ExecuteSynchronously);
+                    if (t.IsFaulted)
+                        result.TrySetException(t.Exception);
+                    else if (t.IsCanceled)
+                        result.TrySetException(new TimeoutException());
+                    else if (t.Result is RecoverySuccess rs)
+                        result.TrySetResult(rs.HighestSequenceNr);
+                    else
+                        result.TrySetException(new InvalidOperationException());
+                }, TaskContinuationOptions.ExecuteSynchronously);
+            return result.Task;
         }
 
         private Task<T> StoreNotInitialized<T>()
@@ -342,7 +342,6 @@ namespace Akka.Cluster.Sharding.Tests
                 //rm.Persistent
                 _replayCallback(rm.Persistent);
             }
-            //else if (message is IPersistentRepresentation) _replayCallback(message as IPersistentRepresentation);
             else if (message is RecoverySuccess)
             {
                 _replayCompletionPromise.SetResult(new object());
