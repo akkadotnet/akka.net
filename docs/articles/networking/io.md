@@ -34,7 +34,7 @@ The following diagram illustrate the actors involved in establishing and handlin
 
 The following example shows a simple Telnet client. The client send lines entered in the console to the TCP connection, and write data received from the network to the console.
 
-[!code-csharp[Main](../../examples/Networking/IO/TelnetClient.cs?range=10-63)]
+[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/TelnetClient.cs?range=10-63)]
 
 #### Server Connection
 To accept connections, an actor sends an `Tcp.Bind` message to the TCP manager, passing the `bind handler` in the message.
@@ -48,6 +48,6 @@ The following diagram illustrate the actor and messages.
 
 The following code example shows a simple server that echo's data received from the network.
 
-[!code-csharp[Main](../../examples/Networking/IO/EchoServer.cs?range=8-29)]
+[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoServer.cs?range=8-29)]
 
-[!code-csharp[Main](../../examples/Networking/IO/EchoConnection.cs?range=6-27)]
+[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoConnection.cs?range=6-27)]
