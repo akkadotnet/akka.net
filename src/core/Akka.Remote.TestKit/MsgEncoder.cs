@@ -151,7 +151,7 @@ namespace Akka.Remote.TestKit
             }
             else if (message is Done)
             {
-                wrapper.Done = "";
+                wrapper.Done = " ";
             }
 
             output.Add(wrapper);

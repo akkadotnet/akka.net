@@ -104,14 +104,13 @@ namespace Akka.Remote.TestKit.Tests
 
                 // have the client send a message to the server
                 await client.WriteAndFlushAsync(Done.Instance);
-                var hello = serverProbe.ExpectMsg<Done>();
-                hello.Should().BeOfType<Done>();
+                var done = serverProbe.ExpectMsg<Done>();
+                done.Should().BeOfType<Done>();
 
-                // have the server send a message back to the client
-                //await serverClientChannel.WriteAndFlushAsync(new Hello("test2", address));
-                //var hello2 = clientProbe.ExpectMsg<Hello>();
-                //hello2.Name.Should().Be("test2");
-                //hello2.Address.Should().Be(address);
+                //have the server send a message back to the client
+                await serverClientChannel.WriteAndFlushAsync(Done.Instance);
+                var done2 = clientProbe.ExpectMsg<Done>();
+                done2.Should().BeOfType<Done>();
             }
             finally
             {
