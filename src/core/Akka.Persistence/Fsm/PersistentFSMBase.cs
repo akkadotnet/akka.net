@@ -502,17 +502,6 @@ namespace Akka.Persistence.Fsm
             var fsmEvent = new FSMBase.Event<TData>(any, _currentState.StateData);
             ProcessEvent(fsmEvent, source);
         }
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IEnumerable<TEvent> DomainEvents
-        {
-            get
-            {
-                return _state.DomainEvents;
-            }
-        }
 
         private void ProcessEvent(FSMBase.Event<TData> fsmEvent, object source)
         {

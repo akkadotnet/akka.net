@@ -163,7 +163,7 @@ namespace Akka.Streams.Implementation.IO
                 _stage = stage;
                 _callback = GetAsyncCallback((IAdapterToStageMessage message) =>
                 {
-                    if(message is ReadElementAcknowledgement)
+                    if (message is ReadElementAcknowledgement)
                         SendPullIfAllowed();
                     else if (message is Close)
                         CompleteStage();
