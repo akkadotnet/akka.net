@@ -737,7 +737,7 @@ namespace Akka.Cluster.Sharding
                     else
                     {
                         Log.Debug("Message for entity [{0}] buffered", id);
-                        MessageBuffers.SetItem(id, buffer.Add(Tuple.Create(message, sender)));
+                        MessageBuffers = MessageBuffers.SetItem(id, buffer.Add(Tuple.Create(message, sender)));
                     }
                 }
                 else
