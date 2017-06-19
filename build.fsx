@@ -93,7 +93,36 @@ Target "RunTests" (fun _ ->
                 { p with 
                     WorkingDir = (Directory.GetParent project).FullName
                     TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+                (sprintf "xunit -parallel none -teamcity -noappdomain -f net452 -c Release -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+
+    CreateDir outputTests
+    projects |> Seq.iter (runSingleProject)
+)
+
+Target "RunTestsNetCore" (fun _ ->
+    let projects =
+        match isWindows with
+        // Windows
+        | true -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+        // Linux/Mono
+        | _ -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/Akka.API.Tests.csproj"
+
+    let runSingleProject project =
+        DotNetCli.RunCommand
+            (fun p -> 
+                { p with 
+                    WorkingDir = (Directory.GetParent project).FullName
+                    TimeOut = TimeSpan.FromMinutes 30. })
+                (sprintf "xunit -parallel none -teamcity -noappdomain -f netcoreapp1.1 -c Release -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -340,6 +369,7 @@ Target "Nuget" DoNothing
 
 // tests dependencies
 "Clean" ==> "RestorePackages" ==> "RunTests"
+"Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
@@ -352,6 +382,7 @@ Target "Nuget" DoNothing
 // all
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
+"RunTestsNetCore" ==> "All"
 "MultiNodeTests" ==> "All"
 "NBench" ==> "All"
 
