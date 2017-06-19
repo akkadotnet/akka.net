@@ -39,6 +39,24 @@ namespace Akka.Persistence
     public abstract partial class Eventsourced
     {
         /// <summary>
+        /// Initial state. Before starting the actual recovery it must get a permit from the `RecoveryPermitter`. 
+        /// When starting many persistent actors at the same time the journal and its data store is protected from 
+        /// being overloaded by limiting number of recoveries that can be in progress at the same time. 
+        /// When receiving `RecoveryPermitGranted` it switches to `recoveryStarted` state.
+        /// All incoming messages are stashed.
+        /// </summary>
+        private EventsourcedState WaitingRecoveryPermit(Recovery recovery)
+        {
+            return new EventsourcedState("waiting for recovery permit", true, (receive, message) =>
+            {
+                if (message is RecoveryPermitGranted)
+                    StartRecovery(recovery);
+                else
+                    StashInternally(message);
+            });
+        }
+
+        /// <summary>
         /// Processes a loaded snapshot, if any. A loaded snapshot is offered with a <see cref="SnapshotOffer"/> 
         /// message to the actor's <see cref="ReceiveRecover"/>. Then initiates a message replay, either starting 
         /// from the loaded snapshot or from scratch, and switches to <see cref="ReplayStarted"/> state. 
@@ -65,50 +83,63 @@ namespace Akka.Persistence
 
             return new EventsourcedState("recovery started - replay max: " + maxReplays, true, (receive, message) =>
             {
-                if (message is LoadSnapshotResult)
+                try
                 {
-                    var res = (LoadSnapshotResult)message;
-                    timeoutCancelable.Cancel();
-                    if (res.Snapshot != null)
+                    if (message is LoadSnapshotResult res)
                     {
-                        var snapshot = res.Snapshot;
-                        LastSequenceNr = snapshot.Metadata.SequenceNr;
-                        // Since we are recovering we can ignore the receive behavior from the stack
-                        base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
-                    }
+                        timeoutCancelable.Cancel();
+                        if (res.Snapshot != null)
+                        {
+                            var snapshot = res.Snapshot;
+                            LastSequenceNr = snapshot.Metadata.SequenceNr;
+                            // Since we are recovering we can ignore the receive behavior from the stack
+                            base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
+                        }
 
-                    ChangeState(Recovering(recoveryBehavior, timeout));
-                    Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
+                        ChangeState(Recovering(recoveryBehavior, timeout));
+                        Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
+                    }
+                    else if (message is LoadSnapshotFailed failed)
+                    {
+                        timeoutCancelable.Cancel();
+                        try
+                        {
+                            OnRecoveryFailure(failed.Cause);
+                        }
+                        finally
+                        {
+                            Context.Stop(Self);
+                        }
+                    }
+                    else if (message is RecoveryTick tick && tick.Snapshot)
+                    {
+                        try
+                        {
+                            OnRecoveryFailure(
+                                new RecoveryTimedOutException(
+                                    $"Recovery timed out, didn't get snapshot within {timeout.TotalSeconds}s."));
+                        }
+                        finally
+                        {
+                            Context.Stop(Self);
+                        }
+                    }
+                    else
+                    {
+                        StashInternally(message);
+                    }
                 }
-                else if (message is LoadSnapshotFailed)
+                catch (Exception)
                 {
-                    var res = (LoadSnapshotFailed)message;
-                    timeoutCancelable.Cancel();
-                    try
-                    {
-                        OnRecoveryFailure(res.Cause);
-                    }
-                    finally
-                    {
-                        Context.Stop(Self);
-                    }
+                    ReturnRecoveryPermit();
+                    throw;
                 }
-                else if (message is RecoveryTick)
-                {
-                    try
-                    {
-                        OnRecoveryFailure(
-                            new RecoveryTimedOutException(
-                                $"Recovery timed out, didn't get snapshot within {timeout.TotalSeconds}s."));
-                    }
-                    finally
-                    {
-                        Context.Stop(Self);
-                    }
-                }
-                else
-                    StashInternally(message);
             });
+        }
+
+        private void ReturnRecoveryPermit()
+        {
+            Extension.RecoveryPermitter().Tell(Akka.Persistence.ReturnRecoveryPermit.Instance, Self);
         }
 
         /// <summary>
@@ -124,62 +155,69 @@ namespace Akka.Persistence
         private EventsourcedState Recovering(Receive recoveryBehavior, TimeSpan timeout)
         {
             // protect against event replay stalling forever because of journal overloaded and such
-            var timeoutCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, Self,
-                new RecoveryTick(false), Self);
+            var timeoutCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, Self, new RecoveryTick(false), Self);
             var eventSeenInInterval = false;
 
             return new EventsourcedState("replay started", true, (receive, message) =>
             {
-                if (message is ReplayedMessage)
+                try
                 {
-                    var m = (ReplayedMessage)message;
-                    try
+                    if (message is ReplayedMessage)
                     {
-                        eventSeenInInterval = true;
-                        UpdateLastSequenceNr(m.Persistent);
-                        base.AroundReceive(recoveryBehavior, m.Persistent);
+                        var m = (ReplayedMessage)message;
+                        try
+                        {
+                            eventSeenInInterval = true;
+                            UpdateLastSequenceNr(m.Persistent);
+                            base.AroundReceive(recoveryBehavior, m.Persistent);
+                        }
+                        catch (Exception cause)
+                        {
+                            timeoutCancelable.Cancel();
+                            try
+                            {
+                                OnRecoveryFailure(cause, m.Persistent.Payload);
+                            }
+                            finally
+                            {
+                                Context.Stop(Self);
+                            }
+                            ReturnRecoveryPermit();
+                        }
                     }
-                    catch (Exception cause)
+                    else if (message is RecoverySuccess)
                     {
+                        var m = (RecoverySuccess)message;
+                        timeoutCancelable.Cancel();
+                        OnReplaySuccess();
+                        ChangeState(ProcessingCommands());
+                        _sequenceNr = m.HighestSequenceNr;
+                        LastSequenceNr = m.HighestSequenceNr;
+                        _internalStash.UnstashAll();
+
+                        try
+                        {
+                            base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
+                        }
+                        finally
+                        {
+                            ReturnRecoveryPermit();
+                        }
+                    }
+                    else if (message is ReplayMessagesFailure)
+                    {
+                        var failure = (ReplayMessagesFailure)message;
                         timeoutCancelable.Cancel();
                         try
                         {
-                            OnRecoveryFailure(cause, m.Persistent.Payload);
+                            OnRecoveryFailure(failure.Cause, message: null);
                         }
                         finally
                         {
                             Context.Stop(Self);
                         }
                     }
-                }
-                else if (message is RecoverySuccess)
-                {
-                    var m = (RecoverySuccess) message;
-                    timeoutCancelable.Cancel();
-                    OnReplaySuccess();
-                    ChangeState(ProcessingCommands());
-                    _sequenceNr = m.HighestSequenceNr;
-                    LastSequenceNr = m.HighestSequenceNr;
-                    _internalStash.UnstashAll();
-                    base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
-                }
-                else if (message is ReplayMessagesFailure)
-                {
-                    var failure = (ReplayMessagesFailure)message;
-                    timeoutCancelable.Cancel();
-                    try
-                    {
-                        OnRecoveryFailure(failure.Cause, message: null);
-                    }
-                    finally
-                    {
-                        Context.Stop(Self);
-                    }
-                }
-                else if (message is RecoveryTick)
-                {
-                    var isSnapshotTick = ((RecoveryTick) message).Snapshot;
-                    if (!isSnapshotTick)
+                    else if (message is RecoveryTick tick && !tick.Snapshot)
                     {
                         if (!eventSeenInInterval)
                         {
@@ -201,12 +239,13 @@ namespace Akka.Persistence
                         }
                     }
                     else
-                    {
-                        // snapshot tick, ignore
-                    }
+                        StashInternally(message);
                 }
-                else
-                    StashInternally(message);
+                catch (Exception)
+                {
+                    ReturnRecoveryPermit();
+                    throw;
+                }
             });
         }
 
