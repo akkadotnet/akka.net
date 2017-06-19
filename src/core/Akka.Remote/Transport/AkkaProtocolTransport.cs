@@ -77,11 +77,11 @@ namespace Akka.Remote.Transport
 
     /// <summary>
     /// Implementation of the Akka protocol as a (logical) <see cref="Transport"/> that wraps an underlying (physical) <see cref="Transport"/> instance.
-    /// 
+    ///
     /// Features provided by this transport include:
     ///  - Soft-state associations via the use of heartbeats and failure detectors
     ///  - Transparent origin address handling
-    /// 
+    ///
     /// This transport is loaded automatically by <see cref="Remoting"/> and will wrap all dynamically loaded transports.
     /// </summary>
     internal class AkkaProtocolTransport : ActorTransportAdapter
@@ -835,15 +835,15 @@ namespace Akka.Remote.Transport
                             ou.StatusCompletionSource.SetException(f.Cause);
                             nextState = Stop();
                         }))
-                    .With<AssociationHandle>(h => fsmEvent.StateData.Match()
+                    .With<HandleMsg>(h => fsmEvent.StateData.Match()
                         .With<OutboundUnassociated>(ou =>
                         {
                             /*
                              * Association has been established, but handshake is not yet complete.
-                             * This actor, the outbound ProtocolStateActor, can now set itself as 
+                             * This actor, the outbound ProtocolStateActor, can now set itself as
                              * the read handler for the remainder of the handshake process.
                              */
-                            AssociationHandle wrappedHandle = h;
+                            AssociationHandle wrappedHandle = h.Handle;
                             var statusPromise = ou.StatusCompletionSource;
                             wrappedHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(Self));
                             if (SendAssociate(wrappedHandle, _localHandshakeInfo))
@@ -858,7 +858,7 @@ namespace Akka.Remote.Transport
                             else
                             {
                                 //Otherwise, retry
-                                SetTimer("associate-retry", wrappedHandle,
+                                SetTimer("associate-retry", new HandleMsg(wrappedHandle),
                                     ((RemoteActorRefProvider)((ActorSystemImpl)Context.System).Provider) //TODO: rewrite using RARP ActorSystem Extension
                                         .RemoteSettings.BackoffPeriod, repeat: false);
                                 nextState = Stay();
@@ -1126,7 +1126,7 @@ namespace Akka.Remote.Transport
                 {
                     // attempt to open underlying transport to the remote address
                     // if using DotNetty, this is where the socket connection is opened.
-                    d.Transport.Associate(d.RemoteAddress).PipeTo(Self);
+                    d.Transport.Associate(d.RemoteAddress).ContinueWith(result => new HandleMsg(result.Result), TaskContinuationOptions.ExecuteSynchronously).PipeTo(Self);
                     StartWith(AssociationState.Closed, d);
                 })
                 .With<InboundUnassociated>(d =>
@@ -1302,9 +1302,9 @@ namespace Akka.Remote.Transport
 
         /// <summary>
         /// <see cref="Props"/> used when creating OUTBOUND associations to remote endpoints.
-        /// 
+        ///
         /// These <see cref="Props"/> create outbound <see cref="ProtocolStateActor"/> instances,
-        /// which begin a state of 
+        /// which begin a state of
         /// </summary>
         /// <param name="handshakeInfo">TBD</param>
         /// <param name="remoteAddress">TBD</param>
