@@ -300,7 +300,7 @@ Messages can be sent via the `ActorSelection` and the path of the `ActorSelectio
 
 To acquire an `IActorRef` for an `ActorSelection` you need to send a message to the selection and use the `Sender` reference of the reply from the actor. There is a built-in `Identify` message that all Actors will understand and automatically reply to with a `ActorIdentity` message containing the `IActorRef`. This message is handled specially by the actors which are traversed in the sense that if a concrete name lookup fails (i.e. a non-wildcard path element does not correspond to a live actor) then a negative result is generated. Please note that this does not mean that delivery of that reply is guaranteed, it still is a normal message.
 
-[!code-csharp[Main](../../examples/Actors/UntypedActorAPI/Follower.cs?range=8-41)]
+[!code-csharp[Main](../../examples/DocsExamples/Actors/UntypedActorAPI/Follower.cs?range=8-41)]
 
 You can also acquire an `IActorRef` for an `ActorSelection` with the `ResolveOne` method of the `ActorSelection`. It returns a Task of the matching `IActorRef` if such an actor exists. It is completed with failure `akka.actor.ActorNotFound` if no such actor exists or the identification didn't complete within the supplied timeout.
 

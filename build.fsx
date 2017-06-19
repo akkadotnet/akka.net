@@ -21,7 +21,7 @@ let outputTests = __SOURCE_DIRECTORY__ @@ "TestResults"
 let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
-let outputMultiNode = output @@ "multinode"
+let outputMultiNode = outputTests @@ "multinode"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
@@ -264,8 +264,10 @@ Target "Protobuf" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Documentation 
 //--------------------------------------------------------------------------------  
-Target "DocFx" <| fun _ ->
-    let docFxToolPath = findToolInSubPath "docfx.exe" "./tools/docfx.console/tools" 
+Target "DocFx" (fun _ ->
+    let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
+    DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
+    DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
 
     let docsPath = "./docs"
 
@@ -274,6 +276,7 @@ Target "DocFx" <| fun _ ->
                     Timeout = TimeSpan.FromMinutes 5.0; 
                     WorkingDirectory  = docsPath; 
                     DocFxJson = docsPath @@ "docfx.json" })
+)
 
 //--------------------------------------------------------------------------------
 // Help 
