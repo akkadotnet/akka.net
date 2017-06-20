@@ -111,7 +111,7 @@ Target "RunTests" (fun _ ->
             info.WorkingDirectory <- (Directory.GetParent project).FullName
             info.Arguments <- (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 5.)
         
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
