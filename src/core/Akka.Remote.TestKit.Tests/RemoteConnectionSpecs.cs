@@ -80,6 +80,52 @@ namespace Akka.Remote.TestKit.Tests
             }
           
         }
+
+        [Fact]
+        public async Task RemoteConnection_should_send_and_decode_Done_message()
+        {
+            var serverProbe = CreateTestProbe("server");
+            var clientProbe = CreateTestProbe("client");
+
+            var serverAddress = IPAddress.Parse("127.0.0.1");
+            var serverEndpoint = new IPEndPoint(serverAddress, 0);
+
+            IChannel server = null;
+            IChannel client = null;
+
+            try
+            {
+                server = await RemoteConnection.CreateConnection(Role.Server, serverEndpoint, 3,
+                    new TestConductorHandler(serverProbe.Ref));
+
+                var reachableEndpoint = (IPEndPoint)server.LocalAddress;
+
+                client = await RemoteConnection.CreateConnection(Role.Client, reachableEndpoint, 3,
+                    new PlayerHandler(serverEndpoint, 2, TimeSpan.FromSeconds(1), 3, clientProbe.Ref, Log, Sys.Scheduler));
+
+                serverProbe.ExpectMsg("active");
+                var serverClientChannel = serverProbe.ExpectMsg<IChannel>();
+                clientProbe.ExpectMsg<ClientFSM.Connected>();
+
+                var address = RARP.For(Sys).Provider.DefaultAddress;
+
+                // have the client send a message to the server
+                await client.WriteAndFlushAsync(Done.Instance);
+                var done = serverProbe.ExpectMsg<Done>();
+                done.Should().BeOfType<Done>();
+
+                //have the server send a message back to the client
+                await serverClientChannel.WriteAndFlushAsync(Done.Instance);
+                var done2 = clientProbe.ExpectMsg<Done>();
+                done2.Should().BeOfType<Done>();
+            }
+            finally
+            {
+                server?.CloseAsync().Wait(TimeSpan.FromSeconds(2));
+                client?.CloseAsync().Wait(TimeSpan.FromSeconds(2));
+            }
+
+        }
     }
 
     public class TestConductorHandler : ChannelHandlerAdapter
