@@ -70,13 +70,31 @@ Target "Build" (fun _ ->
 // Tests targets 
 //--------------------------------------------------------------------------------
 
+module internal ResultHandling =
+    let (|OK|Failure|) = function
+        | 0 -> OK
+        | x -> Failure x
+
+    let buildErrorMessage = function
+        | OK -> None
+        | Failure errorCode ->
+            Some (sprintf "xUnit2 reported an error (Error Code %d)" errorCode)
+
+    let failBuildWithMessage = function
+        | DontFailBuild -> traceError
+        | _ -> (fun m -> raise(FailedTestsException m))
+
+    let failBuildIfXUnitReportedError errorLevel =
+        buildErrorMessage
+        >> Option.iter (failBuildWithMessage errorLevel)
+
 Target "RunTests" (fun _ ->
     let projects =
         match isWindows with
         // Windows
         | true -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj" // TODO: remove once protobuf3 PR is merged
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
         // Linux/Mono
@@ -86,14 +104,14 @@ Target "RunTests" (fun _ ->
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/Akka.API.Tests.csproj"
-
+     
     let runSingleProject project =
-        DotNetCli.RunCommand
-            (fun p -> 
-                { p with 
-                    WorkingDir = (Directory.GetParent project).FullName
-                    TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+        let result = ExecProcess(fun info ->
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- (Directory.GetParent project).FullName
+            info.Arguments <- (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 5.)
+        
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
