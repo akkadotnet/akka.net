@@ -470,8 +470,6 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 EnterBarrier("unreachable-7");
 
-                return;
-
                 RunOn(() =>
                 {
                     Cluster.Join(GetAddress(_config.Third));
