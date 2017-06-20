@@ -52,18 +52,11 @@ Target "RestorePackages" (fun _ ->
 )
 
 Target "Build" (fun _ ->
-    let projects = !! "./**/core/**/*.csproj"
-                   ++ "./**/contrib/**/*.csproj"
-                   -- "./**/serializers/**/*Wire*.csproj"
-
-    let runSingleProject project =
-        DotNetCli.Build
-            (fun p -> 
-                { p with
-                    Project = project
-                    Configuration = configuration })
-
-    projects |> Seq.iter (runSingleProject)
+    DotNetCli.Build
+        (fun p -> 
+            { p with
+                Project = solution
+                Configuration = configuration })
 )
 
 //--------------------------------------------------------------------------------
