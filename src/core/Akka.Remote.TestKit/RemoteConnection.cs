@@ -15,6 +15,7 @@ using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.DotNetty;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
+using DotNetty.Codecs.Protobuf;
 using DotNetty.Common.Internal.Logging;
 using DotNetty.Common.Utilities;
 using DotNetty.Transport.Bootstrapping;
@@ -49,8 +50,8 @@ namespace Akka.Remote.TestKit
         private static void ApplyChannelPipeline(IChannel channel, IChannelHandler handler)
         {
             var encoders = new IChannelHandler[]
-            {new LengthFieldPrepender(ByteOrder.LittleEndian, 4, 0, false), new LengthFieldBasedFrameDecoder(ByteOrder.LittleEndian, 10000, 0, 4, 0, 4, true)};
-            var protobuf = new IChannelHandler[] { new ProtobufEncoder(), new ProtobufDecoder(TCP.Wrapper.DefaultInstance) };
+                {new LengthFieldPrepender(ByteOrder.LittleEndian, 4, 0, false), new LengthFieldBasedFrameDecoder(ByteOrder.LittleEndian, 10000, 0, 4, 0, 4, true)};
+            var protobuf = new IChannelHandler[] { new ProtobufEncoder(), new ProtobufDecoder(Proto.Msg.Wrapper.Parser) };
             var msg = new IChannelHandler[] { new MsgEncoder(), new MsgDecoder() };
             var pipeline = encoders.Concat(protobuf).Concat(msg);
             foreach (var h in pipeline)
@@ -128,7 +129,7 @@ namespace Akka.Remote.TestKit
             {
                 // LoggingFactory.GetLogger<RemoteConnection>().Warning("Failed to shutdown remote connection within {0}", disconnectTimeout);
             }
-            
+
         }
 
         public static async Task ReleaseAll()
@@ -141,4 +142,3 @@ namespace Akka.Remote.TestKit
         #endregion
     }
 }
-
