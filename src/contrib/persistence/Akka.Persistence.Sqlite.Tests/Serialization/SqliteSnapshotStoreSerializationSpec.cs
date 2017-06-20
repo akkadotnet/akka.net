@@ -8,6 +8,7 @@
 using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
 using Akka.Util.Internal;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Serialization
@@ -37,6 +38,11 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
                         }
                     }
                 }");
+        }
+
+        [Fact(Skip = "Sql plugin does not support SerializerWithStringManifest")]
+        public override void SnapshotStore_should_serialize_Payload_with_string_manifest()
+        {
         }
     }
 }
