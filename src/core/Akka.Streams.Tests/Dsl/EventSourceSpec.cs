@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void EventSource_must_should_fail_downstream_in_Fail_overflow_mode()
+        public void EventSource_must_fail_downstream_in_Fail_overflow_mode()
         {
             var s = this.CreateManualSubscriberProbe<int>();
             Source.FromEvent<int>(h => _event += h, h => _event -= h, 1, OverflowStrategy.Fail)
