@@ -218,11 +218,30 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    interface IClientOp { } // messages sent to from Conductor to Player
-    interface IServerOp { } // messages sent to from Player to Conductor
-    interface ICommandOp { } // messages sent from TestConductorExt to Conductor
-    interface INetworkOp { } // messages sent over the wire
-    interface IUnconfirmedClientOp : IClientOp { } // unconfirmed messages going to the Player
+    /// <summary>
+    /// messages sent to from Conductor to Player
+    /// </summary>
+    interface IClientOp { } 
+
+    /// <summary>
+    /// messages sent to from Player to Conductor
+    /// </summary>
+    interface IServerOp { }
+
+    /// <summary>
+    /// messages sent from TestConductorExt to Conductor
+    /// </summary>
+    interface ICommandOp { }
+
+    /// <summary>
+    ///  messages sent over the wire
+    /// </summary> 
+    interface INetworkOp { }
+
+    /// <summary>
+    /// unconfirmed messages going to the Player
+    /// </summary>
+    interface IUnconfirmedClientOp : IClientOp { }
     interface IConfirmedClientOp : IClientOp { }
 
     /// <summary>

@@ -49,7 +49,7 @@ namespace Akka.Remote.TestKit
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            StandardOutWriter.WriteLine($"[{_name}][{logLevel}]{formatter(state, exception)}");
+            StandardOutWriter.WriteLine($"[{_name}][{logLevel}][{DateTime.UtcNow}]{formatter(state, exception)}");
         }
 
         sealed class NoDisposable : IDisposable

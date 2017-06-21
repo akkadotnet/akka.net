@@ -47,6 +47,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.remote.system-message-buffer-size = 100
                     akka.remote.helios.tcp.connection-timeout = 10s
+                    akka.loglevel = DEBUG
                 "))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
@@ -135,7 +136,7 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 foreach (var to in alive)
                 {
-                    var sel = Sys.ActorSelection(Node(to) / "user" / "echo");
+                    var sel = Sys.ActorSelection(new RootActorPath(GetAddress(to)) / "user" / "echo");
                     var msg = $"ping-{to}";
                     var p = CreateTestProbe();
                     AwaitAssert(() =>
@@ -156,7 +157,7 @@ namespace Akka.Cluster.Tests.MultiNode
             A_Network_partition_tolerant_cluster_must_heal_after_a_broken_pair();
             A_Network_partition_tolerant_cluster_must_heal_after_one_isolated_node();
             A_Network_partition_tolerant_cluster_must_heal_two_isolated_islands();
-            //A_Network_partition_tolerant_cluster_must_heal_after_unreachable_when_ring_is_changed();
+            A_Network_partition_tolerant_cluster_must_heal_after_unreachable_when_ring_is_changed();
             A_Network_partition_tolerant_cluster_must_down_and_remove_quarantined_node();
             //A_Network_partition_tolerant_cluster_must_continue_and_move_Joining_to_Up_after_downing_of_one_half();
         }
