@@ -16,29 +16,25 @@ using Akka.Event;
 namespace Akka.Remote.Transport
 {
     /// <summary>
-    /// TBD
+    /// Interface for producing adapters that can wrap an underlying transport and augment it with additional behavior.
     /// </summary>
     public interface ITransportAdapterProvider
     {
         /// <summary>
         /// Create a transport adapter that wraps the underlying transport
         /// </summary>
-        /// <param name="wrappedTransport">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="wrappedTransport">The transport that will be wrapped.</param>
+        /// <param name="system">The actor system to which this transport belongs.</param>
+        /// <returns>A transport wrapped with the new adapter.</returns>
         Transport Create(Transport wrappedTransport, ExtendedActorSystem system);
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="ExtensionIdProvider{T}"/>
         public override TransportAdapters CreateExtension(ExtendedActorSystem system)
         {
             return new TransportAdapters((ActorSystemImpl) system);
@@ -77,12 +73,12 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// The ActorSystem
         /// </summary>
         public ActorSystem System { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The Akka.Remote settings
         /// </summary>
         protected RemoteSettings Settings;
 
@@ -492,7 +488,7 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    ///  Actor-based transport adapter
     /// </summary>
     public abstract class ActorTransportAdapter : AbstractTransportAdapter
     {
@@ -531,12 +527,7 @@ namespace Akka.Remote.Transport
             return System.ActorSelection("/system/transports").Ask<IActorRef>(new RegisterTransportActor(ManagerProps, ManagerName));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="listenAddress">TBD</param>
-        /// <param name="listenerTask">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override Task<IAssociationEventListener> InterceptListen(Address listenAddress, Task<IAssociationEventListener> listenerTask)
         {
             return RegisterManager().ContinueWith(mgrTask =>
@@ -547,20 +538,13 @@ namespace Akka.Remote.Transport
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="statusPromise">TBD</param>
+        /// <inheritdoc/>
         protected override void InterceptAssociate(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
         {
             manager.Tell(new AssociateUnderlying(remoteAddress, statusPromise));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override Task<bool> Shutdown()
         {
             var stopTask = manager.GracefulStop((RARP.For(System).Provider).RemoteSettings.FlushWait);

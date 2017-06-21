@@ -197,7 +197,7 @@ namespace Akka.Actor
         private readonly TaskCompletionSource<object> _promise;
 
         /// <summary>
-        /// TBD
+        /// The result of the promise being completed.
         /// </summary>
         public Task<object> Result => _promise.Task;
 
@@ -309,14 +309,14 @@ namespace Akka.Actor
         private static readonly Action<object> CancelAction = o => ((TaskCompletionSource<object>)o).TrySetCanceled();
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="PromiseActorRef"/>
         /// </summary>
-        /// <param name="provider">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="targetName">TBD</param>
-        /// <param name="messageClassName">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="provider">The current actor ref provider.</param>
+        /// <param name="timeout">The timeout on the promise.</param>
+        /// <param name="targetName">The target of the object / actor</param>
+        /// <param name="messageClassName">The name of the message class.</param>
+        /// <param name="sender">The actor sending the message via promise.</param>
+        /// <returns>A new <see cref="PromiseActorRef"/></returns>
         public static PromiseActorRef Apply(IActorRefProvider provider, TimeSpan timeout, object targetName,
             string messageClassName, IActorRef sender = null)
         {
@@ -402,18 +402,14 @@ namespace Akka.Actor
             return _stateDoNotCallMeDirectly.CompareAndSet(oldState, newState);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="InternalActorRefBase.Parent"/>
         public override IInternalActorRef Parent
         {
             get { return Provider.TempContainer; }
         }
 
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc cref="InternalActorRefBase"/>
         public override ActorPath Path
         {
             get { return GetPath(); }
@@ -462,14 +458,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <exception cref="InvalidMessageException">
-        /// This exception is thrown if the given <paramref name="message"/> is undefined.
-        /// </exception>
+        /// <inheritdoc cref="InternalActorRefBase.TellInternal"/>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if (State is Stopped || State is StoppedWithPath) Provider.DeadLetters.Tell(message);
@@ -487,10 +476,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc cref="InternalActorRefBase.SendSystemMessage(ISystemMessage)"/>
         public override void SendSystemMessage(ISystemMessage message)
         {
             if (message is Terminate) Stop();
