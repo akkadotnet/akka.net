@@ -159,7 +159,7 @@ namespace Akka.Cluster.Tests.MultiNode
             A_Network_partition_tolerant_cluster_must_heal_two_isolated_islands();
             A_Network_partition_tolerant_cluster_must_heal_after_unreachable_when_ring_is_changed();
             A_Network_partition_tolerant_cluster_must_down_and_remove_quarantined_node();
-            //A_Network_partition_tolerant_cluster_must_continue_and_move_Joining_to_Up_after_downing_of_one_half();
+            A_Network_partition_tolerant_cluster_must_continue_and_move_Joining_to_Up_after_downing_of_one_half();
         }
 
         public void A_Network_partition_tolerant_cluster_must_reach_initial_convergence()
