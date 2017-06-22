@@ -37,11 +37,11 @@ namespace Akka.Streams.Tests.Dsl
             var sub = s.ExpectSubscription();
 
             sub.Request(2);
-            _event(this, 1);
+            _event?.Invoke(this, 1);
             s.ExpectNext(1);
-            _event(this, 2);
+            _event?.Invoke(this, 2);
             s.ExpectNext(2);
-            _event(this, 3);
+            _event?.Invoke(this, 3);
             sub.Request(1);
             s.ExpectNext(3);
             sub.Cancel();
@@ -57,11 +57,11 @@ namespace Akka.Streams.Tests.Dsl
             var sub = s.ExpectSubscription();
 
             sub.Request(2);
-            _event(this, 1);
+            _event?.Invoke(this, 1);
             s.ExpectNext(1);
-            _event(this, 2);
+            _event?.Invoke(this, 2);
             s.ExpectNext(2);
-            _event(this, 3);
+            _event?.Invoke(this, 3);
             sub.Request(1);
             s.ExpectNext(3);
 
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
             var sub2 = s2.ExpectSubscription();
             sub2.Request(2);
 
-            _event(this, 123);
+            _event?.Invoke(this, 123);
 
             s1.ExpectNext(123);
             s2.ExpectNext(123);
@@ -101,8 +101,8 @@ namespace Akka.Streams.Tests.Dsl
 
             s.ExpectSubscription();
 
-            _event(this, 1);
-            _event(this, 2);
+            _event?.Invoke(this, 1);
+            _event?.Invoke(this, 2);
 
             s.ExpectError();
         }
@@ -117,12 +117,12 @@ namespace Akka.Streams.Tests.Dsl
             var sub = s.ExpectSubscription();
             sub.Request(2);
             
-            _event(this, 1);
+            _event?.Invoke(this, 1);
             s.ExpectNext(1);
 
             sub.Cancel();
 
-            _event(this, 2);
+            _event?.Invoke(this, 2);
             s.ExpectNoMsg();
         }
     }
