@@ -87,14 +87,12 @@ Target "RunTests" (fun _ ->
         // Windows
         | true -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj" // TODO: remove once protobuf3 PR is merged
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
         // Linux/Mono
         | _ -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/Akka.API.Tests.csproj"
      
