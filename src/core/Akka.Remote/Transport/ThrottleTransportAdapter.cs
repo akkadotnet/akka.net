@@ -542,26 +542,21 @@ namespace Akka.Remote.Transport
         private Task<SetThrottleAck> AskModeWithDeathCompletion(IActorRef target, ThrottleMode mode, TimeSpan timeout)
         {
             if (target.IsNobody()) return Task.FromResult(SetThrottleAck.Instance);
-            else
+
+
+            var internalTarget = target.AsInstanceOf<IInternalActorRef>();
+            var promiseRef = PromiseActorRef.Apply(internalTarget.Provider, timeout, target, mode.GetType().Name);
+            internalTarget.SendSystemMessage(new Watch(internalTarget, promiseRef));
+            target.Tell(mode, promiseRef);
+            return promiseRef.Result.ContinueWith(tr =>
             {
-                //return target.Ask<SetThrottleAck>(mode, timeout);
-
-                //TODO: use PromiseActorRef here when implemented
-                var internalTarget = target.AsInstanceOf<IInternalActorRef>();
-                var promiseRef = PromiseActorRef.Apply(internalTarget.Provider, timeout, target, mode.GetType().Name);
-                internalTarget.SendSystemMessage(new Watch(internalTarget, promiseRef));
-                target.Tell(mode, promiseRef);
-                return promiseRef.Result.ContinueWith(tr =>
-                {
-                    var t = tr.Result as Terminated;
-                    if (t != null && t.ActorRef.Path.Equals(target.Path))
-                        return SetThrottleAck.Instance;
-                    internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
+                var t = tr.Result as Terminated;
+                if (t != null && t.ActorRef.Path.Equals(target.Path))
                     return SetThrottleAck.Instance;
+                internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
+                return SetThrottleAck.Instance;
 
-                }, TaskContinuationOptions.ExecuteSynchronously);
-
-            }
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         private ThrottlerHandle WrapHandle(AssociationHandle originalHandle, IAssociationEventListener listener,
