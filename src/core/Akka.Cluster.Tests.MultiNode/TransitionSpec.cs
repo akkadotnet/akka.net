@@ -61,7 +61,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private MemberStatus MemberStatus(Address address)
         {
-            var status = ClusterView.Members.Concat(ClusterView.UnreachableMembers)
+            var status = ClusterView.Members.Union(ClusterView.UnreachableMembers)
                 .Where(m => m.Address == address)
                 .Select(m => m.Status)
                 .ToList();
@@ -158,7 +158,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }, Roles.Where(r => r != fromRole && r != toRole).ToArray());
         }
 
-        //[MultiNodeFact(Skip = "Race conditions that are difficult to reproduce locally")]
+        [MultiNodeFact]
         public void TransitionSpecs()
         {
             A_Cluster_must_start_nodes_as_singleton_clusters();
@@ -256,6 +256,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("convergence-joining-3");
 
             var leader12 = Leader(_config.First, _config.Second);
+            Log.Debug("Leader: {0}", leader12);
             var tmp = Roles.Where(x => x != leader12).ToList();
             var other1 = tmp.First();
             var other2 = tmp.Skip(1).First();
