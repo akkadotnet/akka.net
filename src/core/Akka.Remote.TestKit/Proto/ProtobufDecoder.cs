@@ -39,8 +39,6 @@ namespace Akka.Remote.TestKit.Proto
         {
             _logger.LogDebug("[{0} --> {1}] Decoding {2} into Protobuf", context.Channel.LocalAddress, context.Channel.RemoteAddress, input);
 
-            // short-circuit if there are no readable bytes
-
             var readable = input.ReadableBytes;
             var buf = new byte[readable];
             input.ReadBytes(buf);

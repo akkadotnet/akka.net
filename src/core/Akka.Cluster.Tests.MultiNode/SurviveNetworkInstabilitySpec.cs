@@ -46,8 +46,7 @@ namespace Akka.Cluster.Tests.MultiNode
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.remote.system-message-buffer-size = 100
-                    akka.remote.helios.tcp.connection-timeout = 10s
-                    akka.loglevel = DEBUG
+                    akka.remote.dot-netty.tcp.connection-timeout = 10s
                 "))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
