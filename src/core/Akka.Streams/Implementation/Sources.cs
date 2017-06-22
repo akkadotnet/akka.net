@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -749,120 +750,147 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
+    /// 
+    /// A graph stage that can be used to integrate Akka.Streams with .NET events.
     /// </summary>
-    public sealed class LazySource<TOut, TMat> : GraphStageWithMaterializedValue<SourceShape<TOut>, Task<TMat>>
+    /// <typeparam name="TEventArgs"></typeparam>
+    /// <typeparam name="TDelegate">Delegate</typeparam>
+    public sealed class EventSourceStage<TDelegate, TEventArgs> : GraphStage<SourceShape<TEventArgs>>
     {
-        #region Logic
+        #region logic
 
-        private sealed class Logic : OutGraphStageLogic
+        private class Logic : OutGraphStageLogic
         {
-            private readonly LazySource<TOut, TMat> _stage;
-            private readonly TaskCompletionSource<TMat> _completion;
-            private readonly Attributes _inheritedAttributes;
+            private readonly EventSourceStage<TDelegate, TEventArgs> _stage;
+            private readonly LinkedList<TEventArgs> _buffer;
+            private readonly TDelegate _handler;
+            private readonly Action<TEventArgs> _onOverflow;
 
-            public Logic(LazySource<TOut, TMat> stage, TaskCompletionSource<TMat> completion, Attributes inheritedAttributes) : base(stage.Shape)
+            public Logic(EventSourceStage<TDelegate, TEventArgs> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _completion = completion;
-                _inheritedAttributes = inheritedAttributes;
+                _buffer = new LinkedList<TEventArgs>();
+                var bufferCapacity = stage._maxBuffer;
+                var onEvent = GetAsyncCallback<TEventArgs>(e =>
+                {
+                    if (IsAvailable(_stage.Out))
+                    {
+                        Push(_stage.Out, e);
+                    }
+                    else
+                    {
+                        if (_buffer.Count >= bufferCapacity) _onOverflow(e);
+                        else Enqueue(e);
+                    }
+                });
 
+                _handler = _stage._conversion(onEvent);
+                _onOverflow = SetupOverflowStrategy(stage._overflowStrategy);
                 SetHandler(stage.Out, this);
             }
+            private void Enqueue(TEventArgs e) => _buffer.AddLast(e);
 
-            public override void OnDownstreamFinish()
+            private TEventArgs Dequeue()
             {
-                _completion.SetException(new Exception("Downstream canceled without triggering lazy source materialization"));
-                CompleteStage();
+                var element = _buffer.First.Value;
+                _buffer.RemoveFirst();
+                return element;
             }
-
 
             public override void OnPull()
             {
-                var source = _stage._sourceFactory();
-                var subSink = new SubSinkInlet<TOut>(this, "LazySource");
-                subSink.Pull();
-
-                SetHandler(_stage.Out, () => subSink.Pull(), () =>
+                if (_buffer.Count > 0)
                 {
-                    subSink.Cancel();
-                    CompleteStage();
-                });
-
-                subSink.SetHandler(new LambdaInHandler(() => Push(_stage.Out, subSink.Grab())));
-
-                try
-                {
-                    var value = SubFusingMaterializer.Materialize(source.ToMaterialized(subSink.Sink, Keep.Left),
-                        _inheritedAttributes);
-                    _completion.SetResult(value);
-                }
-                catch (Exception e)
-                {
-                    subSink.Cancel();
-                    FailStage(e);
-                    _completion.TrySetException(e);
+                    var element = Dequeue();
+                    Push(_stage.Out, element);
                 }
             }
 
-            public override void PostStop() => _completion.TrySetException(
-                new Exception("LazySource stopped without completing the materialized task"));
+            public override void PreStart()
+            {
+                base.PreStart();
+                _stage._addHandler(_handler);
+            }
+
+            public override void PostStop()
+            {
+                _stage._removeHandler(_handler);
+                _buffer.Clear();
+                base.PostStop();
+            }
+
+
+            private Action<TEventArgs> SetupOverflowStrategy(OverflowStrategy overflowStrategy)
+            {
+                switch (overflowStrategy)
+                {
+                    case OverflowStrategy.DropHead:
+                        return message =>
+                        {
+                            _buffer.RemoveFirst();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.DropTail:
+                        return message =>
+                        {
+                            _buffer.RemoveLast();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.DropNew:
+                        return message =>
+                        {
+                            // do nothing
+                        };
+                    case OverflowStrategy.DropBuffer:
+                        return message =>
+                        {
+                            _buffer.Clear();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.Fail:
+                        return message =>
+                        {
+                            FailStage(new BufferOverflowException($"{_stage.Out} buffer has been overflown"));
+                        };
+                    case OverflowStrategy.Backpressure:
+                        return message =>
+                        {
+                            throw new NotSupportedException("OverflowStrategy.Backpressure is not supported");
+                        };
+                    default: throw new NotSupportedException($"Unknown option: {overflowStrategy}");
+                }
+            }
         }
-        
+
         #endregion
 
-        private readonly Func<Source<TOut, TMat>> _sourceFactory;
+        private readonly Func<Action<TEventArgs>, TDelegate> _conversion;
+        private readonly Action<TDelegate> _addHandler;
+        private readonly Action<TDelegate> _removeHandler;
+        private readonly int _maxBuffer;
+        private readonly OverflowStrategy _overflowStrategy;
+
+        public Outlet<TEventArgs> Out { get; } = new Outlet<TEventArgs>("event.out");
 
         /// <summary>
-        /// Creates a new <see cref="LazySource{TOut,TMat}"/>
+        /// Creates a new instance of event source class.
         /// </summary>
-        /// <param name="sourceFactory">The factory that generates the source when needed</param>
-        public LazySource(Func<Source<TOut, TMat>> sourceFactory)
+        /// <param name="conversion">Function used to convert given event handler to delegate compatible with underlying .NET event.</param>
+        /// <param name="addHandler">Action which attaches given event handler to the underlying .NET event.</param>
+        /// <param name="removeHandler">Action which detaches given event handler to the underlying .NET event.</param>
+        /// <param name="maxBuffer">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBuffer"/>) has been overflown.</param>
+        public EventSourceStage(Action<TDelegate> addHandler,  Action<TDelegate> removeHandler, Func<Action<TEventArgs>, TDelegate> conversion, int maxBuffer, OverflowStrategy overflowStrategy)
         {
-            _sourceFactory = sourceFactory;
-            Shape = new SourceShape<TOut>(Out);
+            _conversion = conversion ?? throw new ArgumentNullException(nameof(conversion));
+            _addHandler = addHandler ?? throw new ArgumentNullException(nameof(addHandler));
+            _removeHandler = removeHandler ?? throw new ArgumentNullException(nameof(removeHandler));
+            _maxBuffer = maxBuffer;
+            _overflowStrategy = overflowStrategy;
+            Shape = new SourceShape<TEventArgs>(Out);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("LazySource.out");
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override SourceShape<TOut> Shape { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.LazySource;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var completion = new TaskCompletionSource<TMat>();
-            var logic = new Logic(this, completion, inheritedAttributes);
-
-            return new LogicAndMaterializedValue<Task<TMat>>(logic, completion.Task);
-        }
-
-        /// <summary>
-        /// Returns the string representation of the <see cref="LazySource{TOut,TMat}"/>
-        /// </summary>
-        public override string ToString() => "LazySource";
-    }
-
-    /// <summary>
-    /// API for the <see cref="LazySource{TOut,TMat}"/>
-    /// </summary>
-    public static class LazySource
-    {
-        /// <summary>
-        /// Creates a new <see cref="LazySource{TOut,TMat}"/> for the given <paramref name="create"/> factory
-        /// </summary>
-        public static LazySource<TOut, TMat> Create<TOut, TMat>(Func<Source<TOut, TMat>> create) =>
-            new LazySource<TOut, TMat>(create);
+        public override SourceShape<TEventArgs> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 }
