@@ -101,25 +101,26 @@ let ``actor that accepts _ will receive unit message`` () =
 [<Fact>]
 // SUCCEEDS
 let ``actor that accepts _ will receive string message`` () =    
-    let timeoutConfig =
-        """
-        akka { 
-            actor {
-                ask-timeout = 5s
+    if (Environment.OSVersion.Platform = PlatformID.Win32NT) then
+        let timeoutConfig =
+            """
+            akka { 
+                actor {
+                    ask-timeout = 5s
+                }
             }
-        }
-        """
-        |> Configuration.parse 
+            """
+            |> Configuration.parse 
 
-    let getWhateverHandler (mailbox : Actor<_>) _ = 
-        mailbox.Sender() <! "SomethingToReturn"
+        let getWhateverHandler (mailbox : Actor<_>) _ = 
+            mailbox.Sender() <! "SomethingToReturn"
 
-    let system = System.create "my-system" timeoutConfig
-    let aref = spawn system "UnitActor" (actorOf2 getWhateverHandler)
+        let system = System.create "my-system" timeoutConfig
+        let aref = spawn system "UnitActor" (actorOf2 getWhateverHandler)
 
-    let response = aref <? "SomeRandomInput" |> Async.RunSynchronously
-    response
-    |> equals "SomethingToReturn"
+        let response = aref <? "SomeRandomInput" |> Async.RunSynchronously
+        response
+        |> equals "SomethingToReturn"
 
 //[<Fact>]
 // FAILS
