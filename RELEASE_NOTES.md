@@ -1,3 +1,10 @@
+#### 1.2.1 June 22 2017 ####
+**Maintenance Release for Akka.NET 1.2**
+
+Resolves issues related to Akka.Cluster nodes not being able to cleanly leave or join a cluster after a period of network instability.
+
+[See the full set of Akka.NET 1.2.1 fixes here](https://github.com/akkadotnet/akka.net/milestone/14).
+
 #### 1.2.0 April 11 2017 ####
 **Feature Release for Akka.NET**
 Akka.NET 1.2 is a major feature release that introduces the following major changes:
