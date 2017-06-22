@@ -22,7 +22,7 @@ namespace Akka.Actor
     /// <summary>
     /// TBD
     /// </summary>
-    public partial class ActorCell : IUntypedActorContext, ICell 
+    public partial class ActorCell : IUntypedActorContext, ICell
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private IInternalActorRef _self;
@@ -79,7 +79,7 @@ namespace Akka.Actor
             _systemImpl = system;
             Parent = parent;
             Dispatcher = dispatcher;
-            
+
         }
 
         /// <summary>
@@ -527,6 +527,8 @@ namespace Akka.Actor
             if (!(unwrapped is INoSerializationVerificationNeeded))
             {
                 var deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+                if(deadLetter != null)
+                    return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
                 return new Envelope(deserializedMsg, envelope.Sender);
             }
 
