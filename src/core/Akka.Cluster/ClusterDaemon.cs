@@ -249,16 +249,16 @@ namespace Akka.Cluster
             readonly ImmutableList<Address> _seedNodes;
 
             /// <summary>
-            /// TBD
+            /// Creates a new instance of the command.
             /// </summary>
-            /// <param name="seedNodes">TBD</param>
+            /// <param name="seedNodes">The list of seeds we wish to join.</param>
             public JoinSeedNodes(ImmutableList<Address> seedNodes)
             {
                 _seedNodes = seedNodes;
             }
 
             /// <summary>
-            /// TBD
+            /// The list of seeds we wish to join.
             /// </summary>
             public ImmutableList<Address> SeedNodes
             {
@@ -981,7 +981,7 @@ namespace Akka.Cluster
 
         private readonly VectorClock.Node _vclockNode;
 
-        private string VclockName(UniqueAddress node)
+        internal static string VclockName(UniqueAddress node)
         {
             return node.Address + "-" + node.Uid;
         }
@@ -1015,7 +1015,7 @@ namespace Akka.Cluster
             _cluster = Cluster.Get(Context.System);
             _publisher = publisher;
             SelfUniqueAddress = _cluster.SelfUniqueAddress;
-            _vclockNode = new VectorClock.Node(VclockName(SelfUniqueAddress));
+            _vclockNode = VectorClock.Node.Create(VclockName(SelfUniqueAddress));
             var settings = _cluster.Settings;
             var scheduler = _cluster.Scheduler;
             _seedNodes = _cluster.Settings.SeedNodes;
@@ -1440,14 +1440,14 @@ namespace Akka.Cluster
         /// <summary>
         /// Attempts to join this node or one or more seed nodes.
         /// </summary>
-        /// <param name="newSeedNodes">The list of seed nod we're attempting to join.</param>
+        /// <param name="newSeedNodes">The list of seed node we're attempting to join.</param>
         public void JoinSeedNodes(ImmutableList<Address> newSeedNodes)
         {
             if (!newSeedNodes.IsEmpty)
             {
                 StopSeedNodeProcess();
                 _seedNodes = newSeedNodes; // keep them for retry
-                if (newSeedNodes.SequenceEqual(ImmutableList.Create(_cluster.SelfAddress)))
+                if (newSeedNodes.SequenceEqual(ImmutableList.Create(_cluster.SelfAddress))) // self-join for a singleton cluster
                 {
                     Self.Tell(new ClusterUserAction.JoinTo(_cluster.SelfAddress));
                     _seedNodeProcess = null;
@@ -1654,7 +1654,7 @@ namespace Akka.Cluster
         /// The node will eventually be removed by the leader, after hand-off in EXITING, and only after
         /// removal a new node with same address can join the cluster through the normal joining procedure.
         /// </summary>
-        /// <param name="address">The address.</param>
+        /// <param name="address">The address of the node who is leaving the cluster.</param>
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
@@ -1857,8 +1857,8 @@ namespace Akka.Cluster
             {
                 case VectorClock.Ordering.Same:
                     //same version
-                    winningGossip = remoteGossip.MergeSeen(localGossip);
                     talkback = !_exitingTasksInProgress && !remoteGossip.SeenByNode(SelfUniqueAddress);
+                    winningGossip = remoteGossip.MergeSeen(localGossip);
                     gossipType = ReceiveGossipType.Same;
                     break;
                 case VectorClock.Ordering.Before:
@@ -2474,11 +2474,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Asserts that the gossip is valid and only contains information for current members of the cluster.
         /// </summary>
-        /// <exception cref="InvalidOperationException">
-        /// This exception is thrown when there are too many vector clock entries in the latest gossip.
-        /// </exception>
+        /// <exception cref="InvalidOperationException">Thrown if the VectorClock is corrupt and has not been pruned properly.</exception>
         public void AssertLatestGossip()
         {
             if (Cluster.IsAssertInvariantsEnabled && _latestGossip.Version.Versions.Count > _latestGossip.Members.Count)
@@ -2532,13 +2530,11 @@ namespace Akka.Cluster
     /// They will retry the join procedure.
     /// 
     /// Possible scenarios:
-    /// <ul>
-    /// <li>seed2 started, but doesn't get any ack from seed1 or seed3</li>
-    /// <li>seed3 started, doesn't get any ack from seed1 or seed3 (seed2 doesn't reply)</li>
-    /// <li>seed1 is started and joins itself</li>
-    /// <li>seed2 retries the join procedure and gets an ack from seed1, and then joins to seed1</li>
-    /// <li>seed3 retries the join procedure and gets acks from seed2 first, and then joins to seed2</li>
-    /// </ul>
+    ///  1. seed2 started, but doesn't get any ack from seed1 or seed3
+    ///  2. seed3 started, doesn't get any ack from seed1 or seed3 (seed2 doesn't reply)
+    ///  3. seed1 is started and joins itself
+    ///  4. seed2 retries the join procedure and gets an ack from seed1, and then joins to seed1
+    ///  5. seed3 retries the join procedure and gets acks from seed2 first, and then joins to seed2
     /// </summary>
     internal sealed class JoinSeedNodeProcess : UntypedActor
     {
@@ -2546,6 +2542,7 @@ namespace Akka.Cluster
 
         private readonly ImmutableList<Address> _seeds;
         private readonly Address _selfAddress;
+        private int _attempts = 0;
 
         /// <summary>
         /// TBD
@@ -2586,6 +2583,7 @@ namespace Akka.Cluster
                 {
                     path.Tell(new InternalClusterAction.InitJoin());
                 }
+                _attempts++;
             }
             else if (message is InternalClusterAction.InitJoinAck)
             {
@@ -2597,6 +2595,10 @@ namespace Akka.Cluster
             else if (message is InternalClusterAction.InitJoinNack) { } //that seed was uninitialized
             else if (message is ReceiveTimeout)
             {
+                if (_attempts >= 2)
+                    _log.Warning(
+                      "Couldn't join seed nodes after [{0}] attempts, will try again. seed-nodes=[{1}]",
+                      _attempts, string.Join(",", _seeds.Where(x => !x.Equals(_selfAddress))));
                 //no InitJoinAck received - try again
                 Self.Tell(new InternalClusterAction.JoinSeenNode());
             }

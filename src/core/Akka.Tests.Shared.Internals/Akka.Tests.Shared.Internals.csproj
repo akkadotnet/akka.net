@@ -32,6 +32,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FSharp.Core, Version=4.3.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FSharp.Core.3.1.2.5\lib\net40\FSharp.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
@@ -71,6 +75,7 @@
     <Compile Include="AkkaSpec.cs" />
     <Compile Include="AkkaSpecExtensions.cs" />
     <Compile Include="AskExtensions.cs" />
+    <Compile Include="Helpers\FSharpDelegateHelper.cs" />
     <Compile Include="Helpers\XAssert.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestReceiveActor.cs" />
