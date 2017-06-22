@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Implementation.Stages;
@@ -748,5 +749,151 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => "UnfoldResourceSourceAsync";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// A graph stage that can be used to integrate Akka.Streams with .NET events.
+    /// </summary>
+    /// <typeparam name="TEventArgs"></typeparam>
+    /// <typeparam name="TDelegate">Delegate</typeparam>
+    public sealed class EventSourceStage<TDelegate, TEventArgs> : GraphStage<SourceShape<TEventArgs>>
+    {
+        #region logic
+
+        private class Logic : OutGraphStageLogic
+        {
+            private readonly EventSourceStage<TDelegate, TEventArgs> _stage;
+            private readonly LinkedList<TEventArgs> _buffer;
+            private readonly TDelegate _handler;
+            private readonly Action<TEventArgs> _onOverflow;
+
+            public Logic(EventSourceStage<TDelegate, TEventArgs> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                _buffer = new LinkedList<TEventArgs>();
+                var bufferCapacity = stage._maxBuffer;
+                var onEvent = GetAsyncCallback<TEventArgs>(e =>
+                {
+                    if (IsAvailable(_stage.Out))
+                    {
+                        Push(_stage.Out, e);
+                    }
+                    else
+                    {
+                        if (_buffer.Count >= bufferCapacity) _onOverflow(e);
+                        else Enqueue(e);
+                    }
+                });
+
+                _handler = _stage._conversion(onEvent);
+                _onOverflow = SetupOverflowStrategy(stage._overflowStrategy);
+                SetHandler(stage.Out, this);
+            }
+            private void Enqueue(TEventArgs e) => _buffer.AddLast(e);
+
+            private TEventArgs Dequeue()
+            {
+                var element = _buffer.First.Value;
+                _buffer.RemoveFirst();
+                return element;
+            }
+
+            public override void OnPull()
+            {
+                if (_buffer.Count > 0)
+                {
+                    var element = Dequeue();
+                    Push(_stage.Out, element);
+                }
+            }
+
+            public override void PreStart()
+            {
+                base.PreStart();
+                _stage._addHandler(_handler);
+            }
+
+            public override void PostStop()
+            {
+                _stage._removeHandler(_handler);
+                _buffer.Clear();
+                base.PostStop();
+            }
+
+
+            private Action<TEventArgs> SetupOverflowStrategy(OverflowStrategy overflowStrategy)
+            {
+                switch (overflowStrategy)
+                {
+                    case OverflowStrategy.DropHead:
+                        return message =>
+                        {
+                            _buffer.RemoveFirst();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.DropTail:
+                        return message =>
+                        {
+                            _buffer.RemoveLast();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.DropNew:
+                        return message =>
+                        {
+                            // do nothing
+                        };
+                    case OverflowStrategy.DropBuffer:
+                        return message =>
+                        {
+                            _buffer.Clear();
+                            Enqueue(message);
+                        };
+                    case OverflowStrategy.Fail:
+                        return message =>
+                        {
+                            FailStage(new BufferOverflowException($"{_stage.Out} buffer has been overflown"));
+                        };
+                    case OverflowStrategy.Backpressure:
+                        return message =>
+                        {
+                            throw new NotSupportedException("OverflowStrategy.Backpressure is not supported");
+                        };
+                    default: throw new NotSupportedException($"Unknown option: {overflowStrategy}");
+                }
+            }
+        }
+
+        #endregion
+
+        private readonly Func<Action<TEventArgs>, TDelegate> _conversion;
+        private readonly Action<TDelegate> _addHandler;
+        private readonly Action<TDelegate> _removeHandler;
+        private readonly int _maxBuffer;
+        private readonly OverflowStrategy _overflowStrategy;
+
+        public Outlet<TEventArgs> Out { get; } = new Outlet<TEventArgs>("event.out");
+
+        /// <summary>
+        /// Creates a new instance of event source class.
+        /// </summary>
+        /// <param name="conversion">Function used to convert given event handler to delegate compatible with underlying .NET event.</param>
+        /// <param name="addHandler">Action which attaches given event handler to the underlying .NET event.</param>
+        /// <param name="removeHandler">Action which detaches given event handler to the underlying .NET event.</param>
+        /// <param name="maxBuffer">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBuffer"/>) has been overflown.</param>
+        public EventSourceStage(Action<TDelegate> addHandler,  Action<TDelegate> removeHandler, Func<Action<TEventArgs>, TDelegate> conversion, int maxBuffer, OverflowStrategy overflowStrategy)
+        {
+            _conversion = conversion ?? throw new ArgumentNullException(nameof(conversion));
+            _addHandler = addHandler ?? throw new ArgumentNullException(nameof(addHandler));
+            _removeHandler = removeHandler ?? throw new ArgumentNullException(nameof(removeHandler));
+            _maxBuffer = maxBuffer;
+            _overflowStrategy = overflowStrategy;
+            Shape = new SourceShape<TEventArgs>(Out);
+        }
+
+        public override SourceShape<TEventArgs> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 }
