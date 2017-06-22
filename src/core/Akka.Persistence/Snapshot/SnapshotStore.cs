@@ -57,9 +57,12 @@ namespace Akka.Persistence.Snapshot
             if (message is LoadSnapshot loadSnapshot)
             {
                 _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
-                    .ContinueWith(t => t.IsCompleted
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                         ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
-                        : new LoadSnapshotFailed(t.Exception), _continuationOptions)
+                        : new LoadSnapshotFailed(t.IsFaulted
+                                ? TryUnwrapException(t.Exception)
+                                : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")), 
+						_continuationOptions)
                     .PipeTo(senderPersistentActor);
             }
             else if (message is SaveSnapshot saveSnapshot)
@@ -67,12 +70,12 @@ namespace Akka.Persistence.Snapshot
                 var metadata = new SnapshotMetadata(saveSnapshot.Metadata.PersistenceId, saveSnapshot.Metadata.SequenceNr, DateTime.UtcNow);
 
                 _breaker.WithCircuitBreaker(() => SaveAsync(metadata, saveSnapshot.Snapshot))
-                    .ContinueWith(t => t.IsCompleted
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                         ? new SaveSnapshotSuccess(metadata) as ISnapshotResponse
                         : new SaveSnapshotFailure(saveSnapshot.Metadata,
                             t.IsFaulted
                                 ? TryUnwrapException(t.Exception)
-                                : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")),
+                                : new OperationCanceledException("SaveAsync canceled, possibly due to timing out.")),
                         _continuationOptions)
                     .PipeTo(self, senderPersistentActor);
             }
@@ -103,7 +106,7 @@ namespace Akka.Persistence.Snapshot
             {
                 var eventStream = Context.System.EventStream;
                 _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshot.Metadata))
-                    .ContinueWith(t => t.IsCompleted
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                                 ? new DeleteSnapshotSuccess(deleteSnapshot.Metadata) as ISnapshotResponse
                                 : new DeleteSnapshotFailure(deleteSnapshot.Metadata,
                                     t.IsFaulted
@@ -113,7 +116,7 @@ namespace Akka.Persistence.Snapshot
                     .PipeTo(self, senderPersistentActor)
                     .ContinueWith(t =>
                     {
-                        if (t.IsCompleted && _publish)
+                        if (_publish)
                             eventStream.Publish(message);
                     }, _continuationOptions);
             }
@@ -143,7 +146,7 @@ namespace Akka.Persistence.Snapshot
             {
                 var eventStream = Context.System.EventStream;
                 _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria))
-                    .ContinueWith(t => t.IsCompleted
+                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                                 ? new DeleteSnapshotsSuccess(deleteSnapshots.Criteria) as ISnapshotResponse
                                 : new DeleteSnapshotsFailure(deleteSnapshots.Criteria,
                                     t.IsFaulted
@@ -153,7 +156,7 @@ namespace Akka.Persistence.Snapshot
                     .PipeTo(self, senderPersistentActor)
                     .ContinueWith(t =>
                     {
-                        if (t.IsCompleted && _publish)
+                        if (_publish)
                             eventStream.Publish(message);
                     }, _continuationOptions);
             }

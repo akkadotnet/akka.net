@@ -312,4 +312,3 @@ namespace Akka.Persistence.TCK.Journal
 #endif
     }
 }
-

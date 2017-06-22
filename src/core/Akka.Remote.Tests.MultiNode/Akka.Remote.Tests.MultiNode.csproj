@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.Remote.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />

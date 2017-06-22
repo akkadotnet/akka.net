@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Fsm;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;

@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.TestKit.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from TestConductorProtocol.proto</summary>
-  internal static partial class TestConductorProtocolReflection {
+  public static partial class TestConductorProtocolReflection {
 
     #region Descriptor
     /// <summary>File descriptor for TestConductorProtocol.proto</summary>
@@ -466,7 +466,7 @@ namespace Akka.Remote.TestKit.Proto.Msg {
 
   }
 
-  internal sealed partial class EnterBarrier : pb::IMessage<EnterBarrier> {
+  public sealed partial class EnterBarrier : pb::IMessage<EnterBarrier> {
     private static readonly pb::MessageParser<EnterBarrier> _parser = new pb::MessageParser<EnterBarrier>(() => new EnterBarrier());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<EnterBarrier> Parser { get { return _parser; } }
