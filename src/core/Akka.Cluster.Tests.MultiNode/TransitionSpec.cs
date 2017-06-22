@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -27,7 +28,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = DebugConfig(true)
+            CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                   akka.cluster.periodic-tasks-initial-delay = 300s
                   akka.cluster.publish-stats-interval = 0s
@@ -51,7 +52,9 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private RoleName Leader(params RoleName[] roles)
         {
-            return roles.First();
+            // sorts the addresses and provides the address of the node with the lowest port number
+            // as that node will be the leader
+            return roles.Select(x => Tuple.Create(x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
         }
 
         private RoleName[] NonLeader(params RoleName[] roles)
