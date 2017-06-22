@@ -110,6 +110,35 @@ Target "RunTests" (fun _ ->
     projects |> Seq.iter (runSingleProject)
 )
 
+Target "RunTestsNetCore" (fun _ ->
+    let projects =
+        match isWindows with
+        // Windows
+        | true -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj" // TODO: remove once protobuf3 PR is merged
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+        // Linux/Mono
+        | _ -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/Akka.API.Tests.csproj"
+     
+    let runSingleProject project =
+        let result = ExecProcess(fun info ->
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- (Directory.GetParent project).FullName
+            info.Arguments <- (sprintf "xunit -f netcoreapp1.1 -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
+        
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+
+    CreateDir outputTests
+    projects |> Seq.iter (runSingleProject)
+)
+
 Target "MultiNodeTests" (fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
     let multiNodeTestAssemblies = !! "src/**/bin/Release/**/Akka.Remote.Tests.MultiNode.dll" ++
