@@ -5,7 +5,7 @@
     <AssemblyTitle>Akka.Cluster.Tests</AssemblyTitle>
     <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
   </PropertyGroup>
- 
+
   <ItemGroup>
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
