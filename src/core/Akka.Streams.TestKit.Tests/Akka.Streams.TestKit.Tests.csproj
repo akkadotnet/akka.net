@@ -5,7 +5,7 @@
     <AssemblyName>Akka.Streams.TestKit.Tests</AssemblyName>
     <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
   </PropertyGroup>
-
+  
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
     <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />

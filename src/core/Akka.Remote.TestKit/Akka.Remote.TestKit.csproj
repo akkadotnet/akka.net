@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.ProtocolBuffers" version="2.4.1.555" />
+    <PackageReference Include="Google.Protobuf" version="3.3.0" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">

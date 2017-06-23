@@ -8,6 +8,7 @@
 using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
 using Akka.Util.Internal;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Serialization
@@ -19,7 +20,6 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
         public SqliteJournalSerializationSpec(ITestOutputHelper output)
             : base(CreateSpecConfig("Filename=file:serialization-journal-" + Counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteJournalSerializationSpec", output)
         {
-            SqlitePersistence.Get(Sys);
         }
 
         private static Config CreateSpecConfig(string connectionString)
@@ -30,6 +30,12 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
                     journal {
                         plugin = ""akka.persistence.journal.sqlite""
                         sqlite {
+                            event-adapters {
+                                custom-adapter = ""Akka.Persistence.TCK.Serialization.TestJournal+MyWriteAdapter, Akka.Persistence.TCK""
+                            }
+                            event-adapter-bindings = {
+                                ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK"" = custom-adapter
+                            }
                             class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
                             plugin-dispatcher = ""akka.actor.default-dispatcher""
                             table-name = event_journal
@@ -39,6 +45,16 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
                         }
                     }
                 }");
+        }
+
+        [Fact(Skip = "Sql plugin does not support SerializerWithStringManifest")]
+        public override void Journal_should_serialize_Persistent_with_string_manifest()
+        {
+        }
+
+        [Fact(Skip = "Sql plugin does not support EventAdapter.Manifest")]
+        public override void Journal_should_serialize_Persistent_with_EventAdapter_manifest()
+        {
         }
     }
 }

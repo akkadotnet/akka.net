@@ -1511,6 +1511,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Failed<T>(System.Exception cause) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> From<T>(System.Collections.Generic.IEnumerable<T> enumerable) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEnumerator<T>(System.Func<System.Collections.Generic.IEnumerator<T>> enumeratorFactory) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<TDelegate, T>(System.Func<System.Action<T>, TDelegate> conversion, System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<T>(System.Action<System.EventHandler<T>> addHandler, System.Action<System.EventHandler<T>> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, TMat> FromGraph<T, TMat>(Akka.Streams.IGraph<Akka.Streams.SourceShape<T>, TMat> source) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromPublisher<T>(Reactive.Streams.IPublisher<T> publisher) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
@@ -2326,6 +2328,13 @@ namespace Akka.Streams.Implementation
         public abstract Akka.Streams.Implementation.EnumerableActorName Copy(string newPrefix);
         public static Akka.Streams.Implementation.EnumerableActorName Create(string prefix) { }
         public abstract string Next();
+    }
+    public sealed class EventSourceStage<TDelegate, TEventArgs> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TEventArgs>>
+    {
+        public EventSourceStage(System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, System.Func<System.Action<TEventArgs>, TDelegate> conversion, int maxBuffer, Akka.Streams.OverflowStrategy overflowStrategy) { }
+        public Akka.Streams.Outlet<TEventArgs> Out { get; }
+        public override Akka.Streams.SourceShape<TEventArgs> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public abstract class ExposedPublisherReceive
     {
