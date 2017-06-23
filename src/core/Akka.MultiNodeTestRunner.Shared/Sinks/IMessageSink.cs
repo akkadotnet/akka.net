@@ -64,7 +64,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// <summary>
         /// Report that the test runner is terminating the current test in the suite.
         /// </summary>
-        void EndTest();
+        void EndTest(string className, string methodName);
 
         /// <summary>
         /// Report that an individual node has passed its test.

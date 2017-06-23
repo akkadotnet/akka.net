@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -317,9 +317,9 @@ namespace Akka.Streams.Implementation.IO
             get => throw new NotSupportedException("This stream can only read");
             set => throw new NotSupportedException("This stream can only read");
         }
-
-#endregion
-
+        
+        #endregion
+        
         private static readonly Exception SubscriberClosedException =
             new IOException("Reactive stream is terminated, no reads are possible");
 
@@ -536,4 +536,3 @@ namespace Akka.Streams.Implementation.IO
         public override bool CanWrite => false;
     }
 }
-#endif

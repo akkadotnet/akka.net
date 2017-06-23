@@ -288,7 +288,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class SkipWhile<T> : GraphStage<FlowShape<T, T>>
+    public sealed class SkipWhile<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
 
@@ -300,22 +300,22 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
 
             public void OnPush()
             {
-                var element = Grab(_stage.In);
+                var element = Grab(_stage.Inlet);
                 var result = WithSupervision(() => _stage._predicate(element));
                 if (result.HasValue)
                 {
                     if (result.Value)
-                        Pull(_stage.In);
+                        Pull(_stage.Inlet);
                     else
                     {
-                        Push(_stage.Out, element);
-                        SetHandler(_stage.In, onPush: () => Push(_stage.Out, Grab(_stage.In)));
+                        Push(_stage.Outlet, element);
+                        SetHandler(_stage.Inlet, onPush: () => Push(_stage.Outlet, Grab(_stage.Inlet)));
                     }
                 }
             }
@@ -324,14 +324,14 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnUpstreamFailure(Exception e) => FailStage(e);
 
-            public void OnPull() => Pull(_stage.In);
+            public void OnPull() => Pull(_stage.Inlet);
 
             public void OnDownstreamFinish() => CompleteStage();
 
             protected override void OnResume(Exception ex)
             {
-                if (!HasBeenPulled(_stage.In))
-                    Pull(_stage.In);
+                if (!HasBeenPulled(_stage.Inlet))
+                    Pull(_stage.Inlet);
             }
         }
 
@@ -343,31 +343,15 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="predicate">TBD</param>
-        public SkipWhile(Predicate<T> predicate)
+        public SkipWhile(Predicate<T> predicate) : base("SkipWhile")
         {
             _predicate = predicate;
-            Shape = new FlowShape<T, T>(In, Out);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.SkipWhile;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("SkipWhile.in");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Outlet<T> Out { get; } = new Outlet<T>("SkipWhile.out");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
 
         /// <summary>
         /// TBD
@@ -565,7 +549,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class Recover<T> : GraphStage<FlowShape<T, T>>
+    public sealed class Recover<T> : SimpleLinearGraphStage<T>
     {
         #region Logic 
 
@@ -578,20 +562,20 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
 
-            public override void OnPush() => Push(_stage.Out, Grab(_stage.In));
+            public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
 
             public override void OnUpstreamFailure(Exception ex)
             {
                 var result = _stage._recovery(ex);
                 if (result.HasValue)
                 {
-                    if (IsAvailable(_stage.Out))
+                    if (IsAvailable(_stage.Outlet))
                     {
-                        Push(_stage.Out, result.Value);
+                        Push(_stage.Outlet, result.Value);
                         CompleteStage();
                     }
                     else
@@ -605,11 +589,11 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (_recovered.HasValue)
                 {
-                    Push(_stage.Out, _recovered.Value);
+                    Push(_stage.Outlet, _recovered.Value);
                     CompleteStage();
                 }
                 else
-                    Pull(_stage.In);
+                    Pull(_stage.Inlet);
             }
 
 
@@ -624,33 +608,16 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="recovery">TBD</param>
-        public Recover(Func<Exception, Option<T>> recovery)
+        public Recover(Func<Exception, Option<T>> recovery) : base("Recover")
         {
             _recovery = recovery;
-
-            Shape = new FlowShape<T, T>(In, Out);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Recover;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("Recover.in");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Outlet<T> Out { get; } = new Outlet<T>("Recover.out");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -799,16 +766,16 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class Drop<T> : SimpleLinearGraphStage<T>
+    public sealed class Skip<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
-            private readonly Drop<T> _stage;
+            private readonly Skip<T> _stage;
             private long _left;
 
-            public Logic(Drop<T> stage) : base(stage.Shape)
+            public Logic(Skip<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 _left = stage._count;
@@ -839,7 +806,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="count">TBD</param>
-        public Drop(long count)
+        public Skip(long count)
         {
             _count = count;
         }
@@ -862,7 +829,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>
         /// A <see cref="string" /> that represents this instance.
         /// </returns>
-        public override string ToString() => "Drop";
+        public override string ToString() => "Skip";
     }
 
     /// <summary>
@@ -1481,7 +1448,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class Intersperse<T> : GraphStage<FlowShape<T, T>>
+    public sealed class Intersperse<T> : SimpleLinearGraphStage<T>
     {
         #region internal class
 
@@ -1500,14 +1467,14 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 // if else (to avoid using Iterator[T].flatten in hot code)
                 if (_stage.InjectStartEnd)
-                    _logic.EmitMultiple(_stage.Out, new[] { _stage._start, _logic.Grab(_stage.In) });
-                else _logic.Emit(_stage.Out, _logic.Grab(_stage.In));
-                _logic.SetHandler(_stage.In, new RestInHandler(_stage, _logic));
+                    _logic.EmitMultiple(_stage.Outlet, new[] { _stage._start, _logic.Grab(_stage.Inlet) });
+                else _logic.Emit(_stage.Outlet, _logic.Grab(_stage.Inlet));
+                _logic.SetHandler(_stage.Inlet, new RestInHandler(_stage, _logic));
             }
 
             public override void OnUpstreamFinish()
             {
-                _logic.EmitMultiple(_stage.Out, new[] { _stage._start, _stage._end });
+                _logic.EmitMultiple(_stage.Outlet, new[] { _stage._start, _stage._end });
                 _logic.CompleteStage();
             }
         }
@@ -1524,11 +1491,11 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             public override void OnPush()
-                => _logic.EmitMultiple(_stage.Out, new[] { _stage._inject, _logic.Grab(_stage.In) });
+                => _logic.EmitMultiple(_stage.Outlet, new[] { _stage._inject, _logic.Grab(_stage.Inlet) });
 
             public override void OnUpstreamFinish()
             {
-                if (_stage.InjectStartEnd) _logic.Emit(_stage.Out, _stage._end);
+                if (_stage.InjectStartEnd) _logic.Emit(_stage.Outlet, _stage._end);
                 _logic.CompleteStage();
             }
         }
@@ -1540,25 +1507,17 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Intersperse<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.In, new StartInHandler(stage, this));
-                SetHandler(stage.Out, this);
+                SetHandler(stage.Inlet, new StartInHandler(stage, this));
+                SetHandler(stage.Outlet, this);
             }
 
-            public void OnPull() => Pull(_stage.In);
+            public void OnPull() => Pull(_stage.Inlet);
 
             public void OnDownstreamFinish() => CompleteStage();
         }
 
         #endregion
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("in");
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Out = new Outlet<T>("out");
         private readonly T _start;
         private readonly T _inject;
         private readonly T _end;
@@ -1567,12 +1526,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="inject">TBD</param>
-        public Intersperse(T inject)
+        public Intersperse(T inject) : base("Intersperse")
         {
             _inject = inject;
             InjectStartEnd = false;
-
-            Shape = new FlowShape<T, T>(In, Out);
         }
 
         /// <summary>
@@ -1581,25 +1538,18 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="start">TBD</param>
         /// <param name="inject">TBD</param>
         /// <param name="end">TBD</param>
-        public Intersperse(T start, T inject, T end)
+        public Intersperse(T start, T inject, T end) : base("Intersperse")
         {
             _start = start;
             _inject = inject;
             _end = end;
             InjectStartEnd = true;
-
-            Shape = new FlowShape<T, T>(In, Out);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         public bool InjectStartEnd { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
 
         /// <summary>
         /// TBD
@@ -1726,7 +1676,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class LimitWeighted<T> : GraphStage<FlowShape<T, T>>
+    public sealed class LimitWeighted<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
 
@@ -1740,19 +1690,19 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _left = stage._max;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
             }
 
             public void OnPush()
             {
-                var element = Grab(_stage.In);
+                var element = Grab(_stage.Inlet);
                 var result = WithSupervision(() => _stage._costFunc(element));
                 if (result.HasValue)
                 {
                     _left -= result.Value;
                     if (_left >= 0)
-                        Push(_stage.Out, element);
+                        Push(_stage.Outlet, element);
                     else
                         FailStage(new StreamLimitReachedException(_stage._max));
                 }
@@ -1762,7 +1712,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnUpstreamFailure(Exception e) => FailStage(e);
 
-            public void OnPull() => Pull(_stage.In);
+            public void OnPull() => Pull(_stage.Inlet);
 
             public void OnDownstreamFinish() => CompleteStage();
 
@@ -1776,8 +1726,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void TryPull()
             {
-                if (!HasBeenPulled(_stage.In))
-                    Pull(_stage.In);
+                if (!HasBeenPulled(_stage.Inlet))
+                    Pull(_stage.Inlet);
             }
         }
 
@@ -1791,32 +1741,16 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="max">TBD</param>
         /// <param name="costFunc">TBD</param>
-        public LimitWeighted(long max, Func<T, long> costFunc)
+        public LimitWeighted(long max, Func<T, long> costFunc) : base("LimitWeighted")
         {
             _max = max;
             _costFunc = costFunc;
-            Shape = new FlowShape<T, T>(In, Out);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.LimitWeighted;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("LimitWeighted.in");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Outlet<T> Out { get; } = new Outlet<T>("LimitWeighted.out");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
 
         /// <summary>
         /// TBD

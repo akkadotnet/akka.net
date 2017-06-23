@@ -1511,6 +1511,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Failed<T>(System.Exception cause) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> From<T>(System.Collections.Generic.IEnumerable<T> enumerable) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEnumerator<T>(System.Func<System.Collections.Generic.IEnumerator<T>> enumeratorFactory) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<TDelegate, T>(System.Func<System.Action<T>, TDelegate> conversion, System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromEvent<T>(System.Action<System.EventHandler<T>> addHandler, System.Action<System.EventHandler<T>> removeHandler, int maxBufferCapacity = 128, Akka.Streams.OverflowStrategy overflowStrategy = 2) { }
         public static Akka.Streams.Dsl.Source<T, TMat> FromGraph<T, TMat>(Akka.Streams.IGraph<Akka.Streams.SourceShape<T>, TMat> source) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromPublisher<T>(Reactive.Streams.IPublisher<T> publisher) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
@@ -1771,6 +1773,11 @@ namespace Akka.Streams.Dsl
         public System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding> BindAndHandle(Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> handler, Akka.Streams.IMaterializer materializer, string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = False, System.Nullable<System.TimeSpan> idleTimeout = null) { }
         public Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress = null, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = True, System.Nullable<System.TimeSpan> connectionTimeout = null, System.Nullable<System.TimeSpan> idleTimeout = null) { }
         public Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(string host, int port) { }
+    }
+    public sealed class TcpIdleTimeoutException : System.TimeoutException
+    {
+        public TcpIdleTimeoutException(string message, System.TimeSpan duration) { }
+        public System.TimeSpan Duration { get; }
     }
     public class static TcpStreamExtensions
     {
@@ -2285,14 +2292,11 @@ namespace Akka.Streams.Implementation
         public override string ToString() { }
         public override Akka.Streams.Implementation.IModule WithAttributes(Akka.Streams.Attributes attributes) { }
     }
-    public sealed class DelayInitial<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    public sealed class DelayInitial<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public readonly System.TimeSpan Delay;
-        public readonly Akka.Streams.Inlet<T> In;
-        public readonly Akka.Streams.Outlet<T> Out;
         public DelayInitial(System.TimeSpan delay) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
-        public override Akka.Streams.FlowShape<T, T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
@@ -2324,6 +2328,13 @@ namespace Akka.Streams.Implementation
         public abstract Akka.Streams.Implementation.EnumerableActorName Copy(string newPrefix);
         public static Akka.Streams.Implementation.EnumerableActorName Create(string prefix) { }
         public abstract string Next();
+    }
+    public sealed class EventSourceStage<TDelegate, TEventArgs> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TEventArgs>>
+    {
+        public EventSourceStage(System.Action<TDelegate> addHandler, System.Action<TDelegate> removeHandler, System.Func<System.Action<TEventArgs>, TDelegate> conversion, int maxBuffer, Akka.Streams.OverflowStrategy overflowStrategy) { }
+        public Akka.Streams.Outlet<TEventArgs> Out { get; }
+        public override Akka.Streams.SourceShape<TEventArgs> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     public abstract class ExposedPublisherReceive
     {
@@ -3299,19 +3310,9 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
-    public sealed class Detacher<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    public sealed class Detacher<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
-        public readonly Akka.Streams.Inlet<T> Inlet;
-        public readonly Akka.Streams.Outlet<T> Outlet;
         public Detacher() { }
-        protected override Akka.Streams.Attributes InitialAttributes { get; }
-        public override Akka.Streams.FlowShape<T, T> Shape { get; }
-        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
-        public override string ToString() { }
-    }
-    public sealed class Drop<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
-    {
-        public Drop(long count) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
@@ -3503,23 +3504,17 @@ namespace Akka.Streams.Implementation.Fusing
         Akka.Streams.Implementation.Fusing.IMaterializedValueSource CopySource();
         void SetValue(object result);
     }
-    public sealed class Intersperse<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    public sealed class Intersperse<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
-        public readonly Akka.Streams.Inlet<T> In;
-        public readonly Akka.Streams.Outlet<T> Out;
         public Intersperse(T inject) { }
         public Intersperse(T start, T inject, T end) { }
         public bool InjectStartEnd { get; }
-        public override Akka.Streams.FlowShape<T, T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
-    public sealed class LimitWeighted<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    public sealed class LimitWeighted<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public LimitWeighted(long max, System.Func<T, long> costFunc) { }
-        public Akka.Streams.Inlet<T> In { get; }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
-        public Akka.Streams.Outlet<T> Out { get; }
-        public override Akka.Streams.FlowShape<T, T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
@@ -3549,13 +3544,10 @@ namespace Akka.Streams.Implementation.Fusing
         public override Akka.Streams.Stage.ITerminationDirective OnUpstreamFailure(System.Exception cause, Akka.Streams.Stage.IContext<TOut> context) { }
         public override Akka.Streams.Stage.ITerminationDirective OnUpstreamFinish(Akka.Streams.Stage.IContext<TOut> context) { }
     }
-    public sealed class Recover<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    public sealed class Recover<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public Recover(System.Func<System.Exception, Akka.Streams.Util.Option<T>> recovery) { }
-        public Akka.Streams.Inlet<T> In { get; }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
-        public Akka.Streams.Outlet<T> Out { get; }
-        public override Akka.Streams.FlowShape<T, T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
@@ -3623,7 +3615,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         public readonly Akka.Streams.Inlet<T> Inlet;
         public readonly Akka.Streams.Outlet<T> Outlet;
-        protected SimpleLinearGraphStage() { }
+        protected SimpleLinearGraphStage(string name = null) { }
         public override Akka.Streams.FlowShape<T, T> Shape { get; }
     }
     public sealed class SingleSource<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<T>>
@@ -3633,13 +3625,17 @@ namespace Akka.Streams.Implementation.Fusing
         public override Akka.Streams.SourceShape<T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
-    public sealed class SkipWhile<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
+    public sealed class Skip<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
+    {
+        public Skip(long count) { }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+        public override string ToString() { }
+    }
+    public sealed class SkipWhile<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public SkipWhile(System.Predicate<T> predicate) { }
-        public Akka.Streams.Inlet<T> In { get; }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
-        public Akka.Streams.Outlet<T> Out { get; }
-        public override Akka.Streams.FlowShape<T, T> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }

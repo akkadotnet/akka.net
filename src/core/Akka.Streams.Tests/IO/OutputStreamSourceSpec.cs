@@ -325,10 +325,11 @@ namespace Akka.Streams.Tests.IO
             var probe = t.Item2;
 
             // fill the buffer up
-            Enumerable.Range(1, bufferSize-1).ForEach(i=>outputStream.WriteByte((byte)i));
+            Enumerable.Range(1, bufferSize - 1).ForEach(i => outputStream.WriteByte((byte)i));
 
             Task.Run(() => outputStream.Close());
 
+            // here is the race, has the elements reached the stage buffer yet
             Thread.Sleep(500);
             probe.Request(bufferSize - 1);
             probe.ExpectNextN(bufferSize - 1);

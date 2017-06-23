@@ -21,7 +21,7 @@ let outputTests = __SOURCE_DIRECTORY__ @@ "TestResults"
 let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
-let outputMultiNode = output @@ "multinode"
+let outputMultiNode = outputTests @@ "multinode"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
@@ -52,23 +52,34 @@ Target "RestorePackages" (fun _ ->
 )
 
 Target "Build" (fun _ ->
-    let projects = !! "./**/core/**/*.csproj"
-                   ++ "./**/contrib/**/*.csproj"
-                   -- "./**/serializers/**/*Wire*.csproj"
-
-    let runSingleProject project =
-        DotNetCli.Build
-            (fun p -> 
-                { p with
-                    Project = project
-                    Configuration = configuration })
-
-    projects |> Seq.iter (runSingleProject)
+    DotNetCli.Build
+        (fun p -> 
+            { p with
+                Project = solution
+                Configuration = configuration })
 )
 
 //--------------------------------------------------------------------------------
 // Tests targets 
 //--------------------------------------------------------------------------------
+
+module internal ResultHandling =
+    let (|OK|Failure|) = function
+        | 0 -> OK
+        | x -> Failure x
+
+    let buildErrorMessage = function
+        | OK -> None
+        | Failure errorCode ->
+            Some (sprintf "xUnit2 reported an error (Error Code %d)" errorCode)
+
+    let failBuildWithMessage = function
+        | DontFailBuild -> traceError
+        | _ -> (fun m -> raise(FailedTestsException m))
+
+    let failBuildIfXUnitReportedError errorLevel =
+        buildErrorMessage
+        >> Option.iter (failBuildWithMessage errorLevel)
 
 Target "RunTests" (fun _ ->
     let projects =
@@ -76,26 +87,24 @@ Target "RunTests" (fun _ ->
         // Windows
         | true -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
+                  -- "./**/Akka.Remote.TestKit.Tests.csproj" // TODO: remove once protobuf3 PR is merged
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Persistence.Tests.csproj"                 
         // Linux/Mono
         | _ -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
                   -- "./**/Akka.Remote.TestKit.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"      
-                  -- "./**/Akka.Persistence.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/Akka.API.Tests.csproj"
-
+     
     let runSingleProject project =
-        DotNetCli.RunCommand
-            (fun p -> 
-                { p with 
-                    WorkingDir = (Directory.GetParent project).FullName
-                    TimeOut = TimeSpan.FromMinutes 30. })
-                (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project)) 
+        let result = ExecProcess(fun info ->
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- (Directory.GetParent project).FullName
+            info.Arguments <- (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
+        
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -116,6 +125,7 @@ Target "MultiNodeTests" (fun _ ->
 
         let args = StringBuilder()
                 |> append assembly
+                |> append "-Dmultinode.teamcity=true"
                 |> append "-Dmultinode.enable-filesink=on"
                 |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                 |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
@@ -265,8 +275,10 @@ Target "Protobuf" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Documentation 
 //--------------------------------------------------------------------------------  
-Target "DocFx" <| fun _ ->
-    let docFxToolPath = findToolInSubPath "docfx.exe" "./tools/docfx.console/tools" 
+Target "DocFx" (fun _ ->
+    let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
+    DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
+    DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
 
     let docsPath = "./docs"
 
@@ -275,6 +287,7 @@ Target "DocFx" <| fun _ ->
                     Timeout = TimeSpan.FromMinutes 5.0; 
                     WorkingDirectory  = docsPath; 
                     DocFxJson = docsPath @@ "docfx.json" })
+)
 
 //--------------------------------------------------------------------------------
 // Help 
