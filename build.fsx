@@ -732,4 +732,6 @@ Target "AllTests" DoNothing //used for Mono builds, due to Mono 4.0 bug with FAK
 "RunTests" ==> "AllTests"
 "MultiNodeTests" ==> "AllTests"
 
+Target "RunTestsNetCore" DoNothing
+
 RunTargetOrDefault "Help"
