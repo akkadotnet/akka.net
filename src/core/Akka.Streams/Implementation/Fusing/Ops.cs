@@ -636,6 +636,56 @@ namespace Akka.Streams.Implementation.Fusing
 
     /// <summary>
     /// INTERNAL API
+    /// 
+    /// Maps error with the provided function if it is defined for an error or, otherwise, passes it on unchanged.
+    /// 
+    /// While similar to <see cref="Recover{T}"/> this stage can be used to transform an error signal to a different one without logging
+    /// it as an error in the process. So in that sense it is NOT exactly equivalent to Recover(e => throw e2) since Recover
+    /// would log the e2 error.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public sealed class SelectError<T> : SimpleLinearGraphStage<T>
+    {
+        #region Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly SelectError<T> _stage;
+
+            public Logic(SelectError<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Outlet, this);
+            }
+
+            public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
+
+            public override void OnPull() => Pull(_stage.Inlet);
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                // scala code uses if (f.isDefinedAt(ex)), 
+                // doesn't work here so always call the selector and one can simply return e 
+                // if no other exception should be used
+                base.OnUpstreamFailure(_stage._selector(e));
+            }
+        }
+
+        #endregion
+
+        private readonly Func<Exception, Exception> _selector;
+
+        public SelectError(Func<Exception, Exception> selector)
+        {
+            _selector = selector;
+        }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    }
+
+    /// <summary>
+    /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     public sealed class Take<T> : SimpleLinearGraphStage<T>

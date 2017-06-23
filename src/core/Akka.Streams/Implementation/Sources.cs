@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Pattern;
+using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
@@ -400,17 +401,15 @@ namespace Akka.Streams.Implementation
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly UnfoldResourceSource<TOut, TSource> _stage;
-            private readonly Attributes _inheritedAttributes;
             private readonly Lazy<Decider> _decider;
             private TSource _blockingStream;
 
             public Logic(UnfoldResourceSource<TOut, TSource> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
-                _inheritedAttributes = inheritedAttributes;
                 _decider = new Lazy<Decider>(() =>
                 {
-                    var strategy = _inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                    var strategy = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
                 });
 
@@ -541,7 +540,6 @@ namespace Akka.Streams.Implementation
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly UnfoldResourceSourceAsync<TOut, TSource> _source;
-            private readonly Attributes _inheritedAttributes;
             private readonly Lazy<Decider> _decider;
             private TaskCompletionSource<TSource> _resource;
             private Action<Either<Option<TOut>, Exception>> _callback;
@@ -551,11 +549,10 @@ namespace Akka.Streams.Implementation
             public Logic(UnfoldResourceSourceAsync<TOut, TSource> source, Attributes inheritedAttributes) : base(source.Shape)
             {
                 _source = source;
-                _inheritedAttributes = inheritedAttributes;
                 _resource = new TaskCompletionSource<TSource>();
                 _decider = new Lazy<Decider>(() =>
                 {
-                    var strategy = _inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                    var strategy = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
                 });
 
@@ -751,6 +748,123 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "UnfoldResourceSourceAsync";
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public sealed class LazySource<TOut, TMat> : GraphStageWithMaterializedValue<SourceShape<TOut>, Task<TMat>>
+    {
+        #region Logic
+
+        private sealed class Logic : OutGraphStageLogic
+        {
+            private readonly LazySource<TOut, TMat> _stage;
+            private readonly TaskCompletionSource<TMat> _completion;
+            private readonly Attributes _inheritedAttributes;
+
+            public Logic(LazySource<TOut, TMat> stage, TaskCompletionSource<TMat> completion, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                _completion = completion;
+                _inheritedAttributes = inheritedAttributes;
+
+                SetHandler(stage.Out, this);
+            }
+
+            public override void OnDownstreamFinish()
+            {
+                _completion.SetException(new Exception("Downstream canceled without triggering lazy source materialization"));
+                CompleteStage();
+            }
+
+
+            public override void OnPull()
+            {
+                var source = _stage._sourceFactory();
+                var subSink = new SubSinkInlet<TOut>(this, "LazySource");
+                subSink.Pull();
+
+                SetHandler(_stage.Out, () => subSink.Pull(), () =>
+                {
+                    subSink.Cancel();
+                    CompleteStage();
+                });
+
+                subSink.SetHandler(new LambdaInHandler(() => Push(_stage.Out, subSink.Grab())));
+
+                try
+                {
+                    var value = SubFusingMaterializer.Materialize(source.ToMaterialized(subSink.Sink, Keep.Left),
+                        _inheritedAttributes);
+                    _completion.SetResult(value);
+                }
+                catch (Exception e)
+                {
+                    _completion.SetException(e);
+                }
+            }
+
+            public override void PostStop() => _completion.TrySetException(
+                new Exception("LazySource stopped without completing the materialized task"));
+        }
+        
+        #endregion
+
+        private readonly Func<Source<TOut, TMat>> _sourceFactory;
+
+        /// <summary>
+        /// Creates a new <see cref="LazySource{TOut,TMat}"/>
+        /// </summary>
+        /// <param name="sourceFactory">The factory that generates the source when needed</param>
+        public LazySource(Func<Source<TOut, TMat>> sourceFactory)
+        {
+            _sourceFactory = sourceFactory;
+            Shape = new SourceShape<TOut>(Out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("LazySource.out");
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override SourceShape<TOut> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.LazySource;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var completion = new TaskCompletionSource<TMat>();
+            var logic = new Logic(this, completion, inheritedAttributes);
+
+            return new LogicAndMaterializedValue<Task<TMat>>(logic, completion.Task);
+        }
+
+        /// <summary>
+        /// Returns the string representation of the <see cref="LazySource{TOut,TMat}"/>
+        /// </summary>
+        public override string ToString() => "LazySource";
+    }
+
+    /// <summary>
+    /// API for the <see cref="LazySource{TOut,TMat}"/>
+    /// </summary>
+    public static class LazySource
+    {
+        /// <summary>
+        /// Creates a new <see cref="LazySource{TOut,TMat}"/> for the given <paramref name="create"/> factory
+        /// </summary>
+        public static LazySource<TOut, TMat> Create<TOut, TMat>(Func<Source<TOut, TMat>> create) =>
+            new LazySource<TOut, TMat>(create);
+    }
+  
     /// <summary>
     /// INTERNAL API
     /// 

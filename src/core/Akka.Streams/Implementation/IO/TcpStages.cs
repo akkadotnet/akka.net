@@ -71,7 +71,7 @@ namespace Akka.Streams.Implementation.IO
                 // FIXME: Previous code was wrong, must add new tests
                 var handler = tcpFlow;
                 if (_stage._idleTimeout.HasValue)
-                    handler = tcpFlow.Join(BidiFlow.BidirectionalIdleTimeout<ByteString, ByteString>(_stage._idleTimeout.Value));
+                    handler = tcpFlow.Join(TcpIdleTimeout.Create(_stage._idleTimeout.Value, connected.RemoteAddress));
 
                 return new StreamTcp.IncomingConnection(connected.LocalAddress, connected.RemoteAddress, handler);
             }
@@ -264,7 +264,7 @@ namespace Akka.Streams.Implementation.IO
                 throw new IllegalStateException("Cannot materialize an incoming connection Flow twice.");
             _hasBeenCreated.Value = true;
 
-            return new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Inbound(_connection, _halfClose));
+            return new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Inbound(_connection, _halfClose), _remoteAddress);
         }
 
         /// <summary>
@@ -369,25 +369,19 @@ namespace Akka.Streams.Implementation.IO
             public bool HalfClose { get; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         internal sealed class TcpStreamLogic : GraphStageLogic
         {
             private readonly ITcpRole _role;
+            private readonly EndPoint _remoteAddress;
             private readonly Inlet<ByteString> _bytesIn;
             private readonly Outlet<ByteString> _bytesOut;
             private IActorRef _connection;
             private readonly OutHandler _readHandler;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="shape">TBD</param>
-            /// <param name="role">TBD</param>
-            public TcpStreamLogic(FlowShape<ByteString, ByteString> shape, ITcpRole role) : base(shape)
+            
+            public TcpStreamLogic(FlowShape<ByteString, ByteString> shape, ITcpRole role, EndPoint remoteAddress) : base(shape)
             {
                 _role = role;
+                _remoteAddress = remoteAddress;
                 _bytesIn = shape.Inlet;
                 _bytesOut = shape.Outlet;
 
@@ -431,8 +425,7 @@ namespace Akka.Streams.Implementation.IO
                         {
                             if (Interpreter.Log.IsDebugEnabled)
                                 Interpreter.Log.Debug(
-                                    $"Aborting tcp connection because of upstream failure: {ex.Message}\n{ex.StackTrace}");
-
+                                    $"Aborting tcp connection to {_remoteAddress} because of upstream failure: {ex.Message}\n{ex.StackTrace}");
                             _connection.Tell(Tcp.Abort.Instance, StageActorRef);
                         }
                         else
@@ -604,7 +597,7 @@ namespace Akka.Streams.Implementation.IO
             var logic = new TcpConnectionStage.TcpStreamLogic(Shape,
                 new TcpConnectionStage.Outbound(_tcpManager,
                     new Tcp.Connect(_remoteAddress, _localAddress, _options, _connectionTimeout, pullMode: true),
-                    localAddressPromise, _halfClose));
+                    localAddressPromise, _halfClose), _remoteAddress);
 
             return new LogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>>(logic, outgoingConnectionPromise.Task);
         }
@@ -614,6 +607,30 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => $"TCP-to {_remoteAddress}";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal static class TcpIdleTimeout
+    {
+        public static BidiFlow<ByteString, ByteString, ByteString, ByteString, NotUsed> Create(TimeSpan idleTimeout, EndPoint remoteAddress = null)
+        {
+            var connectionString = remoteAddress == null ? "" : $" on connection to [{remoteAddress}]";
+
+            var idleException = new TcpIdleTimeoutException(
+                $"TCP idle-timeout encountered{connectionString}, no bytes passed in the last {idleTimeout}",
+                idleTimeout);
+
+            var toNetTimeout = BidiFlow.FromFlows(
+                Flow.Create<ByteString>().SelectError(e => e is TimeoutException ? idleException : e),
+                Flow.Create<ByteString>());
+
+            var fromNetTimeout = toNetTimeout.Reversed(); // now the bottom flow transforms the exception, the top one doesn't (since that one is "fromNet") 
+
+            return fromNetTimeout.Atop(BidiFlow.BidirectionalIdleTimeout<ByteString, ByteString>(idleTimeout))
+                .Atop(toNetTimeout);
+        }
     }
 }
 #endif
