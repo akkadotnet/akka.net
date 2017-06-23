@@ -48,7 +48,7 @@ namespace Akka.Streams.Implementation.Fusing
             var structInfo = new BuildStructuralInfo();
 
             // First perform normalization by descending the module tree and recording information in the BuildStructuralInfo instance.
-            IEnumerable<KeyValuePair<IModule, IMaterializedValueNode>> materializedValue;
+            LinkedList<KeyValuePair<IModule, IMaterializedValueNode>> materializedValue;
 
             try
             {
@@ -67,7 +67,8 @@ namespace Akka.Streams.Implementation.Fusing
                 structInfo.NewOutlets(graph.Shape.Outlets));
 
             // Extract the full topological information from the builder before removing assembly-internal (fused) wirings in the next step.
-            var info = structInfo.ToInfo();
+            var info = structInfo.ToInfo(shape,
+                materializedValue.Select(pair => Tuple.Create(pair.Key, pair.Value)).ToList());
 
             // Perform the fusing of `structInfo.groups` into GraphModules (leaving them as they are for non - fusable modules).
             structInfo.RemoveInternalWires();
@@ -88,6 +89,42 @@ namespace Akka.Streams.Implementation.Fusing
             if (IsDebug) Console.WriteLine(module.ToString());
 
             return new Streams.Fusing.FusedGraph<TShape, TMat>(module, (TShape) shape);
+        }
+
+        /// <summary>
+        /// Return the <see cref="StructuralInfoModule"/> for this Graph without any fusing
+        /// </summary>
+        /// <typeparam name="TShape">TBD</typeparam>
+        /// <typeparam name="TMat"></typeparam>
+        /// <param name="graph"></param>
+        /// <param name="attributes"></param>
+        /// <returns></returns>
+        public static StructuralInfoModule StructuralInfo<TShape, TMat>(IGraph<TShape, TMat> graph, Attributes attributes) where TShape : Shape
+        {
+            var structuralInfo = new BuildStructuralInfo();
+
+            // First perform normalization by descending the module tree and recording
+            // information in the BuildStructuralInfo instance.
+
+            try
+            {
+                var materializedValue = Descend<TMat>(graph.Module, Attributes.None, structuralInfo,
+                    structuralInfo.CreateGroup(0), 0);
+
+                // Then create a copy of the original Shape with the new copied ports.
+                var shape = graph.Shape.CopyFromPorts(structuralInfo.NewInlets(graph.Shape.Inlets),
+                    structuralInfo.NewOutlets(graph.Shape.Outlets));
+
+                // Extract the full topological information from the builder
+                return structuralInfo.ToInfo(shape, materializedValue.Select(pair=> Tuple.Create(pair.Key, pair.Value)).ToList(), attributes);
+            }
+            catch (Exception)
+            {
+                if(IsDebug)
+                    structuralInfo.Dump();
+
+                throw;
+            }
         }
 
         /// <summary>
@@ -631,14 +668,18 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public Streams.Fusing.StructuralInfo ToInfo()
+        public StructuralInfoModule ToInfo<TShape>(TShape shape, IList<Tuple<IModule, IMaterializedValueNode>> materializedValues ,Attributes attributes = null) where TShape : Shape
         {
-            return new Streams.Fusing.StructuralInfo(
-                ImmutableDictionary.CreateRange(Upstreams),
-                ImmutableDictionary.CreateRange(Downstreams),
-                ImmutableDictionary.CreateRange(InOwners),
-                ImmutableDictionary.CreateRange(OutOwners),
-                ImmutableHashSet.CreateRange(Modules));
+            attributes = attributes ?? Attributes.None;
+
+            return new StructuralInfoModule(Modules.ToImmutableArray(), shape, 
+                Downstreams.ToImmutableDictionary(),
+                Upstreams.ToImmutableDictionary(), 
+                InOwners.ToImmutableDictionary(), 
+                OutOwners.ToImmutableDictionary(),
+                materializedValues.ToImmutableList(), 
+                materializedValues.First().Item2, 
+                attributes);
         }
 
         /// <summary>
