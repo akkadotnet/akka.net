@@ -831,5 +831,45 @@ namespace Akka.Streams.Dsl
         {
             return FromGraph(new UnfoldResourceSourceAsync<T, TSource>(create, read, close));
         }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// </summary>
+        /// <typeparam name="TDelegate">Delegate type used to attach current source.</typeparam>
+        /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
+        /// <param name="conversion">A function used to convert provided event handler into a delegate compatible with an underlying .NET event type.</param>
+        /// <param name="addHandler">Action used to attach the given event handler to the underlying .NET event.</param>
+        /// <param name="removeHandler">Action used to detach the given event handler to the underlying .NET event.</param>
+        /// <param name="maxBufferCapacity">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBufferCapacity"/>) has been overflown.</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> FromEvent<TDelegate, T>(
+            Func<Action<T>, TDelegate> conversion,
+            Action<TDelegate> addHandler,
+            Action<TDelegate> removeHandler,
+            int maxBufferCapacity = 128,
+            OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
+        {
+            return FromGraph(new EventSourceStage<TDelegate,T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// </summary>
+        /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
+        /// <param name="addHandler">Action used to attach the given event handler to the underlying .NET event.</param>
+        /// <param name="removeHandler">Action used to detach the given event handler to the underlying .NET event.</param>
+        /// <param name="maxBufferCapacity">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBufferCapacity"/>) has been overflown.</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> FromEvent<T>(
+            Action<EventHandler<T>> addHandler,
+            Action<EventHandler<T>> removeHandler,
+            int maxBufferCapacity = 128,
+            OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
+        {
+            Func<Action<T>, EventHandler<T>> conversion = onEvent => (sender, e) => onEvent(e);
+            return FromGraph(new EventSourceStage<EventHandler<T>, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+        }
     }
 }
