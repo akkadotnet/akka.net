@@ -291,7 +291,7 @@ namespace Akka.Remote.Transport
         /// <param name="raw">TBD</param>
         /// <exception cref="PduCodecException">
         /// This exception is thrown when the Akka PDU in the specified byte string,
-        /// <paramref name="raw" />, mets one of the following conditions:
+        /// <paramref name="raw" />, meets one of the following conditions:
         /// <ul>
         /// <li>The PDU is neither a message or a control message.</li>
         /// <li>The PDU is a control message with an invalid format. </li>

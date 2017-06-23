@@ -555,8 +555,8 @@ namespace Akka.Streams.Tests.Dsl
 
                     if (!map.ContainsKey(index))
                     {
-                        var probe = props.Probes[props.PropesReaderTop].Task.AwaitResult();
-                        props.PropesReaderTop++;
+                        var probe = props.Probes[props.ProbesReaderTop].Task.AwaitResult();
+                        props.ProbesReaderTop++;
                         map[index] = new SubFlowState(probe, false, byteString);
                         //stream automatically requests next element 
                     }
@@ -646,7 +646,7 @@ namespace Akka.Streams.Tests.Dsl
 
             public int ProbesWriterTop { get; set; }
 
-            public int PropesReaderTop { get; set; }
+            public int ProbesReaderTop { get; set; }
 
             public List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>> Probes { get; } =
                 new List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>>(100);

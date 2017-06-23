@@ -175,7 +175,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Maximum number of batch operations allowed to be executed at the same time.
         /// Each batch operation must acquire a <see cref="DbConnection"/>, so this setting
-        /// can be effectivelly used to limit the usage of ADO.NET connection pool by current journal.
+        /// can be effectively used to limit the usage of ADO.NET connection pool by current journal.
         /// </summary>
         public int MaxConcurrentOperations { get; }
 
@@ -323,7 +323,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// This implementation uses horizontal batching to recycle usage of the <see cref="DbConnection"/> 
     /// and to optimize writes made to a database. Batching journal is not going to acquire a new DB
     /// connection on every request. Instead it will batch incoming requests and execute them only when
-    /// a previous operation batch has been completed. This means that requests comming from many 
+    /// a previous operation batch has been completed. This means that requests coming from many 
     /// actors at the same time will be executed in one batch.
     /// 
     /// Maximum number of batches executed at the same time is defined by 
@@ -435,7 +435,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         
         /// <summary>
         /// SQL query executed as result of <see cref="GetCurrentPersistenceIds"/> request to journal.
-        /// It's a part of persitence query protocol.
+        /// It's a part of persistence query protocol.
         /// </summary>
         protected virtual string AllPersistenceIdsSql { get; }
 
@@ -486,7 +486,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         
         /// <summary>
         /// Flag determining if incoming journal requests should be published in current actor system event stream.
-        /// Usefull mostly for tests.
+        /// Useful mostly for tests.
         /// </summary>
         protected readonly bool CanPublish;
 
@@ -631,7 +631,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             if (message is WriteMessages) BatchRequest((IJournalRequest)message);
             else if (message is ReplayMessages) BatchRequest((IJournalRequest)message);
             else if (message is BatchComplete) CompleteBatch((BatchComplete)message);
-            else if (message is ReadHighestSequenceNr) BatchRequest((IJournalRequest)message);
             else if (message is DeleteMessagesTo) BatchRequest((IJournalRequest)message);
             else if (message is ReplayTaggedMessages) BatchRequest((IJournalRequest)message);
             else if (message is SubscribePersistenceId) AddPersistenceIdSubscriber((SubscribePersistenceId)message);
@@ -743,12 +742,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private void NotifyPersistenceIdChanged(string persitenceId)
+        private void NotifyPersistenceIdChanged(string persistenceId)
         {
             HashSet<IActorRef> bucket;
-            if (_persistenceIdSubscribers.TryGetValue(persitenceId, out bucket))
+            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out bucket))
             {
-                var changed = new EventAppended(persitenceId);
+                var changed = new EventAppended(persistenceId);
                 foreach (var subscriber in bucket)
                 {
                     subscriber.Tell(changed);
@@ -804,19 +803,11 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 var r = (ReplayMessages)request;
                 r.PersistentActor.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
-
-            }
-            else if (request is ReadHighestSequenceNr)
-            {
-                var r = (ReadHighestSequenceNr)request;
-                r.PersistentActor.Tell(new ReadHighestSequenceNrFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
-
             }
             else if (request is DeleteMessagesTo)
             {
                 var r = (DeleteMessagesTo)request;
                 r.PersistentActor.Tell(new DeleteMessagesFailure(JournalBufferOverflowException.Instance, r.ToSequenceNr), ActorRefs.NoSender);
-
             }
             else if (request is ReplayTaggedMessages)
             {
@@ -861,8 +852,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 await HandleWriteMessages((WriteMessages)req, command);
                             else if (req is ReplayMessages)
                                 await HandleReplayMessages((ReplayMessages)req, command, context);
-                            else if (req is ReadHighestSequenceNr)
-                                await HandleReadHighestSequenceNr((ReadHighestSequenceNr)req, command);
                             else if (req is DeleteMessagesTo)
                                 await HandleDeleteMessagesTo((DeleteMessagesTo)req, command);
                             else if (req is ReplayTaggedMessages)
@@ -931,27 +920,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 var response = new DeleteMessagesFailure(cause, toSequenceNr);
                 req.PersistentActor.Tell(response, ActorRefs.NoSender);
-            }
-        }
-
-        private async Task HandleReadHighestSequenceNr(ReadHighestSequenceNr req, TCommand command)
-        {
-            var replyTo = req.PersistentActor;
-            var persistenceId = req.PersistenceId;
-
-            NotifyNewPersistenceIdAdded(persistenceId);
-
-            try
-            {
-                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command);
-
-                var response = new ReadHighestSequenceNrSuccess(highestSequenceNr);
-                replyTo.Tell(response, ActorRefs.NoSender);
-            }
-            catch (Exception cause)
-            {
-                var response = new ReadHighestSequenceNrFailure(cause);
-                replyTo.Tell(response, ActorRefs.NoSender);
             }
         }
 
@@ -1181,7 +1149,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="command">Database command object used to store data.</param>
         /// <param name="persistent">Persistent event representation.</param>
-        /// <param name="tags">Optional tags extracted from peristent event payload.</param>
+        /// <param name="tags">Optional tags extracted from persistent event payload.</param>
         protected virtual void WriteEvent(TCommand command, IPersistentRepresentation persistent, string tags = "")
         {
             var payloadType = persistent.Payload.GetType();
@@ -1201,7 +1169,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// Returns a persitent representation of an event read from a current row in the database.
+        /// Returns a persistent representation of an event read from a current row in the database.
         /// </summary>
         /// <param name="reader">TBD</param>
         /// <returns>TBD</returns>

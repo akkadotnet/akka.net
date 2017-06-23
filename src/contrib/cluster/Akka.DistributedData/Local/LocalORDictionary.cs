@@ -119,7 +119,7 @@ namespace Akka.DistributedData.Local
 
         /// <summary>
         /// Adds or updated a value in entry with given <paramref name="key"/> using <paramref name="modify"/> function
-        /// if other value existed there previously, within a constext of the current cluster node.
+        /// if other value existed there previously, within a context of the current cluster node.
         /// </summary>
         /// <param name="key">TBD</param>
         /// <param name="value">TBD</param>

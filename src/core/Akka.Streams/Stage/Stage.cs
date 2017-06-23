@@ -272,8 +272,9 @@ namespace Akka.Streams.Stage
         /// Change the behavior to another <see cref="StageState{TIn,TOut}"/>.
         /// </summary>
         /// <param name="state">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="state"/> is undefined.
+        /// </exception>
         public void Become(StageState<TIn, TOut> state)
         {
             if (state == null)
@@ -324,7 +325,9 @@ namespace Akka.Streams.Stage
         /// <param name="enumerator">TBD</param>
         /// <param name="context">TBD</param>
         /// <param name="nextState">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when either currently in the emitting state or the specified <paramref name="enumerator"/> is empty.
+        /// </exception>
         /// <returns>TBD</returns>
         public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context, StageState<TIn, TOut> nextState)
         {
@@ -355,6 +358,9 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="enumerator">TBD</param>
         /// <param name="context">TBD</param>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the specified <paramref name="enumerator"/> is empty.
+        /// </exception>
         /// <returns>TBD</returns>
         public ISyncDirective TerminationEmit(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
@@ -375,7 +381,9 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="enumerator">TBD</param>
         /// <param name="context">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when either currently in the emitting state or the specified <paramref name="enumerator"/> is empty.
+        /// </exception>
         /// <returns>TBD</returns>
         public ISyncDirective EmitAndFinish(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
@@ -469,7 +477,9 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="element">TBD</param>
         /// <param name="context">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when currently in the emitting state.
+        /// </exception>
         /// <returns>TBD</returns>
         public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
         {

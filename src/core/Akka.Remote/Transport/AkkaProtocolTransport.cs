@@ -342,11 +342,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         public int Uid { get; private set; }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -359,10 +355,7 @@ namespace Akka.Remote.Transport
             return Equals(Origin, other.Origin) && Uid == other.Uid;
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -440,13 +433,7 @@ namespace Akka.Remote.Transport
             StateActor.Tell(new DisassociateUnderlying(info));
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -455,24 +442,13 @@ namespace Akka.Remote.Transport
             return Equals((AkkaProtocolHandle)obj);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="AkkaProtocolHandle" />, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="AkkaProtocolHandle" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="AkkaProtocolHandle" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         protected bool Equals(AkkaProtocolHandle other)
         {
             return base.Equals(other) && Equals(HandshakeInfo, other.HandshakeInfo) && Equals(StateActor, other.StateActor);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -726,12 +702,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         public string ErrorMessage { get; private set; }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"Timeout: {ErrorMessage}";

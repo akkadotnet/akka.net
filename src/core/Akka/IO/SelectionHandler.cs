@@ -346,33 +346,28 @@ namespace Akka.IO
                 try
                 {
                     Socket.Select(readable, writeable, null, 1);
-                    foreach (var socket in readable)
-                    {
-                        var channel = _read[socket];
-                        if (channel.IsOpen())
-                            channel.Connection.Tell(ChannelReadable.Instance);
-                        else
-                            channel.Connection.Tell(ChannelAcceptable.Instance);
-                        _read.Remove(socket);
-                    }
-                    foreach (var socket in writeable)
-                    {
-                        var channel = _write[socket];
-                        if (channel.IsOpen())
-                            channel.Connection.Tell(ChannelWritable.Instance);
-                        else
-                            channel.Connection.Tell(ChannelConnectable.Instance);
-                        _write.Remove(socket);
-                    }
                 }
-                catch (SocketException ex)
+                catch (SocketException ex) when (ex.SocketErrorCode == SocketError.NotSocket)
                 {
-                    if (ex.SocketErrorCode == SocketError.NotSocket)
-                    {
-                        // One of the sockets has been closed
-                        readable.Where(x => !x.Connected).ForEach(x =>_read.Remove(x));
-                        writeable.Where(x => !x.Connected).ForEach(x => _write.Remove(x));
-                    }
+                }
+
+                foreach (var socket in readable)
+                {
+                    var channel = _read[socket];
+                    if (channel.IsOpen())
+                        channel.Connection.Tell(ChannelReadable.Instance);
+                    else
+                        channel.Connection.Tell(ChannelAcceptable.Instance);
+                    _read.Remove(socket);
+                }
+                foreach (var socket in writeable)
+                {
+                    var channel = _write[socket];
+                    if (channel.IsOpen())
+                        channel.Connection.Tell(ChannelWritable.Instance);
+                    else
+                        channel.Connection.Tell(ChannelConnectable.Instance);
+                    _write.Remove(socket);
                 }
                 Execute(Select);
             }

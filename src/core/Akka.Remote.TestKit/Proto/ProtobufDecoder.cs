@@ -37,7 +37,7 @@ namespace Akka.Remote.TestKit.Proto
 
         protected override void Decode(IChannelHandlerContext context, IByteBuffer input, List<object> output)
         {
-            _logger.LogDebug("Decoding {0} into Protobuf", input);
+            _logger.LogDebug("[{0} --> {1}] Decoding {2} into Protobuf", context.Channel.LocalAddress, context.Channel.RemoteAddress, input);
 
             var readable = input.ReadableBytes;
             var buf = new byte[readable];

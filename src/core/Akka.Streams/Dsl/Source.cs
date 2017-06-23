@@ -24,7 +24,7 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// A <see cref="Source{TOut,TMat}"/> is a set of stream processing steps that has one open output. It can comprise
     /// any number of internal sources and transformations that are wired together, or it can be
-    /// an “atomic” source, e.g. from a collection or a file. Materialization turns a Source into
+    /// an "atomic" source, e.g. from a collection or a file. Materialization turns a Source into
     /// a Reactive Streams <see cref="IPublisher{T}"/> (at least conceptually).
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
@@ -253,7 +253,7 @@ namespace Akka.Streams.Dsl
             => RunWith(Sink.Aggregate(zero, aggregate), materializer);
 
         /// <summary>
-        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a asnyc <paramref name="aggregate"/> function.
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a async <paramref name="aggregate"/> function.
         /// The given function is invoked for every received element, giving it its previous
         /// output (or the given <paramref name="zero"/> value) and the element as input.
         /// The returned <see cref="Task{TOut2}"/> will be completed with value of the final
@@ -574,7 +574,7 @@ namespace Akka.Streams.Dsl
         /// If the materialized promise is completed with a Some, that value will be produced downstream,
         /// followed by completion.
         /// If the materialized promise is completed with a None, no value will be produced downstream and completion will
-        /// be signalled immediately.
+        /// be signaled immediately.
         /// If the materialized promise is completed with a failure, then the returned source will terminate with that error.
         /// If the downstream of this source cancels before the promise has been completed, then the promise will be completed
         /// with None.

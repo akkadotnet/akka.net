@@ -31,15 +31,17 @@ namespace Akka.Serialization
         /// </summary>
         public static readonly NewtonSoftJsonSerializerSettings Default = new NewtonSoftJsonSerializerSettings(
             encodeTypeNames: true,
-            preverveObjectReferences: true,
+            preserveObjectReferences: true,
             converters: Enumerable.Empty<Type>());
-        
+
         /// <summary>
         /// Creates a new instance of the <see cref="NewtonSoftJsonSerializerSettings"/> based on a provided <paramref name="config"/>.
         /// Config may define several key-values:
-        /// 1. `encode-type-names` (boolean) mapped to <see cref="EncodeTypeNames"/>
-        /// 2. `preserve-object-references` (boolean) mapped to <see cref="PreserveObjectReferences"/>
-        /// 3. `converters` (type list) mapped to <see cref="Converters"/>. They must implement <see cref="JsonConverter"/> and define either default constructor or constructor taking <see cref="ExtendedActorSystem"/> as its only parameter.
+        /// <ul>
+        /// <li>`encode-type-names` (boolean) mapped to <see cref="EncodeTypeNames"/></li>
+        /// <li>`preserve-object-references` (boolean) mapped to <see cref="PreserveObjectReferences"/></li>
+        /// <li>`converters` (type list) mapped to <see cref="Converters"/>. They must implement <see cref="JsonConverter"/> and define either default constructor or constructor taking <see cref="ExtendedActorSystem"/> as its only parameter.</li>
+        /// </ul>
         /// </summary>
         /// <exception cref="ArgumentNullException">Raised when no <paramref name="config"/> was provided.</exception>
         /// <exception cref="ArgumentException">Raised when types defined in `converters` list didn't inherit <see cref="JsonConverter"/>.</exception>
@@ -50,7 +52,7 @@ namespace Akka.Serialization
 
             return new NewtonSoftJsonSerializerSettings(
                 encodeTypeNames: config.GetBoolean("encode-type-names", true),
-                preverveObjectReferences: config.GetBoolean("preserve-object-references", true),
+                preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
                 converters: GetConverterTypes(config));
         }
 
@@ -83,7 +85,7 @@ namespace Akka.Serialization
         public bool PreserveObjectReferences { get; }
 
         /// <summary>
-        /// A collection of an aditional converter types to be applied to a <see cref="NewtonSoftJsonSerializer"/>.
+        /// A collection of an additional converter types to be applied to a <see cref="NewtonSoftJsonSerializer"/>.
         /// Converters must inherit from <see cref="JsonConverter"/> class and implement a default constructor.
         /// </summary>
         public IEnumerable<Type> Converters { get; }
@@ -92,15 +94,15 @@ namespace Akka.Serialization
         /// Creates a new instance of the <see cref="NewtonSoftJsonSerializerSettings"/>.
         /// </summary>
         /// <param name="encodeTypeNames">Determines if a special `$type` field should be emitted into serialized JSON. Must be true if corresponding serializer is used as default.</param>
-        /// <param name="preverveObjectReferences">Determines if object references should be tracked within serialized object graph. Must be true if corresponding serialize is used as default.</param>
+        /// <param name="preserveObjectReferences">Determines if object references should be tracked within serialized object graph. Must be true if corresponding serialize is used as default.</param>
         /// <param name="converters">A list of types implementing a <see cref="JsonConverter"/> to support custom types serialization.</param>
-        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preverveObjectReferences, IEnumerable<Type> converters)
+        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, IEnumerable<Type> converters)
         {
             if (converters == null)
                 throw new ArgumentNullException(nameof(converters), $"{nameof(NewtonSoftJsonSerializerSettings)} requires a sequence of converters.");
 
             EncodeTypeNames = encodeTypeNames;
-            PreserveObjectReferences = preverveObjectReferences;
+            PreserveObjectReferences = preserveObjectReferences;
             Converters = converters;
         }
     }
@@ -341,10 +343,10 @@ namespace Akka.Serialization
 
 
 
-            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer, Type objecType)
+            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer, Type objectType)
             {
                 var surrogate = serializer.Deserialize(reader);
-                return TranslateSurrogate(surrogate, _parent, objecType);
+                return TranslateSurrogate(surrogate, _parent, objectType);
             }
 
             /// <summary>

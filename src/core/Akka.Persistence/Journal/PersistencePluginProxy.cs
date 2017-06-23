@@ -76,12 +76,12 @@ namespace Akka.Persistence.Journal
 
         private class Journal : IPluginType
         {
-            public string Qualifier { get { return "journal"; } }
+            public string Qualifier => "journal";
         }
 
         private class SnapshotStore : IPluginType
         {
-            public string Qualifier { get { return "snapshot-store"; } }
+            public string Qualifier => "snapshot-store";
         }
 
         private readonly Config _config;
@@ -93,10 +93,13 @@ namespace Akka.Persistence.Journal
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="PersistencePluginProxy"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="config">The configuration used to configure the proxy.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when configuration is undefined for the plugin
+        /// or an unknown plugin type is defined.
+        /// </exception>
         public PersistencePluginProxy(Config config)
         {
             _config = config;
@@ -328,7 +331,7 @@ namespace Akka.Persistence.Journal
                     if (message is LoadSnapshot)
                     {
                         var l = (LoadSnapshot) message;
-                        Sender.Tell(new LoadSnapshotResult(null, l.ToSequenceNr));
+                        Sender.Tell(new LoadSnapshotFailed(TimeoutException()));
                     }
                     else if (message is SaveSnapshot)
                     {

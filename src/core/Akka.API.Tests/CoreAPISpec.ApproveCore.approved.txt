@@ -819,7 +819,7 @@ namespace Akka.Actor
         }
         public sealed class StateTimeout
         {
-            [System.ObsoleteAttribute("This constructor is obsoleted. Use Shutdown.Instance [1.2.0]")]
+            [System.ObsoleteAttribute("This constructor is obsoleted. Use StateTimeout.Instance [1.2.0]")]
             public StateTimeout() { }
             public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }
@@ -4457,7 +4457,7 @@ namespace Akka.Serialization
     public sealed class NewtonSoftJsonSerializerSettings
     {
         public static readonly Akka.Serialization.NewtonSoftJsonSerializerSettings Default;
-        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preverveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters) { }
+        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters) { }
         public System.Collections.Generic.IEnumerable<System.Type> Converters { get; }
         public bool EncodeTypeNames { get; }
         public bool PreserveObjectReferences { get; }

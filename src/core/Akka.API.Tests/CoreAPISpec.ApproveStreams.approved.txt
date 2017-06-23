@@ -169,7 +169,7 @@ namespace Akka.Streams
         public BidiShape(Akka.Streams.FlowShape<TIn1, TOut1> top, Akka.Streams.FlowShape<TIn2, TOut2> bottom) { }
         public override System.Collections.Immutable.ImmutableArray<Akka.Streams.Inlet> Inlets { get; }
         public override System.Collections.Immutable.ImmutableArray<Akka.Streams.Outlet> Outlets { get; }
-        public override Akka.Streams.Shape CopyFromPorts(System.Collections.Immutable.ImmutableArray<Akka.Streams.Inlet> i, System.Collections.Immutable.ImmutableArray<Akka.Streams.Outlet> o) { }
+        public override Akka.Streams.Shape CopyFromPorts(System.Collections.Immutable.ImmutableArray<Akka.Streams.Inlet> inlets, System.Collections.Immutable.ImmutableArray<Akka.Streams.Outlet> outlets) { }
         public override Akka.Streams.Shape DeepCopy() { }
         public Akka.Streams.Shape Reversed() { }
     }
@@ -2797,7 +2797,7 @@ namespace Akka.Streams.Implementation
         public static void RejectDueToNonPositiveDemand<T>(Reactive.Streams.ISubscriber<T> subscriber) { }
         public static void RejectDuplicateSubscriber<T>(Reactive.Streams.ISubscriber<T> subscriber) { }
         public static void RequireNonNullElement(object element) { }
-        public static void RequireNonNullException(System.Exception e) { }
+        public static void RequireNonNullException(System.Exception exception) { }
         public static void RequireNonNullSubscriber<T>(Reactive.Streams.ISubscriber<T> subscriber) { }
         public static void RequireNonNullSubscription(Reactive.Streams.ISubscription subscription) { }
         public static void TryCancel(Reactive.Streams.ISubscription subscription) { }
@@ -2812,7 +2812,7 @@ namespace Akka.Streams.Implementation
         protected readonly Akka.Streams.Implementation.ICursors Cursors;
         public ResizableMultiReaderRingBuffer(int initialSize, int maxSize, Akka.Streams.Implementation.ICursors cursors) { }
         public int CapacityLeft { get; }
-        public int ImmediatellyAvailable { get; }
+        public int ImmediatelyAvailable { get; }
         public bool IsEmpty { get; }
         public int Length { get; }
         public bool NonEmpty { get; }

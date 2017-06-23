@@ -163,7 +163,7 @@ namespace Akka.Cluster.Tests.MultiNode
             });
         }
 
-        private void AwaitRemoved(ImmutableList<ActorSystem> additionaSystems, int round)
+        private void AwaitRemoved(ImmutableList<ActorSystem> additionalSystems, int round)
         {
             AwaitMembersUp(Roles.Count, timeout: 40.Seconds());
             EnterBarrier("removed-" + round);
@@ -171,7 +171,7 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 AwaitAssert(() =>
                 {
-                    additionaSystems.ForEach(s =>
+                    additionalSystems.ForEach(s =>
                     {
                         Cluster.Get(s).IsTerminated.Should().BeTrue($"{Cluster.Get(s).SelfAddress}");
                     });

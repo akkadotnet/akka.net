@@ -226,10 +226,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="TryGetChildStatsByName(string, out IChildStats)"/> instead.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">N/A</param>
+        /// <returns>N/A</returns>
         [Obsolete("Use TryGetChildStatsByName [0.7.1]", true)]
         public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {

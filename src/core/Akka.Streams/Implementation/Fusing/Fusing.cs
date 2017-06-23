@@ -277,11 +277,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// 
         /// The materialized value computation is rewritten as well in that all
         /// leaf nodes point to the copied modules and all nested computations are
-        /// “inlined”, resulting in only one big computation tree for the whole
+        /// "inlined", resulting in only one big computation tree for the whole
         /// normalized overall module. The contained MaterializedValueSource stages
         /// are also rewritten to point to the copied MaterializedValueNodes. This
         /// correspondence is then used during materialization to trigger these sources
-        /// when “their” node has received its value.
+        /// when "their" node has received its value.
         /// </summary>
         private static LinkedList<KeyValuePair<IModule, IMaterializedValueNode>> Descend<T>(
             IModule module,
@@ -607,7 +607,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the stack of materialized value sources is empty.
+        /// </exception>
         /// <returns>TBD</returns>
         public IImmutableList<CopiedModule> ExitMaterializationContext()
         {
@@ -621,7 +623,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="module">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the stack of materialized value sources is empty.
+        /// </exception>
         public void PushMaterializationSource(CopiedModule module)
         {
             if (_materializedSources.Count == 0) throw new ArgumentException("PushMaterializationSource without context");
@@ -897,7 +901,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// See through copied modules to the “real” module.
+        /// See through copied modules to the "real" module.
         /// </summary>
         private static IModule GetRealModule(IModule module)
         {

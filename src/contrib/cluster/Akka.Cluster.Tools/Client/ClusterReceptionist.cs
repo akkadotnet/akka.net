@@ -200,11 +200,7 @@ namespace Akka.Cluster.Tools.Client
                 ContactPoints = contactPoints;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -216,10 +212,7 @@ namespace Akka.Cluster.Tools.Client
                 return ContactPoints.SequenceEqual(other.ContactPoints);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -307,7 +300,7 @@ namespace Akka.Cluster.Tools.Client
         internal class RingOrdering : IComparer<Address>
         {
             /// <summary>
-            /// TBD
+            /// The singleton instance of this comparer
             /// </summary>
             public static RingOrdering Instance { get; } = new RingOrdering();
             private RingOrdering() { }
@@ -316,7 +309,9 @@ namespace Akka.Cluster.Tools.Client
             /// TBD
             /// </summary>
             /// <param name="node">TBD</param>
-            /// <exception cref="IllegalStateException">TBD</exception>
+            /// <exception cref="IllegalStateException">
+            /// This exception is thrown when the specified <paramref name="node"/> has a host/port that is undefined.
+            /// </exception>
             /// <returns>TBD</returns>
             public static int HashFor(Address node)
             {
@@ -327,19 +322,14 @@ namespace Akka.Cluster.Tools.Client
                     throw new IllegalStateException("Unexpected address without host/port: " + node);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="a">TBD</param>
-            /// <param name="b">TBD</param>
-            /// <returns>TBD</returns>
-            public int Compare(Address a, Address b)
+            /// <inheritdoc/>
+            public int Compare(Address x, Address y)
             {
-                var ha = HashFor(a);
-                var hb = HashFor(b);
+                var ha = HashFor(x);
+                var hb = HashFor(y);
 
                 if (ha == hb) return 0;
-                return ha < hb || Member.AddressOrdering.Compare(a, b) < 0 ? -1 : 1;
+                return ha < hb || Member.AddressOrdering.Compare(x, y) < 0 ? -1 : 1;
             }
         }
         #endregion

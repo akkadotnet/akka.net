@@ -139,7 +139,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// The number of elements the buffer can still take without having to be resized.
         /// </summary>
-        public int ImmediatellyAvailable => _array.Length - Length;
+        public int ImmediatelyAvailable => _array.Length - Length;
 
         /// <summary>
         /// The maximum number of elements the buffer can still take.

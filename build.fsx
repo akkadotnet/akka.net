@@ -261,11 +261,12 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let xunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/*.Tests.dll" -- 
+    let xunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (
+                                 !! "src/**/bin/Release/*.Tests.dll"
                                  // Akka.Streams.Tests is referencing Akka.Streams.TestKit.Tests
-                                 "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll" --
+                                 -- "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll"
                                  // Akka.Streams.Tests.Performance is referencing Akka.Streams.Tests and Akka.Streams.TestKit.Tests
-                                 "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll")
+                                 -- "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll")
 
     let nunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/Akka.Streams.Tests.TCK.dll")
 
@@ -395,7 +396,7 @@ module Nuget =
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | "Akka.Persistence.Query" -> ["Akka.Persistence", preReleaseVersion; "Akka.Streams", release.NugetVersion]
         | "Akka.Persistence.Query.Sql" -> ["Akka.Persistence.Query", preReleaseVersion; "Akka.Persistence.Sql.Common", preReleaseVersion]
-        | "Akka.Persistence.Sql.TestKit" -> ["Akka.Persistence.Query.Sql", preReleaseVersion; "Akka.Persistence.TestKit", preReleaseVersion; "Akka.Streams.TestKit", preReleaseVersion]
+        | "Akka.Persistence.Sql.TestKit" -> ["Akka.Persistence.Query.Sql", preReleaseVersion; "Akka.Persistence.TestKit", preReleaseVersion; "Akka.Streams.TestKit", release.NugetVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | "Akka.DI.TestKit" -> ["Akka.DI.Core", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
@@ -730,5 +731,7 @@ Target "AllTests" DoNothing //used for Mono builds, due to Mono 4.0 bug with FAK
 "BuildRelease" ==> "AllTests"
 "RunTests" ==> "AllTests"
 "MultiNodeTests" ==> "AllTests"
+
+Target "RunTestsNetCore" DoNothing
 
 RunTargetOrDefault "Help"

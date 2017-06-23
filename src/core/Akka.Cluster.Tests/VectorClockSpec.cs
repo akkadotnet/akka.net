@@ -278,7 +278,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void A_VectorClock_must_support_prunning()
+        public void A_VectorClock_must_support_pruning()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -299,6 +299,18 @@ namespace Akka.Cluster.Tests
 
             var c2 = c.Increment(node2);
             (c1 != c2).Should().BeTrue();
+        }
+
+        [Fact]
+        public void A_VectorClock_must_compare_as_Concurrent_when_Member_removed()
+        {
+            var node1 = VectorClock.Node.Create("1");
+            var node2 = VectorClock.Node.Create("2");
+
+            var a = VectorClock.Create().Increment(node1).Increment(node2);
+            var b = a.Prune(node2).Increment(node1); // remove node2, increment node1
+
+            a.CompareTo(b).Should().Be(VectorClock.Ordering.Concurrent);
         }
     }
 }

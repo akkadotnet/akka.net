@@ -244,6 +244,8 @@ namespace Akka.Cluster
         public Akka.Cluster.VectorClock.Ordering CompareTo(Akka.Cluster.VectorClock that) { }
         public static Akka.Cluster.VectorClock Create() { }
         public static Akka.Cluster.VectorClock Create(System.Collections.Immutable.ImmutableSortedDictionary<Akka.Cluster.VectorClock.Node, long> seedValues) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public Akka.Cluster.VectorClock Increment(Akka.Cluster.VectorClock.Node node) { }
         public bool IsAfter(Akka.Cluster.VectorClock that) { }
         public bool IsBefore(Akka.Cluster.VectorClock that) { }

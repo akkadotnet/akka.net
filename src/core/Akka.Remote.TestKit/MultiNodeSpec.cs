@@ -325,7 +325,7 @@ namespace Akka.Remote.TestKit
 
         /// <summary>
         /// Index of this node in the roles sequence. The TestConductor
-        /// is started in “controller” mode on selfIndex 0, i.e. there you can inject
+        /// is started in "controller" mode on selfIndex 0, i.e. there you can inject
         /// failures and shutdown other nodes etc.
         /// </summary>
         public static int SelfIndex
@@ -660,6 +660,7 @@ namespace Akka.Remote.TestKit
             return system;
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             Dispose(true);

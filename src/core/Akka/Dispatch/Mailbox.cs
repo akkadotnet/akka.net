@@ -73,7 +73,7 @@ namespace Akka.Dispatch
          * This is needed for actually executing the mailbox, i.e. invoking the
          * ActorCell. There are situations (e.g. RepointableActorRef) where a Mailbox
          * is constructed but we know that we will not execute it, in which case this
-         * will be null. It must be a var to support switching into an “active”
+         * will be null. It must be a var to support switching into an "active"
          * mailbox, should the owning ActorRef turn local.
          *
          * ANOTHER THING, IMPORTANT:
@@ -563,7 +563,7 @@ namespace Akka.Dispatch
     /// A factory to create <see cref="IMessageQueue"/>s for an optionally provided <see cref="IActorContext"/>.
     /// </summary>
     /// <remarks>
-    /// Possibily important notice.
+    /// Possibly important notice.
     /// 
     /// When implementing a custom MailboxType, be aware that there is special semantics attached to
     /// <see cref="ActorSystem.ActorOf"/> in that sending the returned <see cref="IActorRef"/> may, for a short
@@ -606,7 +606,7 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    /// Compilment to <see cref="IRequiresMessageQueue{T}"/>
+    /// Compliment to <see cref="IRequiresMessageQueue{T}"/>
     /// </summary>
     /// <typeparam name="TQueue">The type of <see cref="IMessageQueue"/> produced by this class.</typeparam>
     public interface IProducesMessageQueue<TQueue> where TQueue : IMessageQueue { }

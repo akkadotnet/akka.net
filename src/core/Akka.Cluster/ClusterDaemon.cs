@@ -62,11 +62,7 @@ namespace Akka.Cluster
                 return Equals(Address, other.Address);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -75,10 +71,7 @@ namespace Akka.Cluster
                 return Equals((BaseClusterUserAction)obj);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (Address != null ? Address.GetHashCode() : 0);
@@ -164,11 +157,7 @@ namespace Akka.Cluster
             /// </summary>
             public ImmutableHashSet<string> Roles { get { return _roles; } }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -181,10 +170,7 @@ namespace Akka.Cluster
                 return _node.Equals(other._node) && !_roles.Except(other._roles).Any();
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -193,14 +179,11 @@ namespace Akka.Cluster
                 }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
-                return string.Format("{0}: {1} wants to join on Roles [{2}]", GetType(), Node,
-                    string.Join(",", Roles ?? ImmutableHashSet<string>.Empty));
+                var roles = string.Join(",", Roles ?? ImmutableHashSet<string>.Empty);
+                return $"{GetType()}: {Node} wants to join on Roles [{roles}]";
             }
         }
 
@@ -233,11 +216,7 @@ namespace Akka.Cluster
             /// </summary>
             public Gossip Gossip { get { return _gossip; } }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -250,10 +229,7 @@ namespace Akka.Cluster
                 return _from.Equals(other._from) && _gossip.ToString().Equals(other._gossip.ToString());
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked
@@ -273,16 +249,16 @@ namespace Akka.Cluster
             readonly ImmutableList<Address> _seedNodes;
 
             /// <summary>
-            /// TBD
+            /// Creates a new instance of the command.
             /// </summary>
-            /// <param name="seedNodes">TBD</param>
+            /// <param name="seedNodes">The list of seeds we wish to join.</param>
             public JoinSeedNodes(ImmutableList<Address> seedNodes)
             {
                 _seedNodes = seedNodes;
             }
 
             /// <summary>
-            /// TBD
+            /// The list of seeds we wish to join.
             /// </summary>
             public ImmutableList<Address> SeedNodes
             {
@@ -305,11 +281,7 @@ namespace Akka.Cluster
         /// <inheritdoc cref="JoinSeenNode"/>
         internal class InitJoin : IClusterMessage, IDeadLetterSuppression
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 return obj is InitJoin;
@@ -339,7 +311,7 @@ namespace Akka.Cluster
                 get { return _address; }
             }
 
-            /// <inheritdoc cref="object.Equals(object)"/>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -352,7 +324,7 @@ namespace Akka.Cluster
                 return Equals(_address, other._address);
             }
 
-            /// <inheritdoc cref="object.GetHashCode"/>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (_address != null ? _address.GetHashCode() : 0);
@@ -381,11 +353,7 @@ namespace Akka.Cluster
                 get { return _address; }
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -398,10 +366,7 @@ namespace Akka.Cluster
                 return Equals(_address, other._address);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (_address != null ? _address.GetHashCode() : 0);
@@ -428,7 +393,7 @@ namespace Akka.Cluster
                 return Address.Equals(other.Address);
             }
 
-            /// <inheritdoc cref="object.Equals(object)"/>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -436,7 +401,7 @@ namespace Akka.Cluster
                 return obj is ExitingConfirmed && Equals((ExitingConfirmed) obj);
             }
 
-            /// <inheritdoc cref="object.GetHashCode"/>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return Address.GetHashCode();
@@ -596,11 +561,7 @@ namespace Akka.Cluster
             /// </summary>
             public Address Address { get { return _address; } }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as SendGossipTo;
@@ -608,10 +569,7 @@ namespace Akka.Cluster
                 return _address.Equals(other._address);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return _address.GetHashCode();
@@ -708,7 +666,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// The subcriber
+            /// The actor that is subscribed to cluster events.
             /// </summary>
             public IActorRef Subscriber
             {
@@ -1023,7 +981,7 @@ namespace Akka.Cluster
 
         private readonly VectorClock.Node _vclockNode;
 
-        private string VclockName(UniqueAddress node)
+        internal static string VclockName(UniqueAddress node)
         {
             return node.Address + "-" + node.Uid;
         }
@@ -1057,7 +1015,7 @@ namespace Akka.Cluster
             _cluster = Cluster.Get(Context.System);
             _publisher = publisher;
             SelfUniqueAddress = _cluster.SelfUniqueAddress;
-            _vclockNode = new VectorClock.Node(VclockName(SelfUniqueAddress));
+            _vclockNode = VectorClock.Node.Create(VclockName(SelfUniqueAddress));
             var settings = _cluster.Settings;
             var scheduler = _cluster.Scheduler;
             _seedNodes = _cluster.Settings.SeedNodes;
@@ -1482,14 +1440,14 @@ namespace Akka.Cluster
         /// <summary>
         /// Attempts to join this node or one or more seed nodes.
         /// </summary>
-        /// <param name="newSeedNodes">The list of seed nod we're attempting to join.</param>
+        /// <param name="newSeedNodes">The list of seed node we're attempting to join.</param>
         public void JoinSeedNodes(ImmutableList<Address> newSeedNodes)
         {
             if (!newSeedNodes.IsEmpty)
             {
                 StopSeedNodeProcess();
                 _seedNodes = newSeedNodes; // keep them for retry
-                if (newSeedNodes.SequenceEqual(ImmutableList.Create(_cluster.SelfAddress)))
+                if (newSeedNodes.SequenceEqual(ImmutableList.Create(_cluster.SelfAddress))) // self-join for a singleton cluster
                 {
                     Self.Tell(new ClusterUserAction.JoinTo(_cluster.SelfAddress));
                     _seedNodeProcess = null;
@@ -1696,7 +1654,7 @@ namespace Akka.Cluster
         /// The node will eventually be removed by the leader, after hand-off in EXITING, and only after
         /// removal a new node with same address can join the cluster through the normal joining procedure.
         /// </summary>
-        /// <param name="address">The address.</param>
+        /// <param name="address">The address of the node who is leaving the cluster.</param>
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
@@ -1899,8 +1857,8 @@ namespace Akka.Cluster
             {
                 case VectorClock.Ordering.Same:
                     //same version
-                    winningGossip = remoteGossip.MergeSeen(localGossip);
                     talkback = !_exitingTasksInProgress && !remoteGossip.SeenByNode(SelfUniqueAddress);
+                    winningGossip = remoteGossip.MergeSeen(localGossip);
                     gossipType = ReceiveGossipType.Same;
                     break;
                 case VectorClock.Ordering.Before:
@@ -2050,10 +2008,6 @@ namespace Akka.Cluster
             return _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
         }
 
-
-        /// <summary>
-        /// Sends full gossip to `n` other random members.
-        /// </summary>
         private void SendGossipRandom(int n)
         {
             if (!IsSingletonCluster && n > 0)
@@ -2520,9 +2474,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Asserts that the gossip is valid and only contains information for current members of the cluster.
         /// </summary>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the VectorClock is corrupt and has not been pruned properly.</exception>
         public void AssertLatestGossip()
         {
             if (Cluster.IsAssertInvariantsEnabled && _latestGossip.Version.Versions.Count > _latestGossip.Members.Count)
@@ -2588,11 +2542,16 @@ namespace Akka.Cluster
 
         private readonly ImmutableList<Address> _seeds;
         private readonly Address _selfAddress;
+        private int _attempts = 0;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="seeds">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the list of specified <paramref name="seeds"/> is empty
+        /// or the first listed seed is a reference to the <see cref="IUntypedActorContext.System"/>'s address.
+        /// </exception>
         public JoinSeedNodeProcess(ImmutableList<Address> seeds)
         {
             _selfAddress = Cluster.Get(Context.System).SelfAddress;
@@ -2624,6 +2583,7 @@ namespace Akka.Cluster
                 {
                     path.Tell(new InternalClusterAction.InitJoin());
                 }
+                _attempts++;
             }
             else if (message is InternalClusterAction.InitJoinAck)
             {
@@ -2635,6 +2595,10 @@ namespace Akka.Cluster
             else if (message is InternalClusterAction.InitJoinNack) { } //that seed was uninitialized
             else if (message is ReceiveTimeout)
             {
+                if (_attempts >= 2)
+                    _log.Warning(
+                      "Couldn't join seed nodes after [{0}] attempts, will try again. seed-nodes=[{1}]",
+                      _attempts, string.Join(",", _seeds.Where(x => !x.Equals(_selfAddress))));
                 //no InitJoinAck received - try again
                 Self.Tell(new InternalClusterAction.JoinSeenNode());
             }
@@ -2680,6 +2644,10 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         /// <param name="seeds">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the number of specified <paramref name="seeds"/> is less than or equal to 1
+        /// or the first listed seed is a reference to the <see cref="IUntypedActorContext.System"/>'s address.
+        /// </exception>
         public FirstSeedNodeProcess(ImmutableList<Address> seeds)
         {
             _cluster = Cluster.Get(Context.System);
@@ -2855,11 +2823,11 @@ namespace Akka.Cluster
         #region Operator overloads
 
         /// <summary>
-        /// TBD
+        /// Combines two statistics together to create new statistics.
         /// </summary>
-        /// <param name="a">TBD</param>
-        /// <param name="b">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="a">The first set of statistics to combine.</param>
+        /// <param name="b">The second statistics to combine.</param>
+        /// <returns>A new <see cref="GossipStats"/> that is a combination of the two specified statistics.</returns>
         public static GossipStats operator +(GossipStats a, GossipStats b)
         {
             return new GossipStats(a.ReceivedGossipCount + b.ReceivedGossipCount,
@@ -2870,11 +2838,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Decrements the first set of statistics, <paramref name="a"/>, using the second set of statistics, <paramref name="b"/>.
         /// </summary>
-        /// <param name="a">TBD</param>
-        /// <param name="b">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="a">The set of statistics to decrement.</param>
+        /// <param name="b">The set of statistics used to decrement.</param>
+        /// <returns>A new <see cref="GossipStats"/> that is calculated by decrementing <paramref name="a"/> by <paramref name="b"/>.</returns>
         public static GossipStats operator -(GossipStats a, GossipStats b)
         {
             return new GossipStats(a.ReceivedGossipCount - b.ReceivedGossipCount,
@@ -2920,6 +2888,10 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="callback">TBD</param>
         /// <param name="targetStatus">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="targetStatus"/> is invalid.
+        /// Acceptable values are: <see cref="MemberStatus.Up"/> | <see cref="MemberStatus.Down"/>.
+        /// </exception>
         public OnMemberStatusChangedListener(Action callback, MemberStatus targetStatus)
         {
             _callback = callback;
@@ -2946,12 +2918,18 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the current status neither <see cref="MemberStatus.Up"/> or <see cref="MemberStatus.Down"/>.
+        /// </exception>
         protected override void PreStart()
         {
             _cluster.Subscribe(Self, To);
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the current status neither <see cref="MemberStatus.Up"/> or <see cref="MemberStatus.Down"/>.
+        /// </exception>
         protected override void PostStop()
         {
             // execute MemberRemoved hooks if we are shutting down
@@ -3007,11 +2985,7 @@ namespace Akka.Cluster
         /// </summary>
         public int SeenLatest { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             var other = obj as VectorClockStats;
@@ -3020,10 +2994,7 @@ namespace Akka.Cluster
                    SeenLatest == other.SeenLatest;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked

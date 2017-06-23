@@ -35,29 +35,30 @@ namespace Akka.Actor
     public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>, ISurrogated
     {
         /// <summary>
-        /// TBD
+        /// This class represents a surrogate of an <see cref="ActorPath"/>.
+        /// Its main use is to help during the serialization process.
         /// </summary>
         public class Surrogate : ISurrogate, IEquatable<Surrogate>, IEquatable<ActorPath>
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="Surrogate"/> class.
             /// </summary>
-            /// <param name="path">TBD</param>
+            /// <param name="path">The string representation of the actor path.</param>
             public Surrogate(string path)
             {
                 Path = path;
             }
 
             /// <summary>
-            /// TBD
+            /// The string representation of the actor path
             /// </summary>
             public string Path { get; }
 
             /// <summary>
-            /// TBD
+            /// Creates an <see cref="ActorPath"/> encapsulated by this surrogate.
             /// </summary>
-            /// <param name="system">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="system">The actor system that contains this actor path.</param>
+            /// <returns>The <see cref="ActorPath"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 ActorPath path;
@@ -71,11 +72,7 @@ namespace Akka.Actor
 
             #region Equality
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(Surrogate other)
             {
                 if (ReferenceEquals(null, other)) return false;
@@ -83,22 +80,14 @@ namespace Akka.Actor
                 return string.Equals(Path, other.Path);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(ActorPath other)
             {
                 if (other == null) return false;
                 return Equals(other.ToSurrogate(null)); //TODO: not so sure if this is OK
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -108,10 +97,7 @@ namespace Akka.Actor
                 return Equals(obj as Surrogate);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return Path.GetHashCode();
@@ -213,8 +199,6 @@ namespace Akka.Actor
         /// Computed chain meant to be reused not only by calls to <see cref="Elements" /> 
         /// but also during chain computation of children actors.
         /// </summary>
-        /// <param name="actorPath"></param>
-        /// <returns></returns>
         private static IList<string> FillElements(ActorPath actorPath)
         {
             // fast path next three `if`
@@ -238,7 +222,7 @@ namespace Akka.Actor
                 return myElems;
             }
 
-            // walking from `this` instance upto root actor
+            // walking from `this` instance up to root actor
             var current = actorPath;
             var elements = new List<string>();
             while (!(current is RootActorPath))
@@ -313,11 +297,7 @@ namespace Akka.Actor
         /// </summary>
         public abstract ActorPath Parent { get; }
 
-        /// <summary>
-        /// Indicates whether the current object is equal to another object of the same type.
-        /// </summary>
-        /// <param name="other"> An object to compare with this object. </param>
-        /// <returns> true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false. </returns>
+        /// <inheritdoc/>
         public bool Equals(ActorPath other)
         {
             if (other == null)
@@ -326,11 +306,7 @@ namespace Akka.Actor
             return Address.Equals(other.Address) && Elements.SequenceEqual(other.Elements);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public abstract int CompareTo(ActorPath other);
 
         /// <summary>
@@ -341,11 +317,12 @@ namespace Akka.Actor
         public abstract ActorPath WithUid(long uid);
 
         /// <summary>
-        /// Create a new child actor path.
+        /// Creates a new <see cref="ChildActorPath"/> with the specified parent <paramref name="path"/>
+        /// and the specified <paramref name="name"/>.
         /// </summary>
-        /// <param name="path"> The path. </param>
-        /// <param name="name"> The name. </param>
-        /// <returns> The result of the operator. </returns>
+        /// <param name="path">The parent path of the newly created actor path</param>
+        /// <param name="name">The name of child actor path</param>
+        /// <returns>A newly created <see cref="ChildActorPath"/></returns>
         public static ActorPath operator /(ActorPath path, string name)
         {
             var nameAndUid = ActorCell.SplitNameAndUid(name);
@@ -353,11 +330,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Recursively create a descendant’s path by appending all child names.
+        /// Creates a new <see cref="ActorPath"/> by appending all the names in <paramref name="name"/>
+        /// to the specified <paramref name="path"/>.
         /// </summary>
-        /// <param name="path"> The path. </param>
-        /// <param name="name"> The name. </param>
-        /// <returns> The result of the operator. </returns>
+        /// <param name="path">The base path of the newly created actor path.</param>
+        /// <param name="name">The names being appended to the specified <paramref name="path"/>.</param>
+        /// <returns>A newly created <see cref="ActorPath"/></returns>
         public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
         {
             var a = path;
@@ -370,13 +348,13 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an <see cref="ActorPath"/> from the specified <paramref name="path"/>.
         /// </summary>
-        /// <param name="path">TBD</param>
+        /// <param name="path">The string representing a possible <see cref="ActorPath"/></param>
         /// <exception cref="UriFormatException">
         /// This exception is thrown if the given <paramref name="path"/> cannot be parsed into an <see cref="ActorPath"/>.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A newly created <see cref="ActorPath"/></returns>
         public static ActorPath Parse(string path)
         {
             ActorPath actorPath;
@@ -490,10 +468,7 @@ namespace Akka.Actor
             return Join();
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns> A <see cref="System.String" /> that represents this instance. </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return ToStringWithAddress();
@@ -521,23 +496,13 @@ namespace Akka.Actor
             return this / childName;
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns> A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return ToString().GetHashCode();
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" /> is equal to this instance.
-        /// </summary>
-        /// <param name="obj"> The object to compare with the current object. </param>
-        /// <returns>
-        /// <c> true </c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise,
-        /// <c> false </c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             var other = obj as ActorPath;
@@ -629,10 +594,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a surrogate representation of the current <see cref="ActorPath"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that references this actor path.</param>
+        /// <returns>The surrogate representation of the current <see cref="ActorPath"/>.</returns>
         public ISurrogate ToSurrogate(ActorSystem system)
         {
             return new Surrogate(ToSerializationFormat());
@@ -744,11 +709,7 @@ namespace Akka.Actor
             return new ChildActorPath(_parent, _name, uid);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int CompareTo(ActorPath other)
         {
             return InternalCompareTo(this, other);

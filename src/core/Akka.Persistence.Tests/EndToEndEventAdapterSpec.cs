@@ -217,7 +217,7 @@ namespace Akka.Persistence.Tests
                 JournalPluginId = journalPluginId;
             }
 
-            protected bool PersistIncomming(object message)
+            protected bool PersistIncoming(object message)
             {
                 if (message is GetState)
                 {
@@ -247,7 +247,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                return PersistIncomming(message);
+                return PersistIncoming(message);
             }
         }
 

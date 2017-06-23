@@ -269,11 +269,11 @@ namespace Akka.Tests.Actor
 
         public void Handle_extensions_that_fail_to_initialize()
         {
-            Action loadExtenions = () => Sys.WithExtension<FailingTestExtensionImpl>(typeof(FailingTestExtension));
+            Action loadExtensions = () => Sys.WithExtension<FailingTestExtensionImpl>(typeof(FailingTestExtension));
 
-            Assert.Throws<FailingTestExtension.TestException>(loadExtenions);
+            Assert.Throws<FailingTestExtension.TestException>(loadExtensions);
             // same exception should be reported next time
-            Assert.Throws<FailingTestExtension.TestException>(loadExtenions);
+            Assert.Throws<FailingTestExtension.TestException>(loadExtensions);
         }
 
         #endregion

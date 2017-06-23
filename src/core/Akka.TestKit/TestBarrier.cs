@@ -24,7 +24,7 @@ namespace Akka.TestKit
         private readonly Barrier _barrier;
 
         /// <summary>
-        /// TBD
+        /// Obsolete. Use <see cref="TestKitSettings.DefaultTimeout"/> instead.
         /// </summary>
         [Obsolete("This field will be removed in future versions.")]
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);

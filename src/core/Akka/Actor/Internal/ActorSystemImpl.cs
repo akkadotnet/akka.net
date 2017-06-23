@@ -43,9 +43,9 @@ namespace Akka.Actor.Internal
         private TerminationCallbacks _terminationCallbacks;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ActorSystemImpl"/> class.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
         {
@@ -65,7 +65,7 @@ namespace Akka.Actor.Internal
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
-                    $"Invalid ActorSystem name [{name}], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
+                    $"Invalid ActorSystem name [{name}], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')", nameof(name));
             if(config == null)
                 throw new ArgumentNullException(nameof(config), "Configuration must not be null.");
 
@@ -363,10 +363,10 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves an extension with the specified type that is registered to this actor system.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of extension to retrieve</typeparam>
+        /// <returns>The specified extension registered to this actor system</returns>
         public override T GetExtension<T>()
         {
             T extension;

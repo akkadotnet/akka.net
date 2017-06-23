@@ -65,13 +65,13 @@ namespace Akka.Actor
             * Safe publication of this class’s fields is guaranteed by Mailbox.SetActor()
             * which is called indirectly from ActorCell.init() (if you’re wondering why
             * this is at all important, remember that under the CLR readonly fields are only
-            * frozen at the _end_ of the constructor, but we are publishing “this” before
+            * frozen at the _end_ of the constructor, but we are publishing "this" before
             * that is reached).
             * This means that the result of NewActorCell needs to be written to the field
             * _cell before we call init and start, since we can start using "this"
             * object from another thread as soon as we run init.
             */
-            // ReSharper disable once VirtualMemberCallInContructor 
+            // ReSharper disable once VirtualMemberCallInConstructor 
             _cell = NewActorCell(_system, this, _props, _dispatcher, _supervisor); // _cell needs to be assigned before Init is called. 
             _cell.Init(true, MailboxType);
         }

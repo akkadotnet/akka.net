@@ -31,6 +31,7 @@ namespace Akka.DistributedData
             Seen = seen;
         }
 
+        /// <inheritdoc/>
         public bool Equals(PruningInitialized other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -39,11 +40,14 @@ namespace Akka.DistributedData
             return Seen.SetEquals(other.Seen);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) =>
             obj is PruningInitialized && Equals((PruningInitialized)obj);
 
+        /// <inheritdoc/>
         public override int GetHashCode() => Seen.GetHashCode();
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             var sb = new StringBuilder("PruningInitialized(");
@@ -124,6 +128,7 @@ namespace Akka.DistributedData
             }
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is PruningState && Equals((PruningState) obj);
 
         private bool Equals(PruningState other)
@@ -134,6 +139,7 @@ namespace Akka.DistributedData
             return Equals(Owner, other.Owner) && Equals(Phase, other.Phase);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -142,6 +148,7 @@ namespace Akka.DistributedData
             }
         }
 
-        public override string ToString() => $"PrunningState(owner={Owner}, phase={Phase})";
+        /// <inheritdoc/>
+        public override string ToString() => $"PruningState(owner={Owner}, phase={Phase})";
     }
 }

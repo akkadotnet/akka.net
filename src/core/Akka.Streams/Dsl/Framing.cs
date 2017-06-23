@@ -113,9 +113,9 @@ namespace Akka.Streams.Dsl
         public class FramingException : Exception
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="FramingException" /> class.
             /// </summary>
-            /// <param name="message">TBD</param>
+            /// <param name="message">The message that describes the error. </param>
             public FramingException(string message) : base(message)
             {
             }

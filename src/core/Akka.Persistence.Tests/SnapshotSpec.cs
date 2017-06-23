@@ -7,9 +7,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Persistence.Internal;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -29,7 +32,8 @@ namespace Akka.Persistence.Tests
         internal class SaveSnapshotTestActor : NamedPersistentActor
         {
             private readonly IActorRef _probe;
-            protected LinkedList<string> _state = new LinkedList<string>();
+
+            protected ImmutableArray<string> State = ImmutableArray<string>.Empty;
 
             public SaveSnapshotTestActor(string name, IActorRef probe)
                 : base(name)
@@ -40,18 +44,24 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveRecover(object message)
             {
                 return message.Match()
-                    .With<SnapshotOffer>(offer => _state = offer.Snapshot as LinkedList<string>)
-                    .With<string>(m => _state.AddFirst(m + "-" + LastSequenceNr))
+                    .With<SnapshotOffer>(offer =>
+                    {
+                        State = offer.Snapshot.AsInstanceOf<ImmutableArray<string>>();
+                    })
+                    .With<string>(m => State = State.AddFirst(m + "-" + LastSequenceNr))
                     .WasHandled;
             }
 
             protected override bool ReceiveCommand(object message)
             {
                 return message.Match()
-                    .With<string>(payload => Persist(payload, _ => _state.AddFirst(payload + "-" + LastSequenceNr)))
-                    .With<TakeSnapshot>(_ => SaveSnapshot(_state))
+                    .With<string>(payload => Persist(payload, _ =>
+                    {
+                        State = State.AddFirst(payload + "-" + LastSequenceNr);
+                    }))
+                    .With<TakeSnapshot>(_ => SaveSnapshot(State))
                     .With<SaveSnapshotSuccess>(s => _probe.Tell(s.Metadata.SequenceNr))
-                    .With<GetState>(_ => _probe.Tell(_state.Reverse().ToArray()))
+                    .With<GetState>(_ => _probe.Tell(State.Reverse().ToArray()))
                     .WasHandled;
             }
         }

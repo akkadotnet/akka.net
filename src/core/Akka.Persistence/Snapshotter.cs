@@ -61,4 +61,3 @@ namespace Akka.Persistence
         void DeleteSnapshots(SnapshotSelectionCriteria criteria);
     }
 }
-

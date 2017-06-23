@@ -201,7 +201,7 @@ namespace Akka.Cluster.Sharding
     /// host any entities itself, but knows how to delegate messages to the right location.
     /// A <see cref="Sharding.ShardRegion"/> starts in proxy only mode if the roles of the node does not include
     /// the node role specified in `akka.contrib.cluster.sharding.role` config property
-    /// or if the specified `EntityProps` is `null`.
+    /// or if the specified `EntityProps` is <see langword="null"/>.
     /// </para>
     /// <para>
     /// If the state of the entities are persistent you may stop entities that are not used to
@@ -719,7 +719,7 @@ namespace Akka.Cluster.Sharding
     {
         /// <summary>
         /// Extract the entity id from an incoming <paramref name="message"/>. 
-        /// If `null` is returned the message will be `unhandled`, i.e. posted as `Unhandled`
+        /// If <see langword="null"/> is returned the message will be `unhandled`, i.e. posted as `Unhandled`
         ///  messages on the event stream
         /// </summary>
         /// <param name="message">TBD</param>

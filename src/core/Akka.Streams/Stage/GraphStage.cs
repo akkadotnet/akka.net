@@ -367,7 +367,9 @@ namespace Akka.Streams.Stage
             /// <param name="timerKey">TBD</param>
             /// <param name="timerId">TBD</param>
             /// <param name="isRepeating">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <exception cref="ArgumentNullException">
+            /// This exception is thrown when the specified <paramref name="timerKey"/> is undefined.
+            /// </exception>
             public Scheduled(object timerKey, int timerId, bool isRepeating)
             {
                 if (timerKey == null)
@@ -787,13 +789,15 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the class is not initialized.
+        /// </exception>
         internal GraphInterpreter Interpreter
         {
             get
             {
                 if (_interpreter == null)
-                    throw new IllegalStateException("Not yet initialized: only Sethandler is allowed in GraphStageLogic constructor");
+                    throw new IllegalStateException("Not yet initialized: only SetHandler is allowed in GraphStageLogic constructor");
                 return _interpreter;
             }
             set { _interpreter = value; }
@@ -870,7 +874,9 @@ namespace Akka.Streams.Stage
         /// <param name="onPush">TBD</param>
         /// <param name="onUpstreamFinish">TBD</param>
         /// <param name="onUpstreamFailure">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <see cref="onPush"/> is undefined.
+        /// </exception>
         protected internal void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
         {
             if (onPush == null)
@@ -903,7 +909,9 @@ namespace Akka.Streams.Stage
         /// <param name="outlet">TBD</param>
         /// <param name="onPull">TBD</param>
         /// <param name="onDownstreamFinish">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="onPull"/> is undefined.
+        /// </exception>
         protected internal void SetHandler(Outlet outlet, Action onPull, Action onDownstreamFinish = null)
         {
             if (onPull == null)
@@ -935,7 +943,9 @@ namespace Akka.Streams.Stage
         /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
         /// </summary>
         /// <param name="inlet">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="inlet"/> is closed or already pulled.
+        /// </exception>
         protected internal void Pull(Inlet inlet)
         {
             var connection = GetConnection(inlet);
@@ -1007,7 +1017,9 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="inlet">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="inlet"/> is empty.
+        /// </exception>
         /// <returns>TBD</returns>
         protected internal T Grab<T>(Inlet inlet)
         {
@@ -1100,8 +1112,9 @@ namespace Akka.Streams.Stage
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="outlet">TBD</param>
         /// <param name="element">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="outlet"/> is closed or already pulled.
+        /// </exception>
         protected internal void Push<T>(Outlet outlet, T element)
         {
             var connection = GetConnection(outlet);
@@ -1231,7 +1244,12 @@ namespace Akka.Streams.Stage
         /// <param name="n">TBD</param>
         /// <param name="andThen">TBD</param>
         /// <param name="onComplete">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="n"/> is less than zero.
+        /// </exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the specified <paramref name="inlet"/> is currently reading.
+        /// </exception>
         protected void ReadMany<T>(Inlet<T> inlet, int n, Action<IEnumerable<T>> andThen, Action<IEnumerable<T>> onComplete)
         {
             if (n < 0)
@@ -1245,7 +1263,7 @@ namespace Akka.Streams.Stage
 
                 if (IsAvailable(inlet))
                 {
-                    //If we already have data available, then shortcircuit and read the first
+                    //If we already have data available, then short-circuit and read the first
                     result[pos] = Grab(inlet);
                     pos++;
                 }
@@ -1280,6 +1298,9 @@ namespace Akka.Streams.Stage
         /// <param name="inlet">TBD</param>
         /// <param name="andThen">TBD</param>
         /// <param name="onClose">TBD</param>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the specified <paramref name="inlet"/> is currently reading.
+        /// </exception>
         protected void Read<T>(Inlet<T> inlet, Action<T> andThen, Action onClose)
         {
             if (IsAvailable(inlet))
@@ -1312,7 +1333,7 @@ namespace Akka.Streams.Stage
         private void RequireNotReading<T>(Inlet<T> inlet)
         {
             if (GetHandler(inlet) is Reading<T>)
-                throw new IllegalStateException("Already reading on inlet " + inlet);
+                throw new IllegalStateException($"Already reading on inlet {inlet}");
         }
 
         /// <summary>
@@ -1641,12 +1662,14 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            /// <exception cref="IllegalStateException">TBD</exception>
+            /// <exception cref="IllegalStateException">
+            /// This exception is thrown when this inlet is empty.
+            /// </exception>
             /// <returns>TBD</returns>
             public T Grab()
             {
                 if (!_elem.HasValue)
-                    throw new IllegalStateException($"cannot grab element from port {this} when data have not yet arrived");
+                    throw new IllegalStateException($"cannot grab element from port {this} when data has not yet arrived");
 
                 var ret = _elem.Value;
                 _elem = Option<T>.None;
@@ -1656,8 +1679,9 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            /// <exception cref="IllegalStateException">TBD</exception>
-            /// <returns>TBD</returns>
+            /// <exception cref="IllegalStateException">
+            /// This exception is thrown when this inlet is closed or already pulled.
+            /// </exception>
             public void Pull()
             {
                 if (_pulled)
@@ -1678,10 +1702,7 @@ namespace Akka.Streams.Stage
                 _sink.CancelSubstream();
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => $"SubSinkInlet{_name}";
         }
 
@@ -1810,10 +1831,7 @@ namespace Akka.Streams.Stage
                 _source.FailSubstream(ex);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override string ToString() => $"SubSourceOutlet({_name})";
         }
     }
@@ -2076,7 +2094,7 @@ namespace Akka.Streams.Stage
         /// The singleton instance of this exception
         /// </summary>
         public static readonly StageActorRefNotInitializedException Instance = new StageActorRefNotInitializedException();
-        private StageActorRefNotInitializedException() : base("You must first call getStageActorRef, to initialize the Actors behaviour") { }
+        private StageActorRefNotInitializedException() : base("You must first call GetStageActorRef(StageActorRef.Receive), to initialize the actor's behavior") { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StageActorRefNotInitializedException"/> class.
@@ -2462,7 +2480,7 @@ namespace Akka.Streams.Stage
                         Log.Warning("externally triggered unwatch from {0} to {1} is illegal on StageActorRef",
                             watcher, watchee);
                     else
-                        Log.Error("BUG: illegal Unatch({0}, {1}) for {2}", watchee, watcher, this);
+                        Log.Error("BUG: illegal Watch({0}, {1}) for {2}", watchee, watcher, this);
                 }
 
                 break;

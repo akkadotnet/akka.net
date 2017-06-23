@@ -9,27 +9,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Persistence.Internal;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <param name="receive">TBD</param>
-    /// <param name="message">TBD</param>
     internal delegate void StateReceive(Receive receive, object message);
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     internal class EventsourcedState
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="isRecoveryRunning">TBD</param>
-        /// <param name="stateReceive">TBD</param>
         public EventsourcedState(string name, bool isRecoveryRunning, StateReceive stateReceive)
         {
             Name = name;
@@ -37,27 +24,13 @@ namespace Akka.Persistence
             StateReceive = stateReceive;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public string Name { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public bool IsRecoveryRunning { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public StateReceive StateReceive { get; private set; }
+        public string Name { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return Name;
-        }
+        public bool IsRecoveryRunning { get; }
+
+        public StateReceive StateReceive { get; }
+
+        public override string ToString() => Name;
     }
 
     /// <summary>
@@ -106,6 +79,19 @@ namespace Akka.Persistence
 
                     ChangeState(Recovering(recoveryBehavior, timeout));
                     Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
+                }
+                else if (message is LoadSnapshotFailed)
+                {
+                    var res = (LoadSnapshotFailed)message;
+                    timeoutCancelable.Cancel();
+                    try
+                    {
+                        OnRecoveryFailure(res.Cause);
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
                 }
                 else if (message is RecoveryTick)
                 {
@@ -405,29 +391,4 @@ namespace Akka.Persistence
             return true;
         }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    internal static class LinkedListExtensions
-    {
-        /// <summary>
-        /// Removes first element from the list and returns it or returns default value if list was empty.
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="self">TBD</param>
-        /// <returns>TBD</returns>
-        internal static T Pop<T>(this LinkedList<T> self)
-        {
-            if (self.First != null)
-            {
-                var first = self.First.Value;
-                self.RemoveFirst();
-                return first;
-            }
-
-            return default(T);
-        }
-    }
 }
-

@@ -18,14 +18,14 @@ namespace Akka.DistributedData
     {
         /// <summary>
         /// Gets a <see cref="IReadConsistency"/> setup, which will acknowledge success of 
-        /// a <see cref="Get"/> operation immediatelly as soon, as result will be 
+        /// a <see cref="Get"/> operation immediately as soon, as result will be 
         /// confirmed by the local replica only.
         /// </summary>
         public static ReadLocal ReadLocal => Akka.DistributedData.ReadLocal.Instance;
 
         /// <summary>
         /// Gets a <see cref="IWriteConsistency"/> setup, which will acknowledge success of an
-        /// <see cref="Update"/> or <see cref="Delete"/> operation immediatelly as soon, as 
+        /// <see cref="Update"/> or <see cref="Delete"/> operation immediately as soon, as 
         /// result will be confirmed by the local replica only.
         /// </summary>
         public static WriteLocal WriteLocal => Akka.DistributedData.WriteLocal.Instance;
@@ -144,7 +144,7 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// Constructs a message that, when send to <see cref="DistributedData.Replicator"/>,
-        /// will performa a delete of a structure stored under provided <paramref name="key"/>,
+        /// will perform a delete of a structure stored under provided <paramref name="key"/>,
         /// and reply with <see cref="IDeleteResponse"/> message.
         /// 
         /// A delete is irrecoverable - you cannot reinsert a value under the key that has been 
@@ -173,7 +173,7 @@ namespace Akka.DistributedData
         /// <paramref name="subscriber"/>.
         /// </summary>
         /// <typeparam name="T">Replicated data type.</typeparam>
-        /// <param name="key">Key used to subscribe an actor to all changes occuring in correlated data structure.</param>
+        /// <param name="key">Key used to subscribe an actor to all changes occurring in correlated data structure.</param>
         /// <param name="subscriber">Actor subscribing to changes under provided <paramref name="key"/>.</param>
         /// <returns>TBD</returns>
         public static Subscribe Subscribe<T>(IKey<T> key, IActorRef subscriber) where T : IReplicatedData =>

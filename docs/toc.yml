@@ -1,0 +1,9 @@
+- name: Documentation
+  href: articles/
+  homepage: articles/intro/what-is-akka.md
+- name: API Reference
+  href: api/
+  homepage: api/index.md
+- name: Community
+  href: community/
+  homepage: community/building-akka-net.md

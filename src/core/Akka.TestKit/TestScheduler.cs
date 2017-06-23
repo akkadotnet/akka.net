@@ -71,7 +71,9 @@ namespace Akka.TestKit
         /// TBD
         /// </summary>
         /// <param name="when">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown when the specified <paramref name="when"/> offset is less than the currently tracked time.
+        /// </exception>
         public void AdvanceTo(DateTimeOffset when)
         {
             if (when < _now)

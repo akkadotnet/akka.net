@@ -15,18 +15,10 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
     public interface IPendingHandlerInvocation
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         object Event { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         Action<object> Handler { get; }
     }
 
@@ -35,72 +27,45 @@ namespace Akka.Persistence
     /// </summary>
     public sealed class StashingHandlerInvocation : IPendingHandlerInvocation
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
         public StashingHandlerInvocation(object evt, Action<object> handler)
         {
             Event = evt;
             Handler = handler;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Event { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Action<object> Handler { get; private set; }
+        public object Event { get; }
+
+        public Action<object> Handler { get; }
     }
 
     /// <summary>
     /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
-    /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> 
+    /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,Action{TEvent})"/> 
     /// or <see cref="Eventsourced.DeferAsync{TEvent}"/> method calls.
     /// </summary>
     public sealed class AsyncHandlerInvocation : IPendingHandlerInvocation
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
         public AsyncHandlerInvocation(object evt, Action<object> handler)
         {
             Event = evt;
             Handler = handler;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Event { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Action<object> Handler { get; private set; }
+        public object Event { get; }
+
+        public Action<object> Handler { get; }
     }
 
     /// <summary>
-    /// message used to detect that recovery timed out
+    /// Message used to detect that recovery timed out.
     /// </summary>
     public sealed class RecoveryTick
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="snapshot">TBD</param>
         public RecoveryTick(bool snapshot)
         {
             Snapshot = snapshot;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public bool Snapshot { get; }
     }
 
@@ -126,17 +91,17 @@ namespace Akka.Persistence
         private long _pendingStashingPersistInvocations = 0L;
 
         /// Holds user-supplied callbacks for persist/persistAsync calls
-        private LinkedList<IPendingHandlerInvocation> _pendingInvocations = new LinkedList<IPendingHandlerInvocation>();
+        private readonly LinkedList<IPendingHandlerInvocation> _pendingInvocations = new LinkedList<IPendingHandlerInvocation>();
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected readonly PersistenceExtension Extension;
-        private readonly ILoggingAdapter _log;
+        protected PersistenceExtension Extension { get; }
+
         private IStash _stash;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Eventsourced"/> class.
         /// </summary>
         protected Eventsourced()
         {
@@ -149,13 +114,13 @@ namespace Akka.Persistence
             _writerGuid = Guid.NewGuid().ToString();
             _currentState = null;
             _internalStash = CreateStash();
-            _log = Context.GetLogger();
+            Log = Context.GetLogger();
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected virtual ILoggingAdapter Log { get { return _log; } }
+        protected virtual ILoggingAdapter Log { get; }
 
         /// <summary>
         /// Id of the persistent entity for which messages should be replayed.
@@ -165,19 +130,16 @@ namespace Akka.Persistence
         /// <summary>
         /// Called when the persistent actor is started for the first time.
         /// The returned <see cref="Akka.Persistence.Recovery"/> object defines how the actor
-        /// will recover its persistent state behore handling the first incoming message.
+        /// will recover its persistent state before handling the first incoming message.
         /// 
         /// To skip recovery completely return <see cref="Akka.Persistence.Recovery.None"/>.
         /// </summary>
-        public virtual Recovery Recovery { get { return Recovery.Default;} }
+        public virtual Recovery Recovery => Recovery.Default;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual IStashOverflowStrategy InternalStashOverflowStrategy
-        {
-            get { return Extension.DefaultInternalStashOverflowStrategy; }
-        }
+        public virtual IStashOverflowStrategy InternalStashOverflowStrategy => Extension.DefaultInternalStashOverflowStrategy;
 
         /// <summary>
         /// TBD
@@ -201,40 +163,27 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Journal
-        {
-            get { return _journal ?? (_journal = Extension.JournalFor(JournalPluginId)); }
-        }
+        public IActorRef Journal => _journal ?? (_journal = Extension.JournalFor(JournalPluginId));
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef SnapshotStore
-        {
-            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId)); }
-        }
+        public IActorRef SnapshotStore => _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId));
 
         /// <summary>
         /// Returns <see cref="PersistenceId"/>.
         /// </summary>
-        public string SnapshotterId { get { return PersistenceId; } }
+        public string SnapshotterId => PersistenceId;
 
         /// <summary>
         /// Returns true if this persistent entity is currently recovering.
         /// </summary>
-        public bool IsRecovering
-        {
-            get
-            {
-                // _currentState is null if this is called from constructor
-                return _currentState?.IsRecoveryRunning ?? true;
-            }
-        }
+        public bool IsRecovering => _currentState?.IsRecoveryRunning ?? true;
 
         /// <summary>
         /// Returns true if this persistent entity has successfully finished recovery.
         /// </summary>
-        public bool IsRecoveryFinished { get { return !IsRecovering; } }
+        public bool IsRecoveryFinished => !IsRecovering;
 
         /// <summary>
         /// Highest received sequence number so far or `0L` if this actor 
@@ -245,8 +194,8 @@ namespace Akka.Persistence
         /// <summary>
         /// Returns <see cref="LastSequenceNr"/>
         /// </summary>
-        public long SnapshotSequenceNr { get { return LastSequenceNr; } }
-        
+        public long SnapshotSequenceNr => LastSequenceNr;
+
         /// <summary>
         /// Instructs the snapshot store to load the specified snapshot and send it via an
         /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
@@ -467,9 +416,11 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Permanently deletes all persistent messages with sequence numbers less than or equal <paramref name="toSequenceNr"/>.
+        /// If the delete is successful a <see cref="DeleteMessagesSuccess"/> will be sent to the actor.
+        /// If the delete fails a <see cref="DeleteMessagesFailure"/> will be sent to the actor.
         /// </summary>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="toSequenceNr">Upper sequence number bound of persistent messages to be deleted.</param>
         public void DeleteMessages(long toSequenceNr)
         {
             Journal.Tell(new DeleteMessagesTo(PersistenceId, toSequenceNr, Self));
@@ -489,12 +440,12 @@ namespace Akka.Persistence
         {
             if (message != null)
             {
-               _log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]", 
+                Log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]", 
                    message.GetType(), LastSequenceNr, PersistenceId);
             }
             else
             {
-                _log.Error(reason, "Persistence failure when replaying events for persistenceId [{0}]. Last known sequence number [{1}]", PersistenceId, LastSequenceNr);
+                Log.Error(reason, "Persistence failure when replaying events for persistenceId [{0}]. Last known sequence number [{1}]", PersistenceId, LastSequenceNr);
             }
         }
 
@@ -513,7 +464,7 @@ namespace Akka.Persistence
         /// <param name="sequenceNr">TBD</param>
         protected virtual void OnPersistFailure(Exception cause, object @event, long sequenceNr)
         {
-            _log.Error(cause, "Failed to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}].",
+            Log.Error(cause, "Failed to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}].",
                 @event.GetType(), sequenceNr, PersistenceId);
         }
 
@@ -528,8 +479,8 @@ namespace Akka.Persistence
         /// <param name="sequenceNr">TBD</param>
         protected virtual void OnPersistRejected(Exception cause, object @event, long sequenceNr)
         {
-            if (_log.IsWarningEnabled)
-                _log.Warning("Rejected to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}] due to [{3}].",
+            if (Log.IsWarningEnabled)
+                Log.Warning("Rejected to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}] due to [{3}].",
                     @event.GetType(), sequenceNr, PersistenceId, cause.Message);
         }
 
@@ -647,4 +598,3 @@ namespace Akka.Persistence
         }
     }
 }
-

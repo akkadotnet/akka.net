@@ -100,7 +100,7 @@ namespace Akka.Tests.Util
         }
 
         [Fact]
-        public void A_TokenBucket_must_maintain_maximum_capactiy()
+        public void A_TokenBucket_must_maintain_maximum_capacity()
         {
             var bucket = new TestBucket(10, 1);
             bucket.Init();
@@ -112,7 +112,7 @@ namespace Akka.Tests.Util
         }
 
         [Fact]
-        public void A_TokenBucket_must_work_if_CurrentTime_is_negativ()
+        public void A_TokenBucket_must_work_if_CurrentTime_is_negative()
         {
             var bucket = new TestBucket(10, 1);
             bucket.SetCurrentTime(-100); // Must be set before init()!

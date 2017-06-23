@@ -119,6 +119,7 @@ namespace Akka.DistributedData
         public PNCounter PruningCleanup(Cluster.UniqueAddress removedNode) => 
             new PNCounter(Increments.PruningCleanup(removedNode), Decrements.PruningCleanup(removedNode));
 
+        /// <inheritdoc/>
         public bool Equals(PNCounter other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -127,10 +128,13 @@ namespace Akka.DistributedData
             return other.Increments.Equals(Increments) && other.Decrements.Equals(Decrements);
         }
 
+        /// <inheritdoc/>
         public override string ToString() => $"PNCounter({Value})";
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is PNCounter && Equals((PNCounter) obj);
 
+        /// <inheritdoc/>
         public override int GetHashCode() => Increments.GetHashCode() ^ Decrements.GetHashCode();
 
         public IReplicatedData Merge(IReplicatedData other) => Merge((PNCounter) other);

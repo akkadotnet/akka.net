@@ -243,11 +243,7 @@ namespace Akka.Cluster
             public Address From { get; }
 
 #pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
 #pragma warning restore 659
             {
@@ -282,11 +278,7 @@ namespace Akka.Cluster
             public UniqueAddress From { get; }
 
 #pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
 #pragma warning restore 659
             {
@@ -387,20 +379,20 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Check to see if a node with the given address exists inside the heartbeat sender state.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The node to check</param>
+        /// <returns><c>true</c> if the heartbeat sender is already aware of this node. <c>false</c> otherwise.</returns>
         public bool Contains(UniqueAddress node)
         {
             return Ring.Nodes.Contains(node);
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a new <see cref="UniqueAddress"/> to the heartbeat sender's state.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The node to add.</param>
+        /// <returns>An updated copy of the state now including this member.</returns>
         public ClusterHeartbeatSenderState AddMember(UniqueAddress node)
         {
             return MembershipChange(Ring + node);
@@ -514,7 +506,9 @@ namespace Akka.Cluster
         /// <param name="nodes">TBD</param>
         /// <param name="unreachable">TBD</param>
         /// <param name="monitoredByNumberOfNodes">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="nodes"/> doesn't contain the specified <paramref name="selfAddress"/>.
+        /// </exception>
         public HeartbeatNodeRing(
             UniqueAddress selfAddress,
             ImmutableHashSet<UniqueAddress> nodes,
@@ -671,23 +665,18 @@ namespace Akka.Cluster
         internal class RingComparer : IComparer<UniqueAddress>
         {
             /// <summary>
-            /// TBD
+            /// The singleton instance of this comparer
             /// </summary>
             public static readonly RingComparer Instance = new RingComparer();
             private RingComparer() { }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="a">TBD</param>
-            /// <param name="b">TBD</param>
-            /// <returns>TBD</returns>
-            public int Compare(UniqueAddress a, UniqueAddress b)
+            /// <inheritdoc/>
+            public int Compare(UniqueAddress x, UniqueAddress y)
             {
-                var result = Member.AddressOrdering.Compare(a.Address, b.Address);
+                var result = Member.AddressOrdering.Compare(x.Address, y.Address);
                 if (result == 0)
-                    if (a.Uid < b.Uid) return -1;
-                    else if (a.Uid == b.Uid) return 0;
+                    if (x.Uid < y.Uid) return -1;
+                    else if (x.Uid == y.Uid) return 0;
                     else return 1;
                 return result;
             }

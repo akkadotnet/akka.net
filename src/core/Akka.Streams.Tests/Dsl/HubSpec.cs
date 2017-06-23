@@ -520,7 +520,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_properly_singal_completion_to_consumers_arriving_after_producer_finished()
+        public void BroadcastHub_must_properly_signal_completion_to_consumers_arriving_after_producer_finished()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -534,7 +534,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void BroadcastHub_must_properly_singal_error_to_consumers_arriving_after_producer_finished()
+        public void BroadcastHub_must_properly_signal_error_to_consumers_arriving_after_producer_finished()
         {
             this.AssertAllStagesStopped(() =>
             {

@@ -19,8 +19,8 @@ namespace Akka.Persistence
     /// should always be a local Actor (and serialization is performed by plugins).
     /// One notable exception to this is the shared journal used for testing.
     /// </summary>
-    public interface IPersistenceMessage // : INoSerializationVerificationNeeded
+    public interface IPersistenceMessage : INoSerializationVerificationNeeded
     {
-        // TODO look into why extending INoSerializationVerificationNeeded breaks the tests
+
     }
 }

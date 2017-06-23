@@ -80,7 +80,6 @@ namespace Akka.Persistence.Journal
     /// </summary>
     public static class AsyncWriteTarget
     {
-
         #region Internal Messages
 
         /// <summary>
@@ -90,22 +89,24 @@ namespace Akka.Persistence.Journal
         public sealed class ReplayFailure
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="ReplayFailure"/> class.
             /// </summary>
-            /// <param name="cause">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <param name="cause">The cause of the failure</param>
+            /// <exception cref="System.ArgumentNullException">
+            /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
+            /// </exception>
             public ReplayFailure(Exception cause)
             {
                 if (cause == null)
-                    throw new ArgumentNullException("cause", "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
+                    throw new ArgumentNullException(nameof(cause), "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
 
                 Cause = cause;
             }
 
             /// <summary>
-            /// TBD
+            /// The cause of the failure
             /// </summary>
-            public Exception Cause { get; private set; }
+            public Exception Cause { get; }
         }
 
         /// <summary>
@@ -126,12 +127,9 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public long HighestSequenceNr { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            public long HighestSequenceNr { get; }
+
+            /// <inheritdoc/>
             public bool Equals(ReplaySuccess other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -159,7 +157,7 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public AtomicWrite[] Messages { get; private set; }
+            public AtomicWrite[] Messages { get; }
         }
 
         /// <summary>
@@ -186,24 +184,24 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public string PersistenceId { get; private set; }
+            public string PersistenceId { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long FromSequenceNr { get; private set; }
+            public long FromSequenceNr { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long ToSequenceNr { get; private set; }
+            public long ToSequenceNr { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long Max { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            public long Max { get; }
+
+            /// <inheritdoc/>
             public bool Equals(ReplayMessages other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -236,16 +234,14 @@ namespace Akka.Persistence.Journal
             /// <summary>
             /// TBD
             /// </summary>
-            public string PersistenceId { get; private set; }
+            public string PersistenceId { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public long ToSequenceNr { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            public long ToSequenceNr { get; }
+
+            /// <inheritdoc/>
             public bool Equals(DeleteMessagesTo other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -404,7 +400,7 @@ namespace Akka.Persistence.Journal
         private Task<T> StoreNotInitialized<T>()
         {
             var promise = new TaskCompletionSource<T>();
-            promise.SetException(new TimeoutException("Store not intialized."));
+            promise.SetException(new TimeoutException("Store not initialized."));
             return promise.Task;
         }
 
@@ -492,4 +488,3 @@ namespace Akka.Persistence.Journal
         }
     }
 }
-

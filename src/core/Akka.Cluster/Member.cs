@@ -15,13 +15,13 @@ using Akka.Util.Internal;
 namespace Akka.Cluster
 {
     //TODO: Keep an eye on concurrency / immutability
-    //TODO: Comments
     /// <summary>
     /// Represents the address, current status, and roles of a cluster member node.
-    /// 
-    /// Note: `hashCode` and `equals` are solely based on the underlying `Address`, not its `MemberStatus`
-    /// and roles.
     /// </summary>
+    /// <remarks>
+    /// NOTE: <see cref="GetHashCode"/> and <see cref="Equals"/> are solely based on the underlying <see cref="Address"/>, 
+    /// not its <see cref="MemberStatus"/> and roles.
+    /// </remarks>
     public class Member : IComparable<Member>
     {
         /// <summary>
@@ -66,26 +66,25 @@ namespace Akka.Cluster
         public ImmutableHashSet<string> Roles { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Member"/>.
         /// </summary>
-        /// <param name="uniqueAddress">TBD</param>
-        /// <param name="upNumber">TBD</param>
-        /// <param name="status">TBD</param>
-        /// <param name="roles">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="uniqueAddress">The address of the member.</param>
+        /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
+        /// <param name="status">The status of this member.</param>
+        /// <param name="roles">The roles for this member. Can be empty.</param>
+        /// <returns>A new member instance.</returns>
         internal static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
         {
             return new Member(uniqueAddress, upNumber, status, roles);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Member"/>.
         /// </summary>
-        /// <param name="uniqueAddress">TBD</param>
-        /// <param name="upNumber">TBD</param>
-        /// <param name="status">TBD</param>
-        /// <param name="roles">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="uniqueAddress">The address of the member.</param>
+        /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
+        /// <param name="status">The status of this member.</param>
+        /// <param name="roles">The roles for this member. Can be empty.</param>
         internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
         {
             UniqueAddress = uniqueAddress;
@@ -95,24 +94,17 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The <see cref="Address"/> for this member.
         /// </summary>
         public Address Address { get { return UniqueAddress.Address; } }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()
         {
             return UniqueAddress.GetHashCode();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object.Equals(object)"/>
         public override bool Equals(object obj)
         {
             var m = obj as Member;
@@ -120,30 +112,23 @@ namespace Akka.Cluster
             return UniqueAddress.Equals(m.UniqueAddress);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IComparable.CompareTo"/>
         public int CompareTo(Member other)
         {
             return Ordering.Compare(this, other);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="object.ToString"/>
         public override string ToString()
         {
-            return $"Member(address = {Address}, status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
+            return $"Member(address = {Address}, Uid={UniqueAddress.Uid} status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
         }
 
         /// <summary>
-        /// TBD
+        /// Checks to see if a member supports a particular role.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="role">The rolename to check.</param>
+        /// <returns><c>true</c> if this member supports the role. <c>false</c> otherwise.</returns>
         public bool HasRole(string role)
         {
             return Roles.Contains(role);
@@ -155,8 +140,8 @@ namespace Akka.Cluster
         /// cluster. A member that joined after removal of another member may be
         /// considered older than the removed member.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The other member to check.</param>
+        /// <returns><c>true</c> if this member is older than the other member. <c>false</c> otherwise.</returns>
         public bool IsOlderThan(Member other)
         {
             if (UpNumber.Equals(other.UpNumber))
@@ -168,11 +153,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this member with the status provided.
         /// </summary>
-        /// <param name="status">TBD</param>
+        /// <param name="status">The new status of this member.</param>
         /// <exception cref="InvalidOperationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <returns>A new copy of this member with the provided status.</returns>
         public Member Copy(MemberStatus status)
         {
             var oldStatus = Status;
@@ -186,30 +171,26 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this member with the provided upNumber.
         /// </summary>
-        /// <param name="upNumber">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="upNumber">The new upNumber for this member.</param>
+        /// <returns>A new copy of this member with the provided upNumber.</returns>
         public Member CopyUp(int upNumber)
         {
             return new Member(UniqueAddress, upNumber, Status, Roles).Copy(status: MemberStatus.Up);
         }
 
         /// <summary>
-        ///  `Address` ordering type class, sorts addresses by host and port.
+        ///  <see cref="Address"/> ordering type class, sorts addresses by host and port.
         /// </summary>
         public static readonly IComparer<Address> AddressOrdering = new AddressComparer();
+
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         internal class AddressComparer : IComparer<Address>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="x">TBD</param>
-            /// <param name="y">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc cref="IComparer{Address}.Compare"/>
             public int Compare(Address x, Address y)
             {
                 if (x.Equals(y)) return 0;
@@ -220,20 +201,16 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Compares members by their upNumber to determine which is oldest / youngest.
         /// </summary>
         internal static readonly AgeComparer AgeOrdering = new AgeComparer();
+
         /// <summary>
-        /// TBD
+        ///  INTERNAL API
         /// </summary>
         internal class AgeComparer : IComparer<Member>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="a">TBD</param>
-            /// <param name="b">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc cref="IComparer{Member}.Compare"/>
             public int Compare(Member a, Member b)
             {
                 if (a.Equals(b)) return 0;
@@ -247,17 +224,13 @@ namespace Akka.Cluster
         /// Joining, Exiting and Down are ordered last (in that order).
         /// </summary>
         internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new LeaderStatusMemberComparer();
+
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         internal class LeaderStatusMemberComparer : IComparer<Member>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="a">TBD</param>
-            /// <param name="b">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc cref="IComparer{Member}.Compare"/>
             public int Compare(Member a, Member b)
             {
                 var @as = a.Status;
@@ -274,20 +247,16 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// `Member` ordering type class, sorts members by host and port.
+        /// <see cref="Member"/> ordering type class, sorts members by host and port.
         /// </summary>
         internal static readonly MemberComparer Ordering = new MemberComparer();
+
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         internal class MemberComparer : IComparer<Member>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="x">TBD</param>
-            /// <param name="y">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc cref="IComparer{Member}.Compare"/>
             public int Compare(Member x, Member y)
             {
                 return x.UniqueAddress.CompareTo(y.UniqueAddress);
@@ -295,7 +264,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Combines and sorts two lists of <see cref="Member"/> into a single list ordered by highest prioirity
         /// </summary>
         /// <param name="a">TBD</param>
         /// <param name="b">TBD</param>

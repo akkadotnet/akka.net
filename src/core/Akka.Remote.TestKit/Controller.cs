@@ -44,13 +44,7 @@ namespace Akka.Remote.TestKit
                 return Equals(_name, other._name);
             }
 
-            /// <summary>
-            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-            /// </summary>
-            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -58,12 +52,7 @@ namespace Akka.Remote.TestKit
                 return obj is ClientDisconnected && Equals((ClientDisconnected) obj);
             }
 
-            /// <summary>
-            /// Returns a hash code for this instance.
-            /// </summary>
-            /// <returns>
-            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-            /// </returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return (_name != null ? _name.GetHashCode() : 0);
@@ -91,12 +80,7 @@ namespace Akka.Remote.TestKit
                 return !Equals(left, right);
             }
 
-            /// <summary>
-            /// Returns a <see cref="System.String" /> that represents this instance.
-            /// </summary>
-            /// <returns>
-            /// A <see cref="System.String" /> that represents this instance.
-            /// </returns>
+            /// <inheritdoc/>
             public override string ToString()
             {
                 return $"{GetType()}: {Name}";
@@ -193,13 +177,7 @@ namespace Akka.Remote.TestKit
                 return Equals(_name, other._name) && Equals(_addr, other._addr) && Equals(_fsm, other._fsm);
             }
 
-            /// <summary>
-            /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-            /// </summary>
-            /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-            /// <returns>
-            ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-            /// </returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -207,12 +185,7 @@ namespace Akka.Remote.TestKit
                 return obj is NodeInfo && Equals((NodeInfo) obj);
             }
 
-            /// <summary>
-            /// Returns a hash code for this instance.
-            /// </summary>
-            /// <returns>
-            /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-            /// </returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked

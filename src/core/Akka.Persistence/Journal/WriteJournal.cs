@@ -32,11 +32,11 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="resequencables">TBD</param>
+        /// <param name="resequenceables">TBD</param>
         /// <returns>TBD</returns>
-        protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
+        protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequenceables)
         {
-            return resequencables
+            return resequenceables
                .OfType<AtomicWrite>()
                .Select(aw => new AtomicWrite(((IEnumerable<IPersistentRepresentation>)aw.Payload)
                     .Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));
@@ -66,7 +66,7 @@ namespace Akka.Persistence.Journal
             var adapter = _eventAdapters.Get(payload.GetType());
             representation = representation.WithPayload(adapter.ToJournal(payload));
 
-            // IdentityEventAdapter returns "" as manifest and normally the incoming PersistentRepr
+            // IdentityEventAdapter returns "" as manifest and normally the incoming PersistentRepresentation
             // doesn't have an assigned manifest, but when WriteMessages is sent directly to the
             // journal for testing purposes we want to preserve the original manifest instead of
             // letting IdentityEventAdapter clearing it out.

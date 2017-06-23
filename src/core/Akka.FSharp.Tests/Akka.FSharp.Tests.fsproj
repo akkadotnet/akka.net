@@ -9,9 +9,9 @@
     <RootNamespace>Pigeon.FSharp.Tests</RootNamespace>
     <AssemblyName>Akka.FSharp.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
     <Name>Akka.FSharp.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -73,16 +73,14 @@
       <HintPath>..\..\packages\FsCheck.Xunit.0.4.1.0\lib\net40-Client\FsCheck.Xunit.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FSharp.Core, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="FSharp.Core">
+      <HintPath>..\..\packages\FSharp.Core.4.1.17\lib\net45\FSharp.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
-      <Name>Akka.TestKit.Xunit2</Name>
-      <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj">
       <Name>Akka.FSharp</Name>
       <Project>{81574240-BC31-4BE4-B447-ADF0D32F4246}</Project>
@@ -100,6 +98,10 @@
       <Name>Akka</Name>
       <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
     </ProjectReference>
+    <Reference Include="System.ValueTuple">
+      <HintPath>..\..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="xunit.abstractions">
       <HintPath>..\..\packages\xunit.abstractions.2.0.0\lib\net35\xunit.abstractions.dll</HintPath>
       <Private>True</Private>
