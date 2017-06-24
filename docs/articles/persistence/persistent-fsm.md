@@ -39,3 +39,20 @@ Here is how everything is wired together:
 > State data can only be modified directly on initialization. Later it's modified only as a result of applying domain events. Override the `ApplyEvent` method to define how state data is affected by domain events, see the example below
 
 [!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentFSM/ExamplePersistentFSM.cs?range=112-125)]
+
+## Periodical snapshot by snapshot-after
+
+You can enable periodical `SaveStateSnapshot()` calls in `PersistentFSM` if you turn the following flag on in `reference.conf`
+```
+akka.persistence.fsm.snapshot-after = 1000
+```
+this means `SaveStateSnapshot()` is called after the sequence number reaches multiple of 1000.
+
+> [!NOTE]
+> `SaveStateSnapshot()` might not be called exactly at sequence numbers being multiple of the `snapshot-after` configuration value.
+This is because `PersistentFSM` works in a sort of "batch" mode when processing and persisting events, and `SaveStateSnapshot()`
+is called only at the end of the "batch". For example, if you set `akka.persistence.fsm.snapshot-after = 1000`,
+it is possible that `SaveStateSnapshot()` is called at `lastSequenceNr = 1005, 2003, ... `
+A single batch might persist state transition, also there could be multiple domain events to be persisted
+if you pass them to `Applying`  method in the `PersistentFSM` DSL.
+

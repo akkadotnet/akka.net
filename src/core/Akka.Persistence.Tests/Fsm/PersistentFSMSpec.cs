@@ -10,6 +10,7 @@ using Akka.Persistence.Fsm;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
+using Akka.Configuration;
 using Xunit;
 using static Akka.Actor.FSMBase;
 
@@ -304,7 +305,6 @@ namespace Akka.Persistence.Tests.Fsm
             probe.ExpectNoMsg(3.Seconds());
         }
 
-        // TODO
         [Fact]
         public void PersistentFSM_must_not_persist_state_change_event_when_staying_in_the_same_state()
         {
@@ -412,6 +412,39 @@ namespace Akka.Persistence.Tests.Fsm
             fsm.Tell(TimeoutFsm.OverrideTimeoutToInf.Instance);
             probe.ExpectMsg<TimeoutFsm.OverrideTimeoutToInf>();
             probe.ExpectNoMsg(1.Seconds());
+        }
+
+        [Fact]
+        public void PersistentFSM_must_save_periodical_snapshots_if_enablesnapshotafter()
+        {
+            var sys2 = ActorSystem.Create("PersistentFsmSpec2", ConfigurationFactory.ParseString(@"
+                akka.persistence.fsm.enable-snapshot-after = on
+                akka.persistence.fsm.snapshot-after = 3
+            ").WithFallback(Configuration("PersistentFSMSpec")));
+
+            try
+            {
+                var probe = CreateTestProbe();
+                var fsmRef = sys2.ActorOf(SnapshotFSM.Props(probe.Ref));
+
+                fsmRef.Tell(1);
+                fsmRef.Tell(2);
+                fsmRef.Tell(3);
+                // Needs to wait with expectMsg, before sending the next message to fsmRef.
+                // Otherwise, stateData sent to this probe is already updated
+                probe.ExpectMsg("SeqNo=3, StateData=List(3, 2, 1)");
+
+                fsmRef.Tell("4x"); //changes the state to Persist4xAtOnce, also updates SeqNo although nothing is persisted
+                fsmRef.Tell(10); //Persist4xAtOnce = persist 10, 4x times
+                // snapshot-after = 3, but the SeqNo is not multiple of 3,
+                // as saveStateSnapshot() is called at the end of persistent event "batch" = 4x of 10's.
+            
+                probe.ExpectMsg("SeqNo=8, StateData=List(10, 10, 10, 10, 3, 2, 1)");
+            }
+            finally
+            {
+                Shutdown(sys2);
+            }
         }
 
         internal class WebStoreCustomerFSM : PersistentFSM<IUserState, IShoppingCart, IDomainEvent>
@@ -896,4 +929,92 @@ namespace Akka.Persistence.Tests.Fsm
     }
 
     #endregion
+
+    public interface ISnapshotFSMState : PersistentFSM.IFsmState { }
+
+    public class PersistSingleAtOnce : ISnapshotFSMState
+    {
+        public static PersistSingleAtOnce Instance { get; } = new PersistSingleAtOnce();
+        private PersistSingleAtOnce() { }
+        public string Identifier => "PersistSingleAtOnce";
+    }
+
+    public class Persist4xAtOnce : ISnapshotFSMState
+    {
+        public static Persist4xAtOnce Instance { get; } = new Persist4xAtOnce();
+        private Persist4xAtOnce() { }
+        public string Identifier => "Persist4xAtOnce";
+    }
+    
+    public interface ISnapshotFSMEvent { }
+
+    public class IntAdded : ISnapshotFSMEvent
+    {
+        public IntAdded(int i)
+        {
+            I = i;
+        }
+        
+        public int I { get; }
+    }
+
+    internal class SnapshotFSM : PersistentFSM<ISnapshotFSMState, List<int>, ISnapshotFSMEvent>
+    {
+        public SnapshotFSM(IActorRef probe)
+        {
+            StartWith(PersistSingleAtOnce.Instance, null);
+
+            When(PersistSingleAtOnce.Instance, (evt, state) =>
+            {
+                if (evt.FsmEvent is int i)
+                {
+                    return Stay().Applying(new IntAdded(i));
+                }
+                else if (evt.FsmEvent.Equals("4x"))
+                {
+                    return GoTo(Persist4xAtOnce.Instance);
+                }
+                else if (evt.FsmEvent is SaveSnapshotSuccess snap)
+                {
+                    probe.Tell($"SeqNo={snap.Metadata.SequenceNr}, StateData=List({string.Join(", ", StateData)})");
+                    return Stay();
+                }
+                return Stay();
+            });
+
+            When(Persist4xAtOnce.Instance, (evt, state) =>
+            {
+                if (evt.FsmEvent is int i)
+                {
+                    return Stay().Applying(new IntAdded(i), new IntAdded(i), new IntAdded(i), new IntAdded(i));
+                }
+                else if (evt.FsmEvent is SaveSnapshotSuccess snap)
+                {
+                    probe.Tell($"SeqNo={snap.Metadata.SequenceNr}, StateData=List({string.Join(", ", StateData)})");
+                    return Stay();
+                }
+                return Stay();
+            });
+        }
+
+        public override string PersistenceId { get; } = "snapshot-fsm-test";
+
+        protected override List<int> ApplyEvent(ISnapshotFSMEvent domainEvent, List<int> currentData)
+        {
+            if (domainEvent is IntAdded intAdded)
+            {
+                var list = new List<int>();
+                list.Add(intAdded.I);
+                if (currentData != null)
+                    list.AddRange(currentData);
+                return list;
+            }
+            return currentData;
+        }
+        
+        public static Props Props(IActorRef probe)
+        {
+            return Actor.Props.Create(() => new SnapshotFSM(probe));
+        }
+    }
 }
