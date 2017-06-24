@@ -297,6 +297,27 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_an_escaped_backslash_followed_by_a_double_quote()
+        {
+            var buffer = new JsonObjectParser();
+            const string content = @"{ ""key"": ""\\"" }";
+
+            buffer.Offer(ByteString.FromString(content));
+            buffer.Poll().Value.DecodeString().Should().Be(content);
+        }
+
+
+        [Fact]
+        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_a_string_that_contains_an_escaped_quote()
+        {
+            var buffer = new JsonObjectParser();
+            const string content = "{ \"key\": \"\\\"\" }";
+
+            buffer.Offer(ByteString.FromString(content));
+            buffer.Poll().Value.DecodeString().Should().Be(content);
+        }
+
+        [Fact]
         public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_nested_array_should_successfully_parse()
         {
             var buffer = new JsonObjectParser();
