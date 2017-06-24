@@ -294,4 +294,3 @@ namespace Akka.Streams.Dsl
         public TimeSpan Duration { get; }
     }
 }
-#endif
