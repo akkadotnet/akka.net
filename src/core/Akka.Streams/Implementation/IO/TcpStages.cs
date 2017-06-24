@@ -642,4 +642,3 @@ namespace Akka.Streams.Implementation.IO
         }
     }
 }
-#endif
