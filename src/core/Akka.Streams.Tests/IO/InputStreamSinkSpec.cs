@@ -330,7 +330,7 @@ namespace Akka.Streams.Tests.IO
                 r.Item1.Should().Be(_byteString.Count);
                 r.Item2.ShouldBeEquivalentTo(_byteString);
 
-                inputStream.Close();
+                inputStream.Dispose();
             }, _materializer);
         }
 
@@ -340,14 +340,14 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var bytes = ByteString.Create(new byte[] { 0, 100, 200, 255 });
+                var bytes = ByteString.CopyFrom(new byte[] { 0, 100, 200, 255 });
                 var inputStream = Source.Single(bytes).RunWith(StreamConverters.AsInputStream(), _materializer);
 
                 Enumerable.Range(1, 5)
                     .Select(_ => inputStream.ReadByte())
                     .ShouldBeEquivalentTo(new[] { 0, 100, 200, 255, -1 });
 
-                inputStream.Close();
+                inputStream.Dispose();
             }, _materializer);
         }
 

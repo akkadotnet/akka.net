@@ -304,7 +304,7 @@ namespace Akka.Streams.Tests.Dsl
             const string content = @"{ ""key"": ""\\"" }";
 
             buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.DecodeString().Should().Be(content);
+            buffer.Poll().Value.ToString().Should().Be(content);
         }
 
 
@@ -315,7 +315,7 @@ namespace Akka.Streams.Tests.Dsl
             const string content = "{ \"key\": \"\\\"\" }";
 
             buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.DecodeString().Should().Be(content);
+            buffer.Poll().Value.ToString().Should().Be(content);
         }
 
         [Fact]

@@ -327,7 +327,7 @@ namespace Akka.Streams.Tests.IO
             // fill the buffer up
             Enumerable.Range(1, bufferSize - 1).ForEach(i => outputStream.WriteByte((byte)i));
 
-            Task.Run(() => outputStream.Close());
+            Task.Run(() => outputStream.Dispose());
 
             // here is the race, has the elements reached the stage buffer yet?
             Thread.Sleep(500);
