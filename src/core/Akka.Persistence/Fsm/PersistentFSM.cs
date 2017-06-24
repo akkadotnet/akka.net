@@ -162,7 +162,7 @@ namespace Akka.Persistence.Fsm
         /// Persisted on state change
         /// TODO: should implement IMessage
         /// </summary>
-        internal class StateChangeEvent
+        public class StateChangeEvent
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="StateChangeEvent"/> class.
@@ -190,7 +190,7 @@ namespace Akka.Persistence.Fsm
         /// FSM state and data snapshot
         /// TODO: should implement IMessage
         /// </summary>
-        internal class PersistentFSMSnapshot<TD>
+        public class PersistentFSMSnapshot<TD>
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="PersistentFSMSnapshot{TD}"/> class.
