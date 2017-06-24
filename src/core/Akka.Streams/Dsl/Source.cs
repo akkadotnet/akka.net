@@ -182,7 +182,15 @@ namespace Akka.Streams.Dsl
         public Source<TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
             if (flow.Module == GraphStages.Identity<TOut2>().Module)
-                return this as Source<TOut2, TMat3>;
+            {
+                if (Keep.IsLeft(combine))
+                    return this as Source<TOut2, TMat3>;
+
+                if (Keep.IsRight(combine))
+                    return MapMaterializedValue(_ => NotUsed.Instance) as Source<TOut2, TMat3>;
+
+                return MapMaterializedValue(value=> combine(value, (TMat2)(object)NotUsed.Instance)) as Source<TOut2, TMat3>;
+            }
 
             var flowCopy = flow.Module.CarbonCopy();
             return new Source<TOut2, TMat3>(Module
@@ -604,6 +612,14 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Creates a <see cref="Source{TOut,TMat}"/> that is not materialized until there is downstream demand, when the source gets materialized
+        /// the materialized task is completed with its value, if downstream cancels or fails without any demand the
+        /// <paramref name="create"/> factory is never called and the materialized <see cref="Task{TResult}"/> is failed.
+        /// </summary>
+        public static Source<TOut, Task<TMat>> Lazily<TOut, TMat>(Func<Source<TOut, TMat>> create) 
+            => FromGraph(LazySource.Create(create));
+
+        /// <summary>
         /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as a <see cref="ISubscriber{T}"/>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -754,9 +770,9 @@ namespace Akka.Streams.Dsl
         /// 
         /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> until buffer is full.
         /// 
-        /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages are dropped
-        /// if there is no demand from downstream. When <paramref name="bufferSize"/> is 0 the <paramref name="overflowStrategy"/> does
-        /// not matter.
+        /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages will wait
+        /// for downstream demand unless there is another message waiting for downstream demand, in that case
+        /// offer result will be completed according to the <paramref name="overflowStrategy"/>.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="bufferSize">The size of the buffer in element count</param>
