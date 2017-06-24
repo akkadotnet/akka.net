@@ -180,7 +180,6 @@ namespace Akka.Streams.Implementation
             }
             else
                 throw new Framing.FramingException($"Invalid JSON encountered at position {_pos} of {_buffer}");
-        }
 
             _lastInput = input;
         }
