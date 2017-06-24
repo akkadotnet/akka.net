@@ -92,7 +92,7 @@ namespace Akka.Event
             // if we're runing Akka.Remote or Akka.Cluster, this will grab the default inbound listening address
             // otherwise, it'll default to just using the local absolute path
             var addr = ((ExtendedActorSystem) context.System).Provider.DefaultAddress ?? Address.AllSystems;
-            var logSource = addr.Equals(Address.AllSystems) ? context.Self.ToString() : context.Self.Path.ToStringWithAddress(addr);
+            var logSource = addr.Equals(Address.AllSystems) ? context.Self.ToString() : context.Self.Path.ToSerializationFormatWithAddress(addr);
             var logClass = context.Props.Type;
 
             return new BusLogging(context.System.EventStream, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
