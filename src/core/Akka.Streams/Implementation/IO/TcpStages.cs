@@ -393,12 +393,7 @@ namespace Akka.Streams.Implementation.IO
             private readonly Outlet<ByteString> _bytesOut;
             private IActorRef _connection;
             private readonly OutHandler _readHandler;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="shape">TBD</param>
-            /// <param name="role">TBD</param>
+            
             public TcpStreamLogic(FlowShape<ByteString, ByteString> shape, ITcpRole role, EndPoint remoteAddress) : base(shape)
             {
                 _role = role;
