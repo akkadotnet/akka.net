@@ -140,7 +140,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                 // note that it will stash the commands until loading completed
                 r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3);
+                ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3UL);
 
                 Watch(r2);
                 Sys.Stop(r2);
@@ -176,7 +176,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             EnterBarrier("update-done-" + testStepCounter);
 
             r.Tell(Dsl.Get(keyA, readTwo));
-            ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2);
+            ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2UL);
 
             r.Tell(Dsl.Get(keyC, readTwo));
             ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
@@ -196,7 +196,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             });
 
             r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-            ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2);
+            ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2UL);
 
             r2.Tell(Dsl.Get(keyC, ReadLocal.Instance));
             ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
@@ -309,10 +309,10 @@ namespace Akka.DistributedData.Tests.MultiNode
                         });
 
                         r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                        ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3);
+                        ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3UL);
 
                         r2.Tell(Dsl.Get(keyB, ReadLocal.Instance));
-                        ExpectMsg<GetSuccess>().Get(keyB).Value.ShouldBe(2);
+                        ExpectMsg<GetSuccess>().Get(keyB).Value.ShouldBe(2UL);
                     }
                 }
                 finally
