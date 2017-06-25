@@ -15,9 +15,11 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -96,6 +98,55 @@ namespace Akka.Streams.Tests.IO
                 }
                 sub.Request(1);
                 c.ExpectComplete();
+            }, _materializer);
+        }
+
+        [Fact]
+        public void Filesource_could_read_partial_contents_from_a_file()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                var chunkSize = 512;
+                var startPosition = 1000;
+                var bufferAttributes = Attributes.CreateInputBuffer(1, 2);
+
+                var p = FileIO.FromFile(TestFile(), chunkSize, startPosition)
+                    .WithAttributes(bufferAttributes)
+                    .RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
+
+                var c = this.CreateManualSubscriberProbe<ByteString>();
+                p.Subscribe(c);
+                var sub = c.ExpectSubscription();
+
+                var remaining = _testText.Substring(1000);
+
+                var nextChunk = new Func<string>(() => {
+                    string chunks;
+
+                    if (remaining.Length <= chunkSize)
+                    {
+                        chunks = remaining;
+                        remaining = string.Empty;
+                    }
+                    else
+                    {
+                        chunks = remaining.Substring(0, chunkSize);
+                        remaining = remaining.Substring(chunkSize);
+                    }
+
+                    return chunks;
+                });
+
+                sub.Request(5000);
+
+                var expectedChunk = nextChunk();
+                for(int i=0; i<10; ++i)
+                {
+                    c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(expectedChunk);
+                    expectedChunk = nextChunk();
+                }
+                c.ExpectComplete();
+
             }, _materializer);
         }
 
