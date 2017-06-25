@@ -409,12 +409,12 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <exception cref="TimeoutException">TBD</exception>
+        /// <exception cref="TimeoutException">Thrown if we can't verify that the <see cref="ActorSystem"/> was shutdown within the given length of time.</exception>
         protected virtual void Shutdown(ActorSystem system, TimeSpan? duration = null, bool verifySystemShutdown = false)
         {
             if (system == null) system = _testState.System;
 
-            var durationValue = duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
+            var durationValue = (duration ?? Dilated(TimeSpan.FromSeconds(5))).Min(TimeSpan.FromSeconds(10));
 
             var wasShutdownDuringWait = system.Terminate().Wait(durationValue);
             if(!wasShutdownDuringWait)
