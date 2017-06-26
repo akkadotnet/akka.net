@@ -80,7 +80,7 @@ namespace Akka.Cluster.Tools.Singleton
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class Cleanup : IClusterSingletonMessage
+    internal sealed class Cleanup
     {
         /// <summary>
         /// TBD
@@ -353,7 +353,7 @@ namespace Akka.Cluster.Tools.Singleton
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Used for graceful termination as part of <see cref="CoordinatedShutdown"/>.
     /// </summary>
     internal sealed class SelfExiting
@@ -412,7 +412,7 @@ namespace Akka.Cluster.Tools.Singleton
 
     /// <summary>
     /// Thrown when a consistent state can't be determined within the defined retry limits.
-    /// Eventually it will reach a stable state and can continue, and that is simplified 
+    /// Eventually it will reach a stable state and can continue, and that is simplified
     /// by starting over with a clean state. Parent supervisor should typically restart the actor, i.e. default decision.
     /// </summary>
     public sealed class ClusterSingletonManagerIsStuckException : AkkaException
@@ -441,25 +441,25 @@ namespace Akka.Cluster.Tools.Singleton
     /// At most one singleton instance is running at any point in time.
     /// </para>
     /// <para>
-    /// The ClusterSingletonManager is supposed to be started on all nodes, or all nodes with specified role, 
-    /// in the cluster with <see cref="ActorSystem.ActorOf"/>. The actual singleton is started on the oldest node 
+    /// The ClusterSingletonManager is supposed to be started on all nodes, or all nodes with specified role,
+    /// in the cluster with <see cref="ActorSystem.ActorOf"/>. The actual singleton is started on the oldest node
     /// by creating a child actor from the supplied `singletonProps`.
     /// </para>
     /// <para>
-    /// The singleton actor is always running on the oldest member with specified role. The oldest member is determined 
-    /// by <see cref="Member.IsOlderThan"/>. This can change when removing members. A graceful hand over can normally  
-    /// be performed when current oldest node is leaving the cluster. Be aware that there is a short time period when 
+    /// The singleton actor is always running on the oldest member with specified role. The oldest member is determined
+    /// by <see cref="Member.IsOlderThan"/>. This can change when removing members. A graceful hand over can normally
+    /// be performed when current oldest node is leaving the cluster. Be aware that there is a short time period when
     /// there is no active singleton during the hand-over process.
     /// </para>
     /// <para>
-    /// The cluster failure detector will notice when oldest node becomes unreachable due to things like CLR crash, 
-    /// hard shut down, or network failure. When the crashed node has been removed (via down) from the cluster then 
-    /// a new oldest node will take over and a new singleton actor is created.For these failure scenarios there 
+    /// The cluster failure detector will notice when oldest node becomes unreachable due to things like CLR crash,
+    /// hard shut down, or network failure. When the crashed node has been removed (via down) from the cluster then
+    /// a new oldest node will take over and a new singleton actor is created.For these failure scenarios there
     /// will not be a graceful hand-over, but more than one active singletons is prevented by all reasonable means.
     /// Some corner cases are eventually resolved by configurable timeouts.
     /// </para>
     /// <para>
-    /// You access the singleton actor with <see cref="ClusterSingletonProxy"/>. Alternatively the singleton actor may 
+    /// You access the singleton actor with <see cref="ClusterSingletonProxy"/>. Alternatively the singleton actor may
     /// broadcast its existence when it is started.
     /// </para>
     /// <para>
@@ -478,7 +478,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// Creates props for the current cluster singleton manager using <see cref="PoisonPill"/> 
+        /// Creates props for the current cluster singleton manager using <see cref="PoisonPill"/>
         /// as the default termination message.
         /// </summary>
         /// <param name="singletonProps"><see cref="Actor.Props"/> of the singleton actor instance.</param>
@@ -494,9 +494,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         /// <param name="singletonProps"><see cref="Actor.Props"/> of the singleton actor instance.</param>
         /// <param name="terminationMessage">
-        /// When handing over to a new oldest node this <paramref name="terminationMessage"/> is sent to the singleton actor 
-        /// to tell it to finish its work, close resources, and stop. The hand-over to the new oldest node 
-        /// is completed when the singleton actor is terminated. Note that <see cref="PoisonPill"/> is a 
+        /// When handing over to a new oldest node this <paramref name="terminationMessage"/> is sent to the singleton actor
+        /// to tell it to finish its work, close resources, and stop. The hand-over to the new oldest node
+        /// is completed when the singleton actor is terminated. Note that <see cref="PoisonPill"/> is a
         /// perfectly fine <paramref name="terminationMessage"/> if you only need to stop the actor.
         /// </param>
         /// <param name="settings">Cluster singleton manager settings.</param>
@@ -630,8 +630,8 @@ namespace Akka.Cluster.Tools.Singleton
 
         private State<ClusterSingletonState, IClusterSingletonData> GoToOldest()
         {
-            Log.Info("Singleton manager [{0}] starting singleton actor", _cluster.SelfAddress);
             var singleton = Context.Watch(Context.ActorOf(_singletonProps, _settings.SingletonName));
+            Log.Info("Singleton manager starting singleton actor [{0}] ", singleton.Path);
             return
                 GoTo(ClusterSingletonState.Oldest).Using(new OldestData(singleton, false));
         }
@@ -838,7 +838,7 @@ namespace Akka.Cluster.Tools.Singleton
                             }
                     }
                 }
-                else if (e.FsmEvent is HandOverRetry handOverRetry 
+                else if (e.FsmEvent is HandOverRetry handOverRetry
                         && e.StateData is BecomingOldestData becomingOldest)
                 {
                     if (handOverRetry.Count <= _maxHandOverRetries)
@@ -953,16 +953,16 @@ namespace Akka.Cluster.Tools.Singleton
                         Log.Info("Self removed, stopping ClusterSingletonManager");
                         return Stop();
                     }
-                    else if (e.StateData is WasOldestData data 
+                    else if (e.StateData is WasOldestData data
                             && data.NewOldest != null
-                            && !_selfExited 
+                            && !_selfExited
                             && removed.Member.UniqueAddress.Equals(data.NewOldest))
                     {
                         AddRemoved(removed.Member.UniqueAddress);
                         return GoToHandingOver(data.Singleton, data.SingletonTerminated, null);
                     }
                 }
-                else if (e.FsmEvent is Terminated t 
+                else if (e.FsmEvent is Terminated t
                     && e.StateData is WasOldestData oldestData
                     && t.ActorRef.Equals(oldestData.Singleton))
                 {
@@ -987,7 +987,7 @@ namespace Akka.Cluster.Tools.Singleton
                 {
                     return HandleHandOverDone(handingOverData.HandOverTo);
                 }
-                else if (e.FsmEvent is HandOverToMe 
+                else if (e.FsmEvent is HandOverToMe
                     && e.StateData is HandingOverData d
                     && d.HandOverTo.Equals(Sender))
                 {
@@ -1008,7 +1008,7 @@ namespace Akka.Cluster.Tools.Singleton
 
             When(ClusterSingletonState.Stopping, e =>
             {
-                if (e.FsmEvent is Terminated terminated 
+                if (e.FsmEvent is Terminated terminated
                     && e.StateData is StoppingData stoppingData
                     && terminated.ActorRef.Equals(stoppingData.Singleton))
                 {
@@ -1020,7 +1020,7 @@ namespace Akka.Cluster.Tools.Singleton
 
             When(ClusterSingletonState.End, e =>
             {
-                if (e.FsmEvent is MemberRemoved removed 
+                if (e.FsmEvent is MemberRemoved removed
                     && removed.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
                 {
                     Log.Info("Self removed, stopping ClusterSingletonManager");
