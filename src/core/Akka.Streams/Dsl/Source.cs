@@ -182,7 +182,15 @@ namespace Akka.Streams.Dsl
         public Source<TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
             if (flow.Module == GraphStages.Identity<TOut2>().Module)
-                return this as Source<TOut2, TMat3>;
+            {
+                if (Keep.IsLeft(combine))
+                    return this as Source<TOut2, TMat3>;
+
+                if (Keep.IsRight(combine))
+                    return MapMaterializedValue(_ => NotUsed.Instance) as Source<TOut2, TMat3>;
+
+                return MapMaterializedValue(value=> combine(value, (TMat2)(object)NotUsed.Instance)) as Source<TOut2, TMat3>;
+            }
 
             var flowCopy = flow.Module.CarbonCopy();
             return new Source<TOut2, TMat3>(Module
@@ -604,6 +612,14 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Creates a <see cref="Source{TOut,TMat}"/> that is not materialized until there is downstream demand, when the source gets materialized
+        /// the materialized task is completed with its value, if downstream cancels or fails without any demand the
+        /// <paramref name="create"/> factory is never called and the materialized <see cref="Task{TResult}"/> is failed.
+        /// </summary>
+        public static Source<TOut, Task<TMat>> Lazily<TOut, TMat>(Func<Source<TOut, TMat>> create) 
+            => FromGraph(LazySource.Create(create));
+
+        /// <summary>
         /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as a <see cref="ISubscriber{T}"/>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -754,9 +770,9 @@ namespace Akka.Streams.Dsl
         /// 
         /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> until buffer is full.
         /// 
-        /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages are dropped
-        /// if there is no demand from downstream. When <paramref name="bufferSize"/> is 0 the <paramref name="overflowStrategy"/> does
-        /// not matter.
+        /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages will wait
+        /// for downstream demand unless there is another message waiting for downstream demand, in that case
+        /// offer result will be completed according to the <paramref name="overflowStrategy"/>.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="bufferSize">The size of the buffer in element count</param>
@@ -830,6 +846,46 @@ namespace Akka.Streams.Dsl
             Func<TSource, Task<Option<T>>> read, Func<TSource, Task> close)
         {
             return FromGraph(new UnfoldResourceSourceAsync<T, TSource>(create, read, close));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// </summary>
+        /// <typeparam name="TDelegate">Delegate type used to attach current source.</typeparam>
+        /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
+        /// <param name="conversion">A function used to convert provided event handler into a delegate compatible with an underlying .NET event type.</param>
+        /// <param name="addHandler">Action used to attach the given event handler to the underlying .NET event.</param>
+        /// <param name="removeHandler">Action used to detach the given event handler to the underlying .NET event.</param>
+        /// <param name="maxBufferCapacity">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBufferCapacity"/>) has been overflown.</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> FromEvent<TDelegate, T>(
+            Func<Action<T>, TDelegate> conversion,
+            Action<TDelegate> addHandler,
+            Action<TDelegate> removeHandler,
+            int maxBufferCapacity = 128,
+            OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
+        {
+            return FromGraph(new EventSourceStage<TDelegate,T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// </summary>
+        /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
+        /// <param name="addHandler">Action used to attach the given event handler to the underlying .NET event.</param>
+        /// <param name="removeHandler">Action used to detach the given event handler to the underlying .NET event.</param>
+        /// <param name="maxBufferCapacity">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBufferCapacity"/>) has been overflown.</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> FromEvent<T>(
+            Action<EventHandler<T>> addHandler,
+            Action<EventHandler<T>> removeHandler,
+            int maxBufferCapacity = 128,
+            OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
+        {
+            Func<Action<T>, EventHandler<T>> conversion = onEvent => (sender, e) => onEvent(e);
+            return FromGraph(new EventSourceStage<EventHandler<T>, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
         }
     }
 }
