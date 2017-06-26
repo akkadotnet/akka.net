@@ -1113,9 +1113,11 @@ namespace Akka.IO
             {
                 case SocketAsyncOperation.Receive:
                 case SocketAsyncOperation.ReceiveFrom:
+                case SocketAsyncOperation.ReceiveMessageFrom:
                     return Tcp.SocketReceived.Instance;
                 case SocketAsyncOperation.Send:
                 case SocketAsyncOperation.SendTo:
+                case SocketAsyncOperation.SendPackets:
                     return Tcp.SocketSent.Instance;
                 case SocketAsyncOperation.Accept:
                     return Tcp.SocketAccepted.Instance;

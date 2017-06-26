@@ -222,7 +222,7 @@ namespace Akka.IO
         /// <summary>
         /// Gets sequence of the buffers used underneat.
         /// </summary>
-        public IEnumerable<ByteBuffer> Buffers => _buffers;
+        internal IList<ByteBuffer> Buffers => _buffers;
 
         /// <summary>
         /// Gets a byte stored under a provided <paramref name="index"/>.

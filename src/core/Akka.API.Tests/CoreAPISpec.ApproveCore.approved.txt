@@ -3023,7 +3023,6 @@ namespace Akka.IO
     [System.Diagnostics.DebuggerDisplayAttribute("(Count = {_count}, Buffers = {_buffers})")]
     public sealed class ByteString : System.Collections.Generic.IEnumerable<byte>, System.Collections.IEnumerable, System.IEquatable<Akka.IO.ByteString>
     {
-        public System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> Buffers { get; }
         public int Count { get; }
         public static Akka.IO.ByteString Empty { get; }
         public bool IsCompact { get; }

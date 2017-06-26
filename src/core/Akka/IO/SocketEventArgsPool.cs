@@ -53,15 +53,23 @@ namespace Akka.IO
         {
             e.UserToken = null;
             e.AcceptSocket = null;
-            e.SetBuffer(null, 0, 0);
-            if (_pool.Count < 2048) // arbitrary taken max amount of free SAEA stored
+
+            try
             {
-                _pool.Push(e);
+                e.SetBuffer(null, 0, 0);
+                if (_pool.Count < 2048) // arbitrary taken max amount of free SAEA stored
+                {
+                    _pool.Push(e);
+                }
+                else
+                {
+                    e.Dispose();
+                    active--;
+                }
             }
-            else
+            catch (InvalidOperationException)
             {
-                e.Dispose();
-                active--;
+                // it can be that for some reason socket is in use and haven't closed yet
             }
         }
 

@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.IO
                 var expectedChunk = nextChunk();
                 for(int i=0; i<10; ++i)
                 {
-                    c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(expectedChunk);
+                    c.ExpectNext().ToString().Should().Be(expectedChunk);
                     expectedChunk = nextChunk();
                 }
                 c.ExpectComplete();

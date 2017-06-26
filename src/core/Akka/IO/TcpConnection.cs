@@ -51,7 +51,7 @@ namespace Akka.IO
             /// Marks that connection has invoked <see cref="Socket.ReceiveAsync"/> and that 
             /// <see cref="TcpConnection.ReceiveArgs"/> are currently trying to receive data.
             /// </summary>
-            Receiving         = 1,
+            Receiving = 1,
 
             /// <summary>
             /// Marks that connection has invoked <see cref="Socket.SendAsync"/> and that 
@@ -66,12 +66,12 @@ namespace Akka.IO
             /// <summary>
             /// Marks that current connection has suspended reading.
             /// </summary>
-            ReadingSuspended  = 1 << 2,
+            ReadingSuspended = 1 << 2,
 
             /// <summary>
             /// Marks that current connection has suspended writing.
             /// </summary>
-            WritingSuspended  = 1 << 3,
+            WritingSuspended = 1 << 3,
 
             /// <summary>
             /// Marks that current connection has been requested for shutdown. It may not occur immediatelly,
@@ -114,7 +114,7 @@ namespace Akka.IO
         private bool IsWritePending
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return !HasStatus(ConnectionStatus.Sending) && !ReferenceEquals(EmptyPendingWrite.Instance, pendingWrite) ; }
+            get { return !HasStatus(ConnectionStatus.Sending) && !ReferenceEquals(EmptyPendingWrite.Instance, pendingWrite); }
         }
 
         protected void SignDeathPact(IActorRef actor)
@@ -467,7 +467,7 @@ namespace Akka.IO
         private void HandleClose(ConnectionInfo info, IActorRef closeCommander, ConnectionClosed closedEvent)
         {
             SetStatus(ConnectionStatus.ShutdownRequested);
-            
+
             if (closedEvent is Aborted)
             {
                 if (traceLogging) Log.Debug("Got Abort command. RESETing connection.");
@@ -559,6 +559,7 @@ namespace Akka.IO
             {
                 var buffer = new ByteBuffer(ReceiveArgs.Buffer, ReceiveArgs.Offset, ReceiveArgs.Count);
                 Tcp.SocketEventArgsPool.Release(ReceiveArgs);
+                //TODO: there is potential risk, that socket was working while released. In that case releasing buffer may not be safe.
                 Tcp.BufferPool.Release(buffer);
                 ReceiveArgs = null;
             }
@@ -613,8 +614,8 @@ namespace Akka.IO
         private bool HasStatus(ConnectionStatus connectionStatus)
         {
             // don't use Enum.HasFlag - it's using reflection underneat
-            var s = (int) connectionStatus;
-            return ((int) status & s) == s;
+            var s = (int)connectionStatus;
+            return ((int)status & s) == s;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -693,7 +694,7 @@ namespace Akka.IO
 
         private PendingWrite CreatePendingBufferWrite(IActorRef commander, ByteString data, Tcp.Event ack, WriteCommand tail)
         {
-            return new PendingBufferWrite(this, SendArgs, Self, commander, data.Buffers.GetEnumerator(), ack, tail);
+            return new PendingBufferWrite(this, SendArgs, Self, commander, data, ack, tail);
         }
 
         //TODO: Port File IO - currently .NET Core doesn't support TransmitFile API
@@ -807,43 +808,50 @@ namespace Akka.IO
         {
             private readonly TcpConnection connection;
             private readonly IActorRef self;
-            private readonly IEnumerator<ByteBuffer> remainingData;
+            private readonly ByteString data;
             private readonly WriteCommand tail;
             private readonly SocketAsyncEventArgs sendArgs;
-            private bool hasData;
-            
+
             public PendingBufferWrite(
                 TcpConnection connection,
                 SocketAsyncEventArgs sendArgs,
                 IActorRef self,
                 IActorRef commander,
-                IEnumerator<ByteBuffer> remainingData,
+                ByteString data,
                 object ack,
                 WriteCommand tail) : base(commander, ack)
             {
                 this.connection = connection;
                 this.sendArgs = sendArgs;
                 this.self = self;
-                this.remainingData = remainingData;
+                this.data = data;
                 this.tail = tail;
 
                 // start immediatelly as we'll need to cover the case if 
                 // after buffer write request, the remaining enumerator is empty
-                hasData = this.remainingData.MoveNext();
+                //hasData = this.remainingData.MoveNext();
             }
 
             public override PendingWrite DoWrite(ConnectionInfo info)
             {
                 try
                 {
-                    if (hasData)
+                    if (!data.IsEmpty)
                     {
                         connection.SetStatus(ConnectionStatus.Sending);
-                        var buffer = remainingData.Current;
-                        sendArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
 
-                        //TODO: there's probably a better way to do this. We're potentially 
-                        //      sending many byte buffers -> see: _connection.Socket.SendPacketsAsync
+                        if (data.IsCompact)
+                        {
+                            var buffer = data.Buffers[0];
+                            sendArgs.BufferList = null;
+                            sendArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+                        }
+                        else
+                        {
+                            sendArgs.SetBuffer(null, 0, 0);
+                            sendArgs.BufferList = data.Buffers;
+                        }
+
                         if (!connection.Socket.SendAsync(sendArgs))
                             self.Tell(SocketSent.Instance);
 
@@ -851,17 +859,9 @@ namespace Akka.IO
                             connection.Log.Debug("Wrote [{0}] bytes to channel", sendArgs.Count);
                     }
 
-                    // check if there's more data awaiting
-                    if ((hasData = remainingData.MoveNext()) == true)
-                    {
-                        return this;
-                    }
-                    else
-                    {
-                        var ack = Ack == NoAck.Instance ? null : Tuple.Create(Commander, Ack);
-                        connection.SetPendingAcknowledgement(ack);
-                        return connection.CreatePendingWrite(Commander, tail, info);
-                    }
+                    var ack = Ack == NoAck.Instance ? null : Tuple.Create(Commander, Ack);
+                    connection.SetPendingAcknowledgement(ack);
+                    return connection.CreatePendingWrite(Commander, tail, info);
                 }
                 catch (SocketException e)
                 {
