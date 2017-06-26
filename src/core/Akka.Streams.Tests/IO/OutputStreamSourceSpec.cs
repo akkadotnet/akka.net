@@ -329,7 +329,7 @@ namespace Akka.Streams.Tests.IO
 
             Task.Run(() => outputStream.Close());
 
-            // here is the race, has the elements reached the stage buffer yet?
+            // here is the race, has the elements reached the stage buffer yet
             Thread.Sleep(500);
             probe.Request(bufferSize - 1);
             probe.ExpectNextN(bufferSize - 1);

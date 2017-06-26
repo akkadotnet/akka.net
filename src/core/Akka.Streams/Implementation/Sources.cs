@@ -778,7 +778,7 @@ namespace Akka.Streams.Implementation
 
 
             public override void OnPull()
-            {
+            {   
                 var source = _stage._sourceFactory();
                 var subSink = new SubSinkInlet<TOut>(this, "LazySource");
                 subSink.Pull();
@@ -799,10 +799,12 @@ namespace Akka.Streams.Implementation
                 }
                 catch (Exception e)
                 {
-                    _completion.SetException(e);
-                }
-            }
-
+                    subSink.Cancel();
+                    FailStage(e);
+                    _completion.TrySetException(e);
+                 }
+             }   
+             
             public override void PostStop() => _completion.TrySetException(
                 new Exception("LazySource stopped without completing the materialized task"));
         }
@@ -959,8 +961,7 @@ namespace Akka.Streams.Implementation
                             // do nothing
                         };
                     case OverflowStrategy.DropBuffer:
-                        return message =>
-                        {
+                        return message =>                        {
                             _buffer.Clear();
                             Enqueue(message);
                         };
@@ -1010,4 +1011,5 @@ namespace Akka.Streams.Implementation
         public override SourceShape<TEventArgs> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
+  
 }

@@ -265,7 +265,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamAdapter : Stream
     {
-        #region not supported 
+#region not supported 
 
         /// <summary>
         /// TBD
@@ -317,7 +317,7 @@ namespace Akka.Streams.Implementation.IO
             get => throw new NotSupportedException("This stream can only read");
             set => throw new NotSupportedException("This stream can only read");
         }
-
+        
         #endregion
         
         private static readonly Exception SubscriberClosedException =
