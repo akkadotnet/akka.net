@@ -160,14 +160,7 @@ namespace Akka.Routing
             if (RouterConfig is Pool)
             {
                 var pool = (Pool)RouterConfig;
-                // must not use pool.GetNrOfInstances(system) for old (not re-compiled) custom routers
-                // for binary backwards compatibility reasons
-                var deprecatedNrOfInstances = pool.NrOfInstances;
-
-                var nrOfRoutees = deprecatedNrOfInstances < 0
-                    ? pool.GetNrOfInstances(System)
-                    : deprecatedNrOfInstances;
-
+                var nrOfRoutees = pool.GetNrOfInstances(System);
                 if (nrOfRoutees > 0)
                     AddRoutees(Vector.Fill<Routee>(nrOfRoutees)(() => pool.NewRoutee(RouteeProps, this)));
             }
