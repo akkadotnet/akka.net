@@ -466,7 +466,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
-                ExpectMsg(msg, TimeSpan.FromSeconds(1));
+                ExpectMsg(msg, TimeSpan.FromSeconds(5));
             }, oldest);
 
             RunOn(() =>
