@@ -1,5 +1,6 @@
 ﻿#I @"tools/FAKE/tools"
 #r "FakeLib.dll"
+#load "./buildIncremental.fsx"
 
 open System
 open System.IO
@@ -8,6 +9,7 @@ open System.Text
 open Fake
 open Fake.DotNetCli
 open Fake.DocFxHelper
+open Fake.Git
 
 // Variables
 let configuration = "Release"
@@ -81,21 +83,19 @@ module internal ResultHandling =
         buildErrorMessage
         >> Option.iter (failBuildWithMessage errorLevel)
 
-Target "RunTests" (fun _ ->
+open BuildIncremental.IncrementalTests
+
+Target "RunTests" (fun _ ->    
     let projects =
-        match isWindows with
-        // Windows
-        | true -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-        // Linux/Mono
-        | _ -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/Akka.API.Tests.csproj"
-     
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> getIncrementalUnitTests()
+        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
+                            getIncrementalUnitTests() |> Seq.iter log
+                            getAllUnitTestProjects()
+        | _ -> log "All test projects will be run..."
+               getAllUnitTestProjects()
+    
+    projects |> Seq.iter log
     let runSingleProject project =
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
@@ -110,11 +110,15 @@ Target "RunTests" (fun _ ->
 
 Target "MultiNodeTests" (fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
-    let multiNodeTestAssemblies = !! "src/**/bin/Release/**/Akka.Remote.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.DistributedData.Tests.MultiNode.dll"
+
+    let multiNodeTestAssemblies = 
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> getIncrementalMNTRTests()
+        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
+                            getIncrementalMNTRTests() |> Seq.iter log
+                            getAllMntrTestAssemblies()
+        | _ -> log "All test projects will be run"
+               getAllMntrTestAssemblies()
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -140,14 +144,17 @@ Target "MultiNodeTests" (fun _ ->
 
 Target "NBench" <| fun _ ->
     CleanDir outputPerfTests
-    // .NET Framework
-    let testSearchPath =
-        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
-        sprintf "src/**/bin/Release/**/*%s*.Tests.Performance.dll" assemblyFilter
 
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
-    let nbenchTestAssemblies = !! testSearchPath
     printfn "Using NBench.Runner: %s" nbenchTestPath
+
+    let nbenchTestAssemblies = 
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> getIncrementalPerfTests()
+        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
+                            getIncrementalPerfTests() |> Seq.iter log
+                            getAllPerfTestAssemblies()
+        | _ -> getAllPerfTestAssemblies()
 
     let runNBench assembly =
         let spec = getBuildParam "spec"
@@ -172,7 +179,7 @@ Target "NBench" <| fun _ ->
             info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
         if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
     
-    nbenchTestAssemblies |> Seq.iter (runNBench)
+    nbenchTestAssemblies |> Seq.iter runNBench
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
