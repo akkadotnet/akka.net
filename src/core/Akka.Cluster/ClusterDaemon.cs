@@ -2240,8 +2240,7 @@ namespace Akka.Cluster
                 // handle changes
 
                 // replace changed members
-                var newMembers = changedMembers
-                    .Union(localMembers)
+                var newMembers = Member.PickNextTransition(changedMembers, localMembers)
                     .Except(removedUnreachable)
                     .Where(x => !removedExitingConfirmed.Contains(x.UniqueAddress))
                     .ToImmutableSortedSet();
