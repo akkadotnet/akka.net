@@ -141,18 +141,25 @@ namespace Akka.Cluster.Tests
             {
                 var members = actual.Members;
 
-                var mergedMembers = Member.PickHighestPriority(members, model.AllMembers.Values).ToImmutableSortedSet();
+                var mergedMembers = Member.PickNextTransition(members, model.AllMembers.Values).ToImmutableSortedSet();
 
                 actual.Members = mergedMembers;
                 return
                     mergedMembers.SetEquals(model.AllMembers.Values)
-                        .Label("Merged members should equal predicted members.");
+                        .Label("Merged members should equal predicted members.")
+                        .And(mergedMembers.Single(x => x.Address.Equals(TargetedMember)).Status.Equals(NewStatus))
+                        .Label($"Expected Member [{TargetedMember}] to have status [{NewStatus}] but was [{mergedMembers.Single(x => x.Address.Equals(TargetedMember)).Status}]");
             }
 
             public override MembershipModel Run(MembershipModel model)
             {
                 var m = model.AllMembers[TargetedMember];
                 return model.UpdateMember(m.Copy(NewStatus));
+            }
+
+            public override string ToString()
+            {
+                return $"{GetType()}(Address = {TargetedMember}, TargetStatus={NewStatus})";
             }
         }
 
@@ -229,7 +236,7 @@ namespace Akka.Cluster.Tests
         public MembershipModel UpdateMember(Member m)
         {
             if (AllMembers.ContainsKey(m.Address))
-                return new MembershipModel(AllMembers.SetItem(m.Address, m));
+                return new MembershipModel(AllMembers.Remove(m.Address).SetItem(m.Address, m));
             return new MembershipModel(AllMembers.Add(m.Address, m));
         }
     }
