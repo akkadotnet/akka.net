@@ -71,7 +71,7 @@ namespace Akka.DistributedData
             });
         }
 
-        protected static int CalculateMajorityWithMinCapacity(int minCapacity, int numberOfNodes)
+        public static int CalculateMajorityWithMinCapacity(int minCapacity, int numberOfNodes)
         {
             if (numberOfNodes <= minCapacity) return numberOfNodes;
             

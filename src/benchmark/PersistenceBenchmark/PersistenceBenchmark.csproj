@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net462</TargetFrameworks>
+    <TargetFrameworks>net452</TargetFrameworks>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
   </PropertyGroup>
@@ -16,7 +16,7 @@
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net462' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <DefineConstants>$(DefineConstants);THREADS</DefineConstants>
   </PropertyGroup>
 

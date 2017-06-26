@@ -33,11 +33,11 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="f">the File to read from</param>
         /// <param name="chunkSize">the size of each read operation, defaults to 8192</param>
+        /// <param name="startPosition">the start position to read from, defaults to 0</param>
         /// <returns>TBD</returns>
-        public static Source<ByteString, Task<IOResult>> FromFile(FileInfo f, int chunkSize = 8192) =>
-            new Source<ByteString, Task<IOResult>>(new FileSource(f, chunkSize, DefaultAttributes.FileSource,
+        public static Source<ByteString, Task<IOResult>> FromFile(FileInfo f, int chunkSize = 8192, long startPosition = 0) =>
+            new Source<ByteString, Task<IOResult>>(new FileSource(f, chunkSize, startPosition, DefaultAttributes.FileSource,
                 new SourceShape<ByteString>(new Outlet<ByteString>("FileSource"))));
-
 
         /// <summary>
         /// Creates a Sink which writes incoming <see cref="ByteString"/> elements to the given file and either overwrites
@@ -49,11 +49,12 @@ namespace Akka.Streams.Dsl
         /// This source is backed by an Actor which will use the dedicated "akka.stream.blocking-io-dispatcher",
         /// unless configured otherwise by using <see cref="ActorAttributes"/>.
         /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="fileMode">TBD</param>
+        /// <param name="f">the file to write to</param>
+        /// <param name="fileMode">the write file mode, defaults to <see cref="FileMode.OpenOrCreate"/></param>
+        /// <param name="startPosition">the start position to write to, defaults to 0</param>
         /// <returns>TBD</returns>
-        public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null) =>
-            new Sink<ByteString, Task<IOResult>>(new FileSink(f, fileMode ?? FileMode.OpenOrCreate, DefaultAttributes.FileSink,
+        public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null, long startPosition = 0) =>
+            new Sink<ByteString, Task<IOResult>>(new FileSink(f, startPosition, fileMode ?? FileMode.OpenOrCreate, DefaultAttributes.FileSink,
                 new SinkShape<ByteString>(new Inlet<ByteString>("FileSink"))));
     }
 }

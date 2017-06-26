@@ -9,8 +9,6 @@ using Akka.Cluster;
 using System;
 using System.Collections.Immutable;
 using System.Numerics;
-using Akka.Actor;
-using Akka.Util;
 
 namespace Akka.DistributedData
 {
@@ -29,11 +27,16 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed class PNCounter : IReplicatedData<PNCounter>, IRemovedNodePruning<PNCounter>, IReplicatedDataSerialization, IEquatable<PNCounter>
+    public sealed partial class PNCounter :
+        IDeltaReplicatedData<PNCounter, PNCounter>,
+        IRemovedNodePruning<PNCounter>,
+        IReplicatedDataSerialization,
+        IEquatable<PNCounter>,
+        IReplicatedDelta
     {
         public static readonly PNCounter Empty = new PNCounter();
 
-        public BigInteger Value => Increments.Value - Decrements.Value;
+        public BigInteger Value => new BigInteger(Increments.Value) - new BigInteger(Decrements.Value);
 
         public GCounter Increments { get; }
 
@@ -51,72 +54,50 @@ namespace Akka.DistributedData
         /// Increment the counter with the delta specified.
         /// If the delta is negative then it will decrement instead of increment.
         /// </summary>
-        public PNCounter Increment(Cluster.Cluster node, long delta = 1) =>
-            Increment(node.SelfUniqueAddress, delta);
+        public PNCounter Increment(Cluster.Cluster node, long delta = 1) => Increment(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Increment the counter with the delta specified.
         /// If the delta is negative then it will decrement instead of increment.
         /// </summary>
-        public PNCounter Increment(UniqueAddress address, long delta = 1) => 
-            Increment(address, new BigInteger(delta));
+        public PNCounter Increment(UniqueAddress address, long delta = 1) => Change(address, delta);
 
         /// <summary>
         /// Decrement the counter with the delta specified.
         /// If the delta is negative then it will increment instead of decrement.
         /// </summary>
-        public PNCounter Decrement(Cluster.Cluster node, long delta = 1) =>
-            Decrement(node.SelfUniqueAddress, delta);
+        public PNCounter Decrement(Cluster.Cluster node, long delta = 1) => Decrement(node.SelfUniqueAddress, delta);
 
         /// <summary>
         /// Decrement the counter with the delta specified.
         /// If the delta is negative then it will increment instead of decrement.
         /// </summary>
-        public PNCounter Decrement(UniqueAddress address, long delta = 1) => 
-            Decrement(address, new BigInteger(delta));
+        public PNCounter Decrement(UniqueAddress address, long delta = 1) => Change(address, -delta);
 
-        /// <summary>
-        /// Increment the counter with the delta specified.
-        /// If the delta is negative then it will decrement instead of increment.
-        /// </summary>
-        public PNCounter Increment(Cluster.Cluster node, BigInteger delta) => Increment(node.SelfUniqueAddress, delta);
-
-        /// <summary>
-        /// Increment the counter with the delta specified.
-        /// If the delta is negative then it will decrement instead of increment.
-        /// </summary>
-        public PNCounter Increment(UniqueAddress address, BigInteger delta) => Change(address, delta);
-
-        /// <summary>
-        /// Decrement the counter with the delta specified.
-        /// If the delta is negative then it will increment instead of decrement.
-        /// </summary>
-        public PNCounter Decrement(Cluster.Cluster node, BigInteger delta) => Decrement(node.SelfUniqueAddress, delta);
-
-        /// <summary>
-        /// Decrement the counter with the delta specified.
-        /// If the delta is negative then it will increment instead of decrement.
-        /// </summary>
-        public PNCounter Decrement(UniqueAddress address, BigInteger delta) => Change(address, -delta);
-
-        private PNCounter Change(UniqueAddress key, BigInteger delta)
+        private PNCounter Change(UniqueAddress key, long delta)
         {
-            if (delta > 0) return new PNCounter(Increments.Increment(key, delta), Decrements);
-            if (delta < 0) return new PNCounter(Increments, Decrements.Increment(key, -delta));
+            if (delta > 0) return new PNCounter(Increments.Increment(key, (ulong)delta), Decrements);
+            if (delta < 0) return new PNCounter(Increments, Decrements.Increment(key, (ulong)(-delta)));
 
             return this;
         }
 
-        public PNCounter Merge(PNCounter other) => 
+        public PNCounter Merge(PNCounter other) =>
             new PNCounter(Increments.Merge(other.Increments), Decrements.Merge(other.Decrements));
 
-        public bool NeedPruningFrom(Cluster.UniqueAddress removedNode) => 
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => Increments.ModifiedByNodes.Union(Decrements.ModifiedByNodes);
+
+        public bool NeedPruningFrom(Cluster.UniqueAddress removedNode) =>
             Increments.NeedPruningFrom(removedNode) || Decrements.NeedPruningFrom(removedNode);
 
-        public PNCounter Prune(Cluster.UniqueAddress removedNode, Cluster.UniqueAddress collapseInto) => 
+        IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
+
+        IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
+
+        public PNCounter Prune(Cluster.UniqueAddress removedNode, Cluster.UniqueAddress collapseInto) =>
             new PNCounter(Increments.Prune(removedNode, collapseInto), Decrements.Prune(removedNode, collapseInto));
 
-        public PNCounter PruningCleanup(Cluster.UniqueAddress removedNode) => 
+        public PNCounter PruningCleanup(Cluster.UniqueAddress removedNode) =>
             new PNCounter(Increments.PruningCleanup(removedNode), Decrements.PruningCleanup(removedNode));
 
         public bool Equals(PNCounter other)
@@ -129,11 +110,33 @@ namespace Akka.DistributedData
 
         public override string ToString() => $"PNCounter({Value})";
 
-        public override bool Equals(object obj) => obj is PNCounter && Equals((PNCounter) obj);
+        public override bool Equals(object obj) => obj is PNCounter && Equals((PNCounter)obj);
 
         public override int GetHashCode() => Increments.GetHashCode() ^ Decrements.GetHashCode();
 
-        public IReplicatedData Merge(IReplicatedData other) => Merge((PNCounter) other);
+        public IReplicatedData Merge(IReplicatedData other) => Merge((PNCounter)other);
+        IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
+
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => Merge((PNCounter)delta);
+        IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
+
+        #region delta
+
+        public PNCounter Delta => new PNCounter(Increments.Delta ?? GCounter.Empty, Decrements.Delta ?? GCounter.Empty);
+
+        public PNCounter MergeDelta(PNCounter delta) => Merge(delta);
+
+        public PNCounter ResetDelta()
+        {
+            if (Increments.Delta == null && Decrements.Delta == null)
+                return this;
+
+            return new PNCounter(Increments.ResetDelta(), Decrements.ResetDelta());
+        }
+
+        #endregion
+
+        IDeltaReplicatedData IReplicatedDelta.Zero => PNCounter.Empty;
     }
 
     public sealed class PNCounterKey : Key<PNCounter>

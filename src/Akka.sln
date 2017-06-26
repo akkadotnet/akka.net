@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.7
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
@@ -37,11 +37,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.NodeTestRunner", "core
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Tests", "core\Akka.Persistence.Tests\Akka.Persistence.Tests.csproj", "{4492004A-A8D0-45B0-BACC-05BA2F38EC55}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TestKit", "core\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj", "{AD9418B6-C452-4169-94FB-D43DE0BFA966}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TCK", "core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj", "{AD9418B6-C452-4169-94FB-D43DE0BFA966}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence", "core\Akka.Persistence\Akka.Persistence.csproj", "{FCA84DEA-C118-424B-9EB8-34375DFEF18A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TestKit.Tests", "core\Akka.Persistence.TestKit.Tests\Akka.Persistence.TestKit.Tests.csproj", "{E6CDDAC1-BD68-4C7B-9E6D-569AC6D50793}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.TCK.Tests", "core\Akka.Persistence.TCK.Tests\Akka.Persistence.TCK.Tests.csproj", "{E6CDDAC1-BD68-4C7B-9E6D-569AC6D50793}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.MultiNodeTestRunner.Shared.Tests", "core\Akka.MultiNodeTestRunner.Shared.Tests\Akka.MultiNodeTestRunner.Shared.Tests.csproj", "{91746A3F-21C6-4614-B0AB-A59310D75C51}"
 EndProject
