@@ -631,7 +631,7 @@ namespace Akka.Cluster.Tools.Singleton
         private State<ClusterSingletonState, IClusterSingletonData> GoToOldest()
         {
             var singleton = Context.Watch(Context.ActorOf(_singletonProps, _settings.SingletonName));
-            Log.Info("Singleton manager starting singleton actor [{0}] ", singleton.Path);
+            Log.Info("Singleton manager started singleton actor [{0}] ", singleton.Path);
             return
                 GoTo(ClusterSingletonState.Oldest).Using(new OldestData(singleton, false));
         }
