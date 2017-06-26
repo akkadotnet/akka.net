@@ -1312,7 +1312,8 @@ namespace Akka.Cluster
             {
                 var ge = message as GossipEnvelope;
                 var receivedType = ReceiveGossip(ge);
-                _log.Debug("Cluster Node [{0}] - Received gossip from [{1}] which was {2}.", _cluster.SelfAddress, ge.From, receivedType);
+                if(_cluster.Settings.VerboseGossipReceivedLogging)
+                    _log.Debug("Cluster Node [{0}] - Received gossip from [{1}] which was {2}.", _cluster.SelfAddress, ge.From, receivedType);
             }
             else if (message is GossipStatus)
             {
