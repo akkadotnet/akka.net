@@ -14,7 +14,6 @@ using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
-    //TODO: Keep an eye on concurrency / immutability
     /// <summary>
     /// Represents the address, current status, and roles of a cluster member node.
     /// </summary>
