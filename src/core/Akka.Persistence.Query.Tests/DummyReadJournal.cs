@@ -15,11 +15,11 @@ namespace Akka.Persistence.Query.Tests
     /// Use for tests only!
     /// Emits infinite stream of strings (representing queried for events).
     /// </summary>
-    public class DummyReadJournal : IAllPersistenceIdsQuery
+    public class DummyReadJournal : IPersistenceIdsQuery
     {
         public static readonly string Identifier = "akka.persistence.query.journal.dummy";
 
-        public Source<string, NotUsed> AllPersistenceIds() => Source.From(Iterate(0)).Select(i => i.ToString());
+        public Source<string, NotUsed> PersistenceIds() => Source.From(Iterate(0)).Select(i => i.ToString());
 
         private IEnumerable<int> Iterate(int start)
         {
