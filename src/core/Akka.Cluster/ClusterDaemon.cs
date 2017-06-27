@@ -1311,7 +1311,9 @@ namespace Akka.Cluster
             if (message is GossipEnvelope)
             {
                 var ge = message as GossipEnvelope;
-                ReceiveGossip(ge);
+                var receivedType = ReceiveGossip(ge);
+                if(_cluster.Settings.VerboseGossipReceivedLogging)
+                    _log.Debug("Cluster Node [{0}] - Received gossip from [{1}] which was {2}.", _cluster.SelfAddress, ge.From, receivedType);
             }
             else if (message is GossipStatus)
             {
@@ -1787,23 +1789,23 @@ namespace Akka.Cluster
         public enum ReceiveGossipType
         {
             /// <summary>
-            /// TBD
+            /// Gossip is ignored because node was not part of cluster, unreachable, etc..
             /// </summary>
             Ignored,
             /// <summary>
-            /// TBD
+            /// Gossip received is older than what we currently have
             /// </summary>
             Older,
             /// <summary>
-            /// TBD
+            /// Gossip received is newer than what we currently have
             /// </summary>
             Newer,
             /// <summary>
-            /// TBD
+            /// Gossip received is same as what we currently have
             /// </summary>
             Same,
             /// <summary>
-            /// TBD
+            /// Gossip received is concurrent with what we haved, and then merged.
             /// </summary>
             Merge
         }

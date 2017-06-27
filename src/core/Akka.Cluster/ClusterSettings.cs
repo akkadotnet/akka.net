@@ -70,6 +70,7 @@ namespace Akka.Cluster
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
 
             VerboseHeartbeatLogging = cc.GetBoolean("debug.verbose-heartbeat-logging");
+            VerboseGossipReceivedLogging = cc.GetBoolean("debug.verbose-receive-gossip-logging");
 
             var downingProviderClassName = cc.GetString("downing-provider-class");
             if (!string.IsNullOrEmpty(downingProviderClassName))
@@ -212,6 +213,11 @@ namespace Akka.Cluster
         /// Determine whether or not to log heartbeat message in verbose mode.
         /// </summary>
         public bool VerboseHeartbeatLogging { get; }
+
+        /// <summary>
+        /// Determines whether or not to log gossip consumption logging in verbose mode
+        /// </summary>
+        public bool VerboseGossipReceivedLogging { get; }
 
         /// <summary>
         /// TBD
