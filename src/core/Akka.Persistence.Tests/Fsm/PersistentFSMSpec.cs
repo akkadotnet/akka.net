@@ -418,7 +418,6 @@ namespace Akka.Persistence.Tests.Fsm
         public void PersistentFSM_must_save_periodical_snapshots_if_enablesnapshotafter()
         {
             var sys2 = ActorSystem.Create("PersistentFsmSpec2", ConfigurationFactory.ParseString(@"
-                akka.persistence.fsm.enable-snapshot-after = on
                 akka.persistence.fsm.snapshot-after = 3
             ").WithFallback(Configuration("PersistentFSMSpec")));
 
