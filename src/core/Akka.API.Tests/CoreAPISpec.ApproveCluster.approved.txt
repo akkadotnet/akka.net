@@ -186,6 +186,7 @@ namespace Akka.Cluster
         public System.TimeSpan SeedNodeTimeout { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
+        public bool VerboseGossipReceivedLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
     }
     public interface IClusterMessage { }
