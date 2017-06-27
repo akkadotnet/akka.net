@@ -14,7 +14,6 @@ using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
-    //TODO: Keep an eye on concurrency / immutability
     /// <summary>
     /// Represents the address, current status, and roles of a cluster member node.
     /// </summary>
@@ -264,11 +263,62 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Combines and sorts two lists of <see cref="Member"/> into a single list ordered by Member's valid transitions
+        /// </summary>
+        /// <param name="a">The first collection of members.</param>
+        /// <param name="b">The second collection of members.</param>
+        /// <returns>An immutable hash set containing the members with the next logical transition.</returns>
+        public static ImmutableSortedSet<Member> PickNextTransition(IEnumerable<Member> a, IEnumerable<Member> b)
+        {
+            // group all members by Address => Seq[Member]
+            var groupedByAddress = (a.Concat(b)).GroupBy(x => x.UniqueAddress);
+
+            var acc = new HashSet<Member>();
+
+            foreach (var g in groupedByAddress)
+            {
+                if (g.Count() == 2) acc.Add(PickNextTransition(g.First(), g.Skip(1).First()));
+                else
+                {
+                    var m = g.First();
+                    acc.Add(m);
+                }
+            }
+
+            return acc.ToImmutableSortedSet();
+        }
+
+        /// <summary>
+        /// Compares two copies OF THE SAME MEMBER and returns whichever one is a valid transition of the other.
+        /// </summary>
+        /// <param name="a">First member instance.</param>
+        /// <param name="b">Second member instance.</param>
+        /// <returns>If a and b are different members, this method will return <c>null</c>. 
+        /// Otherwise, will return a or b depending on which one is a valid transition of the other.
+        /// If neither are a valid transition, we return <c>null</c></returns>
+        public static Member PickNextTransition(Member a, Member b)
+        {
+            if (a == null || b == null || !a.Equals(b))
+                return null;
+
+            // if the member statuses are equal, then it doesn't matter which one we return
+            if (a.Status.Equals(b.Status))
+                return a;
+
+            if (Member.AllowedTransitions[a.Status].Contains(b.Status))
+                return b;
+            if(Member.AllowedTransitions[b.Status].Contains(a.Status))
+                return a;
+
+            return null; // illegal transition
+        }
+
+        /// <summary>
         /// Combines and sorts two lists of <see cref="Member"/> into a single list ordered by highest prioirity
         /// </summary>
-        /// <param name="a">TBD</param>
-        /// <param name="b">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="a">The first collection of members.</param>
+        /// <param name="b">The second collection of members.</param>
+        /// <returns>An immutable hash set containing the members with the highest priority.</returns>
         public static ImmutableHashSet<Member> PickHighestPriority(IEnumerable<Member> a, IEnumerable<Member> b)
         {
             // group all members by Address => Seq[Member]
@@ -291,9 +341,9 @@ namespace Akka.Cluster
         /// <summary>
         /// Picks the Member with the highest "priority" MemberStatus.
         /// </summary>
-        /// <param name="m1">TBD</param>
-        /// <param name="m2">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="m1">The first member to compare.</param>
+        /// <param name="m2">The second member to compare.</param>
+        /// <returns>The higher priority of the two members.</returns>
         public static Member HighestPriorityOf(Member m1, Member m2)
         {
             if (m1.Status.Equals(m2.Status))

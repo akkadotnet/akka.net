@@ -99,7 +99,7 @@ akka.cluster.publish-stats-interval = 25 s")
                         EnterBarrier("leader-left");
 
                         // verify that the LEADER is EXITING
-                        exitingLatch.Ready(TestLatch.DefaultTimeout);
+                        exitingLatch.Ready(TestKitSettings.DefaultTimeout);
 
                         EnterBarrier("leader-shutdown");
                         MarkNodeAsUnavailable(oldLeaderAddress);
