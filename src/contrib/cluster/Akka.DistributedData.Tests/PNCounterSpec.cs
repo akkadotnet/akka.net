@@ -24,7 +24,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounter_should_be_able_to_increment_each_nodes_record_by_one()
+        public void PNCounter_must_be_able_to_increment_each_nodes_record_by_one()
         {
             var c1 = new PNCounter();
 
@@ -35,12 +35,12 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Increment(_address2);
             var c6 = c5.Increment(_address2);
 
-            Assert.Equal(2, c6.Increments.State[_address1]);
-            Assert.Equal(3, c6.Increments.State[_address2]);
+            Assert.Equal(2UL, c6.Increments.State[_address1]);
+            Assert.Equal(3UL, c6.Increments.State[_address2]);
         }
 
         [Fact]
-        public void A_PNCounter_should_be_able_to_decrement_each_nodes_record_by_one()
+        public void PNCounter_must_be_able_to_decrement_each_nodes_record_by_one()
         {
             var c1 = new PNCounter();
 
@@ -51,12 +51,12 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Decrement(_address2);
             var c6 = c5.Decrement(_address2);
 
-            Assert.Equal(2, c6.Decrements.State[_address1]);
-            Assert.Equal(3, c6.Decrements.State[_address2]);
+            Assert.Equal(2UL, c6.Decrements.State[_address1]);
+            Assert.Equal(3UL, c6.Decrements.State[_address2]);
         }
 
         [Fact]
-        public void A_PNCounter_should_be_able_to_increment_each_nodes_record_by_arbitrary_delta()
+        public void PNCounter_must_be_able_to_increment_each_nodes_record_by_arbitrary_delta()
         {
             var c1 = new PNCounter();
 
@@ -66,12 +66,12 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Increment(_address2, 7);
             var c6 = c5.Increment(_address2);
 
-            Assert.Equal(7, c6.Increments.State[_address1]);
-            Assert.Equal(10, c6.Increments.State[_address2]);
+            Assert.Equal(7UL, c6.Increments.State[_address1]);
+            Assert.Equal(10UL, c6.Increments.State[_address2]);
         }
 
         [Fact]
-        public void A_PNCounter_should_be_able_to_decrement_each_nodes_record_by_arbitrary_delta()
+        public void PNCounter_must_be_able_to_decrement_each_nodes_record_by_arbitrary_delta()
         {
             var c1 = new PNCounter();
 
@@ -81,12 +81,12 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Decrement(_address2, 7);
             var c6 = c5.Decrement(_address2);
 
-            Assert.Equal(7, c6.Decrements.State[_address1]);
-            Assert.Equal(10, c6.Decrements.State[_address2]);
+            Assert.Equal(7UL, c6.Decrements.State[_address1]);
+            Assert.Equal(10UL, c6.Decrements.State[_address2]);
         }
 
         [Fact]
-        public void A_PNCounter_should_be_able_to_increment_and_decrement_each_nodes_record_by_arbitrary_delta()
+        public void PNCounter_must_be_able_to_increment_and_decrement_each_nodes_record_by_arbitrary_delta()
         {
             var c1 = new PNCounter();
 
@@ -101,7 +101,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounter_should_be_able_to_summarize_the_history_to_the_correct_aggregated_value_of_increments_and_decrements()
+        public void PNCounter_must_be_able_to_summarize_the_history_to_the_correct_aggregated_value_of_increments_and_decrements()
         {
             var c1 = new PNCounter();
 
@@ -118,7 +118,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void A_PNCounter_should_be_able_to_have_its_history_correctly_merged_with_another_PNCounter()
+        public void PNCounter_must_be_able_to_have_its_history_correctly_merged_with_another_PNCounter()
         {
             var c11 = new PNCounter();
             var c12 = c11.Increment(_address1, 3);
@@ -145,18 +145,18 @@ namespace Akka.DistributedData.Tests
             Assert.Equal(1, (long)c26.Value);
 
             var merged1 = c16.Merge(c26);
-            Assert.Equal(9, merged1.Increments.Value);
-            Assert.Equal(5, merged1.Decrements.Value);
-            Assert.Equal(4, merged1.Value);
+            Assert.Equal(9UL, merged1.Increments.Value);
+            Assert.Equal(5UL, merged1.Decrements.Value);
+            Assert.Equal(4UL, merged1.Value);
 
             var merged2 = c26.Merge(c16);
-            Assert.Equal(9, merged2.Increments.Value);
-            Assert.Equal(5, merged2.Decrements.Value);
-            Assert.Equal(4, merged2.Value);
+            Assert.Equal(9UL, merged2.Increments.Value);
+            Assert.Equal(5UL, merged2.Decrements.Value);
+            Assert.Equal(4UL, merged2.Value);
         }
 
         [Fact]
-        public void A_PNCounter_should_have_support_for_pruning()
+        public void PNCounter_must_have_support_for_pruning()
         {
             var c1 = new PNCounter();
             var c2 = c1.Increment(_address1);

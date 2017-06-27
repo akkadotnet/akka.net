@@ -24,23 +24,28 @@ namespace Akka.Streams.Implementation.IO
     {
         private readonly FileInfo _f;
         private readonly int _chunkSize;
+        private readonly long _startPosition;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="f">TBD</param>
         /// <param name="chunkSize">TBD</param>
+        /// <param name="startPosition">TBD</param>
         /// <param name="attributes">TBD</param>
         /// <param name="shape">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
-        public FileSource(FileInfo f, int chunkSize, Attributes attributes, SourceShape<ByteString> shape) : base(shape)
+        public FileSource(FileInfo f, int chunkSize, long startPosition, Attributes attributes, SourceShape<ByteString> shape) : base(shape)
         {
             if(chunkSize <= 0)
-                throw new ArgumentException("chunkSize must be greater than 0");
+                throw new ArgumentException($"chunkSize must be > 0 (was {chunkSize})", nameof(chunkSize));
+            if(startPosition < 0)
+                throw new ArgumentException($"startPosition must be >= 0 (was {startPosition})", nameof(startPosition));
 
             _f = f;
             _chunkSize = chunkSize;
+            _startPosition = startPosition;
             Attributes = attributes;
 
             Label = $"FileSource({f}, {chunkSize})";
@@ -62,7 +67,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="attributes">TBD</param>
         /// <returns>TBD</returns>
         public override IModule WithAttributes(Attributes attributes)
-            => new FileSource(_f, _chunkSize, attributes, AmendShape(attributes));
+            => new FileSource(_f, _chunkSize, _startPosition, attributes, AmendShape(attributes));
 
         /// <summary>
         /// TBD
@@ -70,7 +75,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
         protected override SourceModule<ByteString, Task<IOResult>> NewInstance(SourceShape<ByteString> shape)
-            => new FileSource(_f, _chunkSize, Attributes, shape);
+            => new FileSource(_f, _chunkSize, _startPosition, Attributes, shape);
 
         /// <summary>
         /// TBD
@@ -85,7 +90,7 @@ namespace Akka.Streams.Implementation.IO
             var settings = materializer.EffectiveSettings(context.EffectiveAttributes);
 
             var ioResultPromise = new TaskCompletionSource<IOResult>();
-            var props = FilePublisher.Props(_f, ioResultPromise, _chunkSize, settings.InitialInputBufferSize, settings.MaxInputBufferSize);
+            var props = FilePublisher.Props(_f, ioResultPromise, _chunkSize, _startPosition, settings.InitialInputBufferSize, settings.MaxInputBufferSize);
             var dispatcher = context.EffectiveAttributes.GetAttribute(DefaultAttributes.IODispatcher.GetAttribute<ActorAttributes.Dispatcher>());
             var actorRef = materializer.ActorOf(context, props.WithDispatcher(dispatcher.Name));
 

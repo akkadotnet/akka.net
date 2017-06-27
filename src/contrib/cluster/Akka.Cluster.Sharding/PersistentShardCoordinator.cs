@@ -28,7 +28,7 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the event sourced PersistentShardCoordinator.
         /// </summary>
         [Serializable]
-        protected internal sealed class State
+        protected internal sealed class State: IClusterShardingSerializable
         {
             /// <summary>
             /// TBD

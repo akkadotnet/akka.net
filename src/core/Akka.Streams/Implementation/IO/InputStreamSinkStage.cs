@@ -21,7 +21,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
     {
-        #region internal classes
+#region internal classes
 
         /// <summary>
         /// TBD
@@ -210,7 +210,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-        #endregion
+#endregion
 
         private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
@@ -265,7 +265,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class InputStreamAdapter : Stream
     {
-        #region not supported 
+#region not supported 
 
         /// <summary>
         /// TBD
@@ -317,9 +317,9 @@ namespace Akka.Streams.Implementation.IO
             get => throw new NotSupportedException("This stream can only read");
             set => throw new NotSupportedException("This stream can only read");
         }
-
+        
         #endregion
-
+        
         private static readonly Exception SubscriberClosedException =
             new IOException("Reactive stream is terminated, no reads are possible");
 
@@ -376,7 +376,7 @@ namespace Akka.Streams.Implementation.IO
         public sealed override int ReadByte()
         {
             var a = new byte[1];
-            return Read(a, 0, 1) != 0 ? a[0] : -1;
+            return Read(a, 0, 1) != 0 ? a[0] & 0xff : -1;
         }
 
         /// <summary>

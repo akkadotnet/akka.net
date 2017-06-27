@@ -32,18 +32,18 @@ namespace Akka.Persistence.TCK.Query
         [Fact]
         public void ReadJournal_should_implement_IAllPersistenceIdsQuery()
         {
-            Assert.IsAssignableFrom<IAllPersistenceIdsQuery>(ReadJournal);
+            Assert.IsAssignableFrom<IPersistenceIdsQuery>(ReadJournal);
         }
 
         [Fact]
         public virtual void ReadJournal_AllPersistenceIds_should_find_new_events()
         {
-            var queries = ReadJournal.AsInstanceOf<IAllPersistenceIdsQuery>();
+            var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
             Setup("e", 1);
             Setup("f", 1);
 
-            var source = queries.AllPersistenceIds();
+            var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
 
             probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(5).ExpectNextUnordered("e", "f"));
@@ -55,12 +55,12 @@ namespace Akka.Persistence.TCK.Query
         [Fact]
         public virtual void ReadJournal_AllPersistenceIds_should_find_new_events_after_demand_request()
         {
-            var queries = ReadJournal.AsInstanceOf<IAllPersistenceIdsQuery>();
+            var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
             Setup("h", 1);
             Setup("i", 1);
 
-            var source = queries.AllPersistenceIds();
+            var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
 
             probe.Within(TimeSpan.FromSeconds(10), () =>
@@ -80,7 +80,7 @@ namespace Akka.Persistence.TCK.Query
         [Fact]
         public virtual void ReadJournal_AllPersistenceIds_should_only_deliver_what_requested_if_there_is_more_in_the_buffer()
         {
-            var queries = ReadJournal.AsInstanceOf<IAllPersistenceIdsQuery>();
+            var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
             Setup("k", 1);
             Setup("l", 1);
@@ -88,7 +88,7 @@ namespace Akka.Persistence.TCK.Query
             Setup("n", 1);
             Setup("o", 1);
 
-            var source = queries.AllPersistenceIds();
+            var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
 
             probe.Within(TimeSpan.FromSeconds(10), () =>
@@ -110,11 +110,11 @@ namespace Akka.Persistence.TCK.Query
         [Fact]
         public virtual void ReadJournal_AllPersistenceIds_should_deliver_persistenceId_only_once_if_there_are_multiple_events()
         {
-            var queries = ReadJournal.AsInstanceOf<IAllPersistenceIdsQuery>();
+            var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
             Setup("p", 1000);
 
-            var source = queries.AllPersistenceIds();
+            var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
 
             probe.Within(TimeSpan.FromSeconds(10), () =>

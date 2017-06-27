@@ -226,14 +226,7 @@ namespace Akka.Streams.Implementation.IO
                 else if (@event.Item1 is Close)
                 {
                     _close = @event.Item2;
-                    if (_dataQueue.Count == 0)
-                    {
-                        _downstreamStatus.Value = Canceled.Instance;
-                        CompleteStage();
-                        UnblockUpsteam();
-                    }
-                    else
-                        SendResponseIfNeeded();
+                    SendResponseIfNeeded();
                 }
             }
 
@@ -249,8 +242,10 @@ namespace Akka.Streams.Implementation.IO
                 if (_close == null)
                     return;
 
+                _downstreamStatus.Value = Canceled.Instance;
                 _close.TrySetResult(NotUsed.Instance);
                 _close = null;
+                CompleteStage();
             }
 
             private void SendResponseIfNeeded()
@@ -260,7 +255,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-        #endregion
+#endregion
 
         private readonly TimeSpan _writeTimeout;
         private readonly Outlet<ByteString> _out = new Outlet<ByteString>("OutputStreamSource.out");
@@ -315,7 +310,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class OutputStreamAdapter : Stream
     {
-        #region not supported 
+#region not supported 
 
         /// <summary>
         /// TBD
@@ -380,7 +375,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-        #endregion
+#endregion
 
         private static readonly Exception PublisherClosedException = new IOException("Reactive stream is terminated, no writes are possible");
         
