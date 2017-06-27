@@ -19,6 +19,7 @@ using Xunit;
 using Akka.Event;
 using Akka.TestKit.TestActors;
 using System.Collections.Immutable;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -207,7 +208,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Sys.ActorSelection(Node(_config.Controller) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
                 var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                Assert.NotNull(sharedStore);
+                sharedStore.Should().NotBeNull();
 
                 MemoryJournalShared.SetStore(sharedStore, Sys);
             }, _config.First, _config.Second);
@@ -234,7 +235,7 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() =>
             {
                 Cluster.Get(Sys).SendCurrentClusterState(TestActor);
-                Assert.Equal(3, ExpectMsg<ClusterEvent.CurrentClusterState>().Members.Count);
+                ExpectMsg<ClusterEvent.CurrentClusterState>().Members.Count.Should().Be(3);
             });
 
             RunOn(() =>
@@ -256,7 +257,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 var probe = CreateTestProbe();
                 _region.Value.Tell(GetCurrentRegions.Instance, probe.Ref);
-                Assert.Equal(0, probe.ExpectMsg<CurrentRegions>().Regions.Count);
+                probe.ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(0);
             });
 
             EnterBarrier("empty sharding");
@@ -293,7 +294,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe = CreateTestProbe();
                     _region.Value.Tell(GetCurrentRegions.Instance, probe.Ref);
                     var regions = probe.ExpectMsg<CurrentRegions>().Regions;
-                    Assert.Equal(2, regions.Count);
+                    regions.Count.Should().Be(2);
 
                     foreach (var region in regions)
                     {
@@ -303,7 +304,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     var states = probe.ReceiveWhile(null, m => (CurrentShardRegionState)m, regions.Count);
                     var allEntityIds = states.SelectMany(i => i.Shards).SelectMany(j => j.EntityIds).ToImmutableHashSet();
-                    Assert.True(allEntityIds.SetEquals(new string[] { "1", "2", "3", "4" }));
+                    allEntityIds.Should().BeEquivalentTo(new string[] { "1", "2", "3", "4" });
                 });
             });
 

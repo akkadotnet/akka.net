@@ -17,6 +17,7 @@ using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
 using Xunit;
 using System.Collections.Immutable;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -155,7 +156,7 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     AwaitAssert(() =>
                     {
-                        Assert.True(Cluster.State.Members.Any(i => i.UniqueAddress == Cluster.SelfUniqueAddress && i.Status == MemberStatus.Up));
+                        Cluster.State.Members.Should().Contain(i => i.UniqueAddress == Cluster.SelfUniqueAddress && i.Status == MemberStatus.Up);
                     });
                 });
             }, from);
@@ -193,7 +194,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
             var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-            Assert.NotNull(sharedStore);
+            sharedStore.Should().NotBeNull();
 
             MemoryJournalShared.SetStore(sharedStore, Sys);
 
@@ -274,7 +275,7 @@ namespace Akka.Cluster.Sharding.Tests
                             var r = kv.Value;
                             region.Tell(new Ping(id), probe.Ref);
                             if (r.Path.Address.Equals(firstAddress))
-                                Assert.NotEqual(r, probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1)));
+                                probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1)).Should().NotBe(r);
                             else
                                 probe.ExpectMsg(r, TimeSpan.FromSeconds(1)); // should not move
                         }

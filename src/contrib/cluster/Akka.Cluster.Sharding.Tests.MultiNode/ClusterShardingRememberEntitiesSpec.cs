@@ -19,6 +19,7 @@ using Xunit;
 using Akka.Event;
 using Akka.TestKit.TestActors;
 using System.Collections.Immutable;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -169,7 +170,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
                 var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                Assert.NotNull(sharedStore);
+                sharedStore.Should().NotBeNull();
 
                 MemoryJournalShared.SetStore(sharedStore, Sys);
             }, _config.First, _config.Second, _config.Third);
@@ -211,8 +212,8 @@ namespace Akka.Cluster.Sharding.Tests
                     {
                         AwaitAssert(() =>
                         {
-                            Assert.Equal(2, Cluster.State.Members.Count);
-                            Assert.True(Cluster.State.Members.All(i => i.Status == MemberStatus.Up));
+                            Cluster.State.Members.Count.Should().Be(2);
+                            Cluster.State.Members.Should().OnlyContain(i => i.Status == MemberStatus.Up);
                         });
                     });
                 }, _config.Second, _config.Third);
@@ -246,7 +247,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectTerminated(_region.Value);
                     AwaitAssert(() =>
                     {
-                        Assert.True(Cluster.Get(Sys).IsTerminated);
+                        Cluster.Get(Sys).IsTerminated.Should().BeTrue();
                     });
                     // no nodes left of the original cluster, start a new cluster
 
@@ -258,7 +259,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Persistence.Persistence.Instance.Apply(sys2);
                         sys2.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null), probe2.Ref);
                         var sharedStore = probe2.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                        Assert.NotNull(sharedStore);
+                        sharedStore.Should().NotBeNull();
 
                         MemoryJournalShared.SetStore(sharedStore, sys2);
                     }

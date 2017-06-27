@@ -19,6 +19,7 @@ using Xunit;
 using Akka.Event;
 using Akka.TestKit.TestActors;
 using System.Collections.Immutable;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -211,7 +212,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Sys.ActorSelection(Node(_config.Controller) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
                 var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                Assert.NotNull(sharedStore);
+                sharedStore.Should().NotBeNull();
 
                 MemoryJournalShared.SetStore(sharedStore, Sys);
             }, _config.First, _config.Second, _config.Third);
@@ -240,7 +241,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
-                    Assert.Equal(4, Cluster.Get(Sys).State.Members.Count(i => i.Status == MemberStatus.Up));
+                    Cluster.Get(Sys).State.Members.Count(i => i.Status == MemberStatus.Up).Should().Be(4);
                 });
             });
 
@@ -266,9 +267,9 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe = CreateTestProbe();
                     _region.Value.Tell(new GetClusterShardingStats(Dilated(TimeSpan.FromSeconds(10))), probe.Ref);
                     var shardStats = probe.ExpectMsg<ClusterShardingStats>();
-                    Assert.Equal(3, shardStats.Regions.Count);
-                    Assert.Equal(0, shardStats.Regions.Values.Sum(i => i.Stats.Count));
-                    Assert.True(shardStats.Regions.Keys.All(i => i.HasGlobalScope));
+                    shardStats.Regions.Count.Should().Be(3);
+                    shardStats.Regions.Values.Sum(i => i.Stats.Count).Should().Be(0);
+                    shardStats.Regions.Keys.Should().OnlyContain(i => i.HasGlobalScope);
                 });
             });
 
@@ -309,9 +310,9 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe = CreateTestProbe();
                     _region.Value.Tell(new GetClusterShardingStats(Dilated(TimeSpan.FromSeconds(10))), probe.Ref);
                     var regions = probe.ExpectMsg<ClusterShardingStats>().Regions;
-                    Assert.Equal(3, regions.Count);
-                    Assert.Equal(4, regions.Values.SelectMany(i => i.Stats.Values).Sum());
-                    Assert.True(regions.Keys.All(i => i.HasGlobalScope));
+                    regions.Count.Should().Be(3);
+                    regions.Values.SelectMany(i => i.Stats.Values).Sum().Should().Be(4);
+                    regions.Keys.Should().OnlyContain(i => i.HasGlobalScope);
                 });
             });
 
@@ -331,7 +332,7 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     AwaitAssert(() =>
                     {
-                        Assert.Equal(3, Cluster.Get(Sys).State.Members.Count);
+                        Cluster.Get(Sys).State.Members.Count.Should().Be(3);
                     });
                 });
             }, _config.First, _config.Second);
@@ -368,8 +369,8 @@ namespace Akka.Cluster.Sharding.Tests
                         var probe = CreateTestProbe();
                         _region.Value.Tell(new GetClusterShardingStats(Dilated(TimeSpan.FromSeconds(20))), probe.Ref);
                         var regions = probe.ExpectMsg<ClusterShardingStats>().Regions;
-                        Assert.Equal(2, regions.Count);
-                        Assert.Equal(4, regions.Values.SelectMany(i => i.Stats.Values).Sum());
+                        regions.Count.Should().Be(2);
+                        regions.Values.SelectMany(i => i.Stats.Values).Sum().Should().Be(4);
                     });
                 });
             }, _config.Controller);

@@ -16,6 +16,7 @@ using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
 using Xunit;
 using System.Collections.Immutable;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -151,7 +152,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
                 var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                Assert.NotNull(sharedStore);
+                sharedStore.Should().NotBeNull();
 
                 MemoryJournalShared.SetStore(sharedStore, Sys);
             }, _config.First, _config.Second);
@@ -187,7 +188,7 @@ namespace Akka.Cluster.Sharding.Tests
                         })
                         .ToImmutableHashSet();
 
-                    Assert.Equal(2, regionAddresses.Count);
+                    regionAddresses.Count.Should().Be(2);
                 });
                 EnterBarrier("after-2");
             });
@@ -211,7 +212,7 @@ namespace Akka.Cluster.Sharding.Tests
                         {
                             _region.Value.Tell(i, probe.Ref);
                             probe.ExpectMsg(i, TimeSpan.FromSeconds(1));
-                            Assert.Equal(_region.Value.Path / i.ToString() / i.ToString(), probe.LastSender.Path);
+                            probe.LastSender.Path.Should().Be(_region.Value.Path / i.ToString() / i.ToString());
                         }
                     });
                 }, _config.First);

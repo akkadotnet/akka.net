@@ -20,6 +20,7 @@ using Akka.Event;
 using Akka.TestKit.TestActors;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -259,7 +260,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
                 var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                Assert.NotNull(sharedStore);
+                sharedStore.Should().NotBeNull();
 
                 MemoryJournalShared.SetStore(sharedStore, Sys);
             }, _config.First, _config.Second);
@@ -288,7 +289,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg<UseRegionAck>();
                     _region.Value.Tell(1);
                     ExpectMsg(1);
-                    Assert.Equal(_region.Value.Path / "1" / "1", LastSender.Path);
+                    LastSender.Path.Should().Be(_region.Value.Path / "1" / "1");
                 }, _config.First);
                 EnterBarrier("first-started");
 
@@ -299,11 +300,11 @@ namespace Akka.Cluster.Sharding.Tests
 
                 RunOn(() =>
                 {
-                    Assert.Equal(_region.Value.Path / "2" / "2", LastSender.Path);
+                    LastSender.Path.Should().Be(_region.Value.Path / "2" / "2");
                 }, _config.First);
                 RunOn(() =>
                 {
-                    Assert.Equal(Node(_config.First) / "user" / "sharding" / "Entity" / "2" / "2", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.First) / "user" / "sharding" / "Entity" / "2" / "2");
                 }, _config.Second);
                 EnterBarrier("second-started");
 
@@ -320,12 +321,12 @@ namespace Akka.Cluster.Sharding.Tests
                 ExpectMsg(3);
                 RunOn(() =>
                 {
-                    Assert.Equal(_region.Value.Path / "3" / "3", LastSender.Path);
+                    LastSender.Path.Should().Be(_region.Value.Path / "3" / "3");
                 }, _config.Second);
 
                 RunOn(() =>
                 {
-                    Assert.Equal(Node(_config.Second) / "user" / "sharding" / "Entity" / "3" / "3", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Second) / "user" / "sharding" / "Entity" / "3" / "3");
                 }, _config.First);
 
                 EnterBarrier("after-2");
@@ -347,12 +348,12 @@ namespace Akka.Cluster.Sharding.Tests
                         _region.Value.Tell(2, p.Ref);
                         p.ExpectMsg(2, TimeSpan.FromSeconds(2));
 
-                        Assert.Equal(Node(_config.Second) / "user" / "sharding" / "Entity" / "2" / "2", p.LastSender.Path);
+                        p.LastSender.Path.Should().Be(Node(_config.Second) / "user" / "sharding" / "Entity" / "2" / "2");
                     });
 
                     _region.Value.Tell(1);
                     ExpectMsg(1);
-                    Assert.Equal(_region.Value.Path / "1" / "1", LastSender.Path);
+                    LastSender.Path.Should().Be(_region.Value.Path / "1" / "1");
                 }, _config.First);
                 EnterBarrier("after-2");
             });

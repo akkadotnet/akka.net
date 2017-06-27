@@ -22,6 +22,7 @@ using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -471,7 +472,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Sys.ActorSelection(Node(_config.Controller) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
                 var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                Assert.NotNull(sharedStore);
+                sharedStore.Should().NotBeNull();
 
                 MemoryJournalShared.SetStore(sharedStore, Sys);
             }, _config.First, _config.Second, _config.Third, _config.Fourth, _config.Fifth, _config.Sixth);
@@ -514,7 +515,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         public void ClusterSharding_should_use_second_node()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            Within(TimeSpan.FromSeconds(20), () =>
             {
                 Join(_config.Second, _config.First);
 
@@ -544,15 +545,15 @@ namespace Akka.Cluster.Sharding.Tests
                     r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(2));
                     ExpectMsg(3);
-                    Assert.Equal(Node(_config.Second) / "user" / "counterRegion" / "2" / "2", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Second) / "user" / "counterRegion" / "2" / "2");
 
                     r.Tell(new Counter.Get(11));
                     ExpectMsg(1);
                     // local on first
-                    Assert.Equal(r.Path / "11" / "11", LastSender.Path);
+                    LastSender.Path.Should().Be(r.Path / "11" / "11");
                     r.Tell(new Counter.Get(12));
                     ExpectMsg(1);
-                    Assert.Equal(Node(_config.Second) / "user" / "counterRegion" / "0" / "12", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Second) / "user" / "counterRegion" / "0" / "12");
                 }, _config.First);
                 EnterBarrier("first-update");
 
@@ -561,7 +562,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var r = _region.Value;
                     r.Tell(new Counter.Get(2));
                     ExpectMsg(3);
-                    Assert.Equal(r.Path / "2" / "2", LastSender.Path);
+                    LastSender.Path.Should().Be(r.Path / "2" / "2");
 
                     r.Tell(GetCurrentRegions.Instance);
                     ExpectMsg<CurrentRegions>(x => x.Regions.SetEquals(new[] { Cluster.SelfAddress, Node(_config.First).Address }));
@@ -641,7 +642,7 @@ namespace Akka.Cluster.Sharding.Tests
                             var r = _region.Value;
                             r.Tell(new Counter.Get(2), probe1.Ref);
                             probe1.ExpectMsg(4);
-                            Assert.Equal(r.Path / "2" / "2", probe1.LastSender.Path);
+                            probe1.LastSender.Path.Should().Be(r.Path / "2" / "2");
                         });
                     });
 
@@ -653,7 +654,7 @@ namespace Akka.Cluster.Sharding.Tests
                             var r = _region.Value;
                             r.Tell(new Counter.Get(12), probe2.Ref);
                             probe2.ExpectMsg(1);
-                            Assert.Equal(r.Path / "0" / "12", probe2.LastSender.Path);
+                            probe2.LastSender.Path.Should().Be(r.Path / "0" / "12");
                         });
                     });
                 }, _config.First);
@@ -666,7 +667,6 @@ namespace Akka.Cluster.Sharding.Tests
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 Join(_config.Third, _config.First);
-                Join(_config.Fourth, _config.First);
 
                 RunOn(() =>
                 {
@@ -676,9 +676,11 @@ namespace Akka.Cluster.Sharding.Tests
 
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(10);
-                    Assert.Equal(r.Path / "3" / "3", LastSender.Path);
+                    LastSender.Path.Should().Be(r.Path / "3" / "3");
                 }, _config.Third);
                 EnterBarrier("third-update");
+
+                Join(_config.Fourth, _config.First);
 
                 RunOn(() =>
                 {
@@ -688,7 +690,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(20);
-                    Assert.Equal(r.Path / "4" / "4", LastSender.Path);
+                    LastSender.Path.Should().Be(r.Path / "4" / "4");
                 }, _config.Fourth);
                 EnterBarrier("fourth-update");
 
@@ -698,12 +700,12 @@ namespace Akka.Cluster.Sharding.Tests
                     r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(11);
-                    Assert.Equal(Node(_config.Third) / "user" / "counterRegion" / "3" / "3", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Third) / "user" / "counterRegion" / "3" / "3");
 
                     r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(21);
-                    Assert.Equal(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4");
                 }, _config.First);
                 EnterBarrier("first-update");
 
@@ -712,7 +714,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var r = _region.Value;
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(11);
-                    Assert.Equal(r.Path / "3" / "3", LastSender.Path);
+                    LastSender.Path.Should().Be(r.Path / "3" / "3");
                 }, _config.Third);
 
                 RunOn(() =>
@@ -720,7 +722,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var r = _region.Value;
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(21);
-                    Assert.Equal(r.Path / "4" / "4", LastSender.Path);
+                    LastSender.Path.Should().Be(r.Path / "4" / "4");
                 }, _config.Fourth);
                 EnterBarrier("after-7");
             });
@@ -746,7 +748,7 @@ namespace Akka.Cluster.Sharding.Tests
                         {
                             _region.Value.Tell(new Counter.Get(3), probe3.Ref);
                             probe3.ExpectMsg(11);
-                            Assert.Equal(Node(_config.Third) / "user" / "counterRegion" / "3" / "3", probe3.LastSender.Path);
+                            probe3.LastSender.Path.Should().Be(Node(_config.Third) / "user" / "counterRegion" / "3" / "3");
                         });
                     });
 
@@ -757,7 +759,7 @@ namespace Akka.Cluster.Sharding.Tests
                         {
                             _region.Value.Tell(new Counter.Get(4), probe4.Ref);
                             probe4.ExpectMsg(21);
-                            Assert.Equal(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4", probe4.LastSender.Path);
+                            probe4.LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4");
                         });
                     });
                 }, _config.Fifth);
@@ -800,7 +802,7 @@ namespace Akka.Cluster.Sharding.Tests
                                     count++;
                             }
 
-                            Assert.True(count >= 2);
+                            count.Should().BeGreaterOrEqualTo(2);
                         });
                     });
                 }, _config.Sixth);
@@ -837,7 +839,6 @@ namespace Akka.Cluster.Sharding.Tests
                       settings: ClusterShardingSettings.Create(Sys),
                       idExtractor: Counter.ExtractEntityId,
                       shardResolver: Counter.ExtractShardId);
-                    //#counter-supervisor-start
                 }, _config.Third, _config.Fourth, _config.Fifth, _config.Sixth);
                 EnterBarrier("extension-started");
 
@@ -868,7 +869,7 @@ namespace Akka.Cluster.Sharding.Tests
                         ClusterSharding.Get(Sys).ShardRegion("Counter").Tell(new Counter.EntityEnvelope(i, Counter.Increment.Instance));
                         ClusterSharding.Get(Sys).ShardRegion("Counter").Tell(new Counter.Get(i));
                         ExpectMsg(1);
-                        Assert.NotEqual(Cluster.SelfAddress, LastSender.Path.Address);
+                        LastSender.Path.Address.Should().NotBe(Cluster.SelfAddress);
                     }
                 }, _config.Sixth);
                 EnterBarrier("after-10");
@@ -890,7 +891,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     var counterRegionViaGet = ClusterSharding.Get(Sys).ShardRegion("ApiTest");
 
-                    Assert.Equal(counterRegionViaGet, counterRegionViaStart);
+                    counterRegionViaStart.Should().Be(counterRegionViaGet);
                 }, _config.First);
                 EnterBarrier("after-11");
             });
@@ -924,13 +925,13 @@ namespace Akka.Cluster.Sharding.Tests
 
                     //Stop the shard cleanly
                     region.Tell(new PersistentShardCoordinator.HandOff("1"));
-                    ExpectMsg<PersistentShardCoordinator.ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10));
+                    ExpectMsg<PersistentShardCoordinator.ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10), "ShardStopped not received");
 
                     var probe = CreateTestProbe();
                     AwaitAssert(() =>
                     {
                         shard.Tell(new Identify(1), probe.Ref);
-                        probe.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1));
+                        probe.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1), "Shard was still around");
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
                     //Get the path to where the shard now resides
@@ -975,7 +976,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         public void PersistentClusterShards_should_permanently_stop_entities_which_passivate()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
                 {
@@ -1001,7 +1002,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     var counter13 = LastSender;
 
-                    Assert.Equal(counter1.Path.Parent, counter13.Path.Parent);
+                    counter13.Path.Parent.Should().Be(counter1.Path.Parent);
 
                     //Send the shard the passivate message from the counter
                     Watch(counter1);
@@ -1015,18 +1016,18 @@ namespace Akka.Cluster.Sharding.Tests
                     {
                         // check counter 1 is dead
                         counter1.Tell(new Identify(1), probe1.Ref);
-                        probe1.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1));
+                        probe1.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1), "Entity 1 was still around");
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
                     // stop shard cleanly
                     region.Tell(new PersistentShardCoordinator.HandOff("1"));
-                    ExpectMsg<PersistentShardCoordinator.ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10));
+                    ExpectMsg<PersistentShardCoordinator.ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10), "ShardStopped not received");
 
                     var probe2 = CreateTestProbe();
                     AwaitAssert(() =>
                     {
                         shard.Tell(new Identify(2), probe2.Ref);
-                        probe2.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(2) && i.Subject == null, TimeSpan.FromSeconds(1));
+                        probe2.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(2) && i.Subject == null, TimeSpan.FromSeconds(1), "Shard was still around");
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
                 }, _config.Third);
@@ -1080,7 +1081,7 @@ namespace Akka.Cluster.Sharding.Tests
                     AwaitAssert(() =>
                     {
                         counter1.Tell(new Identify(1), probe.Ref);
-                        Assert.NotNull(probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject);
+                        probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject.Should().NotBeNull();
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
                 }, _config.Third);
                 EnterBarrier("after-14");
@@ -1107,7 +1108,7 @@ namespace Akka.Cluster.Sharding.Tests
                     _autoMigrateRegion.Value.Tell(new Counter.Get(1));
                     ExpectMsg(2);
 
-                    Assert.Equal(Node(_config.Third) / "user" / "AutoMigrateRememberRegionTestRegion" / "1" / "1", LastSender.Path);
+                    LastSender.Path.Should().Be(Node(_config.Third) / "user" / "AutoMigrateRememberRegionTestRegion" / "1" / "1");
 
                     // kill region 3
                     Sys.ActorSelection(LastSender.Path.Parent.Parent).Tell(PoisonPill.Instance);
@@ -1123,7 +1124,7 @@ namespace Akka.Cluster.Sharding.Tests
                     AwaitAssert(() =>
                     {
                         counter1.Tell(new Identify(1), probe.Ref);
-                        Assert.NotNull(probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject);
+                        probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject.Should().NotBeNull();
                     }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
                     counter1.Tell(new Counter.Get(1));
@@ -1171,7 +1172,7 @@ namespace Akka.Cluster.Sharding.Tests
                                 count++;
                         }
 
-                        Assert.True(count >= 2);
+                        count.Should().BeGreaterOrEqualTo(2);
                     });
                 }, _config.Fifth);
                 EnterBarrier("after-16");

@@ -17,6 +17,7 @@ using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Xunit;
 using Akka.Event;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -163,8 +164,8 @@ namespace Akka.Cluster.Sharding.Tests
 
                 AwaitAssert(() =>
                 {
-                    Assert.True(Cluster.State.Members.Select(i => i.UniqueAddress).Contains(Cluster.SelfUniqueAddress));
-                    Assert.True(Cluster.State.Members.Select(i => i.Status).All(i => i == MemberStatus.Up));
+                    Cluster.State.Members.Select(i => i.UniqueAddress).Should().Contain(Cluster.SelfUniqueAddress);
+                    Cluster.State.Members.Select(i => i.Status).Should().OnlyContain(i => i == MemberStatus.Up);
                 });
             }, from);
             EnterBarrier(from.Name + "-joined");
@@ -202,7 +203,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Sys.ActorSelection(Node(_config.Controller) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
                 var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                Assert.NotNull(sharedStore);
+                sharedStore.Should().NotBeNull();
 
                 MemoryJournalShared.SetStore(sharedStore, Sys);
             }, _config.First, _config.Second);

@@ -19,6 +19,7 @@ using Xunit;
 using Akka.Event;
 using Akka.TestKit.TestActors;
 using System.Collections.Immutable;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -157,7 +158,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
                 var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                Assert.NotNull(sharedStore);
+                sharedStore.Should().NotBeNull();
 
                 MemoryJournalShared.SetStore(sharedStore, Sys);
             }, _config.First, _config.Second, _config.Third);
@@ -196,8 +197,8 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     AwaitAssert(() =>
                     {
-                        Assert.Equal(3, Cluster.State.Members.Count);
-                        Assert.True(Cluster.State.Members.All(i => i.Status == MemberStatus.Up));
+                        Cluster.State.Members.Count.Should().Be(3);
+                        Cluster.State.Members.Should().OnlyContain(i => i.Status == MemberStatus.Up);
                     });
                 });
                 EnterBarrier("all-up");
@@ -233,8 +234,8 @@ namespace Akka.Cluster.Sharding.Tests
                 var secondAddress = Node(_config.Second).Address;
                 var thirdAddress = Node(_config.Third).Address;
 
-                Assert.True(stats.Regions.Keys.ToImmutableHashSet().SetEquals(new Address[] { firstAddress, secondAddress, thirdAddress }));
-                Assert.Equal(1, stats.Regions[firstAddress].Stats.Values.Sum());
+                stats.Regions.Keys.Should().BeEquivalentTo(new Address[] { firstAddress, secondAddress, thirdAddress });
+                stats.Regions[firstAddress].Stats.Values.Sum().Should().Be(1);
                 EnterBarrier("after-2");
             });
         }
