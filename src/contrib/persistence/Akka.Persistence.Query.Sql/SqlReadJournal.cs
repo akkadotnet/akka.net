@@ -15,7 +15,7 @@ using Akka.Streams.Dsl;
 namespace Akka.Persistence.Query.Sql
 {
     public class SqlReadJournal : IReadJournal,
-        IAllPersistenceIdsQuery,
+        IPersistenceIdsQuery,
         ICurrentPersistenceIdsQuery,
         IEventsByPersistenceIdQuery,
         ICurrentEventsByPersistenceIdQuery,
@@ -46,7 +46,7 @@ namespace Akka.Persistence.Query.Sql
 
         /// <summary>
         /// <para>
-        /// <see cref="AllPersistenceIds"/> is used for retrieving all `persistenceIds` of all
+        /// <see cref="PersistenceIds"/> is used for retrieving all `persistenceIds` of all
         /// persistent actors.
         /// </para>
         /// The returned event stream is unordered and you can expect different order for multiple
@@ -64,13 +64,13 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </para>
         /// </summary>
-        public Source<string, NotUsed> AllPersistenceIds() => 
+        public Source<string, NotUsed> PersistenceIds() => 
             Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(true, _writeJournalPluginId))
             .MapMaterializedValue(_ => NotUsed.Instance)
             .Named("AllPersistenceIds") as Source<string, NotUsed>;
 
         /// <summary>
-        /// Same type of query as <see cref="AllPersistenceIds"/> but the stream
+        /// Same type of query as <see cref="PersistenceIds"/> but the stream
         /// is completed immediately when it reaches the end of the "result set". Persistent
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
