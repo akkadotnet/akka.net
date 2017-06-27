@@ -34,7 +34,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Launches the Akka.Persistence runtime
     /// </summary>
     public class PersistenceExtension : IExtension
     {
@@ -55,12 +55,15 @@ namespace Akka.Persistence
         private const string SnapshotStoreFallbackConfigPath = "akka.persistence.snapshot-store-plugin-fallback";
 
         /// <summary>
-        /// TBD
+        /// Creates a new Akka.Persistence extension.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="NullReferenceException">TBD
+        /// <param name="system">The ActorSystem that will be using Akka.Persistence</param>
+        /// <exception cref="NullReferenceException">
         /// This exception is thrown when the default journal plugin, <c>journal.plugin</c> is not configured.
         /// </exception>
+        /// <remarks>
+        /// DO NOT CALL DIRECTLY. Will be instantiated automatically be Akka.Persistence actors.
+        /// </remarks>
         public PersistenceExtension(ExtendedActorSystem system)
         {
             _system = system;
@@ -106,7 +109,7 @@ namespace Akka.Persistence
                 JournalFor(id);
             });
 
-            _config.GetStringList("journal.auto-start-snapshot-stores").ForEach(id =>
+            _config.GetStringList("snapshot-store.auto-start-snapshot-stores").ForEach(id =>
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Auto-starting snapshot store `{0}`", id);
@@ -120,7 +123,7 @@ namespace Akka.Persistence
         public IStashOverflowStrategy DefaultInternalStashOverflowStrategy => _defaultInternalStashOverflowStrategy.Value;
 
         /// <summary>
-        /// TBD
+        /// The Akka.Persistence settings for the journal and snapshot store
         /// </summary>
         public PersistenceSettings Settings { get; }
 
