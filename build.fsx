@@ -106,7 +106,6 @@ Target "RunTests" (fun _ ->
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
-
 )
 
 Target "RunTestsNetCore" (fun _ ->
