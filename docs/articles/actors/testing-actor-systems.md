@@ -88,3 +88,26 @@ The tight timeouts you use during testing on your lightning-fast notebook will i
 You can scale other durations with the same factor by using the `Dilated` method in `TestKit`.
 
 //TODO DILATED EXAMPLE
+
+## Using Multiple Probe Actors
+
+When the actors under test are supposed to send various messages to different destinations, it may be difficult distinguishing the message streams arriving at the `TestActor` when using the `TestKit` as shown until now. Another approach is to use it for creation of simple probe actors to be inserted in the message flows. The functionality is best explained using a small example:
+
+[!code-csharp[ProbeSample](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=14-40)]
+
+This simple test verifies an equally simple Forwarder actor by injecting a probe as the forwarder’s target. Another example would be two actors A and B which collaborate by A sending messages to B. In order to verify this message flow, a `TestProbe` could be inserted as target of A, using the forwarding capabilities or auto-pilot described below to include a real B in the test setup.
+
+If you have many test probes, you can name them to get meaningful actor names in test logs and assertions:
+
+[!code-csharp[MultipleProbeSample](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=46-50)]
+
+Probes may also be equipped with custom assertions to make your test code even more concise and clear:
+
+//TODO CUSTOM PROBE IMPL SAMPLE
+
+You have complete flexibility here in mixing and matching the `TestKit` facilities with your own checks and choosing an intuitive name for it. In real life your code will probably be a bit more complicated than the example given above; just use the power!
+
+>[WARNING]
+>Any message send from a `TestProbe` to another actor which runs on the `CallingThreadDispatcher` runs the risk of dead-lock, if that other actor might also send to this probe. The implementation of `TestProbe.Watch` and `TestProbe.Unwatch` will also send a message to the watchee, which means that it is dangerous to try watching e.g. `TestActorRef` from a `TestProbe`.
+
+
