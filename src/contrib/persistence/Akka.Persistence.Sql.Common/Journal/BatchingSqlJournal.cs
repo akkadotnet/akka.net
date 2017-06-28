@@ -742,7 +742,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void NotifyPersistenceIdChanged(string persistenceId)
         {
-            if (_persistenceIdSubscribers.TryGetValue(persitenceId, out var bucket))
+            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out var bucket))
             {
                 var changed = new EventAppended(persistenceId);
                 foreach (var subscriber in bucket)
