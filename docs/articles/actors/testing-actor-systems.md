@@ -81,3 +81,10 @@ Another important part of functional testing concerns timing: certain events mus
 The block in `within` must complete after a `Duration` which is between `min` and `max`, where the former defaults to zero. The deadline calculated by adding the `max` parameter to the block's start time is implicitly available within the block to all examination methods, if you do not specify it, it is inherited from the innermost enclosing `within` block.
 
 It should be noted that if the last message-receiving assertion of the block is `ExpectNoMsg` or `ReceiveWhile`, the final check of the within is skipped in order to avoid false positives due to wake-up latencies. This means that while individual contained assertions still use the maximum time bound, the overall block may take arbitrarily longer in this case.
+
+## Accounting for Slow Test System
+The tight timeouts you use during testing on your lightning-fast notebook will invariably lead to spurious test failures on your heavily loaded build server. To account for this situation, all maximum durations are internally scaled by a factor taken from the **Configuration**, `akka.test.timefactor`, which defaults to 1.
+
+You can scale other durations with the same factor by using the `Dilated` method in `TestKit`.
+
+//TODO DILATED EXAMPLE
