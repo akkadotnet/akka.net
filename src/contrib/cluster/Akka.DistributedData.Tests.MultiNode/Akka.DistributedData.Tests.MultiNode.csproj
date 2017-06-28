@@ -13,13 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="DurableDataSpec.cs" />
-    <Compile Include="DurablePruningSpec.cs" />
-    <Compile Include="JepsenInspiredInsertSpec.cs" />
-    <Compile Include="ReplicatorChaosSpec.cs" />
-    <Compile Include="ReplicatorPruningSpec.cs" />
-    <Compile Include="ReplicatorSpec.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
