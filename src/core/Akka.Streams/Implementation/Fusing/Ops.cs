@@ -617,7 +617,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Recover;
-        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -1069,7 +1069,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     switch (_decider(ex))
                     {
-                        case Directive.Stop: 
+                        case Directive.Stop:
                             FailStage(ex);
                             break;
                         case Directive.Restart:
@@ -1190,7 +1190,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 finally
                 {
-                    if(!IsClosed(_stage.In))
+                    if (!IsClosed(_stage.In))
                         Pull(_stage.In);
                 }
             }
@@ -1906,7 +1906,8 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Buffer<T> _stage;
             private readonly Action<T> _enqueue;
             private IBuffer<T> _buffer;
-            
+
+
             public Logic(Buffer<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
@@ -2004,9 +2005,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull()
             {
-                if(_buffer.NonEmpty)
+                if (_buffer.NonEmpty)
                     Push(_stage.Outlet, _buffer.Dequeue());
-                if(IsClosed(_stage.Inlet))
+                if (IsClosed(_stage.Inlet))
                 {
                     if (_buffer.IsEmpty)
                         CompleteStage();
@@ -2017,48 +2018,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFinish()
             {
-                if(_buffer.IsEmpty)
-                    CompleteStage();
-            }
-
-            public override void PreStart()
-            {
-                _buffer = Buffer.Create<T>(_stage._count, Materializer);
-                Pull(_stage.Inlet);
-            }
-
-            public override void OnPush()
-            {
-                var element = Grab(_stage.Inlet);
-
-                // If out is available, then it has been pulled but no dequeued element has been delivered.
-                // It means the buffer at this moment is definitely empty,
-                // so we just push the current element to out, then pull.
-                if (IsAvailable(_stage.Outlet))
-                {
-                    Push(_stage.Outlet, element);
-                    Pull(_stage.Inlet);
-                }
-                else
-                    _enqueue(element);
-            }
-
-            public override void OnPull()
-            {
-                if(_buffer.NonEmpty)
-                    Push(_stage.Outlet, _buffer.Dequeue());
-                if(IsClosed(_stage.Inlet))
-                {
-                    if (_buffer.IsEmpty)
-                        CompleteStage();
-                }
-                else if (!HasBeenPulled(_stage.Inlet))
-                    Pull(_stage.Inlet);
-            }
-
-            public override void OnUpstreamFinish()
-            {
-                if(_buffer.IsEmpty)
+                if (_buffer.IsEmpty)
                     CompleteStage();
             }
         }
@@ -2081,29 +2041,7 @@ namespace Akka.Streams.Implementation.Fusing
             _count = count;
             _overflowStrategy = overflowStrategy;
         }
-        
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
-        }
 
-        #endregion
-
-        private readonly int _count;
-        private readonly OverflowStrategy _overflowStrategy;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="count">TBD</param>
-        /// <param name="overflowStrategy">TBD</param>
-        /// <exception cref="NotSupportedException">
-        /// This exception is thrown when the specified <paramref name="overflowStrategy"/>  has an unknown <see cref="OverflowStrategy"/>.
-        /// </exception>
-        public Buffer(int count, OverflowStrategy overflowStrategy)
-        {
-            _count = count;
-            _overflowStrategy = overflowStrategy;
-        }
-        
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
@@ -3478,7 +3416,7 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Sum<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
-                
+
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
@@ -3515,7 +3453,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 finally
                 {
-                    if(!IsClosed(_stage.Inlet))
+                    if (!IsClosed(_stage.Inlet))
                         Pull(_stage.Inlet);
                 }
             }
