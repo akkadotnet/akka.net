@@ -1,8 +1,3 @@
----
-uid: testing-actor-systems
-title: Testing Actor Systems
----
-
 # Testing Actor Systems
 
 
@@ -62,5 +57,7 @@ Receive one message from the internal queue of the TestActor. This method blocks
    - The next message is received within the idle timeout
    - The number of messages has not yet reached the maximum All collected messages are returned. The maximum duration defaults to the time remaining in the innermost enclosing `Within` block and the idle duration defaults to infinity (thereby disabling the idle timeout feature). The number of expected messages defaults to `Int.MaxValue`, which effectively disables this limit.
 
-
+- `void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, TimeSpan? interval, string message = null)` Poll the given condition every `interval` until it returns `true` or the `max` duration is used up. The interval defaults to 100ms and the maximum defaults to the time remaining in the innermost enclosing `within` block.
+- `void AwaitAssert(Action assertion, TimeSpan? duration = default(TimeSpan?), TimeSpan? interval = default(TimeSpan?))`Poll the given assert function every `interval` until it does not throw an exception or the `max` duration is used up. If the timeout expires the last exception is thrown. The interval defaults to 100ms and the maximum defautls to the time remaining in the innermost enclosing `within` block. The interval defaults to 100ms and the maximum defaults to the time remaining in the innermost enclosing `within` block.
+- `void IgnoreMessages(Func<object, bool> shouldIgnoreMessage)` The internal `testActor` contains a partial function for ignoring messages: it will only enqueue messages which do not match the function or for which the function returns `false`. This feature is useful e.g. when testing a logging system, where you want to ignore regular messages and are only interesting in your specific ones.
  
