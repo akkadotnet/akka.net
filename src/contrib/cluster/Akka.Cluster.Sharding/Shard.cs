@@ -120,7 +120,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        protected internal abstract class StateChange: IClusterShardingSerializable
+        public abstract class StateChange: IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -165,7 +165,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardState"/> change for starting an entity in this `Shard`
         /// </summary>
         [Serializable]
-        protected internal sealed class EntityStarted : StateChange
+        public sealed class EntityStarted : StateChange
         {
             /// <summary>
             /// TBD
@@ -180,7 +180,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardState"/> change for an entity which has terminated.
         /// </summary>
         [Serializable]
-        protected internal sealed class EntityStopped : StateChange
+        public sealed class EntityStopped : StateChange
         {
             /// <summary>
             /// TBD
@@ -310,7 +310,7 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the Shard.
         /// </summary>
         [Serializable]
-        protected internal class ShardState : IClusterShardingSerializable
+        public class ShardState : IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
