@@ -68,4 +68,3 @@ To access unstable nightly builds, please [see the instructions here](http://get
 <a href="http://www.jetbrains.com/resharper"><img src="http://i61.tinypic.com/15qvwj7.jpg" alt="ReSharper" title="ReSharper"></a>
 
 <a href="https://www.jetbrains.com/teamcity/"><img src="http://i59.tinypic.com/2hmiirp.gif" alt="TeamCity" title="TeamCity"></a>
-
