@@ -13,9 +13,19 @@
     <PackageReference Include="System.Diagnostics.StackTrace" version="4.3.0" />
   </ItemGroup>
 
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <PackageReference Include="FsCheck" Version="2.9.0" />
+    <PackageReference Include="FsCheck.Xunit" Version="2.9.0" />
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <DefineConstants>$(DefineConstants);FSCHECK;</DefineConstants>
+  </PropertyGroup>
+
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
