@@ -399,8 +399,6 @@ namespace Akka.DistributedData
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((IDeltaOperation)delta);
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
         public override string ToString()
         {
             var sb = new StringBuilder("ORSet(");
