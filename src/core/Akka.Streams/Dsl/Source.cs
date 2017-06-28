@@ -165,7 +165,7 @@ namespace Akka.Streams.Dsl
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting Flow.
         /// </summary>
-        IFlow<T, TMat3> IFlow<TOut, TMat>.ViaMaterialized<T, TMat2, TMat3>(IGraph<FlowShape<TOut, T>, TMat2> flow, Func<TMat, TMat2, TMat3> combine) 
+        IFlow<T, TMat3> IFlow<TOut, TMat>.ViaMaterialized<T, TMat2, TMat3>(IGraph<FlowShape<TOut, T>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
             => ViaMaterialized(flow, combine);
 
         /// <summary>
@@ -189,7 +189,7 @@ namespace Akka.Streams.Dsl
                 if (Keep.IsRight(combine))
                     return MapMaterializedValue(_ => NotUsed.Instance) as Source<TOut2, TMat3>;
 
-                return MapMaterializedValue(value=> combine(value, (TMat2)(object)NotUsed.Instance)) as Source<TOut2, TMat3>;
+                return MapMaterializedValue(value => combine(value, (TMat2)(object)NotUsed.Instance)) as Source<TOut2, TMat3>;
             }
 
             var flowCopy = flow.Module.CarbonCopy();
@@ -258,7 +258,7 @@ namespace Akka.Streams.Dsl
         /// <param name="aggregate">TBD</param>
         /// <param name="materializer">TBD</param>
         /// <returns>TBD</returns>
-        public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer) 
+        public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
             => RunWith(Sink.Aggregate(zero, aggregate), materializer);
 
         /// <summary>
@@ -435,7 +435,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="enumerable">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable) 
+        public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable)
             => Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
 
         /// <summary>
@@ -445,7 +445,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="element">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> Single<T>(T element) 
+        public static Source<T, NotUsed> Single<T>(T element)
             => FromGraph(new SingleSource<T>(element).WithAttributes(DefaultAttributes.SingleSource));
 
         /// <summary>
@@ -482,7 +482,7 @@ namespace Akka.Streams.Dsl
         /// <param name="interval">TBD</param>
         /// <param name="tick">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<T, ICancelable> Tick<T>(TimeSpan initialDelay, TimeSpan interval, T tick) 
+        public static Source<T, ICancelable> Tick<T>(TimeSpan initialDelay, TimeSpan interval, T tick)
             => FromGraph(new TickSource<T>(initialDelay, interval, tick)).WithAttributes(DefaultAttributes.TickSource);
 
         /// <summary>
@@ -515,7 +515,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold) 
+        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
             => FromGraph(new Unfold<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.Unfold);
 
         /// <summary>
@@ -538,7 +538,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfoldAsync">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync) 
+        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync)
             => FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
 
         /// <summary>
@@ -593,7 +593,7 @@ namespace Akka.Streams.Dsl
         public static Source<T, TaskCompletionSource<T>> Maybe<T>()
         {
             return new Source<T, TaskCompletionSource<T>>(
-                    new MaybeSource<T>(DefaultAttributes.MaybeSource,
+                new MaybeSource<T>(DefaultAttributes.MaybeSource,
                     new SourceShape<T>(new Outlet<T>("MaybeSource"))));
         }
 
@@ -616,7 +616,7 @@ namespace Akka.Streams.Dsl
         /// the materialized task is completed with its value, if downstream cancels or fails without any demand the
         /// <paramref name="create"/> factory is never called and the materialized <see cref="Task{TResult}"/> is failed.
         /// </summary>
-        public static Source<TOut, Task<TMat>> Lazily<TOut, TMat>(Func<Source<TOut, TMat>> create) 
+        public static Source<TOut, Task<TMat>> Lazily<TOut, TMat>(Func<Source<TOut, TMat>> create)
             => FromGraph(LazySource.Create(create));
 
         /// <summary>
@@ -628,7 +628,7 @@ namespace Akka.Streams.Dsl
         {
             return new Source<T, ISubscriber<T>>(
                 new SubscriberSource<T>(DefaultAttributes.SubscriberSource,
-                Shape<T>("SubscriberSource")));
+                    Shape<T>("SubscriberSource")));
         }
 
         /// <summary>
@@ -866,7 +866,7 @@ namespace Akka.Streams.Dsl
             int maxBufferCapacity = 128,
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
-            return FromGraph(new EventSourceStage<TDelegate,T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+            return FromGraph(new EventSourceStage<TDelegate, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
         }
 
         /// <summary>
