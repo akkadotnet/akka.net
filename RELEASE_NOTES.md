@@ -1,3 +1,14 @@
+#### 1.2.2 June 28 2017 ####
+**Maintenance Release for Akka.NET 1.2**
+
+Finally, fully resolves issues related to Akka.Cluster nodes not being able to cleanly leave or join a cluster after a period of network instability. Also includes some minor fixes for clustered routers and Akka.Persistence.
+
+[See the full set of Akka.NET 1.2.2 fixes here](https://github.com/akkadotnet/akka.net/milestone/16).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 13 | 589 | 52 | Aaron Stannard |
+
 #### 1.2.1 June 22 2017 ####
 **Maintenance Release for Akka.NET 1.2**
 
