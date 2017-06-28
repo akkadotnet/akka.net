@@ -70,4 +70,6 @@ Since an integration test does not allow to the internal processing of the parti
 
 If a number of occurrences is specific --as demonstrated above-- then `intercept` will block until that number of matching messages have been received or the timeout configured in `akka.test.filter-leeway` is used up (time starts counting after the passed-in block of code returns). In case of a timeout the test fails.
 
+>[NOTE]
+>By default the TestKit already loads the TestEventListener as a logger. Be aware that if you want to specify your own config. Use the `DefaultConfig` property to apply overrides.
 
