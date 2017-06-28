@@ -73,3 +73,11 @@ If a number of occurrences is specific --as demonstrated above-- then `intercept
 >[NOTE]
 >By default the TestKit already loads the TestEventListener as a logger. Be aware that if you want to specify your own config. Use the `DefaultConfig` property to apply overrides.
 
+## Timing Assertions
+Another important part of functional testing concerns timing: certain events must not happen immediately (like a timer), others need to happen before a deadline. Therefore, all examination methods accept an upper time limit within the positive or negative result must be obtained. Lower time limits need to be checked external to the examination, which is facilitated by a new construct for managing time constraints:
+
+//TODO WITHIN SAMPLE
+
+The block in `within` must complete after a `Duration` which is between `min` and `max`, where the former defaults to zero. The deadline calculated by adding the `max` parameter to the block's start time is implicitly available within the block to all examination methods, if you do not specify it, it is inherited from the innermost enclosing `within` block.
+
+It should be noted that if the last message-receiving assertion of the block is `ExpectNoMsg` or `ReceiveWhile`, the final check of the within is skipped in order to avoid false positives due to wake-up latencies. This means that while individual contained assertions still use the maximum time bound, the overall block may take arbitrarily longer in this case.
