@@ -164,6 +164,7 @@ namespace Akka.DistributedData
 
         public TimeSpan Timeout => TimeSpan.Zero;
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return obj != null && obj is WriteLocal;
@@ -188,6 +189,7 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as WriteTo);
 
         public override string ToString() => $"WriteTo({Count}, timeout={Timeout})";
@@ -219,6 +221,7 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as WriteMajority);
 
         public override string ToString() => $"WriteMajority(timeout={Timeout})";
@@ -248,6 +251,7 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as WriteAll);
 
         public override string ToString() => $"WriteAll(timeout={Timeout})";

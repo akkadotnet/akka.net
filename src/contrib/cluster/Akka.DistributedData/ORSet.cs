@@ -116,7 +116,6 @@ namespace Akka.DistributedData
         internal readonly ImmutableDictionary<T, VersionVector> ElementsMap;
         private readonly VersionVector _versionVector;
 
-
         internal static ImmutableDictionary<T, VersionVector> MergeCommonKeys(IEnumerable<T> commonKeys, ORSet<T> lhs, ORSet<T> rhs) => commonKeys.Aggregate(ImmutableDictionary<T, VersionVector>.Empty, (acc, k) =>
         {
             var l = lhs.ElementsMap[k];
@@ -369,6 +368,7 @@ namespace Akka.DistributedData
             return new ORSet<T>(updated, _versionVector.PruningCleanup(removedNode));
         }
 
+        /// <inheritdoc/>
         public bool Equals(ORSet<T> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -377,10 +377,14 @@ namespace Akka.DistributedData
             return _versionVector == other._versionVector && ElementsMap.SequenceEqual(other.ElementsMap);
         }
 
+        /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator() => ElementsMap.Keys.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is ORSet<T> && Equals((ORSet<T>)obj);
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -394,7 +398,6 @@ namespace Akka.DistributedData
         IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) => MergeDelta((IDeltaOperation)delta);
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public override string ToString()
         {

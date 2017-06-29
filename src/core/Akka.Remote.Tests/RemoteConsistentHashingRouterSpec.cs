@@ -26,7 +26,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void ConsistentHashingGroup_must_use_same_hash_ring_indepenent_of_self_address()
+        public void ConsistentHashingGroup_must_use_same_hash_ring_independent_of_self_address()
         {
             // simulating running router on two different nodes (a1, a2) with target routees on 3 other nodes (s1, s2, s3) 
             var a1 = new Address("akka.tcp", "Sys", "client1", 2552);

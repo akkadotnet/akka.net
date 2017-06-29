@@ -274,7 +274,7 @@ namespace Akka.Streams.Actors
         /// No more elements will be delivered after cancel.
         /// </para>
         /// <para>
-        /// The <see cref="ActorSubscriber"/> will be stopped immediatly after signalling cancelation.
+        /// The <see cref="ActorSubscriber"/> will be stopped immediately after signaling cancellation.
         /// In case the upstream subscription has not yet arrived the Actor will stay alive
         /// until a subscription arrives, cancel it and then stop itself.
         /// </para>

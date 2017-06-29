@@ -77,7 +77,9 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="cause">Failure cause.</param>
         /// <param name="toSequenceNr">Inclusive upper sequence number bound where a replay should end.</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
+        /// </exception>
         public DeleteMessagesFailure(Exception cause, long toSequenceNr)
         {
             if (cause == null)
@@ -134,7 +136,9 @@ namespace Akka.Persistence
         /// <param name="persistenceId">Requesting persistent actor id.</param>
         /// <param name="toSequenceNr">Sequence number where replay should end (inclusive).</param>
         /// <param name="persistentActor">Requesting persistent actor.</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="persistenceId"/> is undefined.
+        /// </exception>
         public DeleteMessagesTo(string persistenceId, long toSequenceNr, IActorRef persistentActor)
         {
             if (string.IsNullOrEmpty(persistenceId))
@@ -200,7 +204,7 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="WriteMessages"/> class.
         /// </summary>
         /// <param name="messages">Messages to be written.</param>
-        /// <param name="persistentActor">Write requestor.</param>
+        /// <param name="persistentActor">Write requester.</param>
         /// <param name="actorInstanceId">TBD</param>
         public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor, int actorInstanceId)
         {
@@ -215,7 +219,7 @@ namespace Akka.Persistence
         public IEnumerable<IPersistentEnvelope> Messages { get; }
 
         /// <summary>
-        /// Write requestor.
+        /// Write requester.
         /// </summary>
         public IActorRef PersistentActor { get; }
 
@@ -256,7 +260,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// Reply message to a successful <see cref="WriteMessages"/> request. This reply is sent 
-    /// to the requestor before all subsequent <see cref="WriteMessageSuccess"/> replies.
+    /// to the requester before all subsequent <see cref="WriteMessageSuccess"/> replies.
     /// </summary>
     [Serializable]
     public sealed class WriteMessagesSuccessful : IJournalResponse
@@ -271,7 +275,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// Reply message to a failed <see cref="WriteMessages"/> request. This reply is sent 
-    /// to the requestor before all subsequent <see cref="WriteMessageFailure"/> replies.
+    /// to the requester before all subsequent <see cref="WriteMessageFailure"/> replies.
     /// </summary>
     [Serializable]
     public sealed class WriteMessagesFailed : IJournalResponse, IEquatable<WriteMessagesFailed>
@@ -317,7 +321,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// Reply message to a successful <see cref="WriteMessages"/> request. For each contained 
-    /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
+    /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requester.
     /// </summary>
     [Serializable]
     public sealed class WriteMessageSuccess : IJournalResponse, IEquatable<WriteMessageSuccess>
@@ -372,7 +376,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to a rejected <see cref="WriteMessages"/> request. The write of this message was rejected
     /// before it was stored, e.g. because it could not be serialized. For each contained 
-    /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
+    /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requester.
     /// </summary>
     [Serializable]
     public sealed class WriteMessageRejected : IJournalResponse, INoSerializationVerificationNeeded, IEquatable<WriteMessageRejected>
@@ -443,7 +447,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// Reply message to a failed <see cref="WriteMessages"/> request. For each contained 
-    /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
+    /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requester.
     /// </summary>
     [Serializable]
     public sealed class WriteMessageFailure : IJournalResponse, INoSerializationVerificationNeeded, IEquatable<WriteMessageFailure>
@@ -648,7 +652,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Reply message to a <see cref="ReplayMessages"/> request. A separate reply is sent to the requestor for each replayed message.
+    /// Reply message to a <see cref="ReplayMessages"/> request. A separate reply is sent to the requester for each replayed message.
     /// </summary>
     [Serializable]
     public sealed class ReplayedMessage : IJournalResponse, IDeadLetterSuppression, INoSerializationVerificationNeeded, IEquatable<ReplayedMessage>
@@ -688,7 +692,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// Reply message to a successful <see cref="ReplayMessages"/> request. This reply is sent 
-    /// to the requestor after all <see cref="ReplayedMessage"/> have been sent (if any).
+    /// to the requester after all <see cref="ReplayedMessage"/> have been sent (if any).
     /// 
     /// It includes the highest stored sequence number of a given persistent actor.
     /// Note that the replay might have been limited to a lower sequence number.
@@ -730,7 +734,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Reply message to a failed <see cref="ReplayMessages"/> request. This reply is sent to the requestor
+    /// Reply message to a failed <see cref="ReplayMessages"/> request. This reply is sent to the requester
     /// if a replay could not be successfully completed.
     /// </summary>
     [Serializable]

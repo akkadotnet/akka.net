@@ -139,49 +139,31 @@ namespace Akka.TestKit
             _internalRef.Unwatch(subject);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return _internalRef.ToString();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return _internalRef.Equals(obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return _internalRef.GetHashCode();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(object obj)
         {
             return ((IComparable) _internalRef).CompareTo(obj);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(IActorRef other)
         {
             return _internalRef.Equals(other);

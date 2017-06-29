@@ -130,7 +130,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Retreives the <see cref="CoordinatedShutdown"/> extension for the current <see cref="ActorSystem"/>
+        /// Retrieves the <see cref="CoordinatedShutdown"/> extension for the current <see cref="ActorSystem"/>
         /// </summary>
         /// <param name="sys">The current actor system.</param>
         /// <returns>A <see cref="CoordinatedShutdown"/> instance.</returns>
@@ -428,8 +428,8 @@ namespace Akka.Actor
         /// The configured timeout for a given <see cref="Phase"/>.
         /// </summary>
         /// <param name="phase">The name of the phase.</param>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="phase"/> doesn't exist in the set of registered phases.</exception>
         /// <returns>Returns the timeout if ti exists.</returns>
-        /// <exception cref="ArgumentException">Thrown if <see cref="phase"/> doesn't exist in the set of registered phases.</exception>
         public TimeSpan Timeout(string phase)
         {
             if (Phases.TryGetValue(phase, out var p))
@@ -473,6 +473,10 @@ namespace Akka.Actor
         /// INTERNAL API: https://en.wikipedia.org/wiki/Topological_sorting
         /// </summary>
         /// <param name="phases">The set of phases to sort.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when a cycle is detected in the phase graph.
+        /// The graph must be a directed acyclic graph (DAG).
+        /// </exception>
         /// <returns>A topologically sorted list of phases.</returns>
         internal static List<string> TopologicalSort(Dictionary<string, Phase> phases)
         {

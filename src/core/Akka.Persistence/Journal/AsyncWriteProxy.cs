@@ -402,7 +402,7 @@ namespace Akka.Persistence.Journal
         private Task<T> StoreNotInitialized<T>()
         {
             var promise = new TaskCompletionSource<T>();
-            promise.SetException(new TimeoutException("Store not intialized."));
+            promise.SetException(new TimeoutException("Store not initialized."));
             return promise.Task;
         }
 

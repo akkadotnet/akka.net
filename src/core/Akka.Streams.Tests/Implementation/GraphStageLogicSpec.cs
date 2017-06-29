@@ -425,11 +425,11 @@ namespace Akka.Streams.Tests.Implementation
         {
             #region internal class
 
-            private class LivecycleLogic : GraphStageLogic
+            private class LifecycleLogic : GraphStageLogic
             {
                 private readonly IActorRef _testActor;
 
-                public LivecycleLogic(LifecycleStage stage, IActorRef testActor) : base(stage.Shape)
+                public LifecycleLogic(LifecycleStage stage, IActorRef testActor) : base(stage.Shape)
                 {
                     _testActor = testActor;
                     SetHandler(stage._in, EagerTerminateInput);
@@ -466,7 +466,7 @@ namespace Akka.Streams.Tests.Implementation
             public override FlowShape<int, int> Shape { get; }
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-                => new LivecycleLogic(this, _testActor);
+                => new LifecycleLogic(this, _testActor);
         }
 
         [Fact]

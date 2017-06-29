@@ -122,7 +122,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Acknowledgement from <see cref="PersistentShardCoordinator"/> that <see cref="Register"/> or <see cref="RegisterProxy"/> was sucessful.
+        /// Acknowledgement from <see cref="PersistentShardCoordinator"/> that <see cref="Register"/> or <see cref="RegisterProxy"/> was successful.
         /// </summary>
         public sealed class RegisterAck : ICoordinatorMessage
         {

@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Take_must_not_Take_aynthing_for_negative_n()
+        public void A_Take_must_not_Take_anything_for_negative_n()
         {
             var probe = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 3))

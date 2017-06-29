@@ -331,7 +331,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class ServerFSM : FSM<ServerFSM.State, IActorRef>, ILoggingFSM
+    internal class ServerFSM : FSM<ServerFSM.State, IActorRef>, ILoggingFSM
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
         readonly IChannel _channel;
