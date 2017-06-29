@@ -23,6 +23,9 @@ namespace Akka.MultiNodeTestRunner
     {
         public Dictionary<string, List<NodeTest>> Tests { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Discovery"/> class.
+        /// </summary>
         public Discovery()
         {
             Tests = new Dictionary<string, List<NodeTest>>();
@@ -100,6 +103,7 @@ namespace Akka.MultiNodeTestRunner
                 : ctors.First().GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             Finished.Dispose();

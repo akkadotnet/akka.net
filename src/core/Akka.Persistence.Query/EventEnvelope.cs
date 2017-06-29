@@ -29,6 +29,7 @@ namespace Akka.Persistence.Query
             Event = @event;
         }
 
+        /// <inheritdoc/>
         public bool Equals(EventEnvelope other)
         {
             if (ReferenceEquals(this, other)) return true;
@@ -40,11 +41,13 @@ namespace Akka.Persistence.Query
                    && Equals(Event, other.Event);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return obj is EventEnvelope && Equals((EventEnvelope) obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -57,6 +60,7 @@ namespace Akka.Persistence.Query
             }
         }
 
+        /// <inheritdoc/>
         public override string ToString() => $"EventEnvelope(persistenceId:{PersistenceId}, seqNr:{SequenceNr}, offset:{Offset}, event:{Event})";
     }
 }

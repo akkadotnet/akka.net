@@ -25,7 +25,7 @@ namespace Akka.Remote.TestKit.Proto
 
         protected override void Encode(IChannelHandlerContext context, IMessage message, List<object> output)
         {
-            _logger.LogDebug("Encoding {0}", message);
+            _logger.LogDebug("[{0} --> {1}] Encoding {2} into Protobuf", context.Channel.LocalAddress, context.Channel.RemoteAddress, message);
             IByteBuffer buffer = null;
 
             try

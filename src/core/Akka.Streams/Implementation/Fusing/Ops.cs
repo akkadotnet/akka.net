@@ -1069,7 +1069,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     switch (_decider(ex))
                     {
-                        case Directive.Stop: 
+                        case Directive.Stop:
                             FailStage(ex);
                             break;
                         case Directive.Restart:
@@ -1190,7 +1190,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 finally
                 {
-                    if(!IsClosed(_stage.In))
+                    if (!IsClosed(_stage.In))
                         Pull(_stage.In);
                 }
             }
@@ -2005,9 +2005,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull()
             {
-                if(_buffer.NonEmpty)
+                if (_buffer.NonEmpty)
                     Push(_stage.Outlet, _buffer.Dequeue());
-                if(IsClosed(_stage.Inlet))
+                if (IsClosed(_stage.Inlet))
                 {
                     if (_buffer.IsEmpty)
                         CompleteStage();
@@ -2018,7 +2018,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFinish()
             {
-                if(_buffer.IsEmpty)
+                if (_buffer.IsEmpty)
                     CompleteStage();
             }
         }
@@ -2041,7 +2041,7 @@ namespace Akka.Streams.Implementation.Fusing
             _count = count;
             _overflowStrategy = overflowStrategy;
         }
-        
+
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
@@ -3453,7 +3453,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 finally
                 {
-                    if(!IsClosed(_stage.Inlet))
+                    if (!IsClosed(_stage.Inlet))
                         Pull(_stage.Inlet);
                 }
             }

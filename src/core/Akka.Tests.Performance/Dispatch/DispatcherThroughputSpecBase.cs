@@ -45,7 +45,7 @@ namespace Akka.Tests.Performance.Dispatch
         /// Warms up <see cref="dispatcher"/> prior to the benchmark running,
         /// so we can exclude initialization overhead from the results of the benchmark.
         /// </summary>
-        /// <param name="dispatcher">The <see cref="MessageDispatcher"/> implementaiton we'll be testing.</param>
+        /// <param name="dispatcher">The <see cref="MessageDispatcher"/> implementation we'll be testing.</param>
         /// <remarks>Does nothing by default (includes overhead)</remarks>
         protected virtual void Warmup(MessageDispatcher dispatcher)
         {

@@ -22,7 +22,7 @@ namespace Akka.Cluster.Tests.MultiNode
         public RoleName Third { get; private set; }
         public RoleName Forth { get; private set; }
 
-        public LeaderElectionSpecConfig(bool failureDectectorPuppet)
+        public LeaderElectionSpecConfig(bool failureDetectorPuppet)
         {
             Controller = Role("controller");
             First = Role("first");
@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Forth = Role("forth");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDectectorPuppet));
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
         }
     }
 
@@ -79,8 +79,8 @@ namespace Akka.Cluster.Tests.MultiNode
         public void LeaderElectionSpecs()
         {
             Cluster_of_four_nodes_must_be_able_to_elect_single_leader();
-            Cluster_of_four_nodes_must_be_able_to_reelect_sinle_leader_after_leader_has_left();
-            Cluster_of_four_nodes_must_be_able_to_reelect_sinle_leader_after_leader_has_left_again();
+            Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left();
+            Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left_again();
         }
 
         public void Cluster_of_four_nodes_must_be_able_to_elect_single_leader()
@@ -152,7 +152,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
         }
 
-        public void Cluster_of_four_nodes_must_be_able_to_reelect_sinle_leader_after_leader_has_left()
+        public void Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left()
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
@@ -161,7 +161,7 @@ namespace Akka.Cluster.Tests.MultiNode
             });
         }
 
-        public void Cluster_of_four_nodes_must_be_able_to_reelect_sinle_leader_after_leader_has_left_again()
+        public void Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left_again()
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {

@@ -80,6 +80,7 @@ namespace Akka.NodeTestRunner
             return true;
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             Finished.Dispose();

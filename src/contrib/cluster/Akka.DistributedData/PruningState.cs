@@ -30,6 +30,7 @@ namespace Akka.DistributedData
             Seen.Contains(node) || Owner.Address == node
                 ? this
                 : new PruningInitialized(Owner, Seen.Add(node));
+        /// <inheritdoc/>
 
         public IPruningState Merge(IPruningState other)
         {

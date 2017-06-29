@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_tick_publisher_must_prouce_ticks()
+        public void A_Flow_based_on_a_tick_publisher_must_produce_ticks()
         {
             this.AssertAllStagesStopped(() =>
             {

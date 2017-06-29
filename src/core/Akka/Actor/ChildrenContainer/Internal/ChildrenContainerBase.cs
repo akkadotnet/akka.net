@@ -43,6 +43,7 @@ namespace Akka.Actor.Internal
                 _lazyCount = -1;
             }
 
+            /// <inheritdoc/>
             public IEnumerator<T> GetEnumerator()
             {
                 return _enumerable.GetEnumerator();

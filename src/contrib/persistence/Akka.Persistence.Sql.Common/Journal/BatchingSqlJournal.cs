@@ -487,7 +487,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         
         /// <summary>
         /// Flag determining if incoming journal requests should be published in current actor system event stream.
-        /// Usefull mostly for tests.
+        /// Useful mostly for tests.
         /// </summary>
         protected readonly bool CanPublish;
 
@@ -740,11 +740,11 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private void NotifyPersistenceIdChanged(string persitenceId)
+        private void NotifyPersistenceIdChanged(string persistenceId)
         {
-            if (_persistenceIdSubscribers.TryGetValue(persitenceId, out var bucket))
+            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out var bucket))
             {
-                var changed = new EventAppended(persitenceId);
+                var changed = new EventAppended(persistenceId);
                 foreach (var subscriber in bucket)
                     subscriber.Tell(changed);
             }

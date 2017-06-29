@@ -94,6 +94,42 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void MemberOrdering_must_work_pick_member_with_legal_transition()
+        {
+            var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
+            var address2 = address1.WithPort(9002);
+            var address3 = address1.WithPort(9003);
+
+            var s1 = ImmutableSortedSet
+                .Create(TestMember.Create(address1, MemberStatus.Joining))
+                .Add(TestMember.Create(address2, MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 1));
+
+            var s2 = ImmutableSortedSet.Create(TestMember.Create(address1, MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber:2));
+
+            var s3 = ImmutableSortedSet
+                .Create(TestMember.Create(address1, MemberStatus.Up))
+                .Add(TestMember.Create(address2, MemberStatus.Up));
+
+            var u1 = Member.PickNextTransition(s2, s1);
+            u1.Should().BeEquivalentTo(s3);
+            u1.Single(x => x.Address.Equals(address1)).Status.Should().Be(MemberStatus.Up);
+
+            var s4 = ImmutableSortedSet
+                .Create(TestMember.Create(address1, MemberStatus.Up))
+                .Add(TestMember.Create(address2, MemberStatus.Up))
+                .Add(TestMember.Create(address3, MemberStatus.Joining));
+
+            var s5 = ImmutableSortedSet
+                .Create(TestMember.Create(address1, MemberStatus.Up))
+                .Add(TestMember.Create(address2, MemberStatus.Up))
+                .Add(TestMember.Create(address3, MemberStatus.Up));
+
+            var u2 = Member.PickNextTransition(s4, s1);
+            u2.Should().BeEquivalentTo(s5);
+            u2.Single(x => x.Address.Equals(address1)).Status.Should().Be(MemberStatus.Up);
+        }
+
+        [Fact]
         public void MemberOrdering_must_work_with_sorted_set()
         {
             var address1 = new Address("akka.tcp", "sys1", "host1", 9001);

@@ -161,11 +161,11 @@ namespace Akka.Streams.Implementation.IO
             public Logic(InputStreamSinkStage stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _callback = GetAsyncCallback((IAdapterToStageMessage messagae) =>
+                _callback = GetAsyncCallback((IAdapterToStageMessage message) =>
                 {
-                    if (messagae is ReadElementAcknowledgement)
+                    if(message is ReadElementAcknowledgement)
                         SendPullIfAllowed();
-                    else if (messagae is Close)
+                    else if (message is Close)
                         CompleteStage();
                 });
 
@@ -317,8 +317,8 @@ namespace Akka.Streams.Implementation.IO
             get => throw new NotSupportedException("This stream can only read");
             set => throw new NotSupportedException("This stream can only read");
         }
-        
-        #endregion
+
+#endregion
         
         private static readonly Exception SubscriberClosedException =
             new IOException("Reactive stream is terminated, no reads are possible");
