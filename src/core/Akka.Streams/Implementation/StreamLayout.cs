@@ -1306,12 +1306,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         public IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> MaterializedValues { get; }
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> MaterializedValues { get; }
-        
+
         /// <summary>
         /// TBD
         /// </summary>

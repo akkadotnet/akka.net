@@ -420,9 +420,7 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         /// <param name="from">TBD</param>
         /// <param name="pruningPerformed"></param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the specified <paramref name="from"/> is not in the <see cref="Pruning"/> map.
-        /// </exception>
+        /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
         internal DataEnvelope Prune(UniqueAddress from, PruningPerformed pruningPerformed)
         {
@@ -510,10 +508,6 @@ namespace Akka.DistributedData.Internal
             else mergedData = Data.Merge(cleanedData);
 
             return new DataEnvelope(mergedData, Pruning, DeltaVersions);
-            }
-            else mergedData = Data.Merge(cleanedData);
-
-            return new DataEnvelope(mergedData, Pruning, DeltaVersions);
         }
 
         private IReplicatedData Cleaned(IReplicatedData c, IImmutableDictionary<UniqueAddress, IPruningState> p) => p.Aggregate(c, (state, kvp) =>
@@ -544,7 +538,11 @@ namespace Akka.DistributedData.Internal
             return changed ? new DataEnvelope(Data, newRemovedNodePruning) : this;
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="other">TBD</param>
+        /// <returns>TBD</returns>
         public bool Equals(DataEnvelope other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -561,10 +559,17 @@ namespace Akka.DistributedData.Internal
             return true;
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="obj">TBD</param>
+        /// <returns>TBD</returns>
         public override bool Equals(object obj) => obj is DataEnvelope && Equals((DataEnvelope)obj);
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -573,7 +578,10 @@ namespace Akka.DistributedData.Internal
             }
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public override string ToString()
         {
             var sb = new StringBuilder("{");
@@ -584,7 +592,7 @@ namespace Akka.DistributedData.Internal
                 }
             sb.Append('}');
 
-            return $"DataEnvelope(data={Data}, pruning={sb})";
+            return $"DataEnvelope(data={Data}, prunning={sb})";
         }
     }
 

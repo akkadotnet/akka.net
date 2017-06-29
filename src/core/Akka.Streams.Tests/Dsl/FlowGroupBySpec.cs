@@ -580,13 +580,6 @@ namespace Akka.Streams.Tests.Dsl
                     }
                     else
                     {
-                        var probe = props.Probes[props.PropesReaderTop].Task.AwaitResult();
-                        props.PropesReaderTop++;
-                        map[index] = new SubFlowState(probe, false, byteString);
-                        //stream automatically requests next element 
-                    }
-                    else
-                    {
                         var probe = props.Probes[props.ProbesReaderTop].Task.AwaitResult();
                         props.ProbesReaderTop++;
                         map[index] = new SubFlowState(probe, false, byteString);
