@@ -331,6 +331,7 @@ namespace Akka.DistributedData
             return new ORDictionary<TKey, TValue>(pruningCleanupKeys, pruningCleanupValues);
         }
 
+        /// <inheritdoc/>
         public bool Equals(ORDictionary<TKey, TValue> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -339,11 +340,13 @@ namespace Akka.DistributedData
             return Equals(KeySet, other.KeySet) && ValueMap.SequenceEqual(other.ValueMap);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return obj is ORDictionary<TKey, TValue> && Equals((ORDictionary<TKey, TValue>)obj);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -352,10 +355,11 @@ namespace Akka.DistributedData
             }
         }
 
+        /// <inheritdoc/>
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => ValueMap.GetEnumerator();
-
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             var sb = new StringBuilder("ORDictionary(");

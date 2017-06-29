@@ -861,11 +861,7 @@ namespace Akka.IO
             return Create(buffer, 0, buffer.Length);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(ByteString other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -878,11 +874,7 @@ namespace Akka.IO
             return true;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return obj is ByteString && Equals((ByteString) obj);

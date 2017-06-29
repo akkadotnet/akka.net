@@ -111,11 +111,7 @@ namespace Akka.DistributedData.Internal
             Envelope = envelope;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Write other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -124,17 +120,10 @@ namespace Akka.DistributedData.Internal
             return Key == other.Key && Equals(Envelope, other.Envelope);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is Write && Equals((Write)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -143,10 +132,7 @@ namespace Akka.DistributedData.Internal
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"Write(key={Key}, envelope={Envelope})";
     }
 
@@ -162,27 +148,13 @@ namespace Akka.DistributedData.Internal
         internal static readonly WriteAck Instance = new WriteAck();
 
         private WriteAck() { }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(WriteAck other) => true;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is WriteAck;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode() => 1;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => "WriteAck";
     }
 
@@ -243,33 +215,19 @@ namespace Akka.DistributedData.Internal
             Key = key;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Read other)
         {
             return other != null && Key == other.Key;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is Read && Equals((Read)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode() => Key?.GetHashCode() ?? 0;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"Read(key={Key})";
     }
 
@@ -293,11 +251,7 @@ namespace Akka.DistributedData.Internal
             Envelope = envelope;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(ReadResult other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -306,23 +260,13 @@ namespace Akka.DistributedData.Internal
             return Equals(Envelope, other.Envelope);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is ReadResult && Equals((ReadResult)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode() => Envelope?.GetHashCode() ?? 0;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"ReadResult(envelope={Envelope})";
     }
 
@@ -352,11 +296,7 @@ namespace Akka.DistributedData.Internal
             Envelope = envelope;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(ReadRepair other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -365,17 +305,10 @@ namespace Akka.DistributedData.Internal
             return Equals(Key, other.Key) && Equals(Envelope, other.Envelope);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is ReadRepair && Equals((ReadRepair)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -384,10 +317,7 @@ namespace Akka.DistributedData.Internal
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"ReadRepair(key={Key}, envelope={Envelope})";
     }
 
@@ -404,10 +334,7 @@ namespace Akka.DistributedData.Internal
 
         private ReadRepairAck() { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => $"ReadRepairAck";
     }
 
@@ -493,7 +420,9 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         /// <param name="from">TBD</param>
         /// <param name="pruningPerformed"></param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="from"/> is not in the <see cref="Pruning"/> map.
+        /// </exception>
         /// <returns>TBD</returns>
         internal DataEnvelope Prune(UniqueAddress from, PruningPerformed pruningPerformed)
         {
@@ -581,6 +510,10 @@ namespace Akka.DistributedData.Internal
             else mergedData = Data.Merge(cleanedData);
 
             return new DataEnvelope(mergedData, Pruning, DeltaVersions);
+            }
+            else mergedData = Data.Merge(cleanedData);
+
+            return new DataEnvelope(mergedData, Pruning, DeltaVersions);
         }
 
         private IReplicatedData Cleaned(IReplicatedData c, IImmutableDictionary<UniqueAddress, IPruningState> p) => p.Aggregate(c, (state, kvp) =>
@@ -611,11 +544,7 @@ namespace Akka.DistributedData.Internal
             return changed ? new DataEnvelope(Data, newRemovedNodePruning) : this;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(DataEnvelope other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -632,17 +561,10 @@ namespace Akka.DistributedData.Internal
             return true;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is DataEnvelope && Equals((DataEnvelope)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -651,10 +573,7 @@ namespace Akka.DistributedData.Internal
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             var sb = new StringBuilder("{");
@@ -665,7 +584,7 @@ namespace Akka.DistributedData.Internal
                 }
             sb.Append('}');
 
-            return $"DataEnvelope(data={Data}, prunning={sb})";
+            return $"DataEnvelope(data={Data}, pruning={sb})";
         }
     }
 
@@ -695,28 +614,16 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         /// <returns>TBD</returns>
         public IReplicatedData Merge(IReplicatedData other) => Merge((DeletedData)other);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(DeletedData other) => true;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is DeletedData;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode() => 1;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => "DeletedData";
     }
 
@@ -752,11 +659,7 @@ namespace Akka.DistributedData.Internal
             TotalChunks = totalChunks;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Status other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -765,17 +668,10 @@ namespace Akka.DistributedData.Internal
             return other.Chunk.Equals(Chunk) && other.TotalChunks.Equals(TotalChunks) && Digests.SequenceEqual(other.Digests);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is Status && Equals((Status)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -787,10 +683,7 @@ namespace Akka.DistributedData.Internal
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             var sb = new StringBuilder("{");
@@ -831,11 +724,7 @@ namespace Akka.DistributedData.Internal
             SendBack = sendBack;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public bool Equals(Gossip other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -844,17 +733,10 @@ namespace Akka.DistributedData.Internal
             return other.SendBack.Equals(SendBack) && UpdatedData.SequenceEqual(other.UpdatedData);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is Gossip && Equals((Gossip)obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -863,10 +745,7 @@ namespace Akka.DistributedData.Internal
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             var sb = new StringBuilder("{");

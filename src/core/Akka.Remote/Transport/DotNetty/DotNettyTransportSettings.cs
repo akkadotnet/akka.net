@@ -108,8 +108,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         /// <summary>
         /// If this value is set, this becomes the public address for the actor system on this
-	    /// transport, which might be different than the physical ip address (hostname)
-	    /// this is designed to make it easy to support private / public addressing schemes
+        /// transport, which might be different than the physical ip address (hostname)
+        /// this is designed to make it easy to support private / public addressing schemes
         /// </summary>
         public readonly string PublicHostname;
 

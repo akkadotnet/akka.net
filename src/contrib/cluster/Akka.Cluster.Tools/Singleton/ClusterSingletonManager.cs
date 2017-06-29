@@ -939,7 +939,7 @@ namespace Akka.Cluster.Tools.Singleton
                     }
                     else
                     {
-                        throw new ClusterSingletonManagerIsStuckException($"Expected hand-over to [{wasOldestData.NewOldest}] never occured");
+                        throw new ClusterSingletonManagerIsStuckException($"Expected hand-over to [{wasOldestData.NewOldest}] never occurred");
                     }
                 }
                 else if (e.FsmEvent is HandOverToMe && e.StateData is WasOldestData w)

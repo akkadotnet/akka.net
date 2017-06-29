@@ -89,6 +89,9 @@ namespace Akka.Cluster.Sharding
         /// <param name="keepNrOfBatches">Keep this number of old persistent batches</param>
         /// <param name="leastShardAllocationRebalanceThreshold">TBD</param>
         /// <param name="leastShardAllocationMaxSimultaneousRebalance">TBD</param>
+        /// <param name="entityRecoveryStrategy">TBD</param>
+        /// <param name="entityRecoveryConstantRateStrategyFrequency">TBD</param>
+        /// <param name="entityRecoveryConstantRateStrategyNumberOfEntities">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="entityRecoveryStrategy"/> is invalid.
         /// Acceptable values include: all | constant

@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Flow_InitialDelay_mustwork_with_zero_delay()
+        public void Flow_InitialDelay_must_work_with_zero_delay()
         {
             this.AssertAllStagesStopped(() =>
             {

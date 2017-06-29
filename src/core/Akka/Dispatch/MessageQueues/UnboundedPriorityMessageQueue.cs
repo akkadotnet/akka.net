@@ -19,7 +19,7 @@ namespace Akka.Dispatch.MessageQueues
         private readonly ListPriorityQueue _prioQueue;
 
         /// <summary>
-        /// DEPRECATED. Use UnboundedPriorityMessageQueue(Func{object, int} priorityGenerator, int initialCapacity) instead.        
+        /// DEPRECATED. Use <see cref="UnboundedPriorityMessageQueue(Func{object,int}, int)"/> instead.
         /// </summary>
         /// <param name="initialCapacity">The initial capacity of the priority queue.</param>
         [Obsolete("Use UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity) instead. [1.1.3]")]
@@ -50,7 +50,7 @@ namespace Akka.Dispatch.MessageQueues
         }
 
         /// <summary>
-        /// Unsafe method for enquing a new message to the queue.
+        /// Unsafe method for enqueuing a new message to the queue.
         /// </summary>
         /// <param name="envelope">The message to enqueue.</param>
         /// <remarks>
@@ -64,7 +64,7 @@ namespace Akka.Dispatch.MessageQueues
         /// <summary>
         /// Unsafe method for attempting to dequeue a message.
         /// </summary>
-        /// <param name="envelope">The message that might be dequed.</param>
+        /// <param name="envelope">The message that might be dequeued.</param>
         /// <returns><c>true</c> if a message was available to be dequeued, <c>false</c> otherwise.</returns>
         /// <remarks>
         /// Called from within a synchronization mechanism.

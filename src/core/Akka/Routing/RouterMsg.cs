@@ -111,7 +111,7 @@ namespace Akka.Routing
 
     /// <summary>
     /// This class represents a <see cref="RouterManagementMessage"/> sent to a <see cref="Pool"/> router instructing
-    /// it to increase or decrease the number of alloted routees the router can use. It may be handled after other messages.
+    /// it to increase or decrease the number of allotted routees the router can use. It may be handled after other messages.
     /// 
     /// <remarks>
     /// Positive <see cref="Change"/> will add that number of routees to the <see cref="Pool"/>.

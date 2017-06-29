@@ -585,6 +585,13 @@ namespace Akka.Streams.Tests.Dsl
                         map[index] = new SubFlowState(probe, false, byteString);
                         //stream automatically requests next element 
                     }
+                    else
+                    {
+                        var probe = props.Probes[props.ProbesReaderTop].Task.AwaitResult();
+                        props.ProbesReaderTop++;
+                        map[index] = new SubFlowState(probe, false, byteString);
+                        //stream automatically requests next element 
+                    }
                 }
                 upstreamSubscription.SendComplete();
             }, Materializer);
@@ -645,7 +652,7 @@ namespace Akka.Streams.Tests.Dsl
 
             public int ProbesWriterTop { get; set; }
 
-            public int PropesReaderTop { get; set; }
+            public int ProbesReaderTop { get; set; }
 
             public List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>> Probes { get; } =
                 new List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>>(100);

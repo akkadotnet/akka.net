@@ -70,7 +70,7 @@ namespace Akka.Persistence.Sqlite
         /// <returns>TBD</returns>
         public static SqlitePersistence Get(ActorSystem system)
         {
-            return system.WithExtension<SqlitePersistence, SqlitePersistenceProvder>();
+            return system.WithExtension<SqlitePersistence, SqlitePersistenceProvider>();
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace Akka.Persistence.Sqlite
     /// <summary>
     /// TBD
     /// </summary>
-    public class SqlitePersistenceProvder : ExtensionIdProvider<SqlitePersistence>
+    public class SqlitePersistenceProvider : ExtensionIdProvider<SqlitePersistence>
     {
         /// <summary>
         /// TBD
