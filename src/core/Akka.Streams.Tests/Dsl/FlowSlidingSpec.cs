@@ -118,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Sliding_must_behave_just_like_collections_sliding_with_step_greather_than_window()
+        public void Sliding_must_behave_just_like_collections_sliding_with_step_greater_than_window()
         {
             this.AssertAllStagesStopped(() =>
             {

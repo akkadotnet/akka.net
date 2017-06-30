@@ -15,7 +15,7 @@ using Akka.Streams.Dsl;
 namespace Akka.Persistence.Query.Sql
 {
     public class SqlReadJournal : IReadJournal,
-        IAllPersistenceIdsQuery,
+        IPersistenceIdsQuery,
         ICurrentPersistenceIdsQuery,
         IEventsByPersistenceIdQuery,
         ICurrentEventsByPersistenceIdQuery,
@@ -33,20 +33,20 @@ namespace Akka.Persistence.Query.Sql
             return ConfigurationFactory.FromResource<SqlReadJournal>("Akka.Persistence.Query.Sql.reference.conf");
         }
         
-        private readonly TimeSpan _refershInterval;
+        private readonly TimeSpan _refreshInterval;
         private readonly string _writeJournalPluginId;
         private readonly int _maxBufferSize;
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
-            _refershInterval = config.GetTimeSpan("refresh-interval");
+            _refreshInterval = config.GetTimeSpan("refresh-interval");
             _writeJournalPluginId = config.GetString("write-plugin");
             _maxBufferSize = config.GetInt("max-buffer-size");
         }
 
         /// <summary>
         /// <para>
-        /// <see cref="AllPersistenceIds"/> is used for retrieving all `persistenceIds` of all
+        /// <see cref="PersistenceIds"/> is used for retrieving all `persistenceIds` of all
         /// persistent actors.
         /// </para>
         /// The returned event stream is unordered and you can expect different order for multiple
@@ -64,13 +64,13 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </para>
         /// </summary>
-        public Source<string, NotUsed> AllPersistenceIds() => 
+        public Source<string, NotUsed> PersistenceIds() => 
             Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(true, _writeJournalPluginId))
             .MapMaterializedValue(_ => NotUsed.Instance)
             .Named("AllPersistenceIds") as Source<string, NotUsed>;
 
         /// <summary>
-        /// Same type of query as <see cref="AllPersistenceIds"/> but the stream
+        /// Same type of query as <see cref="PersistenceIds"/> but the stream
         /// is completed immediately when it reaches the end of the "result set". Persistent
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
@@ -106,7 +106,7 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
-                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refershInterval, _maxBufferSize, _writeJournalPluginId))
+                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
                     .Named("EventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
 
@@ -156,7 +156,7 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refershInterval, _maxBufferSize, _writeJournalPluginId))
+            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByTag-" + tag);
 

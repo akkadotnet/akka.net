@@ -73,7 +73,9 @@ namespace Akka.Streams.Implementation
         /// <param name="self">TBD</param>
         /// <param name="pump">TBD</param>
         /// <param name="afterShutdown">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown when the first message isn't of type <see cref="ExposedPublisher"/>.
+        /// </exception>
         public FanoutOutputs(int maxBufferSize, int initialBufferSize, IActorRef self, IPump pump, Action afterShutdown = null)
         {
             _self = self;

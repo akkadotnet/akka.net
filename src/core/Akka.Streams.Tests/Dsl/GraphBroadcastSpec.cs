@@ -67,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_work_with_one_way_braodcast()
+        public void A_Broadcast_must_work_with_one_way_broadcast()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Broadcast_must_work_with_n_way_braodcast()
+        public void A_Broadcast_must_work_with_n_way_broadcast()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -115,12 +115,12 @@ namespace Akka.Streams.Tests.Dsl
                 var task = Task.WhenAll(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 foreach (var list in task.Result)
-                    list.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });             
+                    list.ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
             }, Materializer);
         }
 
         [Fact(Skip="We don't have enough overloads for GraphDsl.Create")]
-        public void A_Broadcast_must_with_22_way_braodcast()
+        public void A_Broadcast_must_with_22_way_broadcast()
         {
             this.AssertAllStagesStopped(() =>
             {

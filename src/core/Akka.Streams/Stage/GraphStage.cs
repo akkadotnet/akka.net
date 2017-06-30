@@ -2493,7 +2493,7 @@ namespace Akka.Streams.Stage
                         Log.Warning("externally triggered unwatch from {0} to {1} is illegal on StageActorRef",
                             watcher, watchee);
                     else
-                        Log.Error("BUG: illegal Unatch({0}, {1}) for {2}", watchee, watcher, this);
+                        Log.Error("BUG: illegal Watch({0}, {1}) for {2}", watchee, watcher, this);
                 }
 
                 break;

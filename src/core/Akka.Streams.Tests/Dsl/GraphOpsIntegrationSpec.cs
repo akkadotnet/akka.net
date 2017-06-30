@@ -232,7 +232,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphDSLs_must_be_possibe_to_use_as_lego_bricks()
+        public void GraphDSLs_must_be_possible_to_use_as_lego_bricks()
         {
             Func<int, Source<int, Tuple<NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>>>> source =
                 i =>

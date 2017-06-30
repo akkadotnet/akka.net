@@ -193,11 +193,12 @@ namespace Akka.Cluster.Tools.Client
         private readonly Queue<Tuple<object, IActorRef>> _buffer;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ClusterClient" /> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="settings">The settings used to configure the client.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the settings contains no initial contacts.
+        /// </exception>
         public ClusterClient(ClusterClientSettings settings)
         {
             if (settings.InitialContacts.Count == 0)

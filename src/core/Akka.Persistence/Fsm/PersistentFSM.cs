@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using static Akka.Persistence.Fsm.PersistentFSM;
 
 namespace Akka.Persistence.Fsm
@@ -121,6 +122,9 @@ namespace Akka.Persistence.Fsm
                 var nextData = StateData;
                 var handlersExecutedCounter = 0;
 
+                var snapshotAfterExtension = SnapshotAfterExtension.Get(Context.System);
+                var doSnapshot = false;
+
                 void ApplyStateOnLastHandler()
                 {
                     handlersExecutedCounter++;
@@ -129,6 +133,11 @@ namespace Akka.Persistence.Fsm
                         base.ApplyState(nextState.Using(nextData));
                         CurrentStateTimeout = nextState.Timeout;
                         nextState.AfterTransitionDo?.Invoke(nextState.StateData);
+                        if (doSnapshot)
+                        {
+                            Log.Info($"Saving snapshot, sequence number [{SnapshotSequenceNr}]");
+                            SaveStateSnapshot();
+                        }
                     }
                 }
 
@@ -137,10 +146,12 @@ namespace Akka.Persistence.Fsm
                     if (@event is TEvent evt)
                     {
                         nextData = ApplyEvent(evt, nextData);
+                        doSnapshot = doSnapshot || snapshotAfterExtension.IsSnapshotAfterSeqNo(LastSequenceNr);
                         ApplyStateOnLastHandler();
                     }
                     else if (@event is StateChangeEvent)
                     {
+                        doSnapshot = doSnapshot || snapshotAfterExtension.IsSnapshotAfterSeqNo(LastSequenceNr);
                         ApplyStateOnLastHandler();
                     }
                 });
@@ -162,7 +173,7 @@ namespace Akka.Persistence.Fsm
         /// Persisted on state change
         /// TODO: should implement IMessage
         /// </summary>
-        internal class StateChangeEvent
+        public class StateChangeEvent
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="StateChangeEvent"/> class.
@@ -190,7 +201,7 @@ namespace Akka.Persistence.Fsm
         /// FSM state and data snapshot
         /// TODO: should implement IMessage
         /// </summary>
-        internal class PersistentFSMSnapshot<TD>
+        public class PersistentFSMSnapshot<TD>
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="PersistentFSMSnapshot{TD}"/> class.
@@ -428,6 +439,50 @@ namespace Akka.Persistence.Fsm
             {
                 return $"State<TS, TD, TE><StateName: {StateName}, StateData: {StateData}, Timeout: {Timeout}, StopReason: {StopReason}, Notifies: {Notifies}>";
             }
+        }
+    }
+
+    internal sealed class SnapshotAfterExtensionProvider : ExtensionIdProvider<SnapshotAfterExtension>
+    {
+        public override SnapshotAfterExtension CreateExtension(ExtendedActorSystem system)
+        {
+            return new SnapshotAfterExtension(system.Settings.Config);
+        }
+    }
+
+    internal class SnapshotAfterExtension : IExtension
+    {
+        private const string Key = "akka.persistence.fsm.snapshot-after";
+
+        public SnapshotAfterExtension(Config config)
+        {
+            if (config.GetString(Key).ToLowerInvariant().Equals("off"))
+            {
+                SnapshotAfterValue = null;
+            }
+            else
+            {
+                SnapshotAfterValue = config.GetInt(Key);
+            }
+        }
+        
+        public int? SnapshotAfterValue { get; }
+
+        public bool IsSnapshotAfterSeqNo(long lastSequenceNr)
+        {
+            if (SnapshotAfterValue.HasValue)
+            {
+                return lastSequenceNr % SnapshotAfterValue.Value == 0;
+            }
+            else
+            {
+                return false; //always false, if snapshotAfter is not specified in config
+            }
+        }
+
+        public static SnapshotAfterExtension Get(ActorSystem system)
+        {
+            return system.WithExtension<SnapshotAfterExtension, SnapshotAfterExtensionProvider>();
         }
     }
 }

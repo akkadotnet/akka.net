@@ -178,11 +178,11 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public class PersistAllIncommingActor : NamedPersistentActor
+        public class PersistAllIncomingActor : NamedPersistentActor
         {
             public readonly LinkedList<object> State = new LinkedList<object>();
 
-            public PersistAllIncommingActor(string name, string journalPluginId) : base(name)
+            public PersistAllIncomingActor(string name, string journalPluginId) : base(name)
             {
                 JournalPluginId = journalPluginId;
             }
@@ -300,7 +300,7 @@ namespace Akka.Persistence.Tests
 
         private IActorRef Persister(string name, string journalName = null)
         {
-            return Sys.ActorOf(Props.Create(() => new PersistAllIncommingActor(name, "akka.persistence.journal." + (journalName ?? _journalName))));
+            return Sys.ActorOf(Props.Create(() => new PersistAllIncomingActor(name, "akka.persistence.journal." + (journalName ?? _journalName))));
         }
 
         private object ToJournal(object message, string journalName = null)

@@ -157,10 +157,10 @@ namespace Akka.Remote.Tests
             var probe = CreateTestProbe(masterSystem);
             var router = masterSystem.ActorOf(new RoundRobinPool(2).Props(EchoActorProps), "blub");
             var replies = CollectRouteePaths(probe, router, 5);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(2);
-            childred.Select(x => x.Parent).Distinct().Should().HaveCount(1);
-            childred.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(2);
+            children.Select(x => x.Parent).Distinct().Should().HaveCount(1);
+            children.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
             masterSystem.Stop(router);
         }
 
@@ -173,10 +173,10 @@ namespace Akka.Remote.Tests
                 new[] { new Address("akka.tcp", sysName, "127.0.0.1", port) })
                 .Props(EchoActorProps), "blub2");
             var replies = CollectRouteePaths(probe, router, 5);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(2);
-            childred.Select(x => x.Parent).Distinct().Should().HaveCount(1);
-            childred.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(2);
+            children.Select(x => x.Parent).Distinct().Should().HaveCount(1);
+            children.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
             masterSystem.Stop(router);
         }
 
@@ -186,10 +186,10 @@ namespace Akka.Remote.Tests
             var probe = CreateTestProbe(masterSystem);
             var router = masterSystem.ActorOf(FromConfig.Instance.Props(EchoActorProps), "elastic-blub");
             var replies = CollectRouteePaths(probe, router, 5);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(2);
-            childred.Select(x => x.Parent).Distinct().Should().HaveCount(1);
-            childred.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(2);
+            children.Select(x => x.Parent).Distinct().Should().HaveCount(1);
+            children.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
             masterSystem.Stop(router);
         }
 
@@ -201,14 +201,14 @@ namespace Akka.Remote.Tests
             router.Path.Address.Should().Be(intendedRemoteAddress);
 
             var replies = CollectRouteePaths(probe, router, 5);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(2);
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(2);
 
-            var parents = childred.Select(x => x.Parent).Distinct().ToList();
+            var parents = children.Select(x => x.Parent).Distinct().ToList();
             parents.Should().HaveCount(1);
             parents.Head().Should().Be(router.Path);
 
-            childred.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
+            children.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
             masterSystem.Stop(router);
         }
 
@@ -223,14 +223,14 @@ namespace Akka.Remote.Tests
             router.Path.Address.Should().Be(intendedRemoteAddress);
 
             var replies = CollectRouteePaths(probe, router, 5);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(2);
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(2);
 
-            var parents = childred.Select(x => x.Parent).Distinct().ToList();
+            var parents = children.Select(x => x.Parent).Distinct().ToList();
             parents.Should().HaveCount(1);
             parents.Head().Should().Be(router.Path);
 
-            childred.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
+            children.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
             masterSystem.Stop(router);
         }
 
@@ -242,17 +242,17 @@ namespace Akka.Remote.Tests
                 new RoundRobinPool(2)
                 .Props(EchoActorProps)
                 .WithDeploy(new Deploy(new RemoteScope(intendedRemoteAddress))), "local-blub");
-            router.Path.Address.ToString().Should().Be(string.Format("akka://{0}", masterSystem.Name));
+            router.Path.Address.ToString().Should().Be($"akka://{masterSystem.Name}");
 
             var replies = CollectRouteePaths(probe, router, 5);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(2);
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(2);
 
-            var parents = childred.Select(x => x.Parent).Distinct().ToList();
+            var parents = children.Select(x => x.Parent).Distinct().ToList();
             parents.Should().HaveCount(1);
             parents.Head().Address.Should().Be(new Address("akka.tcp", sysName, "127.0.0.1", port));
 
-            childred.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
+            children.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
             masterSystem.Stop(router);
         }
 
@@ -268,14 +268,14 @@ namespace Akka.Remote.Tests
             router.Path.Address.Should().Be(intendedRemoteAddress);
 
             var replies = CollectRouteePaths(probe, router, 5);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(4);
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(4);
 
-            var parents = childred.Select(x => x.Parent).Distinct().ToList();
+            var parents = children.Select(x => x.Parent).Distinct().ToList();
             parents.Should().HaveCount(1);
             parents.Head().Address.Should().Be(new Address("akka.tcp", sysName, "127.0.0.1", port));
 
-            childred.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
+            children.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
             masterSystem.Stop(router);
         }
 
@@ -291,14 +291,14 @@ namespace Akka.Remote.Tests
             router.Path.Address.Should().Be(intendedRemoteAddress);
 
             var replies = CollectRouteePaths(probe, router, 5);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(4);
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(4);
 
-            var parents = childred.Select(x => x.Parent).Distinct().ToList();
+            var parents = children.Select(x => x.Parent).Distinct().ToList();
             parents.Should().HaveCount(1);
             parents.Head().Address.Should().Be(router.Path.Address);
 
-            childred.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
+            children.ForEach(x => x.Address.Should().Be(intendedRemoteAddress));
             masterSystem.Stop(router);
         }
 
@@ -331,8 +331,8 @@ namespace Akka.Remote.Tests
             var probe = CreateTestProbe(masterSystem);
             var router = masterSystem.ActorOf(FromConfig.Instance.Props(EchoActorProps), "round");
             var replies = CollectRouteePaths(probe, router, 10);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(5);
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(5);
             masterSystem.Stop(router);
         }
 
@@ -346,8 +346,8 @@ namespace Akka.Remote.Tests
             parent.Tell(Tuple.Create(FromConfig.Instance.Props(EchoActorProps), "round"), probe);
             var router = probe.ExpectMsg<IActorRef>();
             var replies = CollectRouteePaths(probe, router, 10);
-            var childred = new HashSet<ActorPath>(replies);
-            childred.Should().HaveCount(6);
+            var children = new HashSet<ActorPath>(replies);
+            children.Should().HaveCount(6);
             masterSystem.Stop(router);
         }
     }

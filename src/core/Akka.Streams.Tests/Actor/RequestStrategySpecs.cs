@@ -15,7 +15,7 @@ namespace Akka.Streams.Tests.Actor
     public class RequestStrategySpecs
     {
         [Fact]
-        public void Provided_RequestStragies_should_implement_OneByOne_correctly()
+        public void Provided_RequestStrategies_should_implement_OneByOne_correctly()
         {
             var strat = OneByOneRequestStrategy.Instance;
             strat.RequestDemand(0).Should().Be(1);
@@ -24,7 +24,7 @@ namespace Akka.Streams.Tests.Actor
         }
 
         [Fact]
-        public void Provided_RequestStragies_should_implement_Zero_correctly()
+        public void Provided_RequestStrategies_should_implement_Zero_correctly()
         {
             var strat = ZeroRequestStrategy.Instance;
             strat.RequestDemand(0).Should().Be(0);
@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Actor
         }
 
         [Fact]
-        public void Provided_RequestStragies_should_implement_Watermark_correctly()
+        public void Provided_RequestStrategies_should_implement_Watermark_correctly()
         {
             var strat = new WatermarkRequestStrategy(highWatermark: 10);
             strat.RequestDemand(0).Should().Be(10);
@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Actor
         }
 
         [Fact]
-        public void Provided_RequestStragies_should_implement_MaxInFlight_with_batchSize_1_correctly()
+        public void Provided_RequestStrategies_should_implement_MaxInFlight_with_batchSize_1_correctly()
         {
             var queue = new List<string>();
             var strat = new InFlightWithBatchSize(10, queue, 1);
@@ -67,7 +67,7 @@ namespace Akka.Streams.Tests.Actor
         }
 
         [Fact]
-        public void Provided_RequestStragies_should_implement_MaxInFlight_with_batchSize_3_correctly()
+        public void Provided_RequestStrategies_should_implement_MaxInFlight_with_batchSize_3_correctly()
         {
             var queue = new List<string>();
             var strat = new InFlightWithBatchSize(10, queue, 3);
@@ -89,7 +89,7 @@ namespace Akka.Streams.Tests.Actor
         }
 
         [Fact]
-        public void Provided_RequestStragies_should_implement_MaxInFlight_with_batchSize_max_correctly()
+        public void Provided_RequestStrategies_should_implement_MaxInFlight_with_batchSize_max_correctly()
         {
             var queue = new List<string>();
             var strat = new InFlightWithBatchSize(max: 3, queue: queue, batchSize: 5 ); //will be bounded to max

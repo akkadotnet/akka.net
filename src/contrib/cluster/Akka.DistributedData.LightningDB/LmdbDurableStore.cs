@@ -56,7 +56,7 @@ namespace Akka.DistributedData.LightningDB
         public LmdbDurableStore(Config config)
         {
             config = config.GetConfig("lmdb");
-            if (config == null) throw new ArgumentException("Coudln't find config for LMDB durable store. Default path: `akka.cluster.distributed-data.durable.lmdb`");
+            if (config == null) throw new ArgumentException("Couldn't find config for LMDB durable store. Default path: `akka.cluster.distributed-data.durable.lmdb`");
 
             _log = Context.GetLogger();
 

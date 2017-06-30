@@ -60,11 +60,7 @@ namespace Akka.Remote
 
         #region IComparable<SeqNo>
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(SeqNo other)
         {
             return CompareSeq(this, other);
@@ -97,13 +93,7 @@ namespace Akka.Remote
             return left.CompareTo(right) <= 0;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="SeqNo"/>, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="SeqNo" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="SeqNo" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(SeqNo other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -175,13 +165,7 @@ namespace Akka.Remote
             return seqNo.RawValue;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -189,12 +173,7 @@ namespace Akka.Remote
             return obj is SeqNo && Equals((SeqNo) obj);
         }
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             return RawValue.GetHashCode();
@@ -203,12 +182,7 @@ namespace Akka.Remote
         #endregion
 
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return RawValue.ToString(CultureInfo.InvariantCulture);
@@ -222,12 +196,7 @@ namespace Akka.Remote
         /// <typeparam name="T">TBD</typeparam>
         public class HasSeqNoComparer<T> : IComparer<T> where T : IHasSequenceNumber
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="x">TBD</param>
-            /// <param name="y">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public int Compare(T x, T y)
             {
                 return Comparer.Compare(x.Seq, y.Seq);
@@ -239,12 +208,7 @@ namespace Akka.Remote
         /// </summary>
         public class SeqNoComparer : IComparer<SeqNo>, IEqualityComparer<SeqNo>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="x">TBD</param>
-            /// <param name="y">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public int Compare(SeqNo x, SeqNo y)
             {
                 var sgn = 0;
@@ -254,22 +218,13 @@ namespace Akka.Remote
                 else return sgn;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="x">TBD</param>
-            /// <param name="y">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public bool Equals(SeqNo x, SeqNo y)
             {
                 return x == y;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public int GetHashCode(SeqNo obj)
             {
                 return obj.GetHashCode();

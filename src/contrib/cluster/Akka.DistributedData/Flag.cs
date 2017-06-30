@@ -64,37 +64,15 @@ namespace Akka.DistributedData
             return Enabled == other.Enabled;
         }
 
-        /// <summary>
-        /// Checks if a flag is equal to provided object.
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is Flag && Equals((Flag) obj);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override int GetHashCode() => Enabled.GetHashCode();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(object obj) => obj is Flag ? CompareTo((Flag) obj) : 1;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(Flag other) => other == null ? 1 : Enabled.CompareTo(other.Enabled);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString() => Enabled.ToString();
 
         /// <summary>
