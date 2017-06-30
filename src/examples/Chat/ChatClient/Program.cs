@@ -54,7 +54,12 @@ akka {
                             {
                                 NewUsername = rest
                             });
-                        }                        
+                        }
+                        if (cmd == "/exit")
+                        {
+                            Console.WriteLine("exiting");
+                            break;
+                        }
                     }
                     else
                     {
@@ -64,6 +69,8 @@ akka {
                         });
                     }
                 }
+
+                system.Terminate().Wait();
             }
         }
     }
