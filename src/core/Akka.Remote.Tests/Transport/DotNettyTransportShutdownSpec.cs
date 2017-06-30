@@ -88,6 +88,9 @@ namespace Akka.Remote.Tests.Transport
                 t1.ConnectionGroup.Count.Should().Be(2);
                 t2.ConnectionGroup.Count.Should().Be(2);
 
+                var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
+                var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
+
                 // force a disassociation
                 handle.Disassociate();
 
@@ -95,6 +98,10 @@ namespace Akka.Remote.Tests.Transport
                 p1.ExpectMsg<Disassociated>();
                 AwaitCondition(() => t1.ConnectionGroup.Count == 1);
                 AwaitCondition(() => t2.ConnectionGroup.Count == 1);
+
+                // verify that the connection channels were terminated on both ends
+                chan1.CloseCompletion.IsCompleted.Should().BeTrue();
+                chan2.CloseCompletion.IsCompleted.Should().BeTrue();
             }
             finally
             {
@@ -128,6 +135,9 @@ namespace Akka.Remote.Tests.Transport
                 t1.ConnectionGroup.Count.Should().Be(2);
                 t2.ConnectionGroup.Count.Should().Be(2);
 
+                var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
+                var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
+
                 //  shutdown remoting on t1
                 await t1.Shutdown();
 
@@ -135,6 +145,10 @@ namespace Akka.Remote.Tests.Transport
                 // verify that the connections are terminated
                 AwaitCondition(() => t1.ConnectionGroup.Count == 0, null, message: $"Expected 0 open connection but found {t1.ConnectionGroup.Count}");
                 AwaitCondition(() => t2.ConnectionGroup.Count == 1, null,message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}");
+
+                // verify that the connection channels were terminated on both ends
+                chan1.CloseCompletion.IsCompleted.Should().BeTrue();
+                chan2.CloseCompletion.IsCompleted.Should().BeTrue();
             }
             finally
             {
@@ -168,12 +182,19 @@ namespace Akka.Remote.Tests.Transport
                 t1.ConnectionGroup.Count.Should().Be(2);
                 t2.ConnectionGroup.Count.Should().Be(2);
 
+                var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
+                var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
+
                 // force a disassociation
                 inboundHandle.Disassociate();
 
                 // verify that the connections are terminated
                 AwaitCondition(() => t1.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}");
                 AwaitCondition(() => t2.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}");
+
+                // verify that the connection channels were terminated on both ends
+                chan1.CloseCompletion.IsCompleted.Should().BeTrue();
+                chan2.CloseCompletion.IsCompleted.Should().BeTrue();
             }
             finally
             {
@@ -207,12 +228,19 @@ namespace Akka.Remote.Tests.Transport
                 t1.ConnectionGroup.Count.Should().Be(2);
                 t2.ConnectionGroup.Count.Should().Be(2);
 
+                var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
+                var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
+
                 // shutdown inbound side
                 await t2.Shutdown();
 
                 // verify that the connections are terminated
                 AwaitCondition(() => t1.ConnectionGroup.Count == 1, null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}");
                 AwaitCondition(() => t2.ConnectionGroup.Count == 0, null, message: $"Expected 0 open connection but found {t2.ConnectionGroup.Count}");
+
+                // verify that the connection channels were terminated on both ends
+                chan1.CloseCompletion.IsCompleted.Should().BeTrue();
+                chan2.CloseCompletion.IsCompleted.Should().BeTrue();
             }
             finally
             {
