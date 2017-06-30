@@ -95,7 +95,6 @@ Target "RunTests" (fun _ ->
         | _ -> log "All test projects will be run..."
                getAllUnitTestProjects()
     
-    projects |> Seq.iter log
     let runSingleProject project =
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
@@ -111,18 +110,13 @@ Target "RunTests" (fun _ ->
 
 Target "RunTestsNetCore" (fun _ ->
     let projects =
-        match isWindows with
-        // Windows
-        | true -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-        // Linux/Mono
-        | _ -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/Akka.API.Tests.csproj"
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> getIncrementalUnitTests()
+        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
+                            getIncrementalUnitTests() |> Seq.iter log
+                            getAllUnitTestProjects()
+        | _ -> log "All test projects will be run..."
+               getAllUnitTestProjects()
      
     let runSingleProject project =
         let result = ExecProcess(fun info ->
