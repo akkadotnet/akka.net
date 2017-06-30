@@ -123,7 +123,7 @@ namespace Akka.Remote.Transport.DotNetty
         protected readonly TaskCompletionSource<IAssociationEventListener> AssociationListenerPromise;
         protected readonly ILoggingAdapter Log;
         protected volatile Address LocalAddress;
-        protected volatile IChannel ServerChannel;
+        protected internal volatile IChannel ServerChannel;
 
         private readonly IEventLoopGroup serverEventLoopGroup;
         private readonly IEventLoopGroup clientEventLoopGroup;
