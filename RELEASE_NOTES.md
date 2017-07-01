@@ -1,3 +1,6 @@
+#### 1.3.0 June 28 2017 ####
+Placeholder
+
 #### 1.2.2 June 28 2017 ####
 **Maintenance Release for Akka.NET 1.2**
 
