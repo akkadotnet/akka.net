@@ -1,3 +1,9 @@
+---
+uid: testing-actor-systems
+title: Testing Actor Systems
+---
+
+
 # Testing Actor Systems
 
 
@@ -40,8 +46,6 @@ Receive one message of the specified type from the test actor and assert that it
 
 - `IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max)`
 `n` messages must be received within the given time; the received messages are returned.
-
-
 
 - `object FishForMessage(Predicate<object> isMessage, TimeSpan? max, string)`
 Keep receiving messages as long as the time is not used up and the partial function matches and returns `false`. Returns the message received for which it returned `true` or throws an exception, which will include the provided hint for easier debugging.
@@ -110,4 +114,15 @@ You have complete flexibility here in mixing and matching the `TestKit` faciliti
 >[WARNING]
 >Any message send from a `TestProbe` to another actor which runs on the `CallingThreadDispatcher` runs the risk of dead-lock, if that other actor might also send to this probe. The implementation of `TestProbe.Watch` and `TestProbe.Unwatch` will also send a message to the watchee, which means that it is dangerous to try watching e.g. `TestActorRef` from a `TestProbe`.
 
+###Watching Other Actors from probes
+A `TestProbe` can register itself for DeathWatch of any other actor:
 
+```csharp
+  var probe = CreateTestProbe();
+  probe.Watch(target);
+
+  target.Tell(PoisonPill.Instance);
+
+  var msg = probe.ExpectMsg<Terminated>();
+  Assert.Equal(msg.ActorRef, target);
+```
