@@ -2352,27 +2352,23 @@ namespace Akka.Streams.Stage
         /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            var handled = true;
-
-            if (message is PoisonPill)
-                LogIgnored(message);
-            else if (message is Kill)
-                LogIgnored(message);
-            else
-                handled = false;
-
-            if (handled)
-                return;
-            
-            if (message is Terminated t)
+            switch (message)
             {
-                if (_watching.Contains(t.ActorRef))
-                    _watching.Remove(t.ActorRef);
-                else
+                case PoisonPill _:
+                case Kill _:
+                    LogIgnored(message);
                     return;
+                case Terminated t:
+                    if (_watching.Contains(t.ActorRef))
+                    {
+                        _watching.Remove(t.ActorRef);
+                        break;
+                    }
+                    else return;
+                default:
+                    _callback(Tuple.Create(sender, message));
+                    break;
             }
-
-            _callback(Tuple.Create(sender, message));
         }
 
         /// <summary>

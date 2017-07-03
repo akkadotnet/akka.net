@@ -138,46 +138,42 @@ namespace Akka.IO
         {
             return message =>
             {
-                var register = message as Register;
-                if (register != null)
+                switch (message)
                 {
-                    // up to this point we've been watching the commander,
-                    // but since registration is now complete we only need to watch the handler from here on
-                    if (!Equals(register.Handler, commander))
-                    {
-                        Context.Unwatch(commander);
-                        Context.Watch(register.Handler);
-                    }
+                    case Register register:
+                        // up to this point we've been watching the commander,
+                        // but since registration is now complete we only need to watch the handler from here on
+                        if (!Equals(register.Handler, commander))
+                        {
+                            Context.Unwatch(commander);
+                            Context.Watch(register.Handler);
+                        }
 
-                    if (traceLogging) Log.Debug("[{0}] registered as connection handler", register.Handler);
+                        if (traceLogging) Log.Debug("[{0}] registered as connection handler", register.Handler);
 
-                    var info = new ConnectionInfo(register.Handler, register.KeepOpenOnPeerClosed, register.UseResumeWriting);
+                        var registerInfo = new ConnectionInfo(register.Handler, register.KeepOpenOnPeerClosed, register.UseResumeWriting);
 
-                    // if we have resumed reading from pullMode while waiting for Register then read
-                    if (pullMode && !HasStatus(ConnectionStatus.ReadingSuspended)) ResumeReading();
-                    else if (!pullMode) ReceiveAsync();
+                        // if we have resumed reading from pullMode while waiting for Register then read
+                        if (pullMode && !HasStatus(ConnectionStatus.ReadingSuspended)) ResumeReading();
+                        else if (!pullMode) ReceiveAsync();
 
-                    Context.SetReceiveTimeout(null);
-                    Context.Become(Connected(info));
+                        Context.SetReceiveTimeout(null);
+                        Context.Become(Connected(registerInfo));
+                        return true;
+                    case ResumeReading _: ClearStatus(ConnectionStatus.ReadingSuspended); return true;
+                    case SuspendReading _: SetStatus(ConnectionStatus.ReadingSuspended); return true;
+                    case CloseCommand cmd:
+                        var info = new ConnectionInfo(commander, keepOpenOnPeerClosed: false, useResumeWriting: false);
+                        HandleClose(info, Sender, cmd.Event);
+                        return true;
+                    case ReceiveTimeout _:
+                        // after sending `Register` user should watch this actor to make sure
+                        // it didn't die because of the timeout
+                        Log.Debug("Configured registration timeout of [{0}] expired, stopping", Tcp.Settings.RegisterTimeout);
+                        Context.Stop(Self);
+                        return true;
+                    default: return false;
                 }
-                else if (message is ResumeReading) ClearStatus(ConnectionStatus.ReadingSuspended);
-                else if (message is SuspendReading) SetStatus(ConnectionStatus.ReadingSuspended);
-                else if (message is CloseCommand)
-                {
-                    var cmd = (CloseCommand)message;
-
-                    var info = new ConnectionInfo(commander, keepOpenOnPeerClosed: false, useResumeWriting: false);
-                    HandleClose(info, Sender, cmd.Event);
-                }
-                else if (message is ReceiveTimeout)
-                {
-                    // after sending `Register` user should watch this actor to make sure
-                    // it didn't die because of the timeout
-                    Log.Debug("Configured registration timeout of [{0}] expired, stopping", Tcp.Settings.RegisterTimeout);
-                    Context.Stop(Self);
-                }
-                else return false;
-                return true;
             };
         }
 
@@ -190,12 +186,14 @@ namespace Akka.IO
             return message =>
             {
                 if (handleWrite(message)) return true;
-                if (message is SuspendReading) SuspendReading();
-                else if (message is ResumeReading) ResumeReading();
-                else if (message is SocketReceived) DoRead(info, null);
-                else if (message is CloseCommand) HandleClose(info, Sender, ((CloseCommand)message).Event);
-                else return false;
-                return true;
+                switch (message)
+                {
+                    case SuspendReading _: SuspendReading(); return true;
+                    case ResumeReading _: ResumeReading(); return true;
+                    case SocketReceived _: DoRead(info, null); return true;
+                    case CloseCommand cmd: HandleClose(info, Sender, cmd.Event); return true;
+                    default: return false;
+                }
             };
         }
 
@@ -226,29 +224,27 @@ namespace Akka.IO
         {
             return message =>
             {
-                if (message is SuspendReading) SuspendReading();
-                else if (message is ResumeReading) ResumeReading();
-                else if (message is SocketReceived) DoRead(info, closeCommander);
-                else if (message is SocketSent)
+                switch (message)
                 {
-                    AcknowledgeSent();
+                    case SuspendReading _: SuspendReading(); return true;
+                    case ResumeReading _: ResumeReading(); return true;
+                    case SocketReceived _: DoRead(info, closeCommander); return true;
+                    case SocketSent _:
+                        AcknowledgeSent();
+                        if (IsWritePending) DoWrite(info);
+                        else HandleClose(info, closeCommander, closedEvent);
+                        return true;
+                    case UpdatePendingWriteAndThen updatePendingWrite:
+                        pendingWrite = updatePendingWrite.RemainingWrite;
+                        updatePendingWrite.Work();
 
-                    if (IsWritePending) DoWrite(info);
-                    else HandleClose(info, closeCommander, closedEvent);
+                        if (IsWritePending) DoWrite(info);
+                        else HandleClose(info, closeCommander, closedEvent);
+                        return true;
+                    case WriteFileFailed fail: HandleError(info.Handler, fail.Cause); return true;
+                    case Abort _: HandleClose(info, Sender, Aborted.Instance); return true;
+                    default: return false;
                 }
-                else if (message is UpdatePendingWriteAndThen)
-                {
-                    var updatePendingWrite = (UpdatePendingWriteAndThen)message;
-                    pendingWrite = updatePendingWrite.RemainingWrite;
-                    updatePendingWrite.Work();
-
-                    if (IsWritePending) DoWrite(info);
-                    else HandleClose(info, closeCommander, closedEvent);
-                }
-                else if (message is WriteFileFailed) HandleError(info.Handler, ((WriteFileFailed)message).Cause); // rethrow exception from dispatcher task
-                else if (message is Abort) HandleClose(info, Sender, Aborted.Instance);
-                else return false;
-                return true;
             };
         }
 
@@ -257,12 +253,14 @@ namespace Akka.IO
         {
             return message =>
             {
-                if (message is SuspendReading) SuspendReading();
-                else if (message is ResumeReading) ResumeReading();
-                else if (message is SocketReceived) DoRead(info, closeCommandor);
-                else if (message is Abort) HandleClose(info, Sender, Aborted.Instance);
-                else return false;
-                return true;
+                switch (message)
+                {
+                    case SuspendReading _: SuspendReading(); return true;
+                    case ResumeReading _: ResumeReading(); return true;
+                    case SocketReceived _: DoRead(info, closeCommandor); return true;
+                    case Abort _: HandleClose(info, Sender, Aborted.Instance); return true;
+                    default: return false;
+                }
             };
         }
 
@@ -270,74 +268,67 @@ namespace Akka.IO
         {
             return message =>
             {
-                if (message is SocketSent)
+                switch (message)
                 {
-                    AcknowledgeSent();
-
-                    if (IsWritePending)
-                    {
-                        DoWrite(info);
-                        if (!IsWritePending && interestedInResume != null)
+                    case SocketSent _:
+                        AcknowledgeSent();
+                        if (IsWritePending)
                         {
-                            interestedInResume.Tell(WritingResumed.Instance);
-                            interestedInResume = null;
+                            DoWrite(info);
+                            if (!IsWritePending && interestedInResume != null)
+                            {
+                                interestedInResume.Tell(WritingResumed.Instance);
+                                interestedInResume = null;
+                            }
                         }
-                    }
-                }
-                else if (message is WriteCommand)
-                {
-                    var write = (WriteCommand)message;
-                    if (HasStatus(ConnectionStatus.WritingSuspended))
-                    {
-                        if (traceLogging) Log.Debug("Dropping write because writing is suspended");
-                        Sender.Tell(write.FailureMessage);
-                    }
-                    else if (IsWritePending)
-                    {
-                        if (traceLogging) Log.Debug("Dropping write because queue is full");
-                        Sender.Tell(write.FailureMessage);
-                        if (info.UseResumeWriting) SetStatus(ConnectionStatus.WritingSuspended);
-                    }
-                    else
-                    {
-                        pendingWrite = CreatePendingWrite(Sender, write, info);
+                        return true;
+                    case WriteCommand write:
+                        if (HasStatus(ConnectionStatus.WritingSuspended))
+                        {
+                            if (traceLogging) Log.Debug("Dropping write because writing is suspended");
+                            Sender.Tell(write.FailureMessage);
+                        }
+                        else if (IsWritePending)
+                        {
+                            if (traceLogging) Log.Debug("Dropping write because queue is full");
+                            Sender.Tell(write.FailureMessage);
+                            if (info.UseResumeWriting) SetStatus(ConnectionStatus.WritingSuspended);
+                        }
+                        else
+                        {
+                            pendingWrite = CreatePendingWrite(Sender, write, info);
+                            if (IsWritePending) DoWrite(info);
+                        }
+                        return true;
+                    case ResumeWriting _:
+                        /*
+                         * If more than one actor sends Writes then the first to send this
+                         * message might resume too early for the second, leading to a Write of
+                         * the second to go through although it has not been resumed yet; there
+                         * is nothing we can do about this apart from all actors needing to
+                         * register themselves and us keeping track of them, which sounds bad.
+                         *
+                         * Thus it is documented that useResumeWriting is incompatible with
+                         * multiple writers. But we fail as gracefully as we can.
+                         */
+                        ClearStatus(ConnectionStatus.WritingSuspended);
+                        if (IsWritePending)
+                        {
+                            if (interestedInResume == null) interestedInResume = Sender;
+                            else Sender.Tell(new CommandFailed(ResumeWriting.Instance));
+                        }
+                        else Sender.Tell(WritingResumed.Instance);
+                        return true;
+                    case UpdatePendingWriteAndThen updatePendingWrite:
+                        pendingWrite = updatePendingWrite.RemainingWrite;
+                        updatePendingWrite.Work();
                         if (IsWritePending) DoWrite(info);
-                    }
+                        return true;
+                    case WriteFileFailed fail:
+                        HandleError(info.Handler, fail.Cause);
+                        return true;
+                    default: return false;
                 }
-                else if (message is ResumeWriting)
-                {
-                    /*
-                     * If more than one actor sends Writes then the first to send this
-                     * message might resume too early for the second, leading to a Write of
-                     * the second to go through although it has not been resumed yet; there
-                     * is nothing we can do about this apart from all actors needing to
-                     * register themselves and us keeping track of them, which sounds bad.
-                     *
-                     * Thus it is documented that useResumeWriting is incompatible with
-                     * multiple writers. But we fail as gracefully as we can.
-                     */
-                    ClearStatus(ConnectionStatus.WritingSuspended);
-                    if (IsWritePending)
-                    {
-                        if (interestedInResume == null) interestedInResume = Sender;
-                        else Sender.Tell(new CommandFailed(ResumeWriting.Instance));
-                    }
-                    else Sender.Tell(WritingResumed.Instance);
-                }
-                else if (message is UpdatePendingWriteAndThen)
-                {
-                    var updatePendingWrite = (UpdatePendingWriteAndThen)message;
-
-                    pendingWrite = updatePendingWrite.RemainingWrite;
-                    updatePendingWrite.Work();
-                    if (IsWritePending) DoWrite(info);
-                }
-                else if (message is WriteFileFailed)
-                {
-                    HandleError(info.Handler, ((WriteFileFailed)message).Cause);
-                }
-                else return false;
-                return true;
             };
         }
 
@@ -674,6 +665,7 @@ namespace Akka.IO
                 {
                     return CreatePendingBufferWrite(commander, w.Data, w.Ack, tail);
                 }
+
                 //TODO: there's no TransmitFile API - .NET Core doesn't support it at all
                 var cwrite = head as CompoundWrite;
                 if (cwrite != null)
@@ -692,6 +684,7 @@ namespace Akka.IO
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private PendingWrite CreatePendingBufferWrite(IActorRef commander, ByteString data, Tcp.Event ack, WriteCommand tail)
         {
             return new PendingBufferWrite(this, SendArgs, Self, commander, data, ack, tail);
@@ -840,23 +833,10 @@ namespace Akka.IO
                     {
                         connection.SetStatus(ConnectionStatus.Sending);
 
-                        if (data.IsCompact)
-                        {
-                            var buffer = data.Buffers[0];
-                            sendArgs.BufferList = null;
-                            sendArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
-                        }
-                        else
-                        {
-                            sendArgs.SetBuffer(null, 0, 0);
-                            sendArgs.BufferList = data.Buffers;
-                        }
+                        SetBuffer(data);
 
                         if (!connection.Socket.SendAsync(sendArgs))
                             self.Tell(SocketSent.Instance);
-
-                        if (connection.traceLogging)
-                            connection.Log.Debug("Wrote [{0}] bytes to channel", sendArgs.Count);
                     }
 
                     var ack = Ack == NoAck.Instance ? null : Tuple.Create(Commander, Ack);
@@ -867,6 +847,27 @@ namespace Akka.IO
                 {
                     connection.HandleError(info.Handler, e);
                     return this;
+                }
+            }
+
+            private void SetBuffer(ByteString data)
+            {
+                if (data.IsCompact)
+                {
+                    var buffer = data.Buffers[0];
+                    if (sendArgs.BufferList != null)
+                    {
+                        // BufferList property setter is not simple member association operation, 
+                        // but the getter is. Therefore we first check if we need to clear buffer list
+                        // and only do so if necessary.
+                        sendArgs.BufferList = null;
+                    }
+                    sendArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+                }
+                else
+                {
+                    sendArgs.SetBuffer(null, 0, 0);
+                    sendArgs.BufferList = data.Buffers;
                 }
             }
 
