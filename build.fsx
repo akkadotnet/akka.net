@@ -138,11 +138,11 @@ Target "RunTestsNetCore" (fun _ ->
 
 Target "MultiNodeTests" (fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
-    let multiNodeTestAssemblies = !! "src/**/bin/Release/**/Akka.Remote.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.DistributedData.Tests.MultiNode.dll"
+    let multiNodeTestAssemblies = !! "src/**/bin/Release/**/net452/Akka.Remote.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/net452/Akka.Cluster.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/net452/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/net452/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/net452/Akka.DistributedData.Tests.MultiNode.dll"
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -171,7 +171,7 @@ Target "NBench" <| fun _ ->
     // .NET Framework
     let testSearchPath =
         let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
-        sprintf "src/**/bin/Release/**/*%s*.Tests.Performance.dll" assemblyFilter
+        sprintf "src/**/bin/Release/**/net452/*%s*.Tests.Performance.dll" assemblyFilter
 
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
     let nbenchTestAssemblies = !! testSearchPath
