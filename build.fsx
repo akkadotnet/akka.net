@@ -208,7 +208,7 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.DistributedData.LightningDB.csproj"
                    ++ "src/**/Akka.Persistence.csproj"
                    ++ "src/**/Akka.Persistence.Query.csproj"
-                   ++ "src/**/Akka.Persistence.TestKit.csproj"
+                   ++ "src/**/Akka.Persistence.TCK.csproj"
                    ++ "src/**/Akka.Persistence.Query.Sql.csproj"
                    ++ "src/**/Akka.Persistence.Sql.Common.csproj"
                    ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
@@ -218,6 +218,7 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.Streams.csproj"
                    ++ "src/**/Akka.Streams.TestKit.csproj"
                    ++ "src/**/Akka.TestKit.csproj"
+                   ++ "src/**/Akka.TestKit.Xunit.csproj"
                    ++ "src/**/Akka.TestKit.Xunit2.csproj"
                    ++ "src/**/Akka.DI.Core.csproj"
                    ++ "src/**/Akka.DI.TestKit.csproj"
@@ -239,7 +240,7 @@ Target "CreateNuget" (fun _ ->
 )
 
 Target "PublishNuget" (fun _ ->
-    let projects = !! "./build/nuget/*.nupkg" -- "./build/nuget/*.symbols.nupkg"
+    let projects = !! "./bin/nuget/*.nupkg" -- "./bin/nuget/*.symbols.nupkg"
     let apiKey = getBuildParamOrDefault "nugetkey" ""
     let source = getBuildParamOrDefault "nugetpublishurl" ""
     let symbolSource = getBuildParamOrDefault "symbolspublishurl" ""
