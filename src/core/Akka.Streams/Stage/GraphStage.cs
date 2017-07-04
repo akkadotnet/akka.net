@@ -2362,6 +2362,7 @@ namespace Akka.Streams.Stage
                     if (_watching.Contains(t.ActorRef))
                     {
                         _watching.Remove(t.ActorRef);
+                        _callback(Tuple.Create(sender, message));
                         break;
                     }
                     else return;
