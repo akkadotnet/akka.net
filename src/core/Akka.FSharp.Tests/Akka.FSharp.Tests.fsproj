@@ -26,7 +26,7 @@
   <ItemGroup>
     <PackageReference Include="FSharp.Core" Version="4.2.1" />
     <PackageReference Include="FSharp.NET.Sdk" Version="1.0.5" PrivateAssets="All" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSDKVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="$(XunitVersion)" />
