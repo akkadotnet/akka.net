@@ -110,19 +110,11 @@ Target "RunTests" (fun _ ->
 )
 
 Target "RunTestsNetCore" (fun _ ->
-    let projects =
-        match isWindows with
-        // Windows
-        | true -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-        // Linux/Mono
-        | _ -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/Akka.API.Tests.csproj"
+    let projects = !! "./**/core/**/*.Tests.csproj"
+                   ++ "./**/contrib/**/*.Tests.csproj"
+                   -- "./**/serializers/**/*Wire*.csproj"
+                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                   -- "./**/Akka.API.Tests.csproj"
      
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -138,11 +130,11 @@ Target "RunTestsNetCore" (fun _ ->
 
 Target "MultiNodeTests" (fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
-    let multiNodeTestAssemblies = !! "src/**/bin/Release/**/Akka.Remote.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.DistributedData.Tests.MultiNode.dll"
+    let multiNodeTestAssemblies = !! "src/**/bin/Release/**/net452/Akka.Remote.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/net452/Akka.Cluster.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/net452/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/net452/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/**/net452/Akka.DistributedData.Tests.MultiNode.dll"
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -171,7 +163,7 @@ Target "NBench" <| fun _ ->
     // .NET Framework
     let testSearchPath =
         let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
-        sprintf "src/**/bin/Release/**/*%s*.Tests.Performance.dll" assemblyFilter
+        sprintf "src/**/bin/Release/**/net452/*%s*.Tests.Performance.dll" assemblyFilter
 
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
     let nbenchTestAssemblies = !! testSearchPath
@@ -216,7 +208,7 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.DistributedData.LightningDB.csproj"
                    ++ "src/**/Akka.Persistence.csproj"
                    ++ "src/**/Akka.Persistence.Query.csproj"
-                   ++ "src/**/Akka.Persistence.TestKit.csproj"
+                   ++ "src/**/Akka.Persistence.TCK.csproj"
                    ++ "src/**/Akka.Persistence.Query.Sql.csproj"
                    ++ "src/**/Akka.Persistence.Sql.Common.csproj"
                    ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
@@ -226,6 +218,7 @@ Target "CreateNuget" (fun _ ->
                    ++ "src/**/Akka.Streams.csproj"
                    ++ "src/**/Akka.Streams.TestKit.csproj"
                    ++ "src/**/Akka.TestKit.csproj"
+                   ++ "src/**/Akka.TestKit.Xunit.csproj"
                    ++ "src/**/Akka.TestKit.Xunit2.csproj"
                    ++ "src/**/Akka.DI.Core.csproj"
                    ++ "src/**/Akka.DI.TestKit.csproj"
@@ -247,7 +240,7 @@ Target "CreateNuget" (fun _ ->
 )
 
 Target "PublishNuget" (fun _ ->
-    let projects = !! "./build/nuget/*.nupkg" -- "./build/nuget/*.symbols.nupkg"
+    let projects = !! "./bin/nuget/*.nupkg" -- "./bin/nuget/*.symbols.nupkg"
     let apiKey = getBuildParamOrDefault "nugetkey" ""
     let source = getBuildParamOrDefault "nugetpublishurl" ""
     let symbolSource = getBuildParamOrDefault "symbolspublishurl" ""

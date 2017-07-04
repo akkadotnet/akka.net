@@ -25,7 +25,7 @@ using Xunit;
 
 namespace Akka.Tests.IO
 {
-    class TcpConnectionSpec : AkkaSpec
+    public class TcpConnectionSpec : AkkaSpec
     {
         internal class Ack : Tcp.Event
         {

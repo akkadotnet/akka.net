@@ -13,7 +13,7 @@
     <PackageReference Include="System.Diagnostics.StackTrace" version="4.3.0" />
   </ItemGroup>
 
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
     <PackageReference Include="FsCheck" Version="2.9.0" />
     <PackageReference Include="FsCheck.Xunit" Version="2.9.0" />
     <PackageReference Include="FSharp.Core" Version="4.1.0" />

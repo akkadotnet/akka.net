@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Specialized;
+using System.Collections.Generic;
 
 namespace Akka.Remote.TestKit
 {   
@@ -26,26 +26,26 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public class CommandLine
     {
-        private static readonly Lazy<StringDictionary> Values = new Lazy<StringDictionary>(() =>
+        private static readonly Lazy<Dictionary<string, string>> Values = new Lazy<Dictionary<string, string>>(() =>
         {
-            var dictionary = new StringDictionary();
+            var dictionary = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var arg in Environment.GetCommandLineArgs())
             {
                 if (!arg.StartsWith("-D")) continue;
                 var tokens = arg.Substring(2).Split('=');
-                dictionary.Add(tokens[0], tokens[1]);
+                dictionary[tokens[0]] = tokens[1];
             }
             return dictionary;
         });
 
         public static string GetProperty(string key)
         {
-            return Values.Value[key];
+            return Values.Value.TryGetValue(key, out var res) ? res : null;
         }
 
         public static string GetPropertyOrDefault(string key, string defaultStr)
         {
-            return Values.Value.ContainsKey(key) ? Values.Value[key] : defaultStr;
+            return Values.Value.TryGetValue(key, out var res) ? res : defaultStr;
         }
 
         public static int GetInt32(string key)
@@ -55,7 +55,7 @@ namespace Akka.Remote.TestKit
 
         public static int GetInt32OrDefault(string key, int defaultInt)
         {
-            return Values.Value.ContainsKey(key) ? GetInt32(key) : defaultInt;
+            return Values.Value.TryGetValue(key, out var res) ? GetInt32(res) : defaultInt;
         }
     }
 }
