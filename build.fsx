@@ -110,19 +110,11 @@ Target "RunTests" (fun _ ->
 )
 
 Target "RunTestsNetCore" (fun _ ->
-    let projects =
-        match isWindows with
-        // Windows
-        | true -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-        // Linux/Mono
-        | _ -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/Akka.API.Tests.csproj"
+    let projects = !! "./**/core/**/*.Tests.csproj"
+                   ++ "./**/contrib/**/*.Tests.csproj"
+                   -- "./**/serializers/**/*Wire*.csproj"
+                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                   -- "./**/Akka.API.Tests.csproj"
      
     let runSingleProject project =
         let result = ExecProcess(fun info ->

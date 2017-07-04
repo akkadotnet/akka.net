@@ -36,7 +36,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;AKKAIO</DefineConstants>
+    <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
