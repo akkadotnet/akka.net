@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Akka.Util;
@@ -57,34 +58,22 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public string Host
-        {
-            get { return _host; }
-        }
+        public string Host => _host;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public int? Port
-        {
-            get { return _port; }
-        }
+        public int? Port => _port;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string System
-        {
-            get { return _system; }
-        }
+        public string System => _system;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string Protocol
-        {
-            get { return _protocol; }
-        }
+        public string Protocol => _protocol;
 
         /// <summary>
         /// Returns true if this Address is only defined locally. It is not safe to send locally scoped addresses to remote
@@ -100,10 +89,7 @@ namespace Akka.Actor
         /// addresses of global scope are safe to sent to other hosts, as they globally and uniquely identify an addressable
         /// entity.
         /// </summary>
-        public bool HasGlobalScope
-        {
-            get { return !string.IsNullOrEmpty(Host); }
-        }
+        public bool HasGlobalScope => !string.IsNullOrEmpty(Host);
 
         private Lazy<string> CreateLazyToString()
         {
@@ -120,24 +106,15 @@ namespace Akka.Actor
             }, true);
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// <inheritdoc/>
+        /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
+        /// A <see cref="string" /> that represents this instance.
         /// </returns>
-        public override string ToString()
-        {
-            return _toString.Value;
-        }
+        public override string ToString() => _toString.Value;
 
-        /// <summary>
-        /// Determines whether the specified <see cref="Address" />, is equal to this instance.
-        /// </summary>
-        /// <param name="other">The <see cref="Address" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="Address" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(Address other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -145,21 +122,10 @@ namespace Akka.Actor
             return string.Equals(Host, other.Host) && Port == other.Port && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public override bool Equals(object obj) => obj is Address && Equals((Address)obj);
 
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked

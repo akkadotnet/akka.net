@@ -55,7 +55,7 @@ namespace Akka.Actor
     public interface IRepointableRef : IActorRefScope
     {
         /// <summary>
-        /// Retruns <c>true</c> if this actor has started yet. <c>false</c> otherwise.
+        /// Returns <c>true</c> if this actor has started yet. <c>false</c> otherwise.
         /// </summary>
         bool IsStarted { get; }
     }

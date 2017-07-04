@@ -122,7 +122,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Acknowledgement from <see cref="PersistentShardCoordinator"/> that <see cref="Register"/> or <see cref="RegisterProxy"/> was sucessful.
+        /// Acknowledgement from <see cref="PersistentShardCoordinator"/> that <see cref="Register"/> or <see cref="RegisterProxy"/> was successful.
         /// </summary>
         public sealed class RegisterAck : ICoordinatorMessage
         {
@@ -645,7 +645,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// DomainEvents for the persistent state of the event sourced PersistentShardCoordinator
         /// </summary>
-        public interface IDomainEvent { }
+        public interface IDomainEvent: IClusterShardingSerializable { }
 
         /// <summary>
         /// TBD
@@ -863,7 +863,7 @@ namespace Akka.Cluster.Sharding
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(other, this)) return true;
 
-                return Shard.Equals(other.Shard) 
+                return Shard.Equals(other.Shard)
                     && Region.Equals(other.Region);
             }
 

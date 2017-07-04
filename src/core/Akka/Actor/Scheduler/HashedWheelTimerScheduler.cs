@@ -377,9 +377,7 @@ namespace Akka.Actor
             return Completed;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Dispose()
         {
             var stopped = Stop();

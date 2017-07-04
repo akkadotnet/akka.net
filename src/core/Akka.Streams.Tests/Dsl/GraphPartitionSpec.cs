@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Partition_must_remeber_first_pull_even_thought_first_element_target_another_out()
+        public void A_Partition_must_remember_first_pull_even_thought_first_element_target_another_out()
         {
             this.AssertAllStagesStopped(() =>
             {

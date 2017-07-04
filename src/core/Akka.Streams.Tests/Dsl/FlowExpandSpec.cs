@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Expand_musst_pass_through_elements_unchanged_when_there_is_no_rate_differenc()
+        public void Expand_must_pass_through_elements_unchanged_when_there_is_no_rate_difference()
         {
             // Shadow the fuzzed materializer (see the ordering guarantee needed by the for loop below).
             var materializer = ActorMaterializer.Create(Sys, Settings.WithFuzzingMode(false));
@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Expand_musst_expand_elements_while_upstream_is_silent()
+        public void Expand_must_expand_elements_while_upstream_is_silent()
         {
             var subscriber = this.CreateSubscriberProbe<int>();
             var publisher = this.CreatePublisherProbe<int>();
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Expand_musst_do_not_drop_last_element()
+        public void Expand_must_do_not_drop_last_element()
         {
             var subscriber = this.CreateSubscriberProbe<int>();
             var publisher = this.CreatePublisherProbe<int>();
@@ -129,7 +129,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Expand_musst_backpressure_publisher_when_subscriber_is_slower()
+        public void Expand_must_backpressure_publisher_when_subscriber_is_slower()
         {
             var subscriber = this.CreateSubscriberProbe<int>();
             var publisher = this.CreatePublisherProbe<int>();
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Expand_musst_work_properly_with_finite_extrapolations()
+        public void Expand_must_work_properly_with_finite_extrapolations()
         {
             var t = TestSource.SourceProbe<int>(this)
                 .Expand(i => Enumerable.Range(0, 4).Select(x => Tuple.Create(i, x)).Take(3).GetEnumerator())

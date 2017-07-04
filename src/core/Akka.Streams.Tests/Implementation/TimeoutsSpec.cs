@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Implementation
 
 
         [Fact]
-        public void CompletionTimeout_must_pass_through_elemnts_unmodified()
+        public void CompletionTimeout_must_pass_through_elements_unmodified()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -204,7 +204,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void BackpressureTimeout_must_suceed_if_subscriber_demand_arrives()
+        public void BackpressureTimeout_must_succeed_if_subscriber_demand_arrives()
         {
             this.AssertAllStagesStopped(() =>
             {

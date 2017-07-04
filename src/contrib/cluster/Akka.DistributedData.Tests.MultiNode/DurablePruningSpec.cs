@@ -1,6 +1,6 @@
 ﻿#region copyright
 // -----------------------------------------------------------------------
-//  <copyright file="DurablePrunningSpec.cs" company="Akka.NET project">
+//  <copyright file="DurablePruningSpec.cs" company="Akka.NET project">
 //      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet>
 //  </copyright>
@@ -18,12 +18,12 @@ using Akka.TestKit.Xunit2;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
-    public class DurablePrunningSpecConfig : MultiNodeConfig
+    public class DurablePruningSpecConfig : MultiNodeConfig
     {
         public readonly RoleName First;
         public readonly RoleName Second;
 
-        public DurablePrunningSpecConfig()
+        public DurablePruningSpecConfig()
         {
             First = Role("first");
             Second = Role("second");
@@ -40,17 +40,17 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
     }
 
-    public class DurablePrunningSpec : MultiNodeClusterSpec
+    public class DurablePruningSpec : MultiNodeClusterSpec
     {
         private readonly Cluster.Cluster cluster;
         private readonly RoleName first = new RoleName("first");
         private readonly RoleName second = new RoleName("second");
-        private readonly TimeSpan maxPrunningDissemination = TimeSpan.FromSeconds(3);
+        private readonly TimeSpan maxPruningDissemination = TimeSpan.FromSeconds(3);
         private readonly TimeSpan timeout;
         private readonly GCounterKey keyA = new GCounterKey("A");
         private readonly IActorRef replicator;
 
-        protected DurablePrunningSpec() : base(new DurablePrunningSpecConfig())
+        protected DurablePruningSpec() : base(new DurablePruningSpecConfig())
         {
             InitialParticipantsValueFactory = Roles.Count;
             cluster = Akka.Cluster.Cluster.Get(Sys);
@@ -60,7 +60,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         protected override int InitialParticipantsValueFactory { get; }
 
         [MultiNodeFact(Skip = "FIXME")]
-        public void Prunning_of_durable_CRDT_should_move_data_from_removed_node()
+        public void Pruning_of_durable_CRDT_should_move_data_from_removed_node()
         {
             Join(first, first);
             Join(second, first);
@@ -91,7 +91,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 replicator.Tell(Dsl.Get(keyA, new ReadAll(TimeSpan.FromSeconds(1))));
                 var counter1 = ExpectMsg<GetSuccess>().Get(keyA);
-                counter1.Value.ShouldBe(10);
+                counter1.Value.ShouldBe(10UL);
                 counter1.State.Count.ShouldBe(4);
             }));
 
@@ -99,7 +99,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 replicator2.Tell(Dsl.Get(keyA, new ReadAll(TimeSpan.FromSeconds(1))), probe2.Ref);
                 var counter2 = probe2.ExpectMsg<GetSuccess>().Get(keyA);
-                counter2.Value.ShouldBe(10);
+                counter2.Value.ShouldBe(10UL);
                 counter2.State.Count.ShouldBe(4);
             }));
             EnterBarrier("get1");
@@ -124,7 +124,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     var counter3 = ExpectMsg<GetSuccess>().Get(keyA);
                     var value = counter3.Value;
                     values = values.Add((int) value);
-                    value.ShouldBe(10);
+                    value.ShouldBe(10UL);
                     counter3.State.Count.ShouldBe(3);
                 });
                 values.ShouldBe(ImmutableHashSet.Create(10));
@@ -150,7 +150,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         var counter4 = probe3.ExpectMsg<GetSuccess>().Get(keyA);
                         var value = counter4.Value;
                         values.Add((int) value);
-                        value.ShouldBe(10);
+                        value.ShouldBe(10UL);
                         counter4.State.Count.ShouldBe(3);
                     });
                     values.ShouldBe(ImmutableHashSet.Create(10));
@@ -159,7 +159,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 // after merging with others
                 replicator3.Tell(Dsl.Get(keyA, new ReadAll(RemainingOrDefault)));
                 var counter5 = ExpectMsg<GetSuccess>().Get(keyA);
-                counter5.Value.ShouldBe(10);
+                counter5.Value.ShouldBe(10UL);
                 counter5.State.Count.ShouldBe(3);
 
             }, first);
@@ -167,7 +167,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             replicator.Tell(Dsl.Get(keyA, new ReadAll(RemainingOrDefault)));
             var counter6 = ExpectMsg<GetSuccess>().Get(keyA);
-            counter6.Value.ShouldBe(10);
+            counter6.Value.ShouldBe(10UL);
             counter6.State.Count.ShouldBe(3);
 
             EnterBarrier("after-1");
@@ -178,7 +178,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             return system.ActorOf(Replicator.Props(
                     ReplicatorSettings.Create(system)
                         .WithGossipInterval(TimeSpan.FromSeconds(1))
-                        .WithPruning(TimeSpan.FromSeconds(1), maxPrunningDissemination)),
+                        .WithPruning(TimeSpan.FromSeconds(1), maxPruningDissemination)),
                 "replicator");
         }
 

@@ -31,11 +31,11 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="resequencables">TBD</param>
+        /// <param name="resequenceables">TBD</param>
         /// <returns>TBD</returns>
-        protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
+        protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequenceables)
         {
-            return resequencables
+            return resequenceables
                .OfType<AtomicWrite>()
                .Select(aw => new AtomicWrite(((IEnumerable<IPersistentRepresentation>)aw.Payload)
                     .Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));

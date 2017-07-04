@@ -40,7 +40,7 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// Utility to be used by implementors to create a manifest from the type.
+        /// Utility to be used by implementers to create a manifest from the type.
         /// The manifest is used to look up the type on deserialization.
         /// </summary>
         /// <param name="type">TBD</param>

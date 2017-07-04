@@ -203,4 +203,5 @@ tools/
 build/
 .nuget/
 .dotnet/
+/src/core/Akka.API.Tests/CoreAPISpec.ApproveStreams.received.txt
 launchSettings.json

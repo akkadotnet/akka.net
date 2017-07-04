@@ -13,8 +13,8 @@ namespace Akka.Util.Internal
     /// <summary>
     /// INTERNAL API.
     /// 
-    /// Renamed from <see cref="Akka.Util.Internal.TaskExtensions"/> so it doesn't colide
-    /// with a helper class in the same namespace defined in System.Threadin.Tasks.
+    /// Renamed from <see cref="Akka.Util.Internal.TaskExtensions"/> so it doesn't collide
+    /// with a helper class in the same namespace defined in System.Threading.Tasks.
     /// </summary>
     internal static class TaskEx
     {

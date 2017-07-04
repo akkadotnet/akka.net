@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
+using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -195,7 +196,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_LazySink_must_contine_if_supervision_is_resume()
+        public void A_LazySink_must_continue_if_supervision_is_resume()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -225,7 +226,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_LazySink_must_fail_task_when_zero_throws_expception()
+        public void A_LazySink_must_fail_task_when_zero_throws_exception()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -238,5 +239,60 @@ namespace Akka.Streams.Tests.Dsl
                 taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).ShouldThrow<TestException>();
             }, Materializer);
         }
+
+        [Fact]
+        public void A_LazySink_must_fail_correctly_when_materialization_of_inner_sink_fails()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                var matFail = new TestException("fail!");
+
+                var task = Source.Single("whatever")
+                    .RunWith(Sink.LazySink<string, NotUsed>(
+                        str => Task.FromResult(Sink.FromGraph(new FailingInnerMat(matFail))),
+                        () => NotUsed.Instance), Materializer);
+
+                try
+                {
+                    task.Wait(TimeSpan.FromSeconds(1));
+                }
+                catch (AggregateException) { }
+
+                task.IsFaulted.ShouldBe(true);
+                task.Exception.ShouldNotBe(null);
+                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+
+            }, Materializer);
+        }
+
+        private sealed class FailingInnerMat : GraphStage<SinkShape<string>>
+        {
+            #region Logic
+            private sealed class FailingLogic : GraphStageLogic
+            {
+                public FailingLogic(Shape shape, TestException ex) : base(shape)
+                {
+                    throw ex;
+                }
+            }
+            #endregion
+
+            public FailingInnerMat(TestException ex)
+            {
+                var inlet = new Inlet<string>("in");
+                Shape = new SinkShape<string>(inlet);
+                _ex = ex;
+            }
+
+            private readonly TestException _ex;
+
+            public override SinkShape<string> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+            {
+                return new FailingLogic(Shape, _ex);
+            }
+        }
+
     }
 }

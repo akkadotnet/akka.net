@@ -124,7 +124,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     {
                         _replicator.Tell(Dsl.Get(KeyA, ReadLocal.Instance));
                         var counter = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, KeyA)).Get(KeyA);
-                        counter.Value.ShouldBe(9);
+                        counter.Value.ShouldBe(9UL);
                         counter.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{counter} shouldn't need prunning from {thirdUniqueAddress}");
                     });
                 });
@@ -136,7 +136,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         _replicator.Tell(Dsl.Get(KeyB, ReadLocal.Instance));
                         var set = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, KeyB)).Get(KeyB);
                         set.Elements.Should().BeEquivalentTo(new[] { "c", "b", "a" });
-                        set.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{set} shouldn't need prunning from {thirdUniqueAddress}");
+                        set.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{set} shouldn't need pruning from {thirdUniqueAddress}");
                     });
                 });
 
@@ -148,7 +148,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         var map = ExpectMsg<GetSuccess>(msg => Equals(msg.Key, KeyC)).Get(KeyC);
                         map["x"].Should().Be(3);
                         map["y"].Should().Be(3);
-                        map.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{map} shouldn't need prunning from {thirdUniqueAddress}");
+                        map.NeedPruningFrom(thirdUniqueAddress).Should().BeFalse($"{map} shouldn't need pruning from {thirdUniqueAddress}");
                     });
                 });
             }, First, Second);
@@ -179,7 +179,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         /// <summary>
         /// On one of the nodes the data has been updated by the pruning, client can update anyway
         /// </summary>
-        private void UpdateAfterPruning(int expectedValue)
+        private void UpdateAfterPruning(ulong expectedValue)
         {
             _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 1)));
             ExpectMsg<UpdateSuccess>(msg =>

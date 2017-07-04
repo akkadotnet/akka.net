@@ -119,7 +119,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_completes_the_stream_immediatly_when_receiving_PoisonPill()
+        public void A_ActorRefSource_must_completes_the_stream_immediately_when_receiving_PoisonPill()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -178,7 +178,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ActorRefSource_must_after_receiving_Status_Success_allow_for_earliner_completion_with_PoisonPill()
+        public void A_ActorRefSource_must_after_receiving_Status_Success_allow_for_earlier_completion_with_PoisonPill()
         {
             this.AssertAllStagesStopped(() =>
             {

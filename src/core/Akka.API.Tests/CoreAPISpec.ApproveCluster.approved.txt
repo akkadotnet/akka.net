@@ -187,6 +187,7 @@ namespace Akka.Cluster
         public System.TimeSpan SeedNodeTimeout { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
+        public bool VerboseGossipReceivedLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
     }
     public interface IClusterMessage { }
@@ -211,6 +212,8 @@ namespace Akka.Cluster
         public static Akka.Cluster.Member HighestPriorityOf(Akka.Cluster.Member m1, Akka.Cluster.Member m2) { }
         public bool IsOlderThan(Akka.Cluster.Member other) { }
         public static System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
+        public static System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> PickNextTransition(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
+        public static Akka.Cluster.Member PickNextTransition(Akka.Cluster.Member a, Akka.Cluster.Member b) { }
         public override string ToString() { }
     }
     public enum MemberStatus
@@ -233,7 +236,7 @@ namespace Akka.Cluster
         public UniqueAddress(Akka.Actor.Address address, int uid) { }
         public Akka.Actor.Address Address { get; }
         public int Uid { get; }
-        public int CompareTo(Akka.Cluster.UniqueAddress other) { }
+        public int CompareTo(Akka.Cluster.UniqueAddress that) { }
         public bool Equals(Akka.Cluster.UniqueAddress other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -245,6 +248,8 @@ namespace Akka.Cluster
         public Akka.Cluster.VectorClock.Ordering CompareTo(Akka.Cluster.VectorClock that) { }
         public static Akka.Cluster.VectorClock Create() { }
         public static Akka.Cluster.VectorClock Create(System.Collections.Immutable.ImmutableSortedDictionary<Akka.Cluster.VectorClock.Node, long> seedValues) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public Akka.Cluster.VectorClock Increment(Akka.Cluster.VectorClock.Node node) { }
         public bool IsAfter(Akka.Cluster.VectorClock that) { }
         public bool IsBefore(Akka.Cluster.VectorClock that) { }

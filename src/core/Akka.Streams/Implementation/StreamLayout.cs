@@ -876,11 +876,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public abstract IModule WithAttributes(Attributes attributes);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public int CompareTo(IModule other) => GetHashCode().CompareTo(other.GetHashCode());
     }
 
@@ -1089,11 +1085,8 @@ namespace Akka.Streams.Implementation
                 return new CopiedModule(Shape, attributes, CopyOf);
             return this;
         }
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+
+        /// <inheritdoc/>
         public override string ToString() => $"{GetHashCode()} copy of {CopyOf}";
     }
 
@@ -1208,10 +1201,7 @@ namespace Akka.Streams.Implementation
                 );
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"\n  CompositeModule [{GetHashCode()}%08x]" +
@@ -1225,15 +1215,134 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// When fusing a <see cref="IGraph{TShape}"/> a part of the internal stage wirings are hidden within
+    /// <see cref="GraphAssembly"/> objects that are
+    /// optimized for high-speed execution. This structural information bundle contains
+    /// the wirings in a more accessible form, allowing traversal from port to upstream
+    /// or downstream port and from there to the owning module (or graph vertex).
     /// </summary>
-    public sealed class FusedModule : Module
+    public sealed class StructuralInfoModule : Module
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Streams.Fusing.StructuralInfo Info;
+        /// <param name="subModules">TBD</param>
+        /// <param name="shape">TBD</param>
+        /// <param name="downstreams">TBD</param>
+        /// <param name="upstreams">TBD</param>
+        /// <param name="inOwners">TBD</param>
+        /// <param name="outOwners">TBD</param>
+        /// <param name="materializedValues">TBD</param>
+        /// <param name="materializedValueComputation">TBD</param>
+        /// <param name="attributes">TBD</param>
+        public StructuralInfoModule(ImmutableArray<IModule> subModules,
+            Shape shape,
+            IImmutableDictionary<OutPort, InPort> downstreams,
+            IImmutableDictionary<InPort, OutPort> upstreams,
+            IImmutableDictionary<InPort, IModule> inOwners, 
+            IImmutableDictionary<OutPort, IModule> outOwners,
+            IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> materializedValues,
+            StreamLayout.IMaterializedValueNode materializedValueComputation,
+            Attributes attributes)
+        {
+            InOwners = inOwners;
+            OutOwners = outOwners;
+            MaterializedValues = materializedValues;
 
+            SubModules = subModules;
+            Shape = shape;
+            Downstreams = downstreams;
+            Upstreams = upstreams;
+            MaterializedValueComputation = materializedValueComputation;
+            Attributes = attributes;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override bool IsFused { get; } = false;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override Shape Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override ImmutableArray<IModule> SubModules { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override Attributes Attributes { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableDictionary<InPort, IModule> InOwners { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableDictionary<OutPort, IModule> OutOwners { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> MaterializedValues { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule ReplaceShape(Shape shape)
+        {
+            if (!ReferenceEquals(Shape, shape))
+            {
+                if(!Shape.HasSamePortsAs(shape))
+                    throw new ArgumentException("StructuralInfoModule requires shape with same ports to replace", nameof(shape));
+                return new StructuralInfoModule(SubModules, shape, Downstreams, Upstreams, InOwners, OutOwners,
+                    MaterializedValues, MaterializedValueComputation, Attributes);
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override IModule WithAttributes(Attributes attributes)
+        {
+            return new StructuralInfoModule(SubModules, Shape, Downstreams, Upstreams, InOwners, OutOwners,
+                MaterializedValues, MaterializedValueComputation, attributes);
+        }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public sealed class FusedModule : Module
+    {
         /// <summary>
         /// TBD
         /// </summary>
@@ -1251,7 +1360,7 @@ namespace Akka.Streams.Implementation
             IImmutableDictionary<InPort, OutPort> upstreams,
             StreamLayout.IMaterializedValueNode materializedValueComputation,
             Attributes attributes,
-            Streams.Fusing.StructuralInfo info)
+            StructuralInfoModule info)
         {
             SubModules = subModules;
             Shape = shape;
@@ -1261,6 +1370,12 @@ namespace Akka.Streams.Implementation
             Attributes = attributes;
             Info = info;
         }
+
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public StructuralInfoModule Info { get; }
 
         /// <summary>
         /// TBD
@@ -1332,10 +1447,7 @@ namespace Akka.Streams.Implementation
                 new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes,
                     Info);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"\n  Name: {Attributes.GetNameOrDefault("unnamed")}" +
@@ -1907,7 +2019,7 @@ namespace Akka.Streams.Implementation
      * defers to the upstream that is connected during materialization. This would
      * be trivial if it were not for materialized value computations that may even
      * spawn the code that does `pub.subscribe(sub)` in a Future, running concurrently
-     * with the actual materialization. Therefore we implement a minimial shell here
+     * with the actual materialization. Therefore we implement a minimal shell here
      * that plugs the downstream and the upstream together as soon as both are known.
      * Using a VirtualProcessor would technically also work, but it would defeat the
      * purpose of subscription timeouts�the subscription would always already be

@@ -87,14 +87,12 @@ Target "RunTests" (fun _ ->
         // Windows
         | true -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj" // TODO: remove once protobuf3 PR is merged
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
         // Linux/Mono
         | _ -> !! "./**/core/**/*.Tests.csproj"
                   ++ "./**/contrib/**/*.Tests.csproj"
                   -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.Remote.TestKit.Tests.csproj"
                   -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
                   -- "./**/Akka.API.Tests.csproj"
      
@@ -102,7 +100,35 @@ Target "RunTests" (fun _ ->
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
             info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "xunit -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
+            info.Arguments <- (sprintf "xunit -f net452 -c Release -nobuild -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
+        
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+
+    CreateDir outputTests
+    projects |> Seq.iter (runSingleProject)
+
+)
+
+Target "RunTestsNetCore" (fun _ ->
+    let projects =
+        match isWindows with
+        // Windows
+        | true -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+        // Linux/Mono
+        | _ -> !! "./**/core/**/*.Tests.csproj"
+                  ++ "./**/contrib/**/*.Tests.csproj"
+                  -- "./**/serializers/**/*Wire*.csproj"
+                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
+                  -- "./**/Akka.API.Tests.csproj"
+     
+    let runSingleProject project =
+        let result = ExecProcess(fun info ->
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- (Directory.GetParent project).FullName
+            info.Arguments <- (sprintf "xunit -f netcoreapp1.1 -parallel none -teamcity -xml %s_xunit_netcore.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
         
         ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
@@ -350,7 +376,8 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
 
 // tests dependencies
-"Clean" ==> "RestorePackages" ==> "RunTests"
+// "RunTests" step doesn't require Clean ==> "RestorePackages" step
+"Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
@@ -363,6 +390,7 @@ Target "Nuget" DoNothing
 // all
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
+"RunTestsNetCore" ==> "All"
 "MultiNodeTests" ==> "All"
 "NBench" ==> "All"
 

@@ -18,7 +18,7 @@ namespace Akka.Persistence.Query
     /// The interface is very open so that different journals may implement specific queries.
     /// </para>
     /// There are a few pre-defined queries that a query implementation may implement,
-    /// such as <see cref="IEventsByPersistenceIdQuery"/>, <see cref="IAllPersistenceIdsQuery"/> and <see cref="IEventsByTagQuery"/>
+    /// such as <see cref="IEventsByPersistenceIdQuery"/>, <see cref="IPersistenceIdsQuery"/> and <see cref="IEventsByTagQuery"/>
     /// Implementation of these queries are optional and query (journal) plugins may define
     /// their own specialized queries by implementing other methods.
     /// <example>
@@ -116,14 +116,14 @@ namespace Akka.Persistence.Query
     public interface ICurrentPersistenceIdsQuery : IReadJournal
     {
         /// <summary>
-        /// Same type of query as <see cref="IAllPersistenceIdsQuery.AllPersistenceIds"/> but the stream
+        /// Same type of query as <see cref="IPersistenceIdsQuery.PersistenceIds"/> but the stream
         /// is completed immediately when it reaches the end of the "result set". Persistent
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
         Source<string, NotUsed> CurrentPersistenceIds();
     }
 
-    public interface IAllPersistenceIdsQuery : IReadJournal
+    public interface IPersistenceIdsQuery : IReadJournal
     {
         /// <summary>
         /// Query all <see cref="PersistentActor"/> identifiers, i.e. as defined by the
@@ -134,6 +134,6 @@ namespace Akka.Persistence.Query
         /// Corresponding query that is completed when it reaches the end of the currently
         /// currently used `persistenceIds` is provided by <see cref="ICurrentPersistenceIdsQuery.CurrentPersistenceIds"/>.
         /// </summary>
-        Source<string, NotUsed> AllPersistenceIds();
+        Source<string, NotUsed> PersistenceIds();
     }
 }

@@ -100,4 +100,3 @@ namespace Akka.Persistence
         }
     }
 }
-

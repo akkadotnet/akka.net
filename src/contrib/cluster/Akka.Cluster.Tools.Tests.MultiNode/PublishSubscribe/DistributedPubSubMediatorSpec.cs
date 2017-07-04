@@ -298,8 +298,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             DistributedPubSubMediator_must_remove_terminated_users();
             DistributedPubSubMediator_must_publish();
             DistributedPubSubMediator_must_publish_to_topic();
-            DistributedPubSubMediator_must_demonstrate_usageof_Publish();
-            DistributedPubSubMediator_must_demonstrate_usageof_Send();
+            DistributedPubSubMediator_must_demonstrate_usage_of_Publish();
+            DistributedPubSubMediator_must_demonstrate_usage_of_Send();
             DistributedPubSubMediator_must_SendAll_to_all_other_nodes();
             DistributedPubSubMediator_must_send_one_message_to_each_group();
             DistributedPubSubMediator_must_transfer_delta_correctly();
@@ -523,7 +523,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        public void DistributedPubSubMediator_must_demonstrate_usageof_Publish()
+        public void DistributedPubSubMediator_must_demonstrate_usage_of_Publish()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -549,7 +549,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        public void DistributedPubSubMediator_must_demonstrate_usageof_Send()
+        public void DistributedPubSubMediator_must_demonstrate_usage_of_Send()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {

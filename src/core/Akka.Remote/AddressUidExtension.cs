@@ -49,7 +49,7 @@ namespace Akka.Remote
     public class AddressUid : IExtension
     {
         /// <summary>
-        /// TBD
+        /// The random unique identifier for this incarnation of the ActorSystem.
         /// </summary>
         public readonly int Uid = ThreadLocalRandom.Current.Next();
     }

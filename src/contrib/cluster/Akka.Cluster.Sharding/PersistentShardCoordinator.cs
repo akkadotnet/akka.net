@@ -28,7 +28,7 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the event sourced PersistentShardCoordinator.
         /// </summary>
         [Serializable]
-        protected internal sealed class State
+        public sealed class State: IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -177,11 +177,7 @@ namespace Akka.Cluster.Sharding
 
             #region Equals
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="obj">TBD</param>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as State;
@@ -195,10 +191,7 @@ namespace Akka.Cluster.Sharding
                     && UnallocatedShards.SequenceEqual(other.UnallocatedShards);
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
+            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 unchecked

@@ -432,6 +432,8 @@ namespace Akka.Persistence
         protected PersistentActor() { }
         protected override bool Receive(object message) { }
     }
+    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
+        "0]")]
     public abstract class PersistentView : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>, Akka.Persistence.IPersistenceRecovery, Akka.Persistence.IPersistentIdentity, Akka.Persistence.ISnapshotter
     {
         protected readonly Akka.Persistence.PersistenceExtension Extension;
@@ -591,6 +593,8 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
+        "0]")]
     public sealed class ScheduledUpdate
     {
         public ScheduledUpdate(long replayMax) { }
@@ -694,6 +698,8 @@ namespace Akka.Persistence
         protected virtual bool ReceiveCommand(object message) { }
         protected virtual bool ReceiveRecover(object message) { }
     }
+    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
+        "0]")]
     public sealed class Update
     {
         public Update() { }
@@ -768,6 +774,16 @@ namespace Akka.Persistence.Fsm
         {
             string Identifier { get; }
         }
+        public class PersistentFSMSnapshot<TD>
+        {
+            public PersistentFSMSnapshot(string stateIdentifier, TD data, System.Nullable<System.TimeSpan> timeout) { }
+            public TD Data { get; }
+            public string StateIdentifier { get; }
+            public System.Nullable<System.TimeSpan> Timeout { get; }
+            protected bool Equals(Akka.Persistence.Fsm.PersistentFSM.PersistentFSMSnapshot<TD> other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
         public class State<TS, TD, TE>
         {
             public State(TS stateName, TD stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, System.Collections.Generic.IReadOnlyList<TE> domainEvents = null, System.Action<TD> afterTransitionDo = null, bool notifies = True) { }
@@ -784,6 +800,12 @@ namespace Akka.Persistence.Fsm
             public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> Replying(object replyValue) { }
             public override string ToString() { }
             public Akka.Persistence.Fsm.PersistentFSM.State<TS, TD, TE> Using(TD nextStateData) { }
+        }
+        public class StateChangeEvent
+        {
+            public StateChangeEvent(string stateIdentifier, System.Nullable<System.TimeSpan> timeout) { }
+            public string StateIdentifier { get; }
+            public System.Nullable<System.TimeSpan> Timeout { get; }
         }
     }
     public abstract class PersistentFSM<TState, TData, TEvent> : Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>
@@ -1056,7 +1078,7 @@ namespace Akka.Persistence.Journal
         protected WriteJournalBase() { }
         protected System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> AdaptFromJournal(Akka.Persistence.IPersistentRepresentation representation) { }
         protected Akka.Persistence.IPersistentRepresentation AdaptToJournal(Akka.Persistence.IPersistentRepresentation representation) { }
-        protected System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> PreparePersistentBatch(System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentEnvelope> resequencables) { }
+        protected System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> PreparePersistentBatch(System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentEnvelope> resequenceables) { }
     }
 }
 namespace Akka.Persistence.Serialization
