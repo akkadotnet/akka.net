@@ -106,7 +106,7 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr = 0, long toSequenceNr = long.MaxValue) =>
-                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refershInterval, _maxBufferSize, _writeJournalPluginId))
+                Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
                     .Named("EventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
 
@@ -156,7 +156,7 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset = 0) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refershInterval, _maxBufferSize, _writeJournalPluginId))
+            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByTag-" + tag);
 
@@ -200,7 +200,7 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </summary>
         public Source<EventEnvelope, NotUsed> AllEvents(long fromOffset = 0, long toOffset = long.MaxValue) =>
-            Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(fromOffset, toOffset, _refershInterval, _maxBufferSize, _writeJournalPluginId))
+            Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(fromOffset, toOffset, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllEvents");
 

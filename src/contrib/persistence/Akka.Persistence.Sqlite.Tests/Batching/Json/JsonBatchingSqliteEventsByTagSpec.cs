@@ -7,7 +7,7 @@
 
 using Akka.Configuration;
 using Akka.Persistence.Query.Sql;
-using Akka.Persistence.Sql.TestKit;
+using Akka.Persistence.TCK.Query;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
@@ -38,7 +38,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching.Json
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
 
-        public JsonBatchingSqliteEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), output)
+        public JsonBatchingSqliteEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), output: output)
         {
         }
     }
