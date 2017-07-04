@@ -7,6 +7,7 @@
 
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using Akka.Configuration;
 
 namespace Akka.Remote.TestKit.Internals
@@ -35,7 +36,7 @@ namespace Akka.Remote.TestKit.Internals
         /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
-            var assembly = typeof(TestConductorConfigFactory).Assembly;
+            var assembly = typeof(TestConductorConfigFactory).GetTypeInfo().Assembly;
 
             using (var stream = assembly.GetManifestResourceStream(resourceName))
             {

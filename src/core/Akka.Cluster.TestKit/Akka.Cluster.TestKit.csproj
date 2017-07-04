@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.TestKit</AssemblyTitle>
     <Description>Helper classes for combining the Akka.Remote.TestKit with Akka.Cluster</Description>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;cluster;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

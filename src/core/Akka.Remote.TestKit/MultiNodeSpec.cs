@@ -377,6 +377,7 @@ namespace Akka.Remote.TestKit
 
         private static string GetCallerName()
         {
+#if !CORECLR
             var @this = typeof(MultiNodeSpec).Name;
             var trace = new StackTrace();
             var frames = trace.GetFrames();
@@ -389,6 +390,9 @@ namespace Akka.Remote.TestKit
                 }
             }
             throw new InvalidOperationException("Unable to find calling type");
+#else
+            return "AkkaMultiNodeSpec";
+#endif
         }
 
         readonly RoleName _myself;
@@ -416,7 +420,7 @@ namespace Akka.Remote.TestKit
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
-            var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
+            var node = new IPEndPoint(Dns.GetHostAddressesAsync(ServerName).Result[0], ServerPort);
             _controllerAddr = node;
 
             AttachConductor(new TestConductor(system));

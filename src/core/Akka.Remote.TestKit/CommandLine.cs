@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Specialized;
+using System.Collections.Generic;
 
 namespace Akka.Remote.TestKit
 {   
@@ -26,9 +26,9 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public class CommandLine
     {
-        private static readonly Lazy<StringDictionary> Values = new Lazy<StringDictionary>(() =>
+        private static readonly Lazy<Dictionary<string, string>> Values = new Lazy<Dictionary<string, string>>(() =>
         {
-            var dictionary = new StringDictionary();
+            var dictionary = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var arg in Environment.GetCommandLineArgs())
             {
                 if (!arg.StartsWith("-D")) continue;
