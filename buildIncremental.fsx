@@ -23,7 +23,7 @@ module IncrementalTests =
         if (csproj.Contains(name) && isSupported) then Some(name)
         else None
 
-    let getAllUnitTestProjects() =
+    let getUnitTestProjects() =
         let isRunnable testProject =
             match testProject with
             | IsRunnable "Akka.API.Tests.csproj" Linux proj -> false
@@ -129,14 +129,12 @@ module IncrementalTests =
     | Unit
     | MNTR
     | Perf
-    | All
 
     let isTestProject csproj testMode =
         match testMode with
         | Unit -> (filename csproj).Contains("Tests.csproj")
         | MNTR -> (filename csproj).Contains("Tests.MultiNode.csproj")
         | Perf -> (filename csproj).Contains("Tests.Performance.csproj")
-        | All -> true
 
     let getAllProjectDependencies testMode =
         !! "./src/**/*.csproj"
@@ -158,13 +156,12 @@ module IncrementalTests =
         let updatedFiles = getUpdatedFiles()
         log "The following files have been updated since forking from v1.3 branch..."
         updatedFiles |> Seq.iter log
-
+        log "The following test projects will be run..."
         if (updatedFiles |> Seq.exists (fun p -> isBuildScript p)) then
-            !! "./src/**/*.csproj" // TODO: this will be slow, but needs to take testMode param for now
-            |> Seq.map (fun p -> findTestProjectsThatHaveDependencyOn (filename p) testMode)
-            |> Seq.concat
-            |> Seq.map (fun p -> p.parentProject.projectPath)
-            |> Seq.distinct
+            match testMode with
+            | Unit -> getUnitTestProjects()
+            | MNTR -> getMntrProjects()
+            | Perf -> getPerfTestProjects()
         else
             updatedFiles
             |> generateContainingProjFileCollection

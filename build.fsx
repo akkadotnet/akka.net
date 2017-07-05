@@ -91,9 +91,9 @@ Target "RunTests" (fun _ ->
         | "true" -> getIncrementalUnitTests()
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
                             getIncrementalUnitTests() |> Seq.iter log
-                            getAllUnitTestProjects()
+                            getUnitTestProjects()
         | _ -> log "All test projects will be run..."
-               getAllUnitTestProjects()
+               getUnitTestProjects()
     
     let runSingleProject project =
         let result = ExecProcess(fun info ->
@@ -114,9 +114,9 @@ Target "RunTestsNetCore" (fun _ ->
         | "true" -> getIncrementalUnitTests()
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
                             getIncrementalUnitTests() |> Seq.iter log
-                            getAllUnitTestProjects()
+                            getUnitTestProjects()
         | _ -> log "All test projects will be run..."
-               getAllUnitTestProjects()
+               getUnitTestProjects()
      
     let runSingleProject project =
         let result = ExecProcess(fun info ->
