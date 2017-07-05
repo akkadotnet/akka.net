@@ -136,3 +136,13 @@ The probes stores the sender of the last dequeued message (i.e. after its `Expec
 The probe can also forward a received message (i.e. after its `ExpectMsg*` reception), retaining the original sender:
 
 [!code-csharp[ForwardingProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=68-73)]
+
+###Auto-Pilot
+Receiving messages in a queue for later inspection is nice, but in order to keep a test running and verify traces later you can also install an `AutoPilot` in the participating test probes (actually in any `TestKit`) which is invoked before enqueueing to the inspection queue. This code can be used to forward messages, e.g. in a chain `A --> Probe --> B`, as long as a certain protocol is obeyed.
+
+[!code-csharp[ProbeAutopilot](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=79-91)]
+
+The `run` method must return the auto-pilot for the next message. There are multiple options here:
+You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.KeepRunning` to keep using the current `AutoPilot`. Obviously you can also chain a new `AutoPilot` instance to switch behaviors.
+
+

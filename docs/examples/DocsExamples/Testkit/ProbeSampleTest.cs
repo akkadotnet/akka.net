@@ -73,5 +73,23 @@ namespace DocsExamples.Testkit
             Assert.Equal(TestActor, LastSender);
         }
 
+        [Fact]
+        public void ProbeAutopilot()
+        {
+            var probe = CreateTestProbe();
+            probe.SetAutoPilot(new DelegateAutoPilot((sender, message) =>
+            {
+                sender.Tell(message, ActorRefs.NoSender);
+                return AutoPilot.NoAutoPilot;
+            }));
+
+            //first one is replied to directly
+            probe.Tell("Hello");
+            ExpectMsg("Hello");
+            //... but then the auto-pilot switched itself off
+            probe.Tell("world");
+            ExpectNoMsg();
+        }
+
     }
 }
