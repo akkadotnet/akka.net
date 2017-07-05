@@ -154,5 +154,6 @@ Receiving messages in a queue for later inspection is nice, but in order to keep
 The `run` method must return the auto-pilot for the next message. There are multiple options here:
 You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.KeepRunning` to keep using the current `AutoPilot`. Obviously you can also chain a new `AutoPilot` instance to switch behaviors.
 
-
+###Caution about Timing Assertions
+The behavior of `Within` blocks when using test probes might be perceived as counter-intuitive: you need to remember that the nicely scoped deadline as described **above** is local to each probe. Hence, probes to not react to each other's deadlines or to the deadline set in an enclosing `TestKit` instance.
 
