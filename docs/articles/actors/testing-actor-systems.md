@@ -145,4 +145,24 @@ Receiving messages in a queue for later inspection is nice, but in order to keep
 The `run` method must return the auto-pilot for the next message. There are multiple options here:
 You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.KeepRunning` to keep using the current `AutoPilot`. Obviously you can also chain a new `AutoPilot` instance to switch behaviors.
 
+###Timing Assertions
+Another important part of functional testing concerns timing: certain events must not happen immediately (like a timer), others need to happen before a deadline. Therefore, all examination methods accept an upper time limit within the positive or negative result must be obtained. Lower time limits need to be checked external to the examination, which is facilitated by a new construct for managing time constraints:
 
+[!code-csharp[WithinSample](../../examples/DocsExamples/Testkit/WithinSampleTest.cs?range=18-22)]
+
+The block in `Within` must complete after a Duration, which is between `min` and `max`, where the former defaults to zero. The deadline calculated by adding the `max` parameter to the block's start time is implicitly available within the block to all examination methods, if you do not specify it, it is inherited from the innermost enclosing `Within` block.
+
+It should be noted that if the last message-receiving assertion of the block is `ExpectNoMsg` or `ReceiveWhile`, the final check of the within is skipped in order to avoid false positives due to wake-up latencies. This means that while individual contained assertions still use the maximum time bound, the overall block may take arbitrarily longer in this case.
+
+```csharp
+var worker = ActorOf<Worker>();
+Within(200.Milliseconds()) {
+  worker.Tell("some work");
+  ExpectMsg("Some Result");
+  ExpectNoMsg(); //will block for the rest of the 200ms
+  Thead.Sleep(300); //will NOT make this block fail
+}
+```
+
+>[NOTE]
+>All times are measured using `DateTime.UtcNow`, meaning that they describe wall time, not CPU time.
