@@ -160,7 +160,7 @@ module IncrementalTests =
         updatedFiles |> Seq.iter log
 
         if (updatedFiles |> Seq.exists (fun p -> isBuildScript p)) then
-            !! "./src/**/*.csproj" // TODO: this will be slow, but needs to take testMode param for now
+            !! "./src/**/Akka.csproj" // TODO: this will be slow, but needs to take testMode param for now
             |> Seq.map (fun p -> findTestProjectsThatHaveDependencyOn (filename p) testMode)
             |> Seq.concat
             |> Seq.map (fun p -> p.parentProject.projectPath)
