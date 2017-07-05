@@ -50,6 +50,28 @@ namespace DocsExamples.Testkit
             Assert.True(aggregator.Ref.Path.Name.StartsWith("aggregator"));
         }
 
+        [Fact]
+        public void ReplyingToProbeMessages()
+        {
+
+            var probe = CreateTestProbe();
+            probe.Tell("hello");
+            probe.ExpectMsg("hello");
+            probe.Reply("world");
+            ExpectMsg("world");
+            Assert.Equal(probe.Ref, LastSender);
+        }
+
+        [Fact]
+        public void ForwardingProbeMessages()
+        {
+            var probe = CreateTestProbe();
+            probe.Tell("hello");
+            probe.ExpectMsg("hello");
+            probe.Forward(TestActor);
+            ExpectMsg("hello");
+            Assert.Equal(TestActor, LastSender);
+        }
 
     }
 }

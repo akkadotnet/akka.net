@@ -130,11 +130,9 @@ A `TestProbe` can register itself for DeathWatch of any other actor:
 ###Replying to Messages Received by Probes
 The probes stores the sender of the last dequeued message (i.e. after its `ExpectMsg*` reception), which may be retrieved using the `GetLastSender()` method. This information can also implicitly be used for having the probe reply to the last received message:
 
-```csharp
- var probe = CreateTestProbe();
- probe.Tell("hello");
- probe.ExpectMsg("hello");
- probe.Reply("world");
- ExpectMsg("world");
- Assert.Equal(probe.Ref, LastSender);
-```
+[!code-csharp[ReplyingToProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=57-62)]
+
+###Forwarding Messages Received by Probes
+The probe can also forward a received message (i.e. after its `ExpectMsg*` reception), retaining the original sender:
+
+[!code-csharp[ForwardingProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=68-73)]
