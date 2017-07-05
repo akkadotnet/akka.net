@@ -64,91 +64,70 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Remoting system daemon responsible for powering remote deployment capabilities.
         /// </summary>
         public IInternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
         /// <summary>
-        /// TBD
+        /// The remote transport. Wraps all of the underlying physical network transports.
         /// </summary>
         public RemoteTransport Transport { get { return RemoteInternals.Transport; } }
 
         /// <summary>
-        /// TBD
+        /// The remoting settings
         /// </summary>
         internal RemoteSettings RemoteSettings { get; private set; }
 
         /* these are only available after Init() is called */
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public ActorPath RootPath
         {
             get { return _local.RootPath; }
         }
 
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public IInternalActorRef RootGuardian { get { return _local.RootGuardian; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public LocalActorRef Guardian { get { return _local.Guardian; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public LocalActorRef SystemGuardian { get { return _local.SystemGuardian; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public IInternalActorRef TempContainer { get { return _local.TempContainer; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public IActorRef DeadLetters { get { return _local.DeadLetters; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public Deployer Deployer { get; protected set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public Settings Settings { get { return _local.Settings; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public Task TerminationTask { get { return _local.TerminationTask; } }
+
         private IInternalActorRef InternalDeadLetters { get { return (IInternalActorRef)_local.DeadLetters; } }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public ActorPath TempPath()
         {
             return _local.TempPath();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="path">TBD</param>
+        /// <inheritdoc/>
         public void RegisterTempActor(IInternalActorRef actorRef, ActorPath path)
         {
             _local.RegisterTempActor(actorRef, path);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
+        /// <inheritdoc/>
         public void UnregisterTempActor(ActorPath path)
         {
             _local.UnregisterTempActor(path);
@@ -156,16 +135,14 @@ namespace Akka.Remote
 
         private volatile IActorRef _remotingTerminator;
         private volatile IActorRef _remoteWatcher;
+
         /// <summary>
-        /// TBD
+        /// The remote death watcher.
         /// </summary>
         internal IActorRef RemoteWatcher => _remoteWatcher;
         private volatile IActorRef _remoteDeploymentWatcher;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
+        /// <inheritdoc/>
         public virtual void Init(ActorSystemImpl system)
         {
             _system = system;
