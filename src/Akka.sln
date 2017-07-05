@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.12
+VisualStudioVersion = 15.0.26430.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PingPong", "benchmark\PingPong\PingPong.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PingPong", "benchmark\PingPong\PingPong.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{01167D3C-49C4-4CDE-9787-C176D139ACDD}"
 EndProject
@@ -69,6 +69,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{10C5B1E8-15B5-4EB3-81AE-1FC054FE1305}"
 	ProjectSection(SolutionItems) = preProject
 		..\build.fsx = ..\build.fsx
+		..\buildIncremental.fsx = ..\buildIncremental.fsx
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Contrib", "Contrib", "{588C1513-FAB6-42C3-B6FC-3485F13620CF}"
@@ -83,7 +84,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Persistence.Sql.Common
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Tests.MultiNode", "core\Akka.Cluster.Tests.MultiNode\Akka.Cluster.Tests.MultiNode.csproj", "{F0781BEA-5BA0-4AF0-BB15-E3F209B681F5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersistenceBenchmark", "benchmark\PersistenceBenchmark\PersistenceBenchmark.csproj", "{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PersistenceBenchmark", "benchmark\PersistenceBenchmark\PersistenceBenchmark.csproj", "{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A59BAE84-70E2-46A0-9E26-7413C103E2D7}"
 	ProjectSection(SolutionItems) = preProject
