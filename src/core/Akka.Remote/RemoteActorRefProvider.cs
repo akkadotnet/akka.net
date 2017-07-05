@@ -51,7 +51,7 @@ namespace Akka.Remote
 
         private Internals RemoteInternals
         {
-            get { return _internals ?? (_internals = CreateInternals()); }
+            get { return _internals; }
         }
 
         private Internals CreateInternals()
@@ -153,6 +153,8 @@ namespace Akka.Remote
                 _system.SystemActorOf(
                     RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
                     "remoting-terminator");
+
+            _internals = CreateInternals();
 
             _remotingTerminator.Tell(RemoteInternals);
 
