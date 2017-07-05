@@ -171,7 +171,7 @@ namespace Akka.Persistence.Query.Sql
                 .Named("EventsByTag-" + tag);
 
         /// <summary>
-        /// <see cref="AllEvents"/> is used for retrieving all events (both current and upcoming) visible by current journal.
+        /// <see cref="Events"/> is used for retrieving all events (both current and upcoming) visible by current journal.
         /// <para></para>
         /// You can retrieve a subset of all events by specifying <paramref name="fromOffset"/> and <paramref name="toOffset"/> range. 
         /// Note that the corresponding offset of each event is provided in the <see cref="EventEnvelope"/>, which makes it possible to
@@ -199,18 +199,18 @@ namespace Akka.Persistence.Query.Sql
         /// The stream is completed with failure if there is a failure in executing the query in the
         /// backend journal.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> AllEvents(long fromOffset = 0, long toOffset = long.MaxValue) =>
-            Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(fromOffset, toOffset, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+        public Source<EventEnvelope, NotUsed> Events(long fromOffset = 0, long toOffset = long.MaxValue) =>
+            Source.ActorPublisher<EventEnvelope>(EventsPublisher.Props(fromOffset, toOffset, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("AllEvents");
+                .Named("Events");
 
         /// <summary>
-        /// Same type of query as <see cref="AllEvents"/> but the event stream
+        /// Same type of query as <see cref="Events"/> but the event stream
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEvents(long fromOffset = 0, long toOffset = long.MaxValue) =>
-            Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(fromOffset, toOffset, null, _maxBufferSize, _writeJournalPluginId))
+            Source.ActorPublisher<EventEnvelope>(EventsPublisher.Props(fromOffset, toOffset, null, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentEvents");
     }

@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="AllEventsPublisher.cs" company="Akka.NET Project">
+// <copyright file="EventsPublisher.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -13,7 +13,7 @@ using System;
 
 namespace Akka.Persistence.Query.Sql
 {
-    internal static class AllEventsPublisher
+    internal static class EventsPublisher
     {
         public sealed class Continue
         {
@@ -27,8 +27,8 @@ namespace Akka.Persistence.Query.Sql
         public static Props Props(long fromOffset, long toOffset, TimeSpan? refreshDuration, int maxBufferSize, string writeJournalPluginId)
         {
             return refreshDuration.HasValue
-                ? Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, toOffset, maxBufferSize, writeJournalPluginId, refreshDuration.Value))
-                : Actor.Props.Create(() => new CurrentAllEventsPublisher(fromOffset, toOffset, maxBufferSize, writeJournalPluginId));
+                ? Actor.Props.Create(() => new LiveEventsPublisher(fromOffset, toOffset, maxBufferSize, writeJournalPluginId, refreshDuration.Value))
+                : Actor.Props.Create(() => new CurrentEventsPublisher(fromOffset, toOffset, maxBufferSize, writeJournalPluginId));
         }
     }
 
@@ -72,7 +72,7 @@ namespace Akka.Persistence.Query.Sql
         protected bool Init(object message)
         {
             return message.Match()
-                .With<AllEventsPublisher.Continue>(() => { })
+                .With<EventsPublisher.Continue>(() => { })
                 .With<Request>(_ => ReceiveInitialRequest())
                 .With<Cancel>(_ => Context.Stop(Self))
                 .WasHandled;
@@ -81,7 +81,7 @@ namespace Akka.Persistence.Query.Sql
         protected bool Idle(object message)
         {
             return message.Match()
-                .With<AllEventsPublisher.Continue>(() =>
+                .With<EventsPublisher.Continue>(() =>
                 {
                     if (IsTimeForReplay) Replay();
                 })
@@ -135,13 +135,13 @@ namespace Akka.Persistence.Query.Sql
         }
     }
 
-    internal sealed class LiveAllEventsPublisher : AbstractAllEventsPublisher
+    internal sealed class LiveEventsPublisher : AbstractAllEventsPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveAllEventsPublisher(long fromOffset, long toOffset, int maxBufferSize, string writeJournalPluginId, TimeSpan refreshInterval) 
+        public LiveEventsPublisher(long fromOffset, long toOffset, int maxBufferSize, string writeJournalPluginId, TimeSpan refreshInterval) 
             : base(fromOffset, toOffset, maxBufferSize, writeJournalPluginId)
         {
-            _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, AllEventsPublisher.Continue.Instance, Self);
+            _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsPublisher.Continue.Instance, Self);
         }
 
         protected override void PostStop()
@@ -173,9 +173,9 @@ namespace Akka.Persistence.Query.Sql
         }
     }
 
-    internal sealed class CurrentAllEventsPublisher : AbstractAllEventsPublisher
+    internal sealed class CurrentEventsPublisher : AbstractAllEventsPublisher
     {
-        public CurrentAllEventsPublisher(long fromOffset, long toOffset, int maxBufferSize, string writeJournalPluginId) 
+        public CurrentEventsPublisher(long fromOffset, long toOffset, int maxBufferSize, string writeJournalPluginId) 
             : base(fromOffset, toOffset, maxBufferSize, writeJournalPluginId)
         {
             _toOffset = toOffset;
@@ -195,7 +195,7 @@ namespace Akka.Persistence.Query.Sql
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
                 OnCompleteThenStop();
             else
-                Self.Tell(AllEventsPublisher.Continue.Instance);
+                Self.Tell(EventsPublisher.Continue.Instance);
         }
 
         protected override void ReceiveRecoverySuccess(long highestSequenceNr)
@@ -207,7 +207,7 @@ namespace Akka.Persistence.Query.Sql
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
                 OnCompleteThenStop();
             else
-                Self.Tell(AllEventsPublisher.Continue.Instance);
+                Self.Tell(EventsPublisher.Continue.Instance);
 
             Context.Become(Idle);
         }

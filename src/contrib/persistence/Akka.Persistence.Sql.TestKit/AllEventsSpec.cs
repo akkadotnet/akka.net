@@ -90,7 +90,7 @@ namespace Akka.Persistence.Sql.TestKit
             b.Tell("B1");
             ExpectMsg("B1-done");
 
-            var src = queries.AllEvents();
+            var src = queries.Events();
             var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(4)
                 .ExpectNext(new EventEnvelope(1, "a", 1, "A1"))
@@ -117,7 +117,7 @@ namespace Akka.Persistence.Sql.TestKit
 
             Sql_live_query_AllEvents_should_find_new_events();
 
-            var src = queries.AllEvents(fromOffset: 2, toOffset: 6);
+            var src = queries.Events(fromOffset: 2, toOffset: 6);
             var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(10)
                 .ExpectNext(new EventEnvelope(2, "a", 2, "A2"))
