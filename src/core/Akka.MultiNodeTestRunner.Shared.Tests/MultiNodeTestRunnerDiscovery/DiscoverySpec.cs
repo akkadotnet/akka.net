@@ -46,7 +46,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
 
         private static Dictionary<string, List<NodeTest>> DiscoverSpecs()
         {
+#if CORECLR
+            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, new System.Uri(typeof(DiscoveryCases).GetTypeInfo().Assembly.CodeBase).LocalPath))
+#else
             using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, new System.Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath))
+#endif
             {
                 using (var discovery = new Discovery())
                 {

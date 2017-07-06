@@ -14,6 +14,11 @@
 //     the code is regenerated.
 // </auto-generated>
 // ------------------------------------------------------------------------------
+
+#if CORECLR
+using Akka.MultiNodeTestRunner.Shared.Extensions;
+#endif
+
 namespace Akka.MultiNodeTestRunner.Shared.Persistence
 {
     using System.Linq;
