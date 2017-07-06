@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.TestKit;
@@ -22,7 +23,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void TestCoordinatorEnabledMessageSink_should_receive_TestRunTree_when_EndTestRun_is_received()
         {
-            var consoleMessageSink = Sys.ActorOf(Props.Create(() => new ConsoleMessageSinkActor(false)));
+            var consoleMessageSink = Sys.ActorOf(Props.Create(() => new ConsoleMessageSinkActor(true)));
             var nodeIndexes = Enumerable.Range(1, 4).ToArray();
             var nodeTests = NodeMessageHelpers.BuildNodeTests(nodeIndexes);
 
@@ -40,6 +41,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             foreach (var message in allMessages)
                 consoleMessageSink.Tell(message);
 
+            Task.Delay(1000).Wait();
+            
             //end the spec
             consoleMessageSink.Tell(new EndSpec());
 
