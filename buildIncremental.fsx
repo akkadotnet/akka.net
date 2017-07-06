@@ -144,6 +144,9 @@ module IncrementalTests =
         let allProjects = getAllProjectDependencies testMode
         seq { for proj in allProjects do
                 for dep in proj.dependencies do
+                    if (proj.parentProject.projectName = project && proj.isTestProject) then
+                        // if the altered project is a test project (e.g. Akka.Tests)
+                        yield proj;
                     if (dep.projectName = project && proj.isTestProject) then
                         // logfn "%s references %s and is a test project..." proj.parentProject.projectName project
                         yield proj
