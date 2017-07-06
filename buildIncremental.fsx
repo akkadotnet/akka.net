@@ -45,6 +45,9 @@ module IncrementalTests =
 
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
+        let localBranches = getLocalBranches srcDir
+        if not (localBranches |> Seq.exists (fun b -> b = "v1.3")) then
+            checkoutTracked srcDir "v1.3" "origin/v1.3"
         let forkPoint = runSimpleGitCommand srcDir "merge-base --fork-point v1.3"
         let currentHash = getCurrentHash()
         getChangedFiles srcDir forkPoint currentHash
