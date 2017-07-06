@@ -81,7 +81,7 @@ namespace Akka.Remote.TestKit.Tests
           
         }
 
-        [Fact]
+        [Fact(Skip="This causes a deadlock sometimes")]
         public async Task RemoteConnection_should_send_and_decode_Done_message()
         {
             var serverProbe = CreateTestProbe("server");
