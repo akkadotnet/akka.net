@@ -27,7 +27,6 @@ module IncrementalTests =
         let isRunnable testProject =
             match testProject with
             | IsRunnable "Akka.API.Tests.csproj" Linux proj -> false
-            | IsRunnable "Akka.MultiNodeTestRunner.Shared.Tests.csproj" All proj -> false
             | _ -> true
         let allTestProjects = !! "./**/core/**/*.Tests.csproj"
                               ++ "./**/contrib/**/*.Tests.csproj"
