@@ -378,7 +378,11 @@ namespace Akka.Remote.TestKit
         private static string GetCallerName()
         {
             var @this = typeof(MultiNodeSpec).Name;
+#if CORECLR
+            var trace = new StackTrace(new Exception(), false);
+#else
             var trace = new StackTrace();
+#endif
             var frames = trace.GetFrames();
             if (frames != null)
             {
@@ -416,7 +420,14 @@ namespace Akka.Remote.TestKit
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
+
+#if CORECLR
+            var dnsTask = Dns.GetHostAddressesAsync(ServerName);
+            dnsTask.Wait();
+            var node = new IPEndPoint(dnsTask.Result[0], ServerPort);
+#else
             var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
+#endif
             _controllerAddr = node;
 
             AttachConductor(new TestConductor(system));
