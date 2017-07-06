@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.MultiNodeTestRunner</AssemblyTitle>
     <Description>Akka.NET Multi-node Test Runner; used for executing tests written with Akka.Remote.TestKit</Description>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
   </PropertyGroup>
@@ -32,8 +32,17 @@
     <DefineConstants>$(DefineConstants);</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
+    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
+    <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp1.1|AnyCPU'">
+    <Optimize>False</Optimize>
   </PropertyGroup>
 
 </Project>
