@@ -51,10 +51,12 @@ module IncrementalTests =
         let currentBranch = runSimpleGitCommand srcDir "rev-parse --abbrev-ref HEAD"
         let forkPoint = runSimpleGitCommand srcDir (sprintf "merge-base %s v1.3" currentBranch)
         let currentHash = getCurrentHash()
-        getChangedFiles srcDir forkPoint currentHash
-        |> Seq.map (fun (_, fi) -> FullName fi)
-        // only consider files in ./src/ and build scripts
-        |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
+        if (not (forkPoint = "") && not (currentHash = "")) then
+            getChangedFiles srcDir forkPoint currentHash
+            |> Seq.map (fun (_, fi) -> FullName fi)
+            |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
+        else
+            failwith "Couldn't find commits to compare for incremental tests"
   
     // Gather all of the folder paths that contain .csproj files
     let getAllProjectFolders() =
