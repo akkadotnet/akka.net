@@ -9,9 +9,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.IO.Buffers;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -491,6 +493,36 @@ namespace Akka.IO
             return 0;
         }
 
+        /// <summary>
+        /// Copies content of the current <see cref="ByteString"/> to a provided 
+        /// writeable <paramref name="stream"/>.
+        /// </summary>
+        /// <param name="stream"></param>
+        public void WriteTo(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+            foreach (var buffer in _buffers)
+            {
+                stream.Write(buffer.Array, buffer.Offset, buffer.Count);
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously copies content of the current <see cref="ByteString"/> 
+        /// to a provided writeable <paramref name="stream"/>.
+        /// </summary>
+        /// <param name="stream"></param>
+        public async Task WriteToAsync(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+            foreach (var buffer in _buffers)
+            {
+                await stream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count);
+            }
+        }
+
         public override bool Equals(object obj) => Equals(obj as ByteString);
 
         public override int GetHashCode()
@@ -557,24 +589,24 @@ namespace Akka.IO
 
         #region Obsoleted
 
-        [Obsolete("Use ByteString.CopyFrom instead if you want to copy byte array or ByteString.FromBytes otherwise.", true)]
+        [Obsolete("Use ByteString.CopyFrom instead if you want to copy byte array or ByteString.FromBytes otherwise.")]
         public static ByteString Create(byte[] array) => CopyFrom(array);
 
-        [Obsolete("Use ToString() method instead.", true)]
+        [Obsolete("Use ToString() method instead.")]
         public string DecodeString() => ToString();
 
-        [Obsolete("Use ToString(Encoding) method instead.", true)]
+        [Obsolete("Use ToString(Encoding) method instead.")]
         public string DecodeString(Encoding encoding) => ToString(encoding);
 
-        [Obsolete("Use Slice(0, n) method instead.", true)]
+        [Obsolete("Use Slice(0, n) method instead.")]
         public ByteString Take(int n) => Slice(0, n);
 
-        [Obsolete("Use Slice(n) method instead.", true)]
+        [Obsolete("Use Slice(n) method instead.")]
         public ByteString Drop(int n) => Slice(n);
 
         #endregion
     }
-
+    
     public enum ByteOrder
     {
         BigEndian,

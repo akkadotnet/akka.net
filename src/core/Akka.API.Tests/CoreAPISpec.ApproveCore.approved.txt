@@ -3036,13 +3036,13 @@ namespace Akka.IO
         public static Akka.IO.ByteString CopyFrom(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
         public int CopyTo(byte[] buffer, int index, int count) { }
         [System.ObsoleteAttribute("Use ByteString.CopyFrom instead if you want to copy byte array or ByteString.From" +
-            "Bytes otherwise.", true)]
+            "Bytes otherwise.")]
         public static Akka.IO.ByteString Create(byte[] array) { }
-        [System.ObsoleteAttribute("Use ToString() method instead.", true)]
+        [System.ObsoleteAttribute("Use ToString() method instead.")]
         public string DecodeString() { }
-        [System.ObsoleteAttribute("Use ToString(Encoding) method instead.", true)]
+        [System.ObsoleteAttribute("Use ToString(Encoding) method instead.")]
         public string DecodeString(System.Text.Encoding encoding) { }
-        [System.ObsoleteAttribute("Use Slice(n) method instead.", true)]
+        [System.ObsoleteAttribute("Use Slice(n) method instead.")]
         public Akka.IO.ByteString Drop(int n) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.IO.ByteString other) { }
@@ -3059,11 +3059,13 @@ namespace Akka.IO
         public int IndexOf(byte b, int from) { }
         public Akka.IO.ByteString Slice(int index) { }
         public Akka.IO.ByteString Slice(int index, int count) { }
-        [System.ObsoleteAttribute("Use Slice(0, n) method instead.", true)]
+        [System.ObsoleteAttribute("Use Slice(0, n) method instead.")]
         public Akka.IO.ByteString Take(int n) { }
         public byte[] ToArray() { }
         public override string ToString() { }
         public string ToString(System.Text.Encoding encoding) { }
+        public void WriteTo(System.IO.Stream stream) { }
+        public async System.Threading.Tasks.Task WriteToAsync(System.IO.Stream stream) { }
     }
     public class Dns : Akka.Actor.ExtensionIdProvider<Akka.IO.DnsExt>
     {
