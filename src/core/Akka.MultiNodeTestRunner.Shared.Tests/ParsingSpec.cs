@@ -79,11 +79,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void MessageSink_should_parse_Node_SpecPass_message_correctly()
         {
-#if CORECLR
             var specPass = new SpecPass(1, "super_role_1", GetType().GetTypeInfo().Assembly.GetName().Name);
-#else
-            var specPass = new SpecPass(1, "super_role_1", GetType().Assembly.GetName().Name);
-#endif
             NodeCompletedSpecWithSuccess nodeCompletedSpecWithSuccess;
             MessageSink.TryParseSuccessMessage(specPass.ToString(), out nodeCompletedSpecWithSuccess)
                 .ShouldBeTrue("should have been able to parse node success message");
@@ -95,11 +91,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void MessageSink_should_parse_Node_SpecFail_message_correctly()
         {
-#if CORECLR
             var specFail = new SpecFail(1, "super_role_1", GetType().GetTypeInfo().Assembly.GetName().Name);
-#else
-            var specFail = new SpecFail(1, "super_role_1", GetType().Assembly.GetName().Name);
-#endif
             NodeCompletedSpecWithFail nodeCompletedSpecWithFail;
             MessageSink.TryParseFailureMessage(specFail.ToString(), out nodeCompletedSpecWithFail)
                 .ShouldBeTrue("should have been able to parse node failure message");
@@ -111,13 +103,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void MessageSink_should_be_able_to_infer_message_type()
         {
-#if CORECLR
             var specPass = new SpecPass(1, "super_role_1", GetType().GetTypeInfo().Assembly.GetName().Name);
             var specFail = new SpecFail(1, "super_role_1", GetType().GetTypeInfo().Assembly.GetName().Name);
-#else
-            var specPass = new SpecPass(1, "super_role_1", GetType().Assembly.GetName().Name);
-            var specFail = new SpecFail(1, "super_role_1", GetType().Assembly.GetName().Name);
-#endif
 
             var loggingActor = Sys.ActorOf<LoggingActor>();
             Sys.EventStream.Subscribe(TestActor, typeof(Debug));
