@@ -47,8 +47,9 @@ module IncrementalTests =
         let srcDir = __SOURCE_DIRECTORY__
         let localBranches = getLocalBranches srcDir
         if not (localBranches |> Seq.exists (fun b -> b = "v1.3")) then
-            directRunGitCommandAndFail srcDir "fetch origin v1.3:v1.3"
-        let forkPoint = runSimpleGitCommand srcDir "merge-base --fork-point v1.3"
+            directRunGitCommandAndFail srcDir "fetch origin v1.3"
+        let currentBranch = runSimpleGitCommand srcDir "rev-parse --abbrev-ref HEAD"
+        let forkPoint = runSimpleGitCommand srcDir (sprintf "merge-base %s v1.3" currentBranch)
         let currentHash = getCurrentHash()
         getChangedFiles srcDir forkPoint currentHash
         |> Seq.map (fun (_, fi) -> FullName fi)
