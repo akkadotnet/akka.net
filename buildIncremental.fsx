@@ -44,6 +44,9 @@ module IncrementalTests =
 
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
+        let localBranches = getLocalBranches srcDir
+        if not (localBranches |> Seq.exists (fun b -> b = "v1.3")) then
+            directRunGitCommandAndFail srcDir "fetch origin v1.3:v1.3"
         let forkPoint = runSimpleGitCommand srcDir "merge-base --fork-point v1.3"
         let currentHash = getCurrentHash()
         getChangedFiles srcDir forkPoint currentHash
@@ -143,6 +146,9 @@ module IncrementalTests =
         let allProjects = getAllProjectDependencies testMode
         seq { for proj in allProjects do
                 for dep in proj.dependencies do
+                    if (proj.parentProject.projectName = project && proj.isTestProject) then
+                        // if the altered project is a test project (e.g. Akka.Tests)
+                        yield proj;
                     if (dep.projectName = project && proj.isTestProject) then
                         // logfn "%s references %s and is a test project..." proj.parentProject.projectName project
                         yield proj
