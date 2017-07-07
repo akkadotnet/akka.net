@@ -69,32 +69,34 @@ namespace Akka.Tests.IO
             var client = BindUdp(clientAddress, TestActor);
             var data = ByteString.FromString("Fly little packet!");
 
-            Action checkSendingToClient = () =>
+            void CheckSendingToClient(int iteration)
             {
                 server.Tell(Udp.Send.Create(data, clientAddress));
                 ExpectMsg<Udp.Received>(x =>
                 {
                     x.Data.ShouldBe(data);
-                    Assert.True(x.Sender.Is(serverAddress));
-                });
-            };
-            Action checkSendingToServer = () =>
+                    x.Sender.Is(serverAddress).ShouldBeTrue($"{x.Sender} was expected to be {serverAddress}");
+                }, hint: $"sending to client failed in {iteration} iteration");
+            }
+
+            void CheckSendingToServer(int iteration)
             {
                 client.Tell(Udp.Send.Create(data, serverAddress));
                 ExpectMsg<Udp.Received>(x =>
                 {
                     x.Data.ShouldBe(data);
                     Assert.True(x.Sender.Is(clientAddress));
-                });
-            };
+                }, hint: $"sending to client failed in {iteration} iteration");
+            }
 
-            Enumerable.Range(0, 20).ForEach(_ => checkSendingToServer());
-            Enumerable.Range(0, 20).ForEach(_ => checkSendingToClient());
-            Enumerable.Range(0, 20).ForEach(i =>
+            const int iterations = 20;
+            for (int i = 1; i <= iterations; i++) CheckSendingToServer(i);
+            for (int i = 1; i <= iterations; i++) CheckSendingToClient(i);
+            for (int i = 1; i <= iterations; i++)
             {
-                if (i%2 == 0) checkSendingToServer();
-                else checkSendingToClient();
-            });
+                if (i % 2 == 0) CheckSendingToServer(i);
+                else CheckSendingToClient(i);
+            }
         }
 
         [Fact]

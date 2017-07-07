@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.IO
         }
         
         [Fact]
-        public void Outgoing_TCP_stream_must_be_able_to_read_a_sequence_of_ByteStrings()
+        public async Task Outgoing_TCP_stream_must_be_able_to_read_a_sequence_of_ByteStrings()
         {
             var server = new Server(this);
             var testInput = new ByteString[255];
@@ -102,8 +102,8 @@ namespace Akka.Streams.Tests.IO
                 serverConnection.Write(input);
 
             serverConnection.ConfirmedClose();
-            resultFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            resultFuture.Result.ShouldBe(expectedOutput);
+            var result = await resultFuture;
+            result.ShouldBe(expectedOutput);
         }
 
         [Fact(Skip="FIXME .net core / linux")]
@@ -376,7 +376,7 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_materialize_correctly_when_used_in_multiple_flows()
+        public async Task Outgoing_TCP_stream_must_materialize_correctly_when_used_in_multiple_flows()
         {
             var testData = ByteString.FromBytes(new byte[] {1, 2, 3, 4, 5});
             var server = new Server(this);
@@ -401,11 +401,9 @@ namespace Akka.Streams.Tests.IO
 
             ValidateServerClientCommunication(testData, serverConnection1, tcpReadProbe1, tcpWriteProbe1);
             ValidateServerClientCommunication(testData, serverConnection2, tcpReadProbe2, tcpWriteProbe2);
-
-            conn1F.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            conn2F.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            var conn1 = conn1F.Result;
-            var conn2 = conn2F.Result;
+            
+            var conn1 = await conn1F;
+            var conn2 = await conn2F;
 
             // Since we have already communicated over the connections we can have short timeouts for the tasks
             ((IPEndPoint) conn1.RemoteAddress).Port.Should().Be(((IPEndPoint) server.Address).Port);
@@ -427,14 +425,13 @@ namespace Akka.Streams.Tests.IO
                 var writeButIgnoreRead = Flow.FromSinkAndSource(Sink.Ignore<ByteString>(),
                     Source.Single(ByteString.FromString("Early response")), Keep.Right);
 
-                var task =
+                var task = 
                     Sys.TcpStream()
                         .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
                         .ToMaterialized(
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead).Run(Materializer)),
                             Keep.Left)
                         .Run(Materializer);
-                task.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
                 var binding = task.Result;
 
                 var t = Source.Maybe<ByteString>()
@@ -454,35 +451,30 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_Echo_should_work_even_if_server_is_in_full_close_mode()
+        public async Task Outgoing_TCP_stream_must_Echo_should_work_even_if_server_is_in_full_close_mode()
         {
             var serverAddress = TestUtils.TemporaryServerAddress();
 
-            var task = Sys.TcpStream()
+            var binding = await Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                     .ToMaterialized(
                         Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(Flow.Create<ByteString>()).Run(Materializer)),
                         Keep.Left)
                     .Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            var binding = task.Result;
 
-            var result = Source.From(Enumerable.Repeat(0, 1000)
+            var result = await Source.From(Enumerable.Repeat(0, 1000)
                 .Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)})))
                 .Via(Sys.TcpStream().OutgoingConnection(serverAddress, halfClose: true))
                 .RunAggregate(0, (i, s) => i + s.Count, Materializer);
+            
+            result.Should().Be(1000);
 
-            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.Should().Be(1000);
-
-            binding.Unbind();
+            await binding.Unbind();
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_handle_when_connection_actor_terminates_unexpectedly()
+        public async Task Outgoing_TCP_stream_must_handle_when_connection_actor_terminates_unexpectedly()
         {
-            var timeout = TimeSpan.FromSeconds(3);
-
             var system2 = ActorSystem.Create("system2");
             InitializeLogger(system2);
             var mat2 = ActorMaterializer.Create(system2);
@@ -501,14 +493,14 @@ namespace Akka.Streams.Tests.IO
 
             // Getting rid of existing connection actors by using a blunt instrument
             system2.ActorSelection(system2.Tcp().Path / "$a" / "*").Tell(Kill.Instance);
-            result.Invoking(r => r.Wait(timeout)).ShouldThrow<StreamTcpException>();
+            result.Invoking(r => r.Wait()).ShouldThrow<StreamTcpException>();
 
-            binding.Result.Unbind().Wait(timeout);
-            system2.Terminate().Wait(timeout);
+            await binding.Result.Unbind();
+            await system2.Terminate();
         }
 
         [Fact]
-        public void Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
+        public async Task Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
         {
             var sys2 = ActorSystem.Create("shutdown-test-system");
             var mat2 = sys2.Materializer();
@@ -516,25 +508,21 @@ namespace Akka.Streams.Tests.IO
             try
             {
                 var address = TestUtils.TemporaryServerAddress();
-                var bindingTask = sys2.TcpStream()
+                var binding = await sys2.TcpStream()
                     .BindAndHandle(Flow.Create<ByteString>(), mat2, address.Address.ToString(), address.Port);
 
                 // Ensure server is running
-                bindingTask.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 // and is possible to communicate with 
-                var t = Source.Single(ByteString.FromString(""))
+                await Source.Single(ByteString.FromString(""))
                     .Via(sys2.TcpStream().OutgoingConnection(address))
                     .RunWith(Sink.Ignore<ByteString>(), mat2);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
-                sys2.Terminate().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-
-                var binding = bindingTask.Result;
-                binding.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await sys2.Terminate();
+                await binding.Unbind();
             }
             finally
             {
-                sys2.Terminate().Wait(TimeSpan.FromSeconds(5));
+                await sys2.Terminate();
             }
         }
 
@@ -551,64 +539,64 @@ namespace Akka.Streams.Tests.IO
             Sink.ForEach<Tcp.IncomingConnection>(c => c.Flow.Join(Flow.Create<ByteString>()).Run(Materializer));
 
         [Fact]
-        public void Tcp_listen_stream_must_be_able_to_implement_echo()
+        public async Task Tcp_listen_stream_must_be_able_to_implement_echo()
         {
             var serverAddress = TestUtils.TemporaryServerAddress();
             var t = Sys.TcpStream()
                 .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                 .ToMaterialized(EchoHandler(), Keep.Both)
                 .Run(Materializer);
-            var bindingFuture = t.Item1;
-            var echoServerFinish = t.Item2;
 
             // make sure that the server has bound to the socket
-            bindingFuture.Wait(100).Should().BeTrue();
-            var binding = bindingFuture.Result;
+            var binding = await t.Item1;
+            var echoServerFinish = t.Item2;
 
-            var testInput = Enumerable.Range(0, 255).Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)})).ToList();
+            var testInput = Enumerable.Range(0, 255)
+                .Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)}))
+                .ToList();
+
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
-            var resultFuture =
-                Source.From(testInput)
+
+            var result = await Source.From(testInput)
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
-
-            resultFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            resultFuture.Result.ShouldBeEquivalentTo(expectedOutput);
-            binding.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            echoServerFinish.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
+            
+            result.ShouldBeEquivalentTo(expectedOutput);
+            await binding.Unbind();
+            await echoServerFinish;
         }
 
         [Fact]
-        public void Tcp_listen_stream_must_work_with_a_chain_of_echoes()
+        public async Task Tcp_listen_stream_must_work_with_a_chain_of_echoes()
         {
             var serverAddress = TestUtils.TemporaryServerAddress();
             var t = Sys.TcpStream()
                 .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                 .ToMaterialized(EchoHandler(), Keep.Both)
                 .Run(Materializer);
-            var bindingFuture = t.Item1;
-            var echoServerFinish = t.Item2;
-            
+
             // make sure that the server has bound to the socket
-            bindingFuture.Wait(100).Should().BeTrue();
-            var binding = bindingFuture.Result;
+            var binding = await t.Item1;
+            var echoServerFinish = t.Item2;
 
             var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
-            var testInput = Enumerable.Range(0, 255).Select(i => ByteString.FromBytes(new[] { Convert.ToByte(i) })).ToList();
+            var testInput = Enumerable.Range(0, 255)
+                .Select(i => ByteString.FromBytes(new[] { Convert.ToByte(i) }))
+                .ToList();
+
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
 
-            var resultFuture = Source.From(testInput)
+            var result = await Source.From(testInput)
                 .Via(echoConnection) // The echoConnection is reusable
                 .Via(echoConnection)
                 .Via(echoConnection)
                 .Via(echoConnection)
                 .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
-
-            resultFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            resultFuture.Result.ShouldBeEquivalentTo(expectedOutput);
-            binding.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            echoServerFinish.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
+            
+            result.ShouldBeEquivalentTo(expectedOutput);
+            await binding.Unbind();
+            await echoServerFinish;
         }
 
         [Fact]
