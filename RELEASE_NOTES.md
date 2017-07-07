@@ -5,6 +5,10 @@ Resolves a bug introduced in Akka.NET 1.2.2 that caused Akka.Remote to not termi
 
 [See the full set of Akka.NET 1.2.3 fixes here](https://github.com/akkadotnet/akka.net/milestone/18).
 
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 46 | 63 | Aaron Stannard |
+
 #### 1.2.2 June 28 2017 ####
 **Maintenance Release for Akka.NET 1.2**
 
