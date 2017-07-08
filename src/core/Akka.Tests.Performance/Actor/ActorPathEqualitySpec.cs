@@ -42,5 +42,19 @@ namespace Akka.Tests.Performance.Actor
             var b = TopLevelActorPath.Equals(TopLevelActorPath);
             _equalsThroughput.Increment();
         }
+
+        [PerfBenchmark(
+            Description =
+                "Tests how quickly ActorPath.Equals can perform against two equal paths (worst case performance)",
+            RunMode = RunMode.Throughput, NumberOfIterations = 13, RunTimeMilliseconds = 1000,
+            TestMode = TestMode.Measurement)]
+        [CounterThroughputAssertion(EqualsCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond
+        )]
+        [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
+        public void ActorPath_GetHashCode_throughput(BenchmarkContext context)
+        {
+            var b = TopLevelActorPath.GetHashCode();
+            _equalsThroughput.Increment();
+        }
     }
 }
