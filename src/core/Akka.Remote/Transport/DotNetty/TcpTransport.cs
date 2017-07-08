@@ -23,11 +23,11 @@ namespace Akka.Remote.Transport.DotNetty
 {
     internal abstract class TcpHandlers : CommonHandlers
     {
-        private IHandleEventListener listener;
+        private IHandleEventListener _listener;
         
         protected void NotifyListener(IHandleEvent msg)
         {
-            listener?.Notify(msg);
+            _listener?.Notify(msg);
         }
         
         protected TcpHandlers(DotNettyTransport transport, ILoggingAdapter log) : base(transport, log)
@@ -36,7 +36,7 @@ namespace Akka.Remote.Transport.DotNetty
         
         protected override void RegisterListener(IChannel channel, IHandleEventListener listener, object msg, IPEndPoint remoteAddress)
         {
-            this.listener = listener;
+            this._listener = listener;
         }
         
         protected override AssociationHandle CreateHandle(IChannel channel, Address localAddress, Address remoteAddress)
@@ -79,12 +79,12 @@ namespace Akka.Remote.Transport.DotNetty
 
     internal sealed class TcpServerHandler : TcpHandlers
     {
-        private readonly Task<IAssociationEventListener> associationEventListener;
+        private readonly Task<IAssociationEventListener> _associationEventListener;
         
         public TcpServerHandler(DotNettyTransport transport, ILoggingAdapter log, Task<IAssociationEventListener> associationEventListener) 
             : base(transport, log)
         {
-            this.associationEventListener = associationEventListener;
+            this._associationEventListener = associationEventListener;
         }
         
         public override void ChannelActive(IChannelHandlerContext context)
@@ -98,7 +98,7 @@ namespace Akka.Remote.Transport.DotNetty
             // disable automatic reads
             channel.Configuration.AutoRead = false;
 
-            associationEventListener.ContinueWith(r =>
+            _associationEventListener.ContinueWith(r =>
             {
                 var listener = r.Result;
                 var remoteAddress = DotNettyTransport.MapSocketToAddress(
@@ -114,15 +114,15 @@ namespace Akka.Remote.Transport.DotNetty
 
     internal sealed class TcpClientHandler : TcpHandlers
     {
-        private readonly TaskCompletionSource<AssociationHandle> statusPromise = new TaskCompletionSource<AssociationHandle>();
-        private readonly Address remoteAddress;
+        private readonly TaskCompletionSource<AssociationHandle> _statusPromise = new TaskCompletionSource<AssociationHandle>();
+        private readonly Address _remoteAddress;
 
-        public Task<AssociationHandle> StatusFuture => statusPromise.Task;
+        public Task<AssociationHandle> StatusFuture => _statusPromise.Task;
         
         public TcpClientHandler(DotNettyTransport transport, ILoggingAdapter log, Address remoteAddress) 
             : base(transport, log)
         {
-            this.remoteAddress = remoteAddress;
+            _remoteAddress = remoteAddress;
         }
         
         public override void ChannelActive(IChannelHandlerContext context)
@@ -134,8 +134,8 @@ namespace Akka.Remote.Transport.DotNetty
         private void InitOutbound(IChannel channel, IPEndPoint socketAddress, object msg)
         {
             AssociationHandle handle;
-            Init(channel, socketAddress, remoteAddress, msg, out handle);
-            statusPromise.TrySetResult(handle);
+            Init(channel, socketAddress, _remoteAddress, msg, out handle);
+            _statusPromise.TrySetResult(handle);
         }
     }
 

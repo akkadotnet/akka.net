@@ -28,11 +28,11 @@ namespace Akka.Remote
         private readonly ILoggingAdapter _log;
 
         /// <summary>
-        /// TBD
+        /// Creates a new remote actor ref provider instance.
         /// </summary>
-        /// <param name="systemName">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="eventStream">TBD</param>
+        /// <param name="systemName">Name of the actor system.</param>
+        /// <param name="settings">The actor system settings.</param>
+        /// <param name="eventStream">The <see cref="EventStream"/> instance used by this system.</param>
         public RemoteActorRefProvider(string systemName, Settings settings, EventStream eventStream)
         {
             settings.InjectTopLevelFallback(RemoteConfigFactory.Default());
@@ -67,6 +67,7 @@ namespace Akka.Remote
         /// Remoting system daemon responsible for powering remote deployment capabilities.
         /// </summary>
         public IInternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
+
         /// <summary>
         /// The remote transport. Wraps all of the underlying physical network transports.
         /// </summary>
@@ -84,7 +85,6 @@ namespace Akka.Remote
         {
             get { return _local.RootPath; }
         }
-
 
         /// <inheritdoc/>
         public IInternalActorRef RootGuardian { get { return _local.RootGuardian; } }
