@@ -191,6 +191,7 @@
     <Compile Include="Transport\AkkaProtocolStressTest.cs" />
     <Compile Include="Transport\DotNettySslSupportSpec.cs" />
     <Compile Include="Transport\DotNettyTransportDnsResolutionSpec.cs" />
+    <Compile Include="Transport\DotNettyTransportShutdownSpec.cs" />
     <Compile Include="Transport\GenericTransportSpec.cs" />
     <Compile Include="Transport\TestTransportSpec.cs" />
     <Compile Include="Transport\ThrottleModeSpec.cs" />
