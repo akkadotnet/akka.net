@@ -38,6 +38,15 @@ namespace Akka.TestKit.Internal
         }
 
         /// <summary>
+        /// Return an <see cref="List{T}"/> for the items inside the collection.
+        /// </summary>
+        /// <returns>A <see cref="List{T}"/> for the <see cref="BlockingCollectionTestActorQueue{T}"/> items</returns>
+        public List<T> ToList()
+        {
+            return _queue.ToList();
+        }
+        
+        /// <summary>
         /// <para>
         /// Retrieves all items from the queue.
         /// </para>
