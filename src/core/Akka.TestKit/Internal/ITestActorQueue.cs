@@ -27,6 +27,12 @@ namespace Akka.TestKit.Internal
     public interface ITestActorQueue<T> : ITestActorQueueProducer<T>
     {
         /// <summary>
+        /// Copies all the items from the <see cref="ITestActorQueue{T}"/> instance into a new <see cref="List{T}"/>
+        /// </summary>
+        /// <returns>TBD</returns>
+        List<T> ToList();
+
+        /// <summary>
         /// Get all messages.
         /// </summary>
         /// <returns>TBD</returns>
