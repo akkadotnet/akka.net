@@ -82,6 +82,18 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void DeathWatch_must_notify_with_one_custom_termination_message_when_actor_is_stopped()
+        {
+            const string msg = "hello";
+            const string terminationMsg = "watchee terminated";
+            StartWatching(_terminal).Tell(msg);
+            ExpectMsg(msg);
+            _terminal.Tell(PoisonPill.Instance);
+
+            ExpectMsg<string>(w => w == terminationMsg);
+        }
+
+        [Fact]
         public void DeathWatch_must_notify_with_all_monitors_with_one_Terminated_message_when_Actor_is_stopped()
         {
             var monitor1 = StartWatching(_terminal);
@@ -381,6 +393,23 @@ namespace Akka.Tests.Actor
                     _forwardToActor.Forward(new WrappedTerminated(terminated));
                 else
                     _forwardToActor.Forward(message);
+                return true;
+            }
+        }
+
+        internal class WatchWithAndForwardActor : ActorBase
+        {
+            private readonly IActorRef _forwardToActor;
+
+            public WatchWithAndForwardActor(IActorRef watchedActor, IActorRef forwardToActor, object message)
+            {
+                _forwardToActor = forwardToActor;
+                Context.WatchWith(watchedActor, message);
+            }
+
+            protected override bool Receive(object message)
+            {
+                _forwardToActor.Forward(message);
                 return true;
             }
         }

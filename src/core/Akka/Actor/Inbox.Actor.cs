@@ -146,7 +146,13 @@ namespace Akka.Actor
                         _currentSelect = null;
                     }
                 })
-                .With<StartWatch>(sw => Context.Watch(sw.Target))
+                .With<StartWatch>(sw => 
+                {
+                    if (sw.Message == null)
+                        Context.Watch(sw.Target);
+                    else
+                        Context.WatchWith(sw.Target, sw.Message);
+                })
                 .With<StopWatch>(sw => Context.Unwatch(sw.Target))
                 .With<Kick>(() =>
                 {
