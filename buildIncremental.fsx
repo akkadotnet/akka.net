@@ -42,15 +42,25 @@ module IncrementalTests =
         | EndsWith "cmd" -> true
         | EndsWith "sh" -> true
         | _ -> false
+    
+    let getHeadHashFor repositoryDir branch =
+        let _, msg, error = runGitCommand repositoryDir (sprintf "log --oneline -1 %s" branch)
+        if error <> "" then failwithf "git log --oneline failed: %s" error
+        let logMsg = msg |> Seq.head
+        let tmp =
+            logMsg.Split(' ')
+            |> Seq.head
+            |> fun s -> s.Split('m')
+        if tmp |> Array.length > 2 then tmp.[1].Substring(0,6) else tmp.[0].Substring(0,6)
 
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
-        let localBranches = getLocalBranches srcDir
-        if not (localBranches |> Seq.exists (fun b -> b = "v1.3")) then
-            directRunGitCommandAndFail srcDir "fetch origin v1.3"
-        let currentBranch = runSimpleGitCommand srcDir "rev-parse --abbrev-ref HEAD"
-        let forkPoint = runSimpleGitCommand srcDir (sprintf "merge-base %s v1.3" currentBranch)
+        let lastCommitToDefaultBranch = getHeadHashFor srcDir "origin/v1.3"
+        logfn "HEAD commit hash of origin/v1.3 branch: %s" lastCommitToDefaultBranch
         let currentHash = getCurrentHash()
+        logfn "HEAD commit hash of current branch: %s" currentHash
+        let forkPoint = findMergeBase srcDir currentHash lastCommitToDefaultBranch
+        logfn "merge-base of v1.3 and current branch HEAD: %s" forkPoint
         if (not (forkPoint = "") && not (currentHash = "")) then
             getChangedFiles srcDir forkPoint currentHash
             |> Seq.map (fun (_, fi) -> FullName fi)
