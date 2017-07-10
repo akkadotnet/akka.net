@@ -55,7 +55,13 @@ module IncrementalTests =
 
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
-        let lastCommitToDefaultBranch = getHeadHashFor srcDir "origin/v1.3"
+        let localBranches = getLocalBranches srcDir
+        log "Local branches..."
+        localBranches |> Seq.iter log
+        if not (localBranches |> Seq.exists (fun b -> b = "v1.3")) then
+            log "v1.3 branch information not available... fetching"
+            directRunGitCommandAndFail srcDir "fetch origin v1.3:v1.3"
+        let lastCommitToDefaultBranch = getHeadHashFor srcDir "v1.3"
         logfn "HEAD commit hash of origin/v1.3 branch: %s" lastCommitToDefaultBranch
         let currentHash = getCurrentHash()
         logfn "HEAD commit hash of current branch: %s" currentHash
