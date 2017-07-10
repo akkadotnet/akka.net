@@ -498,7 +498,7 @@ namespace Akka.IO
 
             private Write(ByteString data, Event ack)
             {
-                Ack = ack;
+                Ack = ack ?? NoAck.Instance;
                 Data = data;
             }
 
