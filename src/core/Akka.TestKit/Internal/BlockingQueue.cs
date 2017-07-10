@@ -111,6 +111,22 @@ namespace Akka.TestKit.Internal
             return p.Value;
         }
 
+        /// <summary>
+        /// Copies the items from the <see cref="BlockingQueue{T}"/> instance into a new <see cref="List{T}"/>.
+        /// </summary>
+        /// <returns>A <see cref="List{T}"/> containing copies of the elements of the collection</returns>
+        public List<T> ToList()
+        {
+            var positionArray = _collection.ToArray();
+            var items = new List<T>();
+            foreach (var positioned in positionArray)
+            {
+                items.Add(positioned.Value);
+            }
+            return items;
+        }
+
+
         private class Positioned
         {
             private readonly T _value;
