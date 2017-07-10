@@ -86,6 +86,7 @@ module internal ResultHandling =
 open BuildIncremental.IncrementalTests
 
 Target "RunTests" (fun _ ->    
+    ActivateFinalTarget "KillCreatedProcesses"
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> getIncrementalUnitTests()
