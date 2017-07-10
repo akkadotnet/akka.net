@@ -5,6 +5,7 @@
 open System
 open System.IO
 open System.Text
+open System.Diagnostics
 
 open Fake
 open Fake.DotNetCli
@@ -322,7 +323,7 @@ Target "DocFx" (fun _ ->
 
 FinalTarget "KillCreatedProcesses" (fun _ ->
     log "The following processes were started during FAKE step..."
-    startedProcesses |> Seq.iter (fun (pid, _) -> logfn "%i" pid)
+    startedProcesses |> Seq.iter (fun (pid, _) -> logfn "%i: %s" pid (Process.GetProcessById(pid).ProcessName))
     log "Killing processes started by FAKE..."
     killAllCreatedProcesses()
 )
