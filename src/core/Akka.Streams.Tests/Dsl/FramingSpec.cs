@@ -294,7 +294,7 @@ namespace Akka.Streams.Tests.Dsl
                         foreach (var frameLength in FrameLengths.Where(f => f < 1 << (fieldLength * 8) && f != 0))
                         {
                             var fullFrame = Encode(ReferenceChunk.Slice(0, frameLength), fieldOffset, fieldLength, byteOrder);
-                            var partialFrame = fullFrame.Slice(1);
+                            var partialFrame = fullFrame.Slice(0, fullFrame.Count - 1); // dropRight equivalent
 
                             Action action = () =>
                             {
@@ -303,7 +303,8 @@ namespace Akka.Streams.Tests.Dsl
                                         .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
                                         .Grouped(10000)
                                         .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer)
-                                        .Wait(TimeSpan.FromSeconds(5));
+                                        .Wait(TimeSpan.FromSeconds(5))
+                                        .ShouldBeTrue("Stream should complete withing 5 seconds");
                             };
                             action.ShouldThrow<Framing.FramingException>();
                         }
