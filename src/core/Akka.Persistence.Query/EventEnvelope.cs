@@ -13,21 +13,26 @@ namespace Akka.Persistence.Query
     /// Event wrapper adding meta data for the events in the result stream of
     /// <see cref="IEventsByTagQuery"/> query, or similar queries.
     /// </summary>
-    [Serializable]
     public sealed class EventEnvelope : IEquatable<EventEnvelope>
     {
-        public readonly long Offset;
-        public readonly string PersistenceId;
-        public readonly long SequenceNr;
-        public readonly object Event;
-
-        public EventEnvelope(long offset, string persistenceId, long sequenceNr, object @event)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventEnvelope"/> class.
+        /// </summary>
+        public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event)
         {
             Offset = offset;
             PersistenceId = persistenceId;
             SequenceNr = sequenceNr;
             Event = @event;
         }
+
+        public Offset Offset { get; }
+
+        public string PersistenceId { get; }
+
+        public long SequenceNr { get; }
+
+        public object Event { get; }
 
         /// <inheritdoc/>
         public bool Equals(EventEnvelope other)

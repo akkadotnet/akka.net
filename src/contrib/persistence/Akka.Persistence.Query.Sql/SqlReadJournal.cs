@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Query.Sql
 {
@@ -155,8 +156,8 @@ namespace Akka.Persistence.Query.Sql
         /// The stream is completed with failure if there is a failure in executing the query in the
         /// backend journal.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset) =>
+            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset.AsInstanceOf<Sequence>().Value, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByTag-" + tag);
 
@@ -165,8 +166,8 @@ namespace Akka.Persistence.Query.Sql
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, long offset) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
+        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset) =>
+            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset.AsInstanceOf<Sequence>().Value, long.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByTag-" + tag);
     }
