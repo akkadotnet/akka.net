@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
 using Shared;
+using static Akka.Actor.ActorDsl;
 
 namespace System1
 {
@@ -61,14 +62,14 @@ akka {
     }
 }
 ");
-            using (var system = ActorSystem.Create("system1", config))
+            using (var system = ActorSystem("system1", config))
             {
                 var reply = system.ActorOf<ReplyActor>("reply");
                 //create a local group router (see config)
-                var local = system.ActorOf(Props.Create(() => new SomeActor("hello", 123)).WithRouter(FromConfig.Instance), "localactor");
+                var local = system.ActorOf(Props(() => new SomeActor("hello", 123)).WithRouter(FromConfig()), "localactor");
 
                 //create a remote deployed actor
-                var remote = system.ActorOf(Props.Create(() => new SomeActor(null, 123)).WithRouter(FromConfig.Instance), "remoteactor");
+                var remote = system.ActorOf(Props(() => new SomeActor(null, 123)).WithRouter(FromConfig()), "remoteactor");
 
                 //these messages should reach the workers via the routed local ref
                 local.Tell("Local message 1", reply);
