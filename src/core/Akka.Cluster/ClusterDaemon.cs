@@ -2117,6 +2117,11 @@ namespace Akka.Cluster
                 }
                 else
                 {
+                    if (_cluster.Settings.AllowWeaklyUpMembers)
+                    {
+                        MoveJoiningToWeaklyUp();
+                    }
+
                     _leaderActionCounter += 1;
                     if (_leaderActionCounter == firstNotice || _leaderActionCounter % periodicNotice == 0)
                     {
@@ -2195,7 +2200,7 @@ namespace Akka.Cluster
             var localSeen = localOverview.Seen;
 
             bool enoughMembers = IsMinNrOfMembersFulfilled();
-            Func<Member, bool> isJoiningUp = m => m.Status == MemberStatus.Joining && enoughMembers;
+            Func<Member, bool> isJoiningUp = m => (m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp) && enoughMembers;
 
             var removedUnreachable =
                 localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)
@@ -2295,6 +2300,38 @@ namespace Akka.Cluster
                 foreach (var m in removedExitingConfirmed)
                 {
                     _log.Info("Leader is removing confirmed Exiting node [{0}]", m.Address);
+                }
+
+                Publish(_latestGossip);
+            }
+        }
+
+        public void MoveJoiningToWeaklyUp()
+        {
+            var localGossip = _latestGossip;
+            var localMembers = localGossip.Members;
+
+            var enoughMembers = IsMinNrOfMembersFulfilled();
+            Func<Member, bool> isJoiningToWeaklyUp = m => 
+                m.Status == MemberStatus.Joining && enoughMembers 
+                && _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(m.UniqueAddress);
+
+            var changedMembers = localMembers
+                .Where(isJoiningToWeaklyUp)
+                .Select(m => m.Copy(status: MemberStatus.WeaklyUp))
+                .ToImmutableSortedSet();
+
+            if (!changedMembers.IsEmpty)
+            {
+                // replace changed members
+                var newMembers = changedMembers.Union(localMembers);
+                var newGossip = localGossip.Copy(members: newMembers);
+                UpdateLatestGossip(newGossip);
+
+                // log status changes
+                foreach (var member in changedMembers)
+                {
+                    _log.Info("Leader is moving node [{0}] to [{1}]", member.Address, member.Status);
                 }
 
                 Publish(_latestGossip);

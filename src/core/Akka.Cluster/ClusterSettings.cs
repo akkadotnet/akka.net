@@ -79,8 +79,9 @@ namespace Akka.Cluster
                 DowningProviderType = typeof(AutoDowning);
             else
                 DowningProviderType = typeof(NoDowning);
-
+            
             RunCoordinatedShutdownWhenDown = cc.GetBoolean("run-coordinated-shutdown-when-down");
+            AllowWeaklyUpMembers = cc.GetBoolean("allow-weakly-up-members");
         }
 
         /// <summary>
@@ -223,12 +224,14 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public Type DowningProviderType { get; }
-
+        
         /// <summary>
         /// Trigger the <see cref="CoordinatedShutdown"/> even if this node was removed by non-graceful
         /// means, such as being downed.
         /// </summary>
         public bool RunCoordinatedShutdownWhenDown { get; }
+
+        public bool AllowWeaklyUpMembers { get; }
     }
 }
 
