@@ -316,6 +316,17 @@ Target "DocFx" (fun _ ->
                     DocFxJson = docsPath @@ "docfx.json" })
 )
 
+FinalTarget "KillCreatedProcesses" (fun _ ->
+    log "The following processes were started during FAKE step..."
+    startedProcesses |> Seq.iter (fun (pid, _) -> logfn "%i" pid)
+    log "Killing processes started by FAKE..."
+    killAllCreatedProcesses()
+)
+
+Target "ActivateFinalTargets" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
+)
+
 //--------------------------------------------------------------------------------
 // Help 
 //--------------------------------------------------------------------------------
@@ -374,11 +385,11 @@ Target "All" DoNothing
 Target "Nuget" DoNothing
 
 // build dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
+"Clean" ==> "ActivateFinalTargets" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
 
 // tests dependencies
 // "RunTests" step doesn't require Clean ==> "RestorePackages" step
-"Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
+"Clean" ==> "ActivateFinalTargets" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
