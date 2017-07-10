@@ -110,6 +110,7 @@ Target "RunTests" (fun _ ->
 )
 
 Target "RunTestsNetCore" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> getIncrementalUnitTests()
@@ -132,6 +133,7 @@ Target "RunTestsNetCore" (fun _ ->
 )
 
 Target "MultiNodeTests" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
 
     let multiNodeTestAssemblies = 
@@ -166,6 +168,7 @@ Target "MultiNodeTests" (fun _ ->
 )
 
 Target "NBench" <| fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
     CleanDir outputPerfTests
 
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
@@ -324,10 +327,6 @@ FinalTarget "KillCreatedProcesses" (fun _ ->
     killAllCreatedProcesses()
 )
 
-Target "ActivateFinalTargets" (fun _ ->
-    ActivateFinalTarget "KillCreatedProcesses"
-)
-
 //--------------------------------------------------------------------------------
 // Help 
 //--------------------------------------------------------------------------------
@@ -386,11 +385,11 @@ Target "All" DoNothing
 Target "Nuget" DoNothing
 
 // build dependencies
-"Clean" ==> "ActivateFinalTargets" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
+"Clean" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
 
 // tests dependencies
 // "RunTests" step doesn't require Clean ==> "RestorePackages" step
-"Clean" ==> "ActivateFinalTargets" ==> "RestorePackages" ==> "RunTestsNetCore"
+"Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
