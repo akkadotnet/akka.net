@@ -86,11 +86,10 @@ namespace Akka.Tests.Actor
         {
             const string msg = "hello";
             const string terminationMsg = "watchee terminated";
-            StartWatching(_terminal).Tell(msg);
+            StartWatchingWith(_terminal, terminationMsg).Tell(msg);
             ExpectMsg(msg);
             _terminal.Tell(PoisonPill.Instance);
-
-            ExpectMsg<string>(w => w == terminationMsg);
+            ExpectMsg(terminationMsg);
         }
 
         [Fact]
@@ -255,9 +254,21 @@ namespace Akka.Tests.Actor
             return (IActorRef)task.Result;
         }
 
+        private IActorRef StartWatchingWith(IActorRef target, object message)
+        {
+            var task = _supervisor.Ask(CreateWatchWithAndForwarderProps(target, TestActor, message), TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3));
+            return (IActorRef)task.Result;
+        }
+
         private Props CreateWatchAndForwarderProps(IActorRef target, IActorRef forwardToActor)
         {
             return Props.Create(() => new WatchAndForwardActor(target, forwardToActor));
+        }
+
+        private Props CreateWatchWithAndForwarderProps(IActorRef target, IActorRef forwardToActor, object message)
+        {
+            return Props.Create(() => new WatchWithAndForwardActor(target, forwardToActor, message));
         }
 
         internal class BrotherActor : ReceiveActor
