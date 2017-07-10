@@ -324,7 +324,7 @@ Target "DocFx" (fun _ ->
 FinalTarget "KillCreatedProcesses" (fun _ ->
     log "The following processes were started during FAKE step..."
     startedProcesses |> Seq.iter (fun (pid, _) -> logf "%i, " pid)
-    log "Killing processes started by FAKE..."
+    log (Environment.NewLine + "Killing processes started by FAKE...")
     killAllCreatedProcesses()
 )
 
