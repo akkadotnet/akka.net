@@ -5,6 +5,7 @@
 open System
 open System.IO
 open System.Text
+open System.Diagnostics
 
 open Fake
 open Fake.DotNetCli
@@ -86,6 +87,7 @@ module internal ResultHandling =
 open BuildIncremental.IncrementalTests
 
 Target "RunTests" (fun _ ->    
+    ActivateFinalTarget "KillCreatedProcesses"
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> getIncrementalUnitTests()
@@ -109,6 +111,7 @@ Target "RunTests" (fun _ ->
 )
 
 Target "RunTestsNetCore" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
     let projects =
         match getBuildParamOrDefault "incremental" "" with
         | "true" -> getIncrementalUnitTests()
@@ -131,6 +134,7 @@ Target "RunTestsNetCore" (fun _ ->
 )
 
 Target "MultiNodeTests" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
 
     let multiNodeTestAssemblies = 
@@ -165,6 +169,7 @@ Target "MultiNodeTests" (fun _ ->
 )
 
 Target "NBench" <| fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
     CleanDir outputPerfTests
 
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
@@ -248,7 +253,7 @@ Target "CreateNuget" (fun _ ->
 )
 
 Target "PublishNuget" (fun _ ->
-    let projects = !! "./build/nuget/*.nupkg" -- "./build/nuget/*.symbols.nupkg"
+    let projects = !! "./bin/nuget/*.nupkg" -- "./bin/nuget/*.symbols.nupkg"
     let apiKey = getBuildParamOrDefault "nugetkey" ""
     let source = getBuildParamOrDefault "nugetpublishurl" ""
     let symbolSource = getBuildParamOrDefault "symbolspublishurl" ""
@@ -314,6 +319,13 @@ Target "DocFx" (fun _ ->
                     Timeout = TimeSpan.FromMinutes 5.0; 
                     WorkingDirectory  = docsPath; 
                     DocFxJson = docsPath @@ "docfx.json" })
+)
+
+FinalTarget "KillCreatedProcesses" (fun _ ->
+    log "The following processes were started during FAKE step..."
+    startedProcesses |> Seq.iter (fun (pid, _) -> logf "%i, " pid)
+    log (Environment.NewLine + "Killing processes started by FAKE...")
+    killAllCreatedProcesses()
 )
 
 //--------------------------------------------------------------------------------
