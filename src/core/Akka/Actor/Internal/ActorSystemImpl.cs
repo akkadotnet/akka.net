@@ -330,8 +330,7 @@ namespace Akka.Actor.Internal
         /// <returns>The specified extension registered to this actor system</returns>
         public override object GetExtension(IExtensionId extensionId)
         {
-            object extension;
-            TryGetExtension(extensionId.ExtensionType, out extension);
+            TryGetExtension(extensionId.ExtensionType, out var extension);
             return extension;
         }
 
@@ -368,8 +367,7 @@ namespace Akka.Actor.Internal
         /// <returns>The specified extension registered to this actor system</returns>
         public override T GetExtension<T>()
         {
-            T extension;
-            TryGetExtension(out extension);
+            TryGetExtension(out T extension);
             return extension;
         }
 

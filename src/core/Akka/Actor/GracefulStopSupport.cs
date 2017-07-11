@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
 using Akka.Util.Internal;
@@ -68,16 +66,15 @@ namespace Akka.Actor
                 if (t.Status == TaskStatus.RanToCompletion)
                 {
                     var returnResult = false;
-                    PatternMatch.Match(t.Result)
-                        .With<Terminated>(terminated =>
-                        {
-                            returnResult = (terminated.ActorRef.Path.Equals(target.Path));
-                        })
-                        .Default(m =>
-                        {
-                            internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
-                            returnResult = false;
-                        });
+                    if (t.Result is Terminated terminated)
+                    {
+                        returnResult = terminated.ActorRef.Path.Equals(target.Path);
+                    }
+                    else
+                    {
+                        internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
+                        //returnResult = false;
+                    }
                     return returnResult;
                 }
                 else

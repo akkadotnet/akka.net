@@ -130,15 +130,6 @@ namespace Akka.Actor
                 }
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        public override void SendSystemMessage(ISystemMessage message)
-        {
-            base.SendSystemMessage(message);
-        }
     }
 
 
@@ -205,7 +196,6 @@ namespace Akka.Actor
             var sender = ActorCell.GetCurrentSenderOrNoSender();
             receiver.Tell(message, sender);
         }
-
     }
 
     /// <summary>
@@ -710,8 +700,7 @@ namespace Akka.Actor
         /// <param name="name">TBD</param>
         public void RemoveChild(string name)
         {
-            IInternalActorRef tmp;
-            if (!_children.TryRemove(name, out tmp))
+            if (!_children.TryRemove(name, out var tmp))
             {
                 Log.Warning("{0} trying to remove non-child {1}", Path, name);
             }
@@ -724,8 +713,7 @@ namespace Akka.Actor
         /// <param name="child">TBD</param>
         public void RemoveChild(string name,IActorRef child)
         {
-            IInternalActorRef tmp;
-            if (!_children.TryRemove(name, out tmp))
+            if (!_children.TryRemove(name, out var tmp))
             {
                 Log.Warning("{0} trying to remove non-child {1}",Path,name);
             }

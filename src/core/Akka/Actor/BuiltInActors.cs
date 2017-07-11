@@ -41,13 +41,18 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if(message is Terminated)
-                Context.Stop(Self);
-            else if(message is StopChild)
-                Context.Stop(((StopChild)message).Child);
-            else
-                Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
-            return true;
+            switch (message)
+            {
+                case Terminated _:
+                    Context.Stop(Self);
+                    return true;
+                case StopChild stopChild:
+                    Context.Stop(stopChild.Child);
+                    return true;
+                default:
+                    Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
+                    return true;
+            }
         }
 
         /// <summary>
@@ -86,68 +91,64 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            var terminated = message as Terminated;
-            if(terminated != null)
-            {
-                var terminatedActor = terminated.ActorRef;
-                if(_userGuardian.Equals(terminatedActor))
-                {
-                    // time for the systemGuardian to stop, but first notify all the
-                    // termination hooks, they will reply with TerminationHookDone
-                    // and when all are done the systemGuardian is stopped
-                    Context.Become(Terminating);
-                    foreach(var terminationHook in _terminationHooks)
-                    {
-                        terminationHook.Tell(TerminationHook.Instance);
-                    }
-                    StopWhenAllTerminationHooksDone();
-                }
-                else
-                {
-                    // a registered, and watched termination hook terminated before
-                    // termination process of guardian has started
-                    _terminationHooks.Remove(terminatedActor);
-                }
-                return true;
-            }
-            
-            var stopChild = message as StopChild;
-            if(stopChild != null)
-            {
-                Context.Stop(stopChild.Child);
-                return true;
-            }
             var sender = Sender;
-            
-            var registerTerminationHook = message as RegisterTerminationHook;
-            if(registerTerminationHook != null && !ReferenceEquals(sender, Context.System.DeadLetters))
+
+            switch (message)
             {
-                _terminationHooks.Add(sender);
-                Context.Watch(sender);
-                return true;
+                case Terminated terminated:
+                    var terminatedActor = terminated.ActorRef;
+                    if (_userGuardian.Equals(terminatedActor))
+                    {
+                        // time for the systemGuardian to stop, but first notify all the
+                        // termination hooks, they will reply with TerminationHookDone
+                        // and when all are done the systemGuardian is stopped
+                        Context.Become(Terminating);
+                        foreach (var terminationHook in _terminationHooks)
+                        {
+                            terminationHook.Tell(TerminationHook.Instance);
+                        }
+                        StopWhenAllTerminationHooksDone();
+                    }
+                    else
+                    {
+                        // a registered, and watched termination hook terminated before
+                        // termination process of guardian has started
+                        _terminationHooks.Remove(terminatedActor);
+                    }
+                    return true;
+                case StopChild stopChild:
+                    Context.Stop(stopChild.Child);
+                    return true;
+                case RegisterTerminationHook _:
+                    if (!ReferenceEquals(sender, Context.System.DeadLetters))
+                    {
+                        _terminationHooks.Add(sender);
+                        Context.Watch(sender);
+                    }
+
+                    return true;
+                default:
+                    Context.System.DeadLetters.Tell(new DeadLetter(message, sender, Self), sender);
+                    return true;
             }
-            Context.System.DeadLetters.Tell(new DeadLetter(message, sender, Self), sender);
-            return true;
         }
 
         private bool Terminating(object message)
         {
-            var terminated = message as Terminated;
-            if(terminated != null)
-            {
-                StopWhenAllTerminationHooksDone(terminated.ActorRef);
-                return true;
-            }
             var sender = Sender;
 
-            var terminationHookDone = message as TerminationHookDone;
-            if(terminationHookDone != null)
+            switch (message)
             {
-                StopWhenAllTerminationHooksDone(sender);
-                return true;
+                case Terminated terminated:
+                    StopWhenAllTerminationHooksDone(terminated.ActorRef);
+                    return true;
+                case TerminationHookDone _:
+                    StopWhenAllTerminationHooksDone(sender);
+                    return true;
+                default:
+                    Context.System.DeadLetters.Tell(new DeadLetter(message, sender, Self), sender);
+                    return true;
             }
-            Context.System.DeadLetters.Tell(new DeadLetter(message, sender, Self), sender);
-            return true;
         }
 
         private void StopWhenAllTerminationHooksDone(IActorRef terminatedActor)
@@ -205,20 +206,26 @@ namespace Akka.Actor
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message == null) throw new InvalidMessageException("Message is null");
-            var i = message as Identify;
-            if (i != null)
+            if (message == null)
+                throw new InvalidMessageException("Message is null");
+
+            if (message is Identify identify)
             {
-                sender.Tell(new ActorIdentity(i.MessageId, ActorRefs.Nobody));
+                sender.Tell(new ActorIdentity(identify.MessageId, ActorRefs.Nobody));
                 return;
             }
-            var d = message as DeadLetter;
-            if (d != null)
+            if(message is DeadLetter deadLetter)
             {
-                if (!SpecialHandle(d.Message, d.Sender)) { _eventStream.Publish(d); }
+                if (!SpecialHandle(deadLetter.Message, deadLetter.Sender))
+                {
+                    _eventStream.Publish(deadLetter);
+                }
                 return;
             }
-            if (!SpecialHandle(message, sender)) { _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? Provider.DeadLetters : sender, this)); }
+            if (!SpecialHandle(message, sender))
+            {
+                _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? Provider.DeadLetters : sender, this));
+            }
         }
 
         /// <summary>
@@ -229,15 +236,16 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool SpecialHandle(object message, IActorRef sender)
         {
-            var w = message as Watch;
-            if (w != null)
+            if (message is Watch watch)
             {
-                if (!w.Watchee.Equals(this) && !w.Watcher.Equals(this))
+                if (!watch.Watchee.Equals(this) && !watch.Watcher.Equals(this))
                 {
-                    w.Watcher.SendSystemMessage(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
+                    watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, false, false));
                 }
+
                 return true;
             }
+
             return base.SpecialHandle(message, sender);
         }
     }

@@ -124,7 +124,7 @@ namespace Akka.Actor
         protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message,
             IActorRef sender, ICancelable cancelable)
         {
-            var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
+            var cancellationToken = cancelable?.Token ?? CancellationToken.None;
             InternalScheduleOnce(delay, () =>
             {
                 receiver.Tell(message, sender);
@@ -143,7 +143,7 @@ namespace Akka.Actor
         protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval,
             ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
-            var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
+            var cancellationToken = cancelable?.Token ?? CancellationToken.None;
             InternalScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(message, sender), cancellationToken);
         }
 
@@ -155,7 +155,7 @@ namespace Akka.Actor
         /// <param name="cancelable">N/A</param>
         protected override void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
-            var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
+            var cancellationToken = cancelable?.Token ?? CancellationToken.None;
             InternalScheduleOnce(delay, action, cancellationToken);
         }
 
@@ -169,14 +169,14 @@ namespace Akka.Actor
         protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action,
             ICancelable cancelable)
         {
-            var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
+            var cancellationToken = cancelable?.Token ?? CancellationToken.None;
             InternalScheduleRepeatedly(initialDelay, interval, action, cancellationToken);
         }
 
 
         private void InternalScheduleOnce(TimeSpan initialDelay, Action action, CancellationToken token)
         {
-            Action executeAction = () =>
+            void ExecuteAction()
             {
                 if (token.IsCancellationRequested)
                     return;
@@ -192,17 +192,16 @@ namespace Akka.Actor
                 {
                     Log.Error(x, "DedicatedThreadScheduler failed to execute action");
                 }
-            };
-            AddWork(initialDelay, executeAction, token);
+            }
 
+            AddWork(initialDelay, ExecuteAction, token);
         }
 
 
         private void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action,
             CancellationToken token)
         {
-            Action executeAction = null;
-            executeAction = () =>
+            void ExecuteAction()
             {
                 if (token.IsCancellationRequested)
                     return;
@@ -213,7 +212,7 @@ namespace Akka.Actor
                     if (token.IsCancellationRequested)
                         return;
 
-                    AddWork(interval, executeAction, token);
+                    AddWork(interval, ExecuteAction, token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -222,8 +221,9 @@ namespace Akka.Actor
                 {
                     Log.Error(x, "DedicatedThreadScheduler failed to execute action");
                 }
-            };
-            AddWork(initialDelay, executeAction, token);
+            }
+
+            AddWork(initialDelay, ExecuteAction, token);
 
         }
 

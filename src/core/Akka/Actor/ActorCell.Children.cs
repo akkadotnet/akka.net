@@ -96,8 +96,7 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         public void Stop(IActorRef child)
         {
-            ChildRestartStats stats;
-            if (ChildrenContainer.TryGetByRef(child, out stats))
+            if (ChildrenContainer.TryGetByRef(child, out var stats))
             {
                 var repointableActorRef = child as RepointableActorRef;
                 if (repointableActorRef == null || repointableActorRef.IsStarted)
@@ -172,12 +171,10 @@ namespace Akka.Actor
         {
             return UpdateChildrenRefs(cc =>
             {
-                IChildStats stats;
                 var name = actor.Path.Name;
-                if (cc.TryGetByName(name, out stats))
+                if (cc.TryGetByName(name, out var stats))
                 {
-                    var old = stats as ChildRestartStats;
-                    if (old != null)
+                    if (stats is ChildRestartStats old)
                     {
                         //Do not update. Return old
                         return new Tuple<bool, IChildrenContainer, ChildRestartStats>(false, cc, old);
@@ -204,11 +201,10 @@ namespace Akka.Actor
         {
             return UpdateChildrenRefs(cc =>
             {
-                var c = cc as TerminatingChildrenContainer;
-                if (c != null)
+                if (cc is TerminatingChildrenContainer c)
                     //The arguments says: Update; with a new reason; and return true
                     return new Tuple<bool, IChildrenContainer, bool>(true, c.CreateCopyWithReason(reason), true);
-                
+
                 //The arguments says:Do NOT update; any container will do since it wont be updated; return false 
                 return new Tuple<bool, IChildrenContainer, bool>(false, cc, false);
             });
@@ -235,8 +231,7 @@ namespace Akka.Actor
         {
             get
             {
-                var terminating = ChildrenContainer as TerminatingChildrenContainer;
-                return terminating != null && terminating.Reason is SuspendReason.IWaitingForChildren;
+                return ChildrenContainer is TerminatingChildrenContainer terminating && terminating.Reason is SuspendReason.IWaitingForChildren;
             }
         }
 
@@ -295,8 +290,7 @@ namespace Akka.Actor
         /// </summary>
         private bool TryGetChildRestartStatsByName(string name, out ChildRestartStats child)
         {
-            IChildStats stats;
-            if (ChildrenContainer.TryGetByName(name, out stats))
+            if (ChildrenContainer.TryGetByName(name, out var stats))
             {
                 child = stats as ChildRestartStats;
                 if (child != null)
@@ -328,8 +322,7 @@ namespace Akka.Actor
         [Obsolete("Use TryGetSingleChild [0.7.1]")]
         public IInternalActorRef GetSingleChild(string name)
         {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
+            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
         }
 
         /// <summary>
@@ -343,8 +336,7 @@ namespace Akka.Actor
             if (name.IndexOf('#') < 0)
             {
                 // optimization for the non-uid case
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(name, out stats))
+                if (TryGetChildRestartStatsByName(name, out var stats))
                 {
                     child = stats.Child;
                     return true;
@@ -353,8 +345,7 @@ namespace Akka.Actor
             else
             {
                 var nameAndUid = SplitNameAndUid(name);
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(nameAndUid.Name, out stats))
+                if (TryGetChildRestartStatsByName(nameAndUid.Name, out var stats))
                 {
                     var uid = nameAndUid.Uid;
                     if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
@@ -375,8 +366,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected SuspendReason RemoveChildAndGetStateChange(IActorRef child)
         {
-            var terminating = ChildrenContainer as TerminatingChildrenContainer;
-            if (terminating != null)
+            if (ChildrenContainer is TerminatingChildrenContainer terminating)
             {
                 var newContainer = UpdateChildrenRefs(c => c.Remove(child));
                 if (newContainer is TerminatingChildrenContainer) return null;
@@ -410,8 +400,7 @@ namespace Akka.Actor
                         {
                             var serializer = ser.FindSerializerFor(argument);
                             var bytes = serializer.ToBinary(argument);
-                            var manifestSerializer = serializer as SerializerWithStringManifest;
-                            if (manifestSerializer != null)
+                            if (serializer is SerializerWithStringManifest manifestSerializer)
                             {
                                 var manifest = manifestSerializer.Manifest(argument);
                                 if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
@@ -469,4 +458,3 @@ namespace Akka.Actor
         }
     }
 }
-

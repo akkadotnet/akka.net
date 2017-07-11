@@ -253,16 +253,11 @@ namespace Akka.Actor
             try
             {
                 //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed)
+                if(disposing && !_isDisposed)
                 {
-                    if(disposing)
-                    {
-                        //Clean up managed resources
-                        if(_source != null)
-                        {
-                            _source.Dispose();
-                        }
-                    }
+                    //Clean up managed resources
+                    _source?.Dispose();
+
                     //Clean up unmanaged resources
                 }
                 _isDisposed = true;

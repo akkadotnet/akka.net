@@ -7,7 +7,6 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
@@ -30,7 +29,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static IChildrenContainer Instance { get { return _instance; } }
+        public static IChildrenContainer Instance => _instance;
 
         /// <summary>
         /// TBD
@@ -128,10 +127,7 @@ namespace Akka.Actor.Internal
             return this;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "No children";
@@ -140,11 +136,11 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual bool IsTerminating { get { return false; } }
+        public virtual bool IsTerminating => false;
+
         /// <summary>
         /// TBD
         /// </summary>
-        public virtual bool IsNormal { get { return true; } }
+        public virtual bool IsNormal => true;
     }
 }
-

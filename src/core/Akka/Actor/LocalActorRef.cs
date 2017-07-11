@@ -25,7 +25,7 @@ namespace Akka.Actor
         private readonly MessageDispatcher _dispatcher;
         private readonly IInternalActorRef _supervisor;
         private readonly ActorPath _path;
-        private ActorCell _cell;
+        private readonly ActorCell _cell;
 
         //This mimics what's done in Akka`s construction of an LocalActorRef.
         //The actorCell is created in the overridable newActorCell() during creation of the instance.
@@ -257,12 +257,13 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
+            var list = (name ?? Enumerable.Empty<string>()).ToList();
             var current = (IActorRef)this;
             int index = 0;
-            foreach (string element in name)
+
+            foreach (string element in list)
             {
-                var currentLocalActorRef = current as LocalActorRef;
-                if (currentLocalActorRef != null)
+                if (current is LocalActorRef currentLocalActorRef)
                 {
                     switch (element)
                     {
@@ -281,7 +282,7 @@ namespace Akka.Actor
                     //Current is not a LocalActorRef
                     if (current != null)
                     {
-                        var rest = name.Skip(index).ToList();
+                        var rest = list.Skip(index).ToList();
                         return current.AsInstanceOf<IInternalActorRef>().GetChild(rest);
                     }
                     throw new NotSupportedException("Bug, we should not get here");

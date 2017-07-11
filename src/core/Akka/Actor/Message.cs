@@ -52,14 +52,12 @@ namespace Akka.Actor
         /// <value>The message.</value>
         public object Message { get; private set; }
 
-        /// <summary>
-        /// Converts the <see cref="Envelope"/> to a string representation.
-        /// </summary>
-        /// <returns>A string.</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return "<" + (Message ?? "null") + "> from " + (Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString());
+            var message = Message ?? "null";
+            var sender = Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString();
+            return $"<{message}> from {sender}";
         }
     }
 }
-

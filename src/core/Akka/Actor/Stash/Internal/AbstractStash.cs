@@ -164,8 +164,7 @@ An (unbounded) deque-based mailbox can be configured as follows:
         private void EnqueueFirst(Envelope msg)
         {
             Mailbox.EnqueueFirst(msg);
-            var terminatedMessage = msg.Message as Terminated;
-            if(terminatedMessage != null)
+            if(msg.Message is Terminated terminatedMessage)
             {
                 _actorCell.TerminatedQueuedFor(terminatedMessage.ActorRef);
             }

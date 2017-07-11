@@ -64,8 +64,7 @@ namespace Akka.Actor
 
             if(Uri.IsWellFormedUriString(path, UriKind.Absolute))
             {
-                ActorPath actorPath;
-                if(!ActorPath.TryParse(path, out actorPath))
+                if(!ActorPath.TryParse(path, out var actorPath))
                     return new ActorSelection(provider.DeadLetters, "");
 
                 var actorRef = provider.RootGuardianAt(actorPath.Address);
@@ -90,4 +89,3 @@ namespace Akka.Actor
         }
     }
 }
-

@@ -403,7 +403,7 @@ namespace Akka.Actor
     /// </summary>
     public class Inbox : IInboxable, IDisposable
     {
-        private static int inboxNr = 0;
+        private static int _inboxNr = 0;
         private readonly ISet<IObserver<object>> _subscribers;
         private readonly ActorSystem _system;
         private readonly TimeSpan _defaultTimeout;
@@ -419,7 +419,7 @@ namespace Akka.Actor
             var inboxSize = config.GetInt("inbox-size");
             var timeout = config.GetTimeSpan("default-timeout");
 
-            var receiver =((ActorSystemImpl) system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref inboxNr));
+            var receiver =((ActorSystemImpl) system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref _inboxNr));
 
             var inbox = new Inbox(timeout, receiver, system);
             return inbox;
@@ -471,10 +471,10 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="actorRef">TBD</param>
-        /// <param name="msg">TBD</param>
-        public void Send(IActorRef actorRef, object msg)
+        /// <param name="message">TBD</param>
+        public void Send(IActorRef actorRef, object message)
         {
-            actorRef.Tell(msg, Receiver);
+            actorRef.Tell(message, Receiver);
         }
 
         /// <summary>
@@ -577,8 +577,7 @@ namespace Akka.Actor
         {
             if (task.Wait(timeout))
             {
-                var received = task.Result as Status.Failure;
-                if (received != null && received.Cause is TimeoutException)
+                if (task.Result is Status.Failure received && received.Cause is TimeoutException)
                 {
                     throw new TimeoutException(
                         $"Inbox {Receiver.Path} received a status failure response message: {received.Cause.Message}", received.Cause);

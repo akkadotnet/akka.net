@@ -147,8 +147,7 @@ namespace Akka.Actor
             if (underlying == null)
                 throw new IllegalStateException("Underlying cell is null");
 
-            var unstartedCell = underlying as UnstartedCell;
-            if (unstartedCell != null)
+            if (underlying is UnstartedCell unstartedCell)
             {
                 // The problem here was that if the real actor (which will start running
                 // at cell.start()) creates children in its constructor, then this may
@@ -279,28 +278,25 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
-            var current = (IActorRef)this;
-            if (!name.Any()) return current;
+            var list = (name ?? Enumerable.Empty<string>()).ToList();
+            if (!list.Any()) return (IActorRef)this; //current
 
-            var next = name.FirstOrDefault() ?? "";
-
+            var next = list.FirstOrDefault() ?? "";
             switch (next)
             {
                 case "..":
-                    return Parent.GetChild(name.Skip(1));
+                    return Parent.GetChild(list.Skip(1));
                 case "":
                     return ActorRefs.Nobody;
                 default:
                     var nameAndUid = ActorCell.SplitNameAndUid(next);
-                    IChildStats stats;
-                    if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out stats))
+                    if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out var stats))
                     {
-                        var crs = stats as ChildRestartStats;
                         var uid = nameAndUid.Uid;
-                        if (crs != null && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
+                        if (stats is ChildRestartStats crs && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
                         {
-                            if (name.Skip(1).Any())
-                                return crs.Child.GetChild(name.Skip(1));
+                            if (list.Skip(1).Any())
+                                return crs.Child.GetChild(list.Skip(1));
                             else
                                 return crs.Child;
                         }
@@ -518,8 +514,8 @@ namespace Akka.Actor
         /// <param name="message">TBD</param>
         public void SendMessage(IActorRef sender, object message)
         {
-            if (message is ISystemMessage)
-                SendSystemMessage((ISystemMessage)message);
+            if (message is ISystemMessage systemMessage)
+                SendSystemMessage(systemMessage);
             else
                 SendMessage(message, sender);
         }
