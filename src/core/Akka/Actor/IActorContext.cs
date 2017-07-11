@@ -29,6 +29,15 @@ namespace Akka.Actor
         IActorRef Watch(IActorRef subject);
 
         /// <summary>
+        /// Monitors the specified actor for termination. When the <paramref name="subject"/> terminates
+        /// the instance watching will receive the provided message.
+        /// </summary>
+        /// <param name="subject">The actor to monitor for termination.</param>
+        /// <param name="message">The custom termination message</param>
+        /// <returns>Returns the provided subject</returns>
+        IActorRef WatchWith(IActorRef subject, object message);
+
+        /// <summary>
         /// Stops monitoring the <paramref name="subject"/> for termination.
         /// </summary>
         /// <param name="subject">The actor to stop monitor for termination.</param>
