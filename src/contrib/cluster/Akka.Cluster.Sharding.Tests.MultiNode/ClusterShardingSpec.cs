@@ -549,11 +549,15 @@ namespace Akka.Cluster.Sharding.Tests
 
                     r.Tell(new Counter.Get(11));
                     ExpectMsg(1);
-                    // local on first
-                    LastSender.Path.Should().Be(r.Path / "11" / "11");
+                    var path11 = LastSender.Path;
+                    LastSender.Path.ToStringWithoutAddress().Should().Be((r.Path / "11" / "11").ToStringWithoutAddress());
                     r.Tell(new Counter.Get(12));
                     ExpectMsg(1);
-                    LastSender.Path.Should().Be(Node(_config.Second) / "user" / "counterRegion" / "0" / "12");
+                    var path12 = LastSender.Path;
+                    LastSender.Path.ToStringWithoutAddress().Should().Be((r.Path / "0" / "12").ToStringWithoutAddress());
+
+                    //one has to be local, the other one remote
+                    (path11.Address.HasLocalScope && path12.Address.HasGlobalScope || path11.Address.HasGlobalScope && path12.Address.HasLocalScope).Should().BeTrue();
                 }, _config.First);
                 EnterBarrier("first-update");
 
