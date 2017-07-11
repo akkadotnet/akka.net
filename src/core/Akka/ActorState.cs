@@ -36,8 +36,9 @@ namespace Akka.Actor
         /// Adds the provided <see cref="IActorRef"/> to the `Watching` set
         /// </summary>
         /// <param name="actor">The <see cref="IActorRef"/> to be added</param>
+        /// <param name="message">The message sent on termination, null for default <see cref="Terminated"/> message</param>
         /// <returns>TBD</returns>
-        IActorState AddWatching(IActorRef actor);
+        IActorState AddWatching(IActorRef actor, object message);
         /// <summary>
         /// Adds the provided <see cref="IActorRef"/> to the `WatchedBy` set
         /// </summary>
@@ -88,6 +89,16 @@ namespace Akka.Actor
         /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set</param>
         /// <returns>TBD</returns>
         bool ContainsWatching(IActorRef actor);
+        /// <summary>
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set 
+        /// and retrieves the potential custom termination message
+        /// </summary>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set</param>
+        /// <param name="msg">
+        /// The custom termination message or null if the default <see cref="Terminated"/> message is expected
+        /// </param>
+        /// <returns></returns>
+        bool TryGetWatching(IActorRef actor, out object msg);
         /// <summary>
         /// Determines whether the provided <see cref="IActorRef"/> is present in the `WatchedBy` set
         /// </summary>
@@ -167,10 +178,11 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="actor">TBD</param>
+        /// <param name="msg">TBD</param>
         /// <returns>TBD</returns>
-        public IActorState AddWatching(IActorRef actor)
+        public IActorState AddWatching(IActorRef actor, object msg)
         {
-            return GetFullState().AddWatching(actor);
+            return GetFullState().AddWatching(actor, msg);
         }
 
         /// <summary>
@@ -223,6 +235,17 @@ namespace Akka.Actor
         public bool ContainsWatching(IActorRef actor)
         {
             return false;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="msg">TBD</param>
+        /// <returns>TBD</returns>
+        public bool TryGetWatching(IActorRef actor, out object msg)
+        {
+            return GetFullState().TryGetWatching(actor, out msg);
         }
 
         /// <summary>
@@ -361,7 +384,7 @@ namespace Akka.Actor
     /// </summary>
     internal class FullActorState : IActorState
     {
-        private readonly HashSet<IActorRef> _watching = new HashSet<IActorRef>();
+        private readonly Dictionary<IActorRef, object> _watching = new Dictionary<IActorRef, object>();
         private readonly HashSet<IActorRef> _watchedBy = new HashSet<IActorRef>();
         private readonly HashSet<IActorRef> _terminatedQueue = new HashSet<IActorRef>();//terminatedqueue should never be used outside the message loop
         private Stack<Receive> _behaviorStack = new Stack<Receive>(2);
@@ -402,10 +425,11 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="actor">TBD</param>
+        /// <param name="msg">TBD</param>
         /// <returns>TBD</returns>
-        public IActorState AddWatching(IActorRef actor)
+        public IActorState AddWatching(IActorRef actor, object msg)
         {
-            _watching.Add(actor);
+            _watching.Add(actor, msg);
             return this;
         }
 
@@ -439,7 +463,18 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public bool ContainsWatching(IActorRef actor)
         {
-            return _watching.Contains(actor);
+            return _watching.ContainsKey(actor);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="msg">TBD</param>
+        /// <returns>TBD</returns>
+        public bool TryGetWatching(IActorRef actor, out object msg)
+        {
+            return _watching.TryGetValue(actor, out msg);
         }
 
         /// <summary>
@@ -468,7 +503,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IEnumerable<IActorRef> GetWatching()
         {
-            return _watching;
+            return _watching.Keys;
         }
 
         /// <summary>
