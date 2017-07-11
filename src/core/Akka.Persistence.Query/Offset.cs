@@ -18,6 +18,9 @@ namespace Akka.Persistence.Query
 
     public sealed class Sequence : Offset
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Sequence"/> class.
+        /// </summary>
         public Sequence(long value)
         {
             Value = value;
@@ -39,6 +42,9 @@ namespace Akka.Persistence.Query
 
     public sealed class TimeBasedGuid : Offset
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TimeBasedGuid"/> class.
+        /// </summary>
         public TimeBasedGuid(Guid value)
         {
             Value = value;
@@ -60,6 +66,9 @@ namespace Akka.Persistence.Query
 
     public sealed class NoOffset : Offset
     {
+        /// <summary>
+        /// The singleton instance of <see cref="NoOffset"/>.
+        /// </summary>
         public static NoOffset Instance { get; } = new NoOffset();
         private NoOffset() { }
     }
