@@ -160,8 +160,9 @@ namespace Akka.Persistence.Query.Sql
         /// The stream is completed with failure if there is a failure in executing the query in the
         /// backend journal.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset)
+        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset = null)
         {
+            offset = offset ?? new Sequence(0L);
             switch (offset)
             {
                 case Sequence seq:
@@ -180,8 +181,9 @@ namespace Akka.Persistence.Query.Sql
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset)
+        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset = null)
         {
+            offset = offset ?? new Sequence(0L);
             switch (offset)
             {
                 case Sequence seq:
