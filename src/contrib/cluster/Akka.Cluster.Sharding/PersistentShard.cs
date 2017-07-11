@@ -209,14 +209,14 @@ namespace Akka.Cluster.Sharding
         /// <param name="handler">TBD</param>
         protected override void ProcessChange<T>(T evt, Action<T> handler)
         {
-            SaveSnapshotIfNeeded();
+            SaveSnapshotWhenNeeded();
             _persistent.Persist(evt, handler);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected void SaveSnapshotIfNeeded()
+        protected void SaveSnapshotWhenNeeded()
         {
             if (_persistent.LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && _persistent.LastSequenceNr != 0)
             {

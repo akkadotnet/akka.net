@@ -727,7 +727,7 @@ namespace Akka.Cluster.Sharding
         }
 
 
-        private void SaveSnapshotIfNeeded()
+        private void SaveSnapshotWhenNeeded()
         {
             if (LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
             {
@@ -930,7 +930,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         protected void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
         {
-            SaveSnapshotIfNeeded();
+            SaveSnapshotWhenNeeded();
             Persist(e, handler);
         }
 

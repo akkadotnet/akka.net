@@ -219,7 +219,7 @@ namespace Akka.Cluster.Sharding
                             settings: settings,
                             coordinatorPath: coordinatorPath,
                             extractEntityId: startProxy.ExtractEntityId,
-                            extractShardId: startProxy.ExtractShardId), encName);
+                            extractShardId: startProxy.ExtractShardId).WithDispatcher(Context.Props.Dispatcher), encName);
                     }
 
                     Sender.Tell(new Started(shardRegion));
