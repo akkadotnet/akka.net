@@ -124,6 +124,7 @@ namespace Akka.Actor
         public void UseThreadContext(System.Action action) { }
         public Akka.Actor.IActorRef Watch(Akka.Actor.IActorRef subject) { }
         protected void WatchedActorTerminated(Akka.Actor.IActorRef actor, bool existenceConfirmed, bool addressTerminated) { }
+        public Akka.Actor.IActorRef WatchWith(Akka.Actor.IActorRef subject, object message) { }
     }
     public sealed class ActorIdentity
     {
@@ -981,6 +982,7 @@ namespace Akka.Actor
     {
         Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject);
         Akka.Actor.IActorRef Watch(Akka.Actor.IActorRef subject);
+        Akka.Actor.IActorRef WatchWith(Akka.Actor.IActorRef subject, object message);
     }
     public interface ICell
     {
@@ -1103,6 +1105,7 @@ namespace Akka.Actor
         public void Send(Akka.Actor.IActorRef actorRef, object msg) { }
         public Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject) { }
         public Akka.Actor.IActorRef Watch(Akka.Actor.IActorRef subject) { }
+        public Akka.Actor.IActorRef WatchWith(Akka.Actor.IActorRef subject, object message) { }
     }
     public interface INoSerializationVerificationNeeded { }
     public interface INotInfluenceReceiveTimeout { }
