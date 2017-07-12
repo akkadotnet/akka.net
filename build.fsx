@@ -253,7 +253,7 @@ Target "CreateNuget" (fun _ ->
 )
 
 Target "PublishNuget" (fun _ ->
-    let projects = !! "./build/nuget/*.nupkg" -- "./build/nuget/*.symbols.nupkg"
+    let projects = !! "./bin/nuget/*.nupkg" -- "./bin/nuget/*.symbols.nupkg"
     let apiKey = getBuildParamOrDefault "nugetkey" ""
     let source = getBuildParamOrDefault "nugetpublishurl" ""
     let symbolSource = getBuildParamOrDefault "symbolspublishurl" ""
