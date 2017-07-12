@@ -17,12 +17,12 @@ using Akka.Remote.TestKit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Akka.MultiNodeTestRunner
+namespace Akka.MultiNodeTestRunner.Shared
 {
 #if CORECLR
-    internal class Discovery : IMessageSink, IDisposable
+    public class Discovery : IMessageSink, IDisposable
 #else
-    internal class Discovery : MarshalByRefObject, IMessageSink, IDisposable
+    public class Discovery : MarshalByRefObject, IMessageSink, IDisposable
 #endif
     {
         public Dictionary<string, List<NodeTest>> Tests { get; set; }
