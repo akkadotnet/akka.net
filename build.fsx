@@ -15,7 +15,10 @@ open Fake.Git
 // Variables
 let configuration = "Release"
 let solution = "./src/Akka.sln"
-let versionSuffix = getBuildParamOrDefault "versionsuffix" ""
+let versionSuffix = 
+    match (getBuildParamOrDefault "nugetprerelease" "") with
+    | "dev" -> "beta"
+    | _ -> ""
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
@@ -258,14 +261,15 @@ Target "PublishNuget" (fun _ ->
     let source = getBuildParamOrDefault "nugetpublishurl" ""
     let symbolSource = getBuildParamOrDefault "symbolspublishurl" ""
 
-    let runSingleProject project =
-        DotNetCli.RunCommand
-            (fun p -> 
-                { p with 
-                    TimeOut = TimeSpan.FromMinutes 10. })
-            (sprintf "nuget push %s --api-key %s --source %s --symbol-source %s" project apiKey source symbolSource)
+    if (not (source = "") && not (apiKey = "")) then
+        let runSingleProject project =
+            DotNetCli.RunCommand
+                (fun p -> 
+                    { p with 
+                        TimeOut = TimeSpan.FromMinutes 10. })
+                (sprintf "nuget push %s --api-key %s --source %s --symbol-source %s" project apiKey source symbolSource)
 
-    projects |> Seq.iter (runSingleProject)
+        projects |> Seq.iter (runSingleProject)
 )
 
 //--------------------------------------------------------------------------------
@@ -394,8 +398,7 @@ Target "Nuget" DoNothing
 
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
-"CreateNuget" ==> "PublishNuget"
-"PublishNuget" ==> "Nuget"
+"CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "Clean" ==> "Docfx"
