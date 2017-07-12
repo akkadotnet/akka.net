@@ -81,13 +81,7 @@ namespace Akka.Actor
             };
         }
 
-        /// <summary>
-        /// Indicates whether the current object is equal to another object of the same type.
-        /// </summary>
-        /// <param name="other">An object to compare with this object.</param>
-        /// <returns>
-        /// <c>true</c> if the current object is equal to the <paramref name="other" /> parameter; otherwise, <c>false</c>.
-        /// </returns>
+        /// <inheritdoc/>
         public bool Equals(Props other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -303,13 +297,7 @@ namespace Akka.Actor
         [JsonIgnore]
         public Type Type
         {
-            get
-            {
-                if (outputType == null) {
-                    outputType = producer.ActorType;
-                }
-                return outputType;
-            }
+            get { return outputType ?? (outputType = producer.ActorType); }
         }
 
         /// <summary>
@@ -699,7 +687,7 @@ namespace Akka.Actor
         {
             try
             {
-                if (this.producer != null) this.producer.Release(actor);
+                producer?.Release(actor);
             }
             finally
             {

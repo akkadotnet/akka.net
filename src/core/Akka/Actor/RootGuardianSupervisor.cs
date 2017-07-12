@@ -63,29 +63,25 @@ namespace Akka.Actor
         /// <param name="systemMessage">TBD</param>
         public override void SendSystemMessage(ISystemMessage systemMessage)
         {
-            var failed = systemMessage as Failed;
-            if (failed != null)
+            switch (systemMessage)
             {
-                var cause = failed.Cause;
-                var child = failed.Child;
-                _log.Error(cause, "guardian {0} failed, shutting down!", child);
-                CauseOfTermination = cause;
-                ((IInternalActorRef)child).Stop();
-                return;
+                case Failed failed:
+                    var cause = failed.Cause;
+                    var child = failed.Child;
+                    _log.Error(cause, "guardian {0} failed, shutting down!", child);
+                    CauseOfTermination = cause;
+                    ((IInternalActorRef)child).Stop();
+                    return;
+                case Supervise _:
+                    // This comment comes from AKKA: TO DO register child in some map to keep track of it and enable shutdown after all dead
+                    return;
+                case DeathWatchNotification _:
+                    Stop();
+                    return;
+                default:
+                    _log.Error("{0} received unexpected system message [{1}]", _path, systemMessage);
+                    return;
             }
-            var supervise = systemMessage as Supervise;
-            if (supervise != null)
-            {
-                // This comment comes from AKKA: TO DO register child in some map to keep track of it and enable shutdown after all dead
-                return;
-            }
-            var deathWatchNotification = systemMessage as DeathWatchNotification;
-            if (deathWatchNotification != null)
-            {
-                Stop();
-                return;
-            }
-            _log.Error("{0} received unexpected system message [{1}]", _path, systemMessage);
         }
 
         /// <summary>

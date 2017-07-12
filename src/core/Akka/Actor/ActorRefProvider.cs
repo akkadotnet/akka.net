@@ -380,8 +380,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef ResolveActorRef(string path)
         {
-            ActorPath actorPath;
-            if (ActorPath.TryParse(path, out actorPath) && actorPath.Address == _rootPath.Address)
+            if (ActorPath.TryParse(path, out var actorPath) && actorPath.Address == _rootPath.Address)
                 return ResolveActorRef(_rootGuardian, actorPath.Elements);
             _log.Debug("Resolve of unknown path [{0}] failed. Invalid format.", path);
             return _deadLetters;

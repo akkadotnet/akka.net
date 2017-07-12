@@ -61,8 +61,7 @@ namespace Akka.Actor
             /// <returns>The <see cref="ActorPath"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                ActorPath path;
-                if (TryParse(Path, out path))
+                if (TryParse(Path, out var path))
                 {
                     return path;
                 }
@@ -98,10 +97,7 @@ namespace Akka.Actor
             }
 
             /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return Path.GetHashCode();
-            }
+            public override int GetHashCode() => Path.GetHashCode();
 
             #endregion
         }
@@ -357,8 +353,7 @@ namespace Akka.Actor
         /// <returns>A newly created <see cref="ActorPath"/></returns>
         public static ActorPath Parse(string path)
         {
-            ActorPath actorPath;
-            if (TryParse(path, out actorPath))
+            if (TryParse(path, out var actorPath))
             {
                 return actorPath;
             }
@@ -376,10 +371,9 @@ namespace Akka.Actor
         {
             actorPath = null;
 
+            if (!TryParseAddress(path, out var address, out var uri))
+                return false;
 
-            Address address;
-            Uri uri;
-            if (!TryParseAddress(path, out address, out uri)) return false;
             var pathElements = uri.AbsolutePath.Split('/');
             actorPath = new RootActorPath(address) / pathElements.Skip(1);
             if (uri.Fragment.StartsWith("#"))
@@ -398,8 +392,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static bool TryParseAddress(string path, out Address address)
         {
-            Uri uri;
-            return TryParseAddress(path, out address, out uri);
+            return TryParseAddress(path, out address, out var _);
         }
 
         private static bool TryParseAddress(string path, out Address address, out Uri uri)
@@ -408,13 +401,13 @@ namespace Akka.Actor
             address = null;
             if (!Uri.TryCreate(path, UriKind.Absolute, out uri))
                 return false;
+
             var protocol = uri.Scheme; //Typically "akka"
             if (!protocol.StartsWith("akka", StringComparison.OrdinalIgnoreCase))
             {
                 // Protocol must start with 'akka.*
                 return false;
             }
-
 
             string systemName;
             string host = null;
@@ -453,8 +446,7 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         private string Join()
         {
-            var joined = String.Join("/", Elements);
-            return "/" + joined;
+            return "/" + string.Join("/", Elements);
         }
 
         /// <summary>
@@ -566,7 +558,7 @@ namespace Akka.Actor
             if (Uid == ActorCell.UndefinedUid)
                 return withAddress;
 
-            return String.Concat(withAddress, "#", Uid.ToString());
+            return string.Concat(withAddress, "#", Uid.ToString());
         }
         /// <summary>
         /// Generate String representation, replacing the Address in the RootActorPath
@@ -590,7 +582,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static string FormatPathElements(IEnumerable<string> pathElements)
         {
-            return String.Join("/", pathElements);
+            return string.Join("/", pathElements);
         }
 
         /// <summary>
@@ -689,9 +681,9 @@ namespace Akka.Actor
             get
             {
                 var current = _parent;
-                while (current is ChildActorPath)
+                while (current is ChildActorPath childActorPath)
                 {
-                    current = ((ChildActorPath)current)._parent;
+                    current = childActorPath._parent;
                 }
                 return current.Root;
             }
@@ -717,16 +709,19 @@ namespace Akka.Actor
 
         private int InternalCompareTo(ActorPath left, ActorPath right)
         {
-            if (ReferenceEquals(left, right)) return 0;
-            var leftRoot = left as RootActorPath;
-            if (leftRoot != null)
+            if (ReferenceEquals(left, right))
+                return 0;
+
+            if (left is RootActorPath leftRoot)
                 return leftRoot.CompareTo(right);
-            var rightRoot = right as RootActorPath;
-            if (rightRoot != null)
+
+            if (right is RootActorPath rightRoot)
                 return -rightRoot.CompareTo(left);
+
             var nameCompareResult = Compare(left.Name, right.Name, StringComparison.Ordinal);
             if (nameCompareResult != 0)
                 return nameCompareResult;
+
             return InternalCompareTo(left.Parent, right.Parent);
         }
     }

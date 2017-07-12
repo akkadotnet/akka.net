@@ -13,13 +13,9 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Debug = Akka.Event.Debug;
-using System.Globalization;
 
 namespace Akka.Actor
 {
-    /// <summary>
-    ///     Class ActorCell.
-    /// </summary>
     [DebuggerDisplay("{Self,nq}")]
     public partial class ActorCell
     {
@@ -31,9 +27,7 @@ namespace Akka.Actor
         {
             get
             {
-                if (_actor != null)
-                    return _actor.GetType();
-                return GetType();
+                return _actor?.GetType() ?? GetType();
             }
         }
 
@@ -136,18 +130,32 @@ namespace Akka.Actor
             var message = envelope.Message;
 
             var actor = _actor;
-            var actorType = actor != null ? actor.GetType() : null;
+            var actorType = actor?.GetType();
 
             if (System.Settings.DebugAutoReceive)
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
-            var m = envelope.Message;
-            if (m is Terminated) ReceivedTerminated(m as Terminated);
-            else if (m is AddressTerminated) AddressTerminated((m as AddressTerminated).Address);
-            else if (m is Kill) Kill();
-            else if (m is PoisonPill) HandlePoisonPill();
-            else if (m is ActorSelectionMessage) ReceiveSelection(m as ActorSelectionMessage);
-            else if (m is Identify) HandleIdentity(m as Identify);
+            switch (envelope.Message)
+            {
+                case Terminated terminated:
+                    ReceivedTerminated(terminated);
+                    break;
+                case AddressTerminated addressTerminated:
+                    AddressTerminated(addressTerminated.Address);
+                    break;
+                case Kill kill:
+                    Kill();
+                    break;
+                case PoisonPill poisonPill:
+                    HandlePoisonPill();
+                    break;
+                case ActorSelectionMessage actorSelectionMessage:
+                    ReceiveSelection(actorSelectionMessage);
+                    break;
+                case Identify identify:
+                    HandleIdentity(identify);
+                    break;
+            }
         }
 
         /// <summary>
@@ -181,7 +189,8 @@ namespace Akka.Actor
             if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
             {
                 //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
-                var msg = "received " + (wasHandled ? "handled" : "unhandled") + " message " + message + " from " + Sender.Path;
+                var handled = wasHandled ? "handled" : "unhandled";
+                var msg = $"received {handled} message {message} from {Sender.Path}";
                 Publish(new Debug(Self.Path.ToString(), _actor.GetType(), msg));
             }
         }
@@ -248,36 +257,45 @@ namespace Akka.Actor
                     {
                         Stash(m);
                     }
-                    if (m is ActorTaskSchedulerMessage) HandleActorTaskSchedulerMessage((ActorTaskSchedulerMessage)m);
-                    else if (m is Failed) HandleFailed(m as Failed);
-                    else if (m is DeathWatchNotification)
+
+                    switch (m)
                     {
-                        var msg = m as DeathWatchNotification;
-                        WatchedActorTerminated(msg.Actor, msg.ExistenceConfirmed, msg.AddressTerminated);
-                    }
-                    else if (m is Create) Create((m as Create).Failure);
-                    else if (m is Watch)
-                    {
-                        var watch = m as Watch;
-                        AddWatcher(watch.Watchee, watch.Watcher);
-                    }
-                    else if (m is Unwatch)
-                    {
-                        var unwatch = m as Unwatch;
-                        RemWatcher(unwatch.Watchee, unwatch.Watcher);
-                    }
-                    else if (m is Recreate) FaultRecreate((m as Recreate).Cause);
-                    else if (m is Suspend) FaultSuspend();
-                    else if (m is Resume) FaultResume((m as Resume).CausedByFailure);
-                    else if (m is Terminate) Terminate();
-                    else if (m is Supervise)
-                    {
-                        var supervise = m as Supervise;
-                        Supervise(supervise.Child, supervise.Async);
-                    }
-                    else
-                    {
-                        throw new NotSupportedException($"Unknown message {m.GetType().Name}");
+                        case ActorTaskSchedulerMessage actorTaskSchedulerMessage:
+                            HandleActorTaskSchedulerMessage(actorTaskSchedulerMessage);
+                            break;
+                        case Failed failed:
+                            HandleFailed(failed);
+                            break;
+                        case DeathWatchNotification deathWatchNotification:
+                            WatchedActorTerminated(
+                                deathWatchNotification.Actor, deathWatchNotification.ExistenceConfirmed, deathWatchNotification.AddressTerminated);
+                            break;
+                        case Create create:
+                            Create(create.Failure);
+                            break;
+                        case Watch watch:
+                            AddWatcher(watch.Watchee, watch.Watcher);
+                            break;
+                        case Unwatch unwatch:
+                            RemWatcher(unwatch.Watchee, unwatch.Watcher);
+                            break;
+                        case Recreate recreate:
+                            FaultRecreate(recreate.Cause);
+                            break;
+                        case Suspend suspend:
+                            FaultSuspend();
+                            break;
+                        case Resume resume:
+                            FaultResume(resume.CausedByFailure);
+                            break;
+                        case Terminate terminate:
+                            Terminate();
+                            break;
+                        case Supervise supervise:
+                            Supervise(supervise.Child, supervise.Async);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Unknown message {m.GetType().Name}");
                     }
                 }
                 catch (Exception cause)
@@ -372,21 +390,21 @@ namespace Akka.Actor
                     HandleSupervise(child, async);
                     if (System.Settings.DebugLifecycle)
                     {
-                        Publish(new Debug(Self.Path.ToString(), ActorType, "now supervising " + child.Path));
+                        Publish(new Debug(Self.Path.ToString(), ActorType, $"now supervising {child.Path}"));
                     }
                 }
                 else
                 {
-                    Publish(new Debug(Self.Path.ToString(), ActorType, "received Supervise from unregistered child " + child.Path + ", this will not end well"));
+                    Publish(new Debug(Self.Path.ToString(), ActorType, $"received Supervise from unregistered child {child.Path}, this will not end well"));
                 }
             }
         }
 
         private void HandleSupervise(IActorRef child, bool async)
         {
-            if (async && child is RepointableActorRef)
+            if (async && child is RepointableActorRef actorRef)
             {
-                ((RepointableActorRef)child).Point();
+                actorRef.Point();
             }
         }
 
@@ -429,7 +447,7 @@ namespace Akka.Actor
                 UseThreadContext(() => created.AroundPreStart());
                 CheckReceiveTimeout();
                 if (System.Settings.DebugLifecycle)
-                    Publish(new Debug(Self.Path.ToString(), created.GetType(), "Started (" + created + ")"));
+                    Publish(new Debug(Self.Path.ToString(), created.GetType(), $"Started ({created})"));
             }
             catch (Exception e)
             {

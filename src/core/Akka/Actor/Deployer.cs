@@ -95,7 +95,7 @@ namespace Akka.Actor
         /// </exception>
         public void SetDeploy(Deploy deploy)
         {
-            Action<IList<string>, Deploy> add = (path, d) =>
+            void Add(IList<string> path, Deploy d)
             {
                 bool set;
                 do
@@ -108,15 +108,15 @@ namespace Akka.Actor
                             throw new IllegalActorNameException($"Actor name in deployment [{d.Path}] must not be empty");
                         if (!ActorPath.IsValidPathElement(t))
                         {
-                            throw new IllegalActorNameException(
-                                $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
+                            throw new IllegalActorNameException($"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
                         }
                     }
                     set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
                 } while (!set);
-            };
+            }
+
             var elements = deploy.Path.Split('/').Drop(1).ToList();
-            add(elements, deploy);
+            Add(elements, deploy);
         }
 
         /// <summary>

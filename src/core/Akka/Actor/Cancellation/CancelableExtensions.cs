@@ -18,9 +18,7 @@ namespace Akka.Actor
         /// <param name="cancelable">The cancelable. Will be canceled if it's not <c>null</c></param>
         public static void CancelIfNotNull(this ICancelable cancelable)
         {
-            if(cancelable != null) cancelable.Cancel();
+            cancelable?.Cancel();
         }
-
     }
 }
-

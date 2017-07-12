@@ -119,13 +119,15 @@ namespace Akka.Actor
             if (ActorCell.Current != null)
                 return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
 
-            if (self is IInternalActorRef)
-                return self.AsInstanceOf<IInternalActorRef>().Provider;
-
-            if (self is ActorSelection)
-                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
-
-            return null;
+            switch (self)
+            {
+                case IInternalActorRef internalActorRef:
+                    return internalActorRef.Provider;
+                case ActorSelection actorSelection:
+                    return ResolveProvider(actorSelection.Anchor);
+                default:
+                    return null;
+            }
         }
 
         private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
@@ -150,22 +152,21 @@ namespace Akka.Actor
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
             //callback to unregister from tempcontainer
-            Action unregister =
-                () =>
+            Action unregister = () =>
+            {
+                // cancelling timeout (if any) in order to prevent memory leaks
+                // (a reference to 'result' variable in CancellationToken's callback)
+                if (timeoutCancellation != null)
                 {
-                    // cancelling timeout (if any) in order to prevent memory leaks
-                    // (a reference to 'result' variable in CancellationToken's callback)
-                    if (timeoutCancellation != null)
-                    {
-                        timeoutCancellation.Cancel();
-                        timeoutCancellation.Dispose();
-                    }
-                    for (var i = 0; i < ctrList.Count; i++)
-                    {
-                        ctrList[i].Dispose();
-                    }
-                    provider.UnregisterTempActor(path);
-                };
+                    timeoutCancellation.Cancel();
+                    timeoutCancellation.Dispose();
+                }
+                for (var i = 0; i < ctrList.Count; i++)
+                {
+                    ctrList[i].Dispose();
+                }
+                provider.UnregisterTempActor(path);
+            };
 
             var future = new FutureActorRef(result, unregister, path);
             //The future actor needs to be registered in the temp container
@@ -443,28 +444,34 @@ namespace Akka.Actor
                     continue;
                 }
 
-                if (State is ActorPath)
-                    return State as ActorPath;
-                if (State is StoppedWithPath)
-                    return State.AsInstanceOf<StoppedWithPath>().Path;
-                if (State is Stopped)
+                switch (State)
                 {
-                    //even if we are already stopped we still need to produce a proper path
-                    UpdateState(Stopped.Instance, new StoppedWithPath(Provider.TempPath()));
-                    continue;
+                    case ActorPath actorPath:
+                        return actorPath;
+                    case StoppedWithPath stoppedWithPath:
+                        return stoppedWithPath.Path;
+                    case Stopped _:
+                        //even if we are already stopped we still need to produce a proper path
+                        UpdateState(Stopped.Instance, new StoppedWithPath(Provider.TempPath()));
+                        continue;
+                    case Registering _:
+                        continue;
                 }
-                if (State is Registering)
-                    continue;
             }
         }
 
         /// <inheritdoc cref="InternalActorRefBase.TellInternal"/>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (State is Stopped || State is StoppedWithPath) Provider.DeadLetters.Tell(message);
+            if (State is Stopped || State is StoppedWithPath)
+            {
+                Provider.DeadLetters.Tell(message);
+            }
             else
             {
-                if (message == null) throw new InvalidMessageException("Message is null");
+                if (message == null)
+                    throw new InvalidMessageException("Message is null");
+
                 // @Aaronontheweb note: not using any of the Status stuff here. Seems like it's extraneous in CLR
                 //var wrappedMessage = message;
                 //if (!(message is Status.Success || message is Status.Failure))
@@ -479,35 +486,41 @@ namespace Akka.Actor
         /// <inheritdoc cref="InternalActorRefBase.SendSystemMessage(ISystemMessage)"/>
         public override void SendSystemMessage(ISystemMessage message)
         {
-            if (message is Terminate) Stop();
-            else if (message is DeathWatchNotification)
+            switch (message)
             {
-                var dw = message as DeathWatchNotification;
-                Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated), this);
-            }
-            else if (message is Watch)
-            {
-                var watch = message as Watch;
-                if (Equals(watch.Watchee, this))
-                {
-                    if (!AddWatcher(watch.Watcher))
+                case Terminate _:
+                    Stop();
+                    break;
+                case DeathWatchNotification deathWatchNotification:
+                    Tell(new Terminated(deathWatchNotification.Actor, deathWatchNotification.ExistenceConfirmed, deathWatchNotification.AddressTerminated), this);
+                    break;
+                case Watch watch:
+                    if (Equals(watch.Watchee, this))
                     {
-                        // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
-                        watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: true,
-                            addressTerminated: false));
+                        if (!AddWatcher(watch.Watcher))
+                        {
+                            // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
+                            watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee,
+                                existenceConfirmed: true,
+                                addressTerminated: false));
+                        }
+                        else
+                        {
+                            //TODO: find a way to get access to logger?
+                            Console.WriteLine("BUG: illegal Watch({0},{1}) for {2}", watch.Watchee, watch.Watcher, this);
+                        }
+                    }
+                    break;
+                case Unwatch unwatch:
+                    if (Equals(unwatch.Watchee, this) && !Equals(unwatch.Watcher, this))
+                    {
+                        RemoveWatcher(unwatch.Watcher);
                     }
                     else
                     {
-                        //TODO: find a way to get access to logger?
-                        Console.WriteLine("BUG: illegal Watch({0},{1}) for {2}", watch.Watchee, watch.Watcher, this);
+                        Console.WriteLine("BUG: illegal Unwatch({0},{1}) for {2}", unwatch.Watchee, unwatch.Watcher, this);
                     }
-                }
-            }
-            else if (message is Unwatch)
-            {
-                var unwatch = message as Unwatch;
-                if (Equals(unwatch.Watchee, this) && !Equals(unwatch.Watcher, this)) RemoveWatcher(unwatch.Watcher);
-                else Console.WriteLine("BUG: illegal Unwatch({0},{1}) for {2}", unwatch.Watchee, unwatch.Watcher, this);
+                    break;
             }
         }
 
@@ -519,40 +532,38 @@ namespace Akka.Actor
             while (true)
             {
                 var state = State;
-                // if path was never queried nobody can possibly be watching us, so we don't have to publish termination either
-                if (state == null)
+                switch (state)
                 {
-                    if (UpdateState(null, Stopped.Instance)) StopEnsureCompleted();
-                    else continue;
-                }
-                else if (state is ActorPath)
-                {
-                    var p = state as ActorPath;
-                    if (UpdateState(p, new StoppedWithPath(p)))
-                    {
-                        try
+                    case null: // if path was never queried nobody can possibly be watching us, so we don't have to publish termination either
+                        if (UpdateState(null, Stopped.Instance))
                         {
                             StopEnsureCompleted();
+                            break;
                         }
-                        finally
+                        else continue;
+                    case ActorPath actorPath:
+                        if (UpdateState(actorPath, new StoppedWithPath(actorPath)))
                         {
-                            Provider.UnregisterTempActor(p);
+                            try
+                            {
+                                StopEnsureCompleted();
+                            }
+                            finally
+                            {
+                                Provider.UnregisterTempActor(actorPath);
+                            }
+                            break;
                         }
-                    }
-                    else
-                    {
+                        else continue;
+                    case Stopped _:
+                    case StoppedWithPath _:
+                        //already stopped
+                        break;
+                    case Registering _:
+                        //spin until registration is completed before stopping
                         continue;
-                    }
                 }
-                else if (state is Stopped || state is StoppedWithPath)
-                {
-                    //already stopped
-                }
-                else if (state is Registering)
-                {
-                    //spin until registration is completed before stopping
-                    continue;
-                }
+
                 break;
             }
         }
@@ -566,8 +577,7 @@ namespace Akka.Actor
                 foreach (var watcher in watchers)
                 {
                     watcher.AsInstanceOf<IInternalActorRef>()
-                        .SendSystemMessage(new DeathWatchNotification(watcher, existenceConfirmed: true,
-                            addressTerminated: false));
+                        .SendSystemMessage(new DeathWatchNotification(watcher, true, false));
                 }
             }
         }

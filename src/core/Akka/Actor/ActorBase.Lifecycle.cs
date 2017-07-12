@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+
 namespace Akka.Actor
 {
     public abstract partial class ActorBase
@@ -98,4 +99,3 @@ namespace Akka.Actor
         }
     }
 }
-

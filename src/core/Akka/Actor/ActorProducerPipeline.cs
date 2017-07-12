@@ -232,7 +232,7 @@ namespace Akka.Actor
     /// </summary>
     public class ActorProducerPipeline : IEnumerable<IActorProducerPlugin>
     {
-        private Lazy<ILoggingAdapter> _log;
+        private readonly Lazy<ILoggingAdapter> _log;
         private readonly List<IActorProducerPlugin> _plugins;
 
         /// <summary>
@@ -297,18 +297,14 @@ namespace Akka.Actor
 
         private void LogException(ActorBase actor, Exception e, string errorMessageFormat, IActorProducerPlugin plugin)
         {
-            var internalActor = (actor as IInternalActor);
-            var actorPath = internalActor != null && internalActor.ActorContext != null
+            var actorPath = actor is IInternalActor internalActor && internalActor.ActorContext != null
                 ? internalActor.ActorContext.Self.Path.ToString()
                 : string.Empty;
 
-            _log.Value.Error(e, errorMessageFormat, plugin.GetType(), actor.GetType(), actorPath);
+            _log.Value.Error(e, errorMessageFormat, plugin.GetType(), actor?.GetType(), actorPath);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public IEnumerator<IActorProducerPlugin> GetEnumerator()
         {
             return _plugins.GetEnumerator();

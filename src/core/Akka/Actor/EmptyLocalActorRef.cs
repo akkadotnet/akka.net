@@ -58,9 +58,13 @@ namespace Akka.Actor
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message == null) throw new InvalidMessageException("Message is null");
-            var d = message as DeadLetter;
-            if (d != null) SpecialHandle(d.Message, d.Sender);
+            if (message == null)
+                throw new InvalidMessageException("Message is null");
+
+            if (message is DeadLetter d)
+            {
+                SpecialHandle(d.Message, d.Sender);
+            }
             else if (!SpecialHandle(message, sender))
             {
                 _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
@@ -85,49 +89,35 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
-            var watch = message as Watch;
-            if (watch != null)
+            switch (message)
             {
-                if (watch.Watchee.Equals(this) && !watch.Watcher.Equals(this))
-                {
-                    watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: false, addressTerminated: false));
-                }
-                return true;
-            }
-            if (message is Unwatch)
-                return true;    //Just ignore
-
-            var identify = message as Identify;
-            if (identify != null)
-            {
-                sender.Tell(new ActorIdentity(identify.MessageId, null));
-                return true;
-            }
-
-            var actorSelectionMessage = message as ActorSelectionMessage;
-            if (actorSelectionMessage != null)
-            {
-                var selectionIdentify = actorSelectionMessage.Message as Identify;
-                if (selectionIdentify != null)
-                {
-                    if (!actorSelectionMessage.WildCardFanOut)
+                case Watch watch:
+                    if (watch.Watchee.Equals(this) && !watch.Watcher.Equals(this))
+                    {
+                        watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, false, false));
+                    }
+                    return true;
+                case Unwatch _:
+                    return true;    //Just ignore
+                case Identify identify:
+                    sender.Tell(new ActorIdentity(identify.MessageId, null));
+                    return true;
+                case ActorSelectionMessage actorSelectionMessage:
+                    if (actorSelectionMessage.Message is Identify selectionIdentify && !actorSelectionMessage.WildCardFanOut)
+                    {
                         sender.Tell(new ActorIdentity(selectionIdentify.MessageId, null));
-                }
-                else
-                {
-                    _eventStream.Publish(new DeadLetter(actorSelectionMessage.Message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
-                }
-                return true;
+                    }
+                    else
+                    {
+                        _eventStream.Publish(new DeadLetter(actorSelectionMessage.Message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
+                    }
+                    return true;
+                case IDeadLetterSuppression deadLetterSuppression:
+                    _eventStream.Publish(new SuppressedDeadLetter(deadLetterSuppression, sender.IsNobody() ? _provider.DeadLetters : sender, this));
+                    return true;
+                default:
+                    return false;
             }
-
-            var deadLetterSuppression = message as IDeadLetterSuppression;
-            if (deadLetterSuppression != null)
-            {
-                _eventStream.Publish(new SuppressedDeadLetter(deadLetterSuppression, sender.IsNobody() ? _provider.DeadLetters : sender, this));
-                return true;
-            }
-
-            return false;
         }
     }
 }

@@ -56,7 +56,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return (Address != null ? Address.GetHashCode() : 0);
+            return Address?.GetHashCode() ?? 0;
         }
 
         /// <summary>

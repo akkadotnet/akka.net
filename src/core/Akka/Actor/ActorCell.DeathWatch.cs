@@ -9,11 +9,10 @@ using System;
 using System.Linq;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-    partial class ActorCell
+    public partial class ActorCell
     {
         private IActorState _state = new DefaultActorState();
 
@@ -84,14 +83,14 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="t">TBD</param>
-        protected void ReceivedTerminated(Terminated t)
+        /// <param name="terminated">TBD</param>
+        protected void ReceivedTerminated(Terminated terminated)
         {
-            if (!_state.ContainsTerminated(t.ActorRef))
+            if (!_state.ContainsTerminated(terminated.ActorRef))
                 return;
 
-            _state = _state.RemoveTerminated(t.ActorRef); // here we know that it is the SAME ref which was put in
-            ReceiveMessage(t);
+            _state = _state.RemoveTerminated(terminated.ActorRef); // here we know that it is the SAME ref which was put in
+            ReceiveMessage(terminated);
         }
 
         /// <summary>
@@ -179,7 +178,7 @@ namespace Akka.Actor
 
         private void SendTerminated(bool ifLocal, IInternalActorRef watcher)
         {
-            if (((IActorRefScope)watcher).IsLocal == ifLocal && !watcher.Equals(Parent))
+            if (watcher.IsLocal == ifLocal && !watcher.Equals(Parent))
             {
                 watcher.SendSystemMessage(new DeathWatchNotification(Self, true, false));
             }
@@ -229,7 +228,7 @@ namespace Akka.Actor
                 {
                     _state = _state.AddWatchedBy(watcher);
 
-                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), string.Format("now watched by {0}", watcher)));
+                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), $"now watched by {watcher}"));
                 }, watcher);
             }
             else if (!watcheeSelf && watcherSelf)
@@ -238,7 +237,7 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), string.Format("BUG: illegal Watch({0},{1} for {2}", watchee, watcher, Self)));
+                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), $"BUG: illegal Watch({watchee},{watcher} for {Self}"));
             }
         }
 
@@ -258,7 +257,7 @@ namespace Akka.Actor
                 {
                     _state = _state.RemoveWatchedBy(watcher);
 
-                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), string.Format("no longer watched by {0}", watcher)));
+                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), $"no longer watched by {watcher}"));
                 }, watcher);
             }
             else if (!watcheeSelf && watcherSelf)
@@ -267,7 +266,7 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), string.Format("BUG: illegal Unwatch({0},{1} for {2}", watchee, watcher, Self)));
+                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), $"BUG: illegal Unwatch({watchee},{watcher} for {Self}"));
             }
         }
 
@@ -280,7 +279,6 @@ namespace Akka.Actor
             // cleanup watchedBy since we know they are dead
             MaintainAddressTerminatedSubscription(() =>
             {
-                
                 foreach (var a in _state.GetWatchedBy().Where(a => a.Path.Address == address).ToList())
                 {
                     //_watchedBy.Remove(a);
@@ -327,13 +325,12 @@ namespace Akka.Actor
             }
         }
 
-        private static bool IsNonLocal(IActorRef @ref)
+        private static bool IsNonLocal(IActorRef actor)
         {
-            if (@ref == null)
+            if (actor == null)
                 return true;
 
-            var a = @ref as IInternalActorRef;
-            return a != null && !a.IsLocal;
+            return actor is IInternalActorRef actorRef && !actorRef.IsLocal;
         }
 
         private bool HasNonLocalAddress()

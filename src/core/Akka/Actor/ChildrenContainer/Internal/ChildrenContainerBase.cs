@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
@@ -165,8 +164,7 @@ namespace Akka.Actor.Internal
             if (InternalChildren.TryGetValue(actor.Path.Name, out var stats))
             {
                 //Since the actor exists, ChildRestartStats is the only valid ChildStats.
-                var crStats = stats as ChildRestartStats;
-                if (crStats != null && actor.Equals(crStats.Child))
+                if (stats is ChildRestartStats crStats && actor.Equals(crStats.Child))
                 {
                     childRestartStats = crStats;
                     return true;
@@ -183,8 +181,7 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public bool Contains(IActorRef actor)
         {
-            ChildRestartStats stats;
-            return TryGetByRef(actor, out stats);
+            return TryGetByRef(actor, out var stats);
         }
 
         /// <summary>
@@ -195,17 +192,16 @@ namespace Akka.Actor.Internal
         /// <param name="index">TBD</param>
         protected void ChildStatsAppender(StringBuilder sb, KeyValuePair<string, IChildStats> kvp, int index)
         {
-            sb.Append('<');
             var childStats = kvp.Value;
-            var childRestartStats = childStats as ChildRestartStats;
-            if (childRestartStats != null)
+            if (childStats is ChildRestartStats childRestartStats)
             {
-                sb.Append(childRestartStats.Child.Path.ToStringWithUid()).Append(':');
-                sb.Append(childRestartStats.MaxNrOfRetriesCount).Append(" retries>");
+                var uid = childRestartStats.Child.Path.ToStringWithUid();
+                var count = childRestartStats.MaxNrOfRetriesCount;
+                sb.Append($"<{uid}:{count} retries>");
             }
             else
             {
-                sb.Append(kvp.Key).Append(":").Append(childStats).Append('>');
+                sb.Append($"<{kvp.Key}:{childStats}>");
             }
         }
     }

@@ -53,10 +53,7 @@ namespace Akka.Actor
         /// </summary>
         public bool ExistenceConfirmed { get; }
 
-        /// <summary>
-        /// Returns a <see cref="string" /> that represents this instance.
-        /// </summary>
-        /// <returns>A <see cref="string" /> that represents this instance.</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"<Terminated>: {ActorRef} - ExistenceConfirmed={ExistenceConfirmed}";
@@ -99,7 +96,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return (MessageId != null ? MessageId.GetHashCode() : 0);
+            return MessageId?.GetHashCode() ?? 0;
         }
 
         /// <inheritdoc/>
@@ -156,7 +153,7 @@ namespace Akka.Actor
         {
             unchecked
             {
-                return ((MessageId != null ? MessageId.GetHashCode() : 0) * 397) ^ (Subject != null ? Subject.GetHashCode() : 0);
+                return ((MessageId?.GetHashCode() ?? 0) * 397) ^ (Subject?.GetHashCode() ?? 0);
             }
         }
 

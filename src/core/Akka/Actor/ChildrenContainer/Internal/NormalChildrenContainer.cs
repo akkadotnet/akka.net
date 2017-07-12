@@ -8,7 +8,6 @@
 using System.Collections.Immutable;
 using System.Text;
 using Akka.Util.Internal;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
@@ -31,8 +30,9 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public static IChildrenContainer Create(IImmutableDictionary<string, IChildStats> children)
         {
-            if (children.Count == 0) return EmptyChildrenContainer.Instance;
-            return new NormalChildrenContainer(children);
+            return children.Count == 0
+                ? EmptyChildrenContainer.Instance
+                : new NormalChildrenContainer(children);
         }
 
         /// <summary>
@@ -86,26 +86,20 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public override IChildrenContainer Unreserve(string name)
         {
-            if (InternalChildren.TryGetValue(name, out var stats) && (stats is ChildNameReserved))
+            if (InternalChildren.TryGetValue(name, out var stats) && stats is ChildNameReserved)
                 return Create(InternalChildren.Remove(name));
             return this;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             var numberOfChildren = InternalChildren.Count;
-            if (numberOfChildren > 20) return numberOfChildren + " children";
+            if (numberOfChildren > 20) return $"{numberOfChildren} children";
             var sb = new StringBuilder();
 
             sb.Append("Children:\n    ").AppendJoin("\n    ", InternalChildren, ChildStatsAppender);
             return sb.ToString();
         }
-
-
     }
 }
-

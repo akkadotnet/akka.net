@@ -36,13 +36,10 @@ namespace Akka.Actor
         /// </summary>
         public int Uid { get { return _uid; } }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return _name + "#" + _uid;
+            return $"{_name}#{_uid}";
         }
     }
 }

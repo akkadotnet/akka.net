@@ -8,9 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
-using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -178,9 +176,8 @@ namespace Akka.Actor
             {
                 HandleNonFatalOrInterruptedException(() => HandleInvokeFailure(e));
             }
-        }      
+        }
 
-        /// <summary>Terminates this instance.</summary>
         private void Terminate()
         {
             SetReceiveTimeout(null);
@@ -240,7 +237,7 @@ namespace Akka.Actor
                     {
                         SetFailed(_self);
                     }
-                    SuspendChildren(childrenNotToSuspend == null ? null : childrenNotToSuspend.ToList());
+                    SuspendChildren(childrenNotToSuspend?.ToList());
 
                     //Tell supervisor
                     Parent.SendSystemMessage(new Failed(_self, cause, _self.Path.Uid));
@@ -342,7 +339,7 @@ namespace Akka.Actor
                 UseThreadContext(() => freshActor.AroundPostRestart(cause, null));
 
                 if (System.Settings.DebugLifecycle)
-                    Publish(new Debug(_self.Path.ToString(), freshActor.GetType(), "Restarted (" + freshActor + ")"));
+                    Publish(new Debug(_self.Path.ToString(), freshActor.GetType(), $"Restarted ({freshActor})"));
 
                 // only after parent is up and running again do restart the children which were not stopped
                 foreach (var survivingChild in survivors)
@@ -354,7 +351,7 @@ namespace Akka.Actor
                     catch (Exception e)
                     {
                         var child = survivingChild;    //Needed since otherwise it would be access to foreach variable in closure
-                        HandleNonFatalOrInterruptedException(() => Publish(new Error(e, _self.Path.ToString(), freshActor.GetType(), "restarting (" + child + ")")));
+                        HandleNonFatalOrInterruptedException(() => Publish(new Error(e, _self.Path.ToString(), freshActor.GetType(), $"restarting ({child})")));
                     }
                 }
             }
@@ -363,7 +360,6 @@ namespace Akka.Actor
                 ClearActor(_actor); // in order to prevent preRestart() from happening again
                 HandleInvokeFailure(new PostRestartException(_self, e, cause), survivors);
             }
-
         }
 
 
@@ -377,8 +373,7 @@ namespace Akka.Actor
             //the UID protects against reception of a Failed from a child which was
             //killed in preRestart and re-created in postRestart
 
-            ChildRestartStats childStats;
-            if (TryGetChildStatsByRef(failedChild, out childStats))
+            if (TryGetChildStatsByRef(failedChild, out var childStats))
             {
                 var statsUid = childStats.Child.Path.Uid;
                 if (statsUid == f.Uid)
@@ -389,12 +384,12 @@ namespace Akka.Actor
                 }
                 else
                 {
-                    Publish(new Debug(_self.Path.ToString(), _actor.GetType(), "Dropping Failed(" + f.Cause + ") from old child " + f.Child + " (uid=" + statsUid + " != " + f.Uid + ")"));
+                    Publish(new Debug(_self.Path.ToString(), _actor.GetType(), $"Dropping Failed({f.Cause}) from old child {f.Child} (uid={statsUid} != {f.Uid})"));
                 }
             }
             else
             {
-                Publish(new Debug(_self.Path.ToString(), _actor.GetType(), "Dropping Failed(" + f.Cause + ") from unknown child " + failedChild));
+                Publish(new Debug(_self.Path.ToString(), _actor.GetType(), $"Dropping Failed({f.Cause}) from unknown child {failedChild}"));
             }
         }
 
@@ -424,18 +419,17 @@ namespace Akka.Actor
 
             // if the removal changed the state of the (terminating) children container,
             // then we are continuing the previously suspended recreate/create/terminate action
-            var recreation = status as SuspendReason.Recreation;
-            if (recreation != null)
+            switch (status)
             {
-                FinishRecreate(recreation.Cause, _actor);
-            }
-            else if (status is SuspendReason.Creation)
-            {
-                FinishCreate();
-            }
-            else if (status is SuspendReason.Termination)
-            {
-                FinishTerminate();
+                case SuspendReason.Recreation recreation:
+                    FinishRecreate(recreation.Cause, _actor);
+                    break;
+                case SuspendReason.Creation _:
+                    FinishCreate();
+                    break;
+                case SuspendReason.Termination _:
+                    FinishTerminate();
+                    break;
             }
         }
 

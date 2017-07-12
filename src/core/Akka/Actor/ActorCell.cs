@@ -234,14 +234,12 @@ namespace Akka.Actor
         [Obsolete("Use TryGetChildStatsByName [0.7.1]", true)]
         public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
+            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
         }
 
         IActorRef IActorContext.Child(string name)
         {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
+            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
         }
 
         /// <summary>
@@ -354,8 +352,7 @@ namespace Akka.Actor
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
             pipeline.AfterActorIncarnated(actor, this);
 
-            var initializableActor = actor as IInitializableActor;
-            if (initializableActor != null)
+            if (actor is IInitializableActor initializableActor)
             {
                 initializableActor.Init();
             }
@@ -435,8 +432,7 @@ namespace Akka.Actor
         {
             if (actor != null)
             {
-                var disposable = actor as IDisposable;
-                if (disposable != null)
+                if (actor is IDisposable disposable)
                 {
                     try
                     {
@@ -444,11 +440,8 @@ namespace Akka.Actor
                     }
                     catch (Exception e)
                     {
-                        if (_systemImpl.Log != null)
-                        {
-                            _systemImpl.Log.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
-                                actor.GetType(), e.Message);
-                        }
+                        _systemImpl.Log?.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
+                            actor.GetType(), e.Message);
                     }
                 }
 
@@ -475,17 +468,16 @@ namespace Akka.Actor
             _state = _state.ClearBehaviorStack();
             _actorHasBeenCleared = false;
         }
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="actor">TBD</param>
         protected void SetActorFields(ActorBase actor)
         {
-            if (actor != null)
-            {
-                actor.Unclear();
-            }
+            actor?.Unclear();
         }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -496,7 +488,7 @@ namespace Akka.Actor
             var i = name.IndexOf('#');
             return i < 0
                 ? new NameAndUid(name, UndefinedUid)
-                : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
+                : new NameAndUid(name.Substring(0, i), int.Parse(name.Substring(i + 1)));
         }
 
         /// <summary>
@@ -521,8 +513,8 @@ namespace Akka.Actor
 
         private Envelope SerializeAndDeserialize(Envelope envelope)
         {
-            DeadLetter deadLetter;
-            var unwrapped = (deadLetter = envelope.Message as DeadLetter) != null ? deadLetter.Message : envelope.Message;
+            var deadLetter = envelope.Message as DeadLetter;
+            var unwrapped = deadLetter != null ? deadLetter.Message : envelope.Message;
 
             if (!(unwrapped is INoSerializationVerificationNeeded))
             {
@@ -537,11 +529,10 @@ namespace Akka.Actor
 
         private object SerializeAndDeserializePayload(object obj)
         {
-            Serializer serializer = _systemImpl.Serialization.FindSerializerFor(obj);
-            byte[] bytes = serializer.ToBinary(obj);
+            var serializer = _systemImpl.Serialization.FindSerializerFor(obj);
+            var bytes = serializer.ToBinary(obj);
 
-            var manifestSerializer = serializer as SerializerWithStringManifest;
-            if (manifestSerializer != null)
+            if (serializer is SerializerWithStringManifest manifestSerializer)
             {
                 var manifest = manifestSerializer.Manifest(obj);
                 return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
@@ -551,4 +542,3 @@ namespace Akka.Actor
         }
     }
 }
-

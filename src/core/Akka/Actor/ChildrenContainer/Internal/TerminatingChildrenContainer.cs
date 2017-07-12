@@ -9,7 +9,6 @@ using System;
 using System.Collections.Immutable;
 using System.Text;
 using Akka.Util.Internal;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
@@ -103,7 +102,8 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public override IChildrenContainer Reserve(string name)
         {
-            if (_reason is SuspendReason.Termination) throw new InvalidOperationException($@"Cannot reserve actor name ""{name}"". It is terminating.");
+            if (_reason is SuspendReason.Termination)
+                throw new InvalidOperationException($@"Cannot reserve actor name ""{name}"". It is terminating.");
             if (InternalChildren.ContainsKey(name))
                 throw new InvalidActorNameException($@"Actor name ""{name}"" is not unique!");
             else
@@ -148,12 +148,11 @@ namespace Akka.Actor.Internal
             var sb = new StringBuilder();
 
             if (numberOfChildren > 10)
-                sb.Append(numberOfChildren).Append(" children\n");
+                sb.AppendLine($"{numberOfChildren} children");
             else
-                sb.Append("Children:\n    ").AppendJoin("\n    ", InternalChildren, ChildStatsAppender).Append('\n');
+                sb.Append("Children:\n    ").AppendJoin("\n    ", InternalChildren, ChildStatsAppender).AppendLine();
 
-            var numberToDie = _toDie.Count;
-            sb.Append(numberToDie).Append(" children terminating:\n    ");
+            sb.Append($"{_toDie.Count} children terminating:\n    ");
             sb.AppendJoin("\n    ", _toDie);
 
             return sb.ToString();

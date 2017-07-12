@@ -18,14 +18,14 @@ namespace Akka.Actor
 
     public partial class ActorCell
     {
-        private TimeSpan? _receiveTimeoutDuration = null;
-        private ICancelable _pendingReceiveTimeout = null;
+        private TimeSpan? _receiveTimeoutDuration;
+        private ICancelable _pendingReceiveTimeout;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="timeout">TBD</param>
-        public void SetReceiveTimeout(TimeSpan? timeout=null)
+        public void SetReceiveTimeout(TimeSpan? timeout = null)
         {
             _receiveTimeoutDuration = timeout;
         }

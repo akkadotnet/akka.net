@@ -92,7 +92,7 @@ namespace Akka.Actor
         public void Invoke(Akka.Actor.Envelope envelope) { }
         protected void PrepareForNewActor() { }
         protected virtual void PreStart() { }
-        protected void ReceivedTerminated(Akka.Actor.Terminated t) { }
+        protected void ReceivedTerminated(Akka.Actor.Terminated terminated) { }
         public void ReceiveMessageForTest(Akka.Actor.Envelope envelope) { }
         protected Akka.Actor.Internal.SuspendReason RemoveChildAndGetStateChange(Akka.Actor.IActorRef child) { }
         protected void RemWatcher(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
@@ -415,7 +415,7 @@ namespace Akka.Actor
         public bool Equals(Akka.Actor.AllForOneStrategy other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-        protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception x) { }
+        protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception exception) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
         [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
@@ -858,7 +858,6 @@ namespace Akka.Actor
         public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<object> result, System.Action unregister, Akka.Actor.ActorPath path) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
-        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class static Futures
@@ -1102,7 +1101,7 @@ namespace Akka.Actor
         public System.Threading.Tasks.Task<object> ReceiveAsync(System.TimeSpan timeout) { }
         public object ReceiveWhere(System.Predicate<object> predicate) { }
         public object ReceiveWhere(System.Predicate<object> predicate, System.TimeSpan timeout) { }
-        public void Send(Akka.Actor.IActorRef actorRef, object msg) { }
+        public void Send(Akka.Actor.IActorRef actorRef, object message) { }
         public Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject) { }
         public Akka.Actor.IActorRef Watch(Akka.Actor.IActorRef subject) { }
         public Akka.Actor.IActorRef WatchWith(Akka.Actor.IActorRef subject, object message) { }
@@ -1312,7 +1311,7 @@ namespace Akka.Actor
         public bool Equals(Akka.Actor.OneForOneStrategy other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-        protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception x) { }
+        protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception exception) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
         [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
@@ -1651,7 +1650,7 @@ namespace Akka.Actor
         protected SupervisorStrategy() { }
         public abstract Akka.Actor.IDecider Decider { get; }
         protected bool LoggingEnabled { get; set; }
-        protected abstract Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception x);
+        protected abstract Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception exception);
         public abstract void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children);
         [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
         public bool HandleFailure(Akka.Actor.ActorCell actorCell, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
