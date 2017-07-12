@@ -9,6 +9,8 @@ open Fake.Git
 
 module IncrementalTests =   
 
+    let akkaDefaultBranch = "v1.3"
+
     type Supports =
     | Windows
     | Linux
@@ -58,15 +60,15 @@ module IncrementalTests =
         let localBranches = getLocalBranches srcDir
         log "Local branches..."
         localBranches |> Seq.iter log
-        if not (localBranches |> Seq.exists (fun b -> b = "v1.3")) then
-            log "v1.3 branch information not available... fetching"
-            directRunGitCommandAndFail srcDir "fetch origin v1.3:v1.3"
-        let lastCommitToDefaultBranch = getHeadHashFor srcDir "v1.3"
-        logfn "HEAD commit hash of origin/v1.3 branch: %s" lastCommitToDefaultBranch
+        if not (localBranches |> Seq.exists (fun b -> b = akkaDefaultBranch)) then
+            log "default branch information not available... fetching"
+            directRunGitCommandAndFail srcDir (sprintf "fetch origin %s:%s" akkaDefaultBranch akkaDefaultBranch)
+        let lastCommitToDefaultBranch = getHeadHashFor srcDir akkaDefaultBranch
+        logfn "HEAD commit hash of default branch: %s" lastCommitToDefaultBranch
         let currentHash = getCurrentHash()
         logfn "HEAD commit hash of current branch: %s" currentHash
         let forkPoint = findMergeBase srcDir currentHash lastCommitToDefaultBranch
-        logfn "merge-base of v1.3 and current branch HEAD: %s" forkPoint
+        logfn "merge-base of default branch and current branch HEAD: %s" forkPoint
         if (not (forkPoint = "") && not (currentHash = "")) then
             getChangedFiles srcDir forkPoint currentHash
             |> Seq.map (fun (_, fi) -> FullName fi)
