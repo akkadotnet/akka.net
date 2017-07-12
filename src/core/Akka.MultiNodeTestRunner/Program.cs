@@ -226,10 +226,7 @@ namespace Akka.MultiNodeTestRunner
                         {
                             process.WaitForExit();
                             var exitCode = process.ExitCode;
-                            // NOTE: This might cause a bug.
-#if !CORECLR
                             process.Close();
-#endif
                         }
 
                         PublishRunnerMessage(

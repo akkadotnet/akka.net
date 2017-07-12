@@ -90,18 +90,6 @@ namespace Akka.IO
             return _connected;
         }
 
-#if CORECLR
-        public IAsyncResult BeginSocketConnect(Socket socket, EndPoint address, AsyncCallback callback, object state)
-        {
-            return socket.ConnectAsync(address).AsApm(callback, state);
-        }
-
-        public void EndSocketConnect(IAsyncResult asyncResult)
-        {
-            ((Task)asyncResult).Wait();
-        }
-#endif
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -109,18 +97,10 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         public bool Connect(EndPoint address)
         {
-#if CORECLR
-            _connectResult = BeginSocketConnect(_socket, address, ar => { }, null);
-#else
             _connectResult = _socket.BeginConnect(address, ar => { }, null);
-#endif
             if (_connectResult.CompletedSynchronously)
             {
-#if CORECLR
-                EndSocketConnect(_connectResult);
-#else
                 _socket.EndConnect(_connectResult);
-#endif
                 _connected = true;
                 return true;
             }
@@ -138,11 +118,7 @@ namespace Akka.IO
                 return true;
             if (_connectResult.IsCompleted)
             {
-#if CORECLR
-                EndSocketConnect(_connectResult);
-#else
                 _socket.EndConnect(_connectResult);
-#endif
                 _connected = true;
             }
             return _connected;
