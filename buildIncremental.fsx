@@ -9,6 +9,8 @@ open Fake.Git
 
 module IncrementalTests =   
 
+    let akkaDefaultBranch = "v1.3"
+
     type Supports =
     | Windows
     | Linux
@@ -42,18 +44,37 @@ module IncrementalTests =
         | EndsWith "cmd" -> true
         | EndsWith "sh" -> true
         | _ -> false
+    
+    let getHeadHashFor repositoryDir branch =
+        let _, msg, error = runGitCommand repositoryDir (sprintf "log --oneline -1 %s" branch)
+        if error <> "" then failwithf "git log --oneline failed: %s" error
+        let logMsg = msg |> Seq.head
+        let tmp =
+            logMsg.Split(' ')
+            |> Seq.head
+            |> fun s -> s.Split('m')
+        if tmp |> Array.length > 2 then tmp.[1].Substring(0,6) else tmp.[0].Substring(0,6)
 
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
         let localBranches = getLocalBranches srcDir
-        if not (localBranches |> Seq.exists (fun b -> b = "v1.3")) then
-            directRunGitCommandAndFail srcDir "fetch origin v1.3:v1.3"
-        let forkPoint = runSimpleGitCommand srcDir "merge-base --fork-point v1.3"
+        log "Local branches..."
+        localBranches |> Seq.iter log
+        if not (localBranches |> Seq.exists (fun b -> b = akkaDefaultBranch)) then
+            log "default branch information not available... fetching"
+            directRunGitCommandAndFail srcDir (sprintf "fetch origin %s:%s" akkaDefaultBranch akkaDefaultBranch)
+        let lastCommitToDefaultBranch = getHeadHashFor srcDir akkaDefaultBranch
+        logfn "HEAD commit hash of default branch: %s" lastCommitToDefaultBranch
         let currentHash = getCurrentHash()
-        getChangedFiles srcDir forkPoint currentHash
-        |> Seq.map (fun (_, fi) -> FullName fi)
-        // only consider files in ./src/ and build scripts
-        |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
+        logfn "HEAD commit hash of current branch: %s" currentHash
+        let forkPoint = findMergeBase srcDir currentHash lastCommitToDefaultBranch
+        logfn "merge-base of default branch and current branch HEAD: %s" forkPoint
+        if (not (forkPoint = "") && not (currentHash = "")) then
+            getChangedFiles srcDir forkPoint currentHash
+            |> Seq.map (fun (_, fi) -> FullName fi)
+            |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
+        else
+            failwith "Couldn't find commits to compare for incremental tests"
   
     // Gather all of the folder paths that contain .csproj files
     let getAllProjectFolders() =
