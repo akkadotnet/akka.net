@@ -69,7 +69,7 @@ namespace Akka.Persistence
             var timeout = Extension.JournalConfigFor(JournalPluginId).GetTimeSpan("recovery-event-timeout", null, false);
             var timeoutCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(timeout, Self, new RecoveryTick(true), Self);
 
-            Receive recoveryBehavior = message =>
+            bool RecoveryBehavior(object message)
             {
                 Receive receiveRecover = ReceiveRecover;
                 if (message is IPersistentRepresentation && IsRecovering)
@@ -79,7 +79,7 @@ namespace Akka.Persistence
                 else if (message is RecoveryCompleted)
                     return receiveRecover(RecoveryCompleted.Instance);
                 else return false;
-            };
+            }
 
             return new EventsourcedState("recovery started - replay max: " + maxReplays, true, (receive, message) =>
             {
@@ -93,10 +93,10 @@ namespace Akka.Persistence
                             var snapshot = res.Snapshot;
                             LastSequenceNr = snapshot.Metadata.SequenceNr;
                             // Since we are recovering we can ignore the receive behavior from the stack
-                            base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
+                            base.AroundReceive(RecoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
                         }
 
-                        ChangeState(Recovering(recoveryBehavior, timeout));
+                        ChangeState(Recovering(RecoveryBehavior, timeout));
                         Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
                     }
                     else if (message is LoadSnapshotFailed failed)

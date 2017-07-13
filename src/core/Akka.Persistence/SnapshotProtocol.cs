@@ -14,7 +14,13 @@ namespace Akka.Persistence
     /// <summary>
     /// Marker interface for internal snapshot messages
     /// </summary>
-    public interface ISnapshotMessage : IPersistenceMessage { }
+    public interface ISnapshotMessage : IPersistenceMessage
+    {
+        /// <summary>
+        /// Used to correlate snapshot requests with responses.
+        /// </summary>
+        object CorrelationId { get; }
+    }
 
     /// <summary>
     /// Internal snapshot command
@@ -138,9 +144,13 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="SaveSnapshotSuccess"/> class.
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
-        public SaveSnapshotSuccess(SnapshotMetadata metadata)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public SaveSnapshotSuccess(SnapshotMetadata metadata, object correlationId = null)
         {
             Metadata = metadata;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -149,19 +159,29 @@ namespace Akka.Persistence
         public SnapshotMetadata Metadata { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(SaveSnapshotSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Metadata, other.Metadata);
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Metadata, other.Metadata);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as SaveSnapshotSuccess);
 
         /// <inheritdoc/>
-        public override int GetHashCode() => Metadata != null ? Metadata.GetHashCode() : 0;
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Metadata != null ? Metadata.GetHashCode() : 0) * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+            }
+        }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"SaveSnapshotSuccess<{Metadata}>";
@@ -177,9 +197,13 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="DeleteSnapshotSuccess"/> class.
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
-        public DeleteSnapshotSuccess(SnapshotMetadata metadata)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public DeleteSnapshotSuccess(SnapshotMetadata metadata, object correlationId = null)
         {
             Metadata = metadata;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -188,19 +212,29 @@ namespace Akka.Persistence
         public SnapshotMetadata Metadata { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshotSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Metadata, other.Metadata);
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Metadata, other.Metadata);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as DeleteSnapshotSuccess);
 
         /// <inheritdoc/>
-        public override int GetHashCode() => Metadata != null ? Metadata.GetHashCode() : 0;
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Metadata != null ? Metadata.GetHashCode() : 0) * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+            }
+        }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"DeleteSnapshotSuccess<{Metadata}>";
@@ -216,9 +250,13 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="DeleteSnapshotsSuccess"/> class.
         /// </summary>
         /// <param name="criteria">Snapshot selection criteria.</param>
-        public DeleteSnapshotsSuccess(SnapshotSelectionCriteria criteria)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public DeleteSnapshotsSuccess(SnapshotSelectionCriteria criteria, object correlationId = null)
         {
             Criteria = criteria;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -227,12 +265,15 @@ namespace Akka.Persistence
         public SnapshotSelectionCriteria Criteria { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshotsSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Criteria, other.Criteria);
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Criteria, other.Criteria);
         }
 
         /// <inheritdoc/>
@@ -244,8 +285,12 @@ namespace Akka.Persistence
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return (Criteria != null ? Criteria.GetHashCode() : 0);
+            unchecked
+            {
+                return ((Criteria != null ? Criteria.GetHashCode() : 0) * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+            }
         }
+
 
         /// <inheritdoc/>
         public override string ToString()
@@ -265,10 +310,14 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
         /// <param name="cause">A failure cause.</param>
-        public SaveSnapshotFailure(SnapshotMetadata metadata, Exception cause)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public SaveSnapshotFailure(SnapshotMetadata metadata, Exception cause, object correlationId = null)
         {
             Metadata = metadata;
             Cause = cause;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -282,12 +331,15 @@ namespace Akka.Persistence
         public Exception Cause { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(SaveSnapshotFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Cause, other.Cause) && Equals(Metadata, other.Metadata);
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Cause, other.Cause) && Equals(Metadata, other.Metadata);
         }
 
         /// <inheritdoc/>
@@ -301,15 +353,16 @@ namespace Akka.Persistence
         {
             unchecked
             {
-                return ((Metadata != null ? Metadata.GetHashCode() : 0) * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
+                var hashCode = (Metadata != null ? Metadata.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+                return hashCode;
             }
         }
 
+
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            return $"SaveSnapshotFailure<meta: {Metadata}, cause: {Cause}>";
-        }
+        public override string ToString() => $"SaveSnapshotFailure<meta: {Metadata}, cause: {Cause}>";
     }
 
     /// <summary>
@@ -323,10 +376,14 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
         /// <param name="cause">A failure cause.</param>
-        public DeleteSnapshotFailure(SnapshotMetadata metadata, Exception cause)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public DeleteSnapshotFailure(SnapshotMetadata metadata, Exception cause, object correlationId = null)
         {
             Metadata = metadata;
             Cause = cause;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -340,12 +397,15 @@ namespace Akka.Persistence
         public Exception Cause { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshotFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Cause, other.Cause) && Equals(Metadata, other.Metadata);
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Cause, other.Cause) && Equals(Metadata, other.Metadata);
         }
 
         /// <inheritdoc/>
@@ -356,7 +416,10 @@ namespace Akka.Persistence
         {
             unchecked
             {
-                return ((Metadata != null ? Metadata.GetHashCode() : 0) * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
+                var hashCode = (Metadata != null ? Metadata.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+                return hashCode;
             }
         }
 
@@ -375,10 +438,14 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="criteria">Snapshot selection criteria.</param>
         /// <param name="cause">A failure cause.</param>
-        public DeleteSnapshotsFailure(SnapshotSelectionCriteria criteria, Exception cause)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public DeleteSnapshotsFailure(SnapshotSelectionCriteria criteria, Exception cause, object correlationId = null)
         {
             Criteria = criteria;
             Cause = cause;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -392,12 +459,15 @@ namespace Akka.Persistence
         public Exception Cause { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshotsFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Cause, other.Cause) && Equals(Criteria, other.Criteria);
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Cause, other.Cause) && Equals(Criteria, other.Criteria);
         }
 
         /// <inheritdoc/>
@@ -408,9 +478,13 @@ namespace Akka.Persistence
         {
             unchecked
             {
-                return ((Criteria != null ? Criteria.GetHashCode() : 0) * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
+                var hashCode = (Criteria != null ? Criteria.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+                return hashCode;
             }
         }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"DeleteSnapshotsFailure<criteria: {Criteria}, cause: {Cause}>";
@@ -637,11 +711,15 @@ namespace Akka.Persistence
         /// <param name="persistenceId">Persistent actor identifier.</param>
         /// <param name="criteria">Criteria for selecting snapshot, from which the recovery should start.</param>
         /// <param name="toSequenceNr">Upper, inclusive sequence number bound for recovery.</param>
-        public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr, object correlationId = null)
         {
             PersistenceId = persistenceId;
             Criteria = criteria;
             ToSequenceNr = toSequenceNr;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -660,12 +738,16 @@ namespace Akka.Persistence
         public long ToSequenceNr { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(LoadSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(ToSequenceNr, other.ToSequenceNr)
+            return Equals(CorrelationId, other.CorrelationId) 
+                   && Equals(ToSequenceNr, other.ToSequenceNr)
                    && Equals(PersistenceId, other.PersistenceId)
                    && Equals(Criteria, other.Criteria);
         }
@@ -681,9 +763,11 @@ namespace Akka.Persistence
                 var hashCode = (PersistenceId != null ? PersistenceId.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Criteria != null ? Criteria.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ ToSequenceNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
                 return hashCode;
             }
         }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"LoadSnapshot<pid: {PersistenceId}, toSeqNr: {ToSequenceNr}, criteria: {Criteria}>";
@@ -700,10 +784,14 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="snapshot">Loaded snapshot or null if none provided.</param>
         /// <param name="toSequenceNr">Upper sequence number bound (inclusive) for recovery.</param>
-        public LoadSnapshotResult(SelectedSnapshot snapshot, long toSequenceNr)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public LoadSnapshotResult(SelectedSnapshot snapshot, long toSequenceNr, object correlationId = null)
         {
             Snapshot = snapshot;
             ToSequenceNr = toSequenceNr;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -715,6 +803,9 @@ namespace Akka.Persistence
         /// Upper sequence number bound (inclusive) for recovery.
         /// </summary>
         public long ToSequenceNr { get; }
+
+        /// <inheritdoc/>
+        public object CorrelationId { get; }
 
         /// <inheritdoc/>
         public bool Equals(LoadSnapshotResult other)
@@ -734,7 +825,10 @@ namespace Akka.Persistence
         {
             unchecked
             {
-                return ((Snapshot != null ? Snapshot.GetHashCode() : 0) * 397) ^ ToSequenceNr.GetHashCode();
+                var hashCode = (Snapshot != null ? Snapshot.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ToSequenceNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+                return hashCode;
             }
         }
 
@@ -751,9 +845,13 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="LoadSnapshotFailed"/> class.
         /// </summary>
         /// <param name="cause">Failure cause.</param>
-        public LoadSnapshotFailed(Exception cause)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public LoadSnapshotFailed(Exception cause, object correlationId = null)
         {
             Cause = cause;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -761,7 +859,11 @@ namespace Akka.Persistence
         /// </summary>
         public Exception Cause { get; }
 
-        private bool Equals(LoadSnapshotFailed other) => Equals(Cause, other.Cause);
+        /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        private bool Equals(LoadSnapshotFailed other) => 
+            Equals(CorrelationId, other.CorrelationId) && Equals(Cause, other.Cause);
 
         public override bool Equals(object obj)
         {
@@ -770,7 +872,15 @@ namespace Akka.Persistence
             return obj is LoadSnapshotFailed && Equals((LoadSnapshotFailed)obj);
         }
 
-        public override int GetHashCode() => Cause?.GetHashCode() ?? 0;
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Cause != null ? Cause.GetHashCode() : 0) * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+            }
+        }
+
 
         public override string ToString() => $"LoadSnapshotFailed<Cause: {Cause}>";
     }
@@ -786,16 +896,20 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
         /// <param name="snapshot">Snapshot.</param>
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="metadata"/> is undefined.
         /// </exception>
-        public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
+        public SaveSnapshot(SnapshotMetadata metadata, object snapshot, object correlationId = null)
         {
             if (metadata == null)
                 throw new ArgumentNullException(nameof(metadata), "SaveSnapshot requires SnapshotMetadata to be provided");
 
             Metadata = metadata;
             Snapshot = snapshot;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -809,25 +923,31 @@ namespace Akka.Persistence
         public object Snapshot { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(SaveSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Metadata, other.Metadata) && Equals(Snapshot, other.Snapshot);
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Metadata, other.Metadata) && Equals(Snapshot, other.Snapshot);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as SaveSnapshot);
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((Metadata != null ? Metadata.GetHashCode() : 0) * 397) ^ (Snapshot != null ? Snapshot.GetHashCode() : 0);
+                var hashCode = (Metadata != null ? Metadata.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Snapshot != null ? Snapshot.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+                return hashCode;
             }
         }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"SaveSnapshot<meta: {Metadata}, snapshot: {Snapshot}>";
@@ -843,15 +963,19 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="DeleteSnapshot"/> class.
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="metadata"/> is undefined.
         /// </exception>
-        public DeleteSnapshot(SnapshotMetadata metadata)
+        public DeleteSnapshot(SnapshotMetadata metadata, object correlationId = null)
         {
             if (metadata == null)
                 throw new ArgumentNullException(nameof(metadata), "DeleteSnapshot requires SnapshotMetadata to be provided");
 
             Metadata = metadata;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -860,19 +984,28 @@ namespace Akka.Persistence
         public SnapshotMetadata Metadata { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshot other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Metadata, other.Metadata);
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Metadata, other.Metadata);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as DeleteSnapshot);
 
-        /// <inheritdoc/>
-        public override int GetHashCode() => Metadata.GetHashCode();
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Metadata != null ? Metadata.GetHashCode() : 0) * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+            }
+        }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"DeleteSnapshot<meta: {Metadata}>";
@@ -889,10 +1022,14 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="persistenceId">Persistent actor id.</param>
         /// <param name="criteria">Criteria for selecting snapshots to be deleted.</param>
-        public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="ISnapshotRequest"/> with <see cref="ISnapshotResponse"/>.
+        /// </param>
+        public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria, object correlationId = null)
         {
             PersistenceId = persistenceId;
             Criteria = criteria;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -906,12 +1043,16 @@ namespace Akka.Persistence
         public SnapshotSelectionCriteria Criteria { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteSnapshots other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(PersistenceId, other.PersistenceId)
+            return Equals(CorrelationId, other.CorrelationId) 
+                   && Equals(PersistenceId, other.PersistenceId)
                    && Equals(Criteria, other.Criteria);
         }
 
@@ -923,9 +1064,13 @@ namespace Akka.Persistence
         {
             unchecked
             {
-                return ((PersistenceId != null ? PersistenceId.GetHashCode() : 0) * 397) ^ (Criteria != null ? Criteria.GetHashCode() : 0);
+                var hashCode = (PersistenceId != null ? PersistenceId.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Criteria != null ? Criteria.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+                return hashCode;
             }
         }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"DeleteSnapshots<pid: {PersistenceId}, criteria: {Criteria}>";
