@@ -818,7 +818,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             else if (request is DeleteMessagesTo)
             {
                 var r = (DeleteMessagesTo)request;
-                r.PersistentActor.Tell(new DeleteMessagesFailure(JournalBufferOverflowException.Instance, r.ToSequenceNr), ActorRefs.NoSender);
+                r.PersistentActor.Tell(new DeleteMessagesFailure(JournalBufferOverflowException.Instance, r.ToSequenceNr, r.CorrelationId), ActorRefs.NoSender);
             }
             else if (request is ReplayTaggedMessages)
             {
@@ -929,7 +929,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
             catch (Exception cause)
             {
-                var response = new DeleteMessagesFailure(cause, toSequenceNr);
+                var response = new DeleteMessagesFailure(cause, toSequenceNr, req.CorrelationId);
                 req.PersistentActor.Tell(response, ActorRefs.NoSender);
             }
         }
@@ -1048,7 +1048,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             var responses = new List<IJournalResponse>();
             var tags = new HashSet<string>();
             var persistenceIds = new HashSet<string>();
-            var actorInstanceId = req.ActorInstanceId;
+            var actorInstanceId = req.CorrelationId;
 
             try
             {

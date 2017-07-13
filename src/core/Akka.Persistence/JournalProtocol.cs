@@ -34,18 +34,33 @@ namespace Akka.Persistence
     public interface IJournalResponse : IJournalMessage { }
 
     /// <summary>
+    /// Internal journal acknowledgement - response for a failed operation.
+    /// </summary>
+    public interface IJournalFailure : IJournalResponse
+    {
+        /// <summary>
+        /// Failure cause.
+        /// </summary>
+        Exception Cause { get; }
+    }
+
+    /// <summary>
     /// Reply message to a successful <see cref="Eventsourced.DeleteMessages"/> request.
     /// </summary>
     [Serializable]
-    public sealed class DeleteMessagesSuccess : IEquatable<DeleteMessagesSuccess>
+    public sealed class DeleteMessagesSuccess : IEquatable<DeleteMessagesSuccess>, IJournalResponse
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeleteMessagesSuccess"/> class.
         /// </summary>
         /// <param name="toSequenceNr">Inclusive upper sequence number bound where a replay should end.</param>
-        public DeleteMessagesSuccess(long toSequenceNr)
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="IJournalRequest"/> with <see cref="IJournalResponse"/>.
+        /// </param>
+        public DeleteMessagesSuccess(long toSequenceNr, object correlationId = null)
         {
             ToSequenceNr = toSequenceNr;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -54,19 +69,29 @@ namespace Akka.Persistence
         public long ToSequenceNr { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteMessagesSuccess other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return ToSequenceNr == other.ToSequenceNr;
+            return ToSequenceNr == other.ToSequenceNr && Equals(CorrelationId, other.CorrelationId);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as DeleteMessagesSuccess);
 
         /// <inheritdoc/>
-        public override int GetHashCode() => ToSequenceNr.GetHashCode();
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (ToSequenceNr.GetHashCode() * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+            }
+        }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"DeleteMessagesSuccess<toSequenceNr: {ToSequenceNr}>";
@@ -76,23 +101,27 @@ namespace Akka.Persistence
     /// Reply message to failed <see cref="Eventsourced.DeleteMessages"/> request.
     /// </summary>
     [Serializable]
-    public sealed class DeleteMessagesFailure : IEquatable<DeleteMessagesFailure>
+    public sealed class DeleteMessagesFailure : IEquatable<DeleteMessagesFailure>, IJournalFailure
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeleteMessagesFailure"/> class.
         /// </summary>
         /// <param name="cause">Failure cause.</param>
         /// <param name="toSequenceNr">Inclusive upper sequence number bound where a replay should end.</param>
+        /// <param name="correlationId">
+        /// Unique identifier used to correlate <see cref="IJournalRequest"/> with <see cref="IJournalResponse"/>.
+        /// </param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
-        public DeleteMessagesFailure(Exception cause, long toSequenceNr)
+        public DeleteMessagesFailure(Exception cause, long toSequenceNr, object correlationId)
         {
             if (cause == null)
                 throw new ArgumentNullException(nameof(cause), "DeleteMessagesFailure cause exception cannot be null");
 
             Cause = cause;
             ToSequenceNr = toSequenceNr;
+            CorrelationId = correlationId;
         }
 
         /// <summary>
@@ -106,25 +135,31 @@ namespace Akka.Persistence
         public long ToSequenceNr { get; }
 
         /// <inheritdoc/>
+        public object CorrelationId { get; }
+
+        /// <inheritdoc/>
         public bool Equals(DeleteMessagesFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Cause, other.Cause) && ToSequenceNr == other.ToSequenceNr;
+            return Equals(CorrelationId, other.CorrelationId) && Equals(Cause, other.Cause) && ToSequenceNr == other.ToSequenceNr;
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj) => Equals(obj as DeleteMessagesFailure);
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((Cause != null ? Cause.GetHashCode() : 0) * 397) ^ ToSequenceNr.GetHashCode();
+                var hashCode = (Cause != null ? Cause.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ToSequenceNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
+                return hashCode;
             }
         }
+
 
         /// <inheritdoc/>
         public override string ToString() => $"DeleteMessagesFailure<cause: {Cause}, toSequenceNr: {ToSequenceNr}>";
@@ -221,15 +256,13 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="messages">Messages to be written.</param>
         /// <param name="persistentActor">Write requester.</param>
-        /// <param name="actorInstanceId">TBD</param>
         /// <param name="correlationId">
         /// Unique identifier used to correlate <see cref="IJournalRequest"/> with <see cref="IJournalResponse"/>.
         /// </param>
-        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor, int actorInstanceId, object correlationId = null)
+        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor, object correlationId = null)
         {
             Messages = messages;
             PersistentActor = persistentActor;
-            ActorInstanceId = actorInstanceId;
             CorrelationId = correlationId;
         }
 
@@ -243,11 +276,6 @@ namespace Akka.Persistence
         /// </summary>
         public IActorRef PersistentActor { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int ActorInstanceId { get; }
-
         /// <inheritdoc/>
         public object CorrelationId { get; }
 
@@ -258,7 +286,6 @@ namespace Akka.Persistence
             if (ReferenceEquals(this, other)) return true;
 
             return Equals(CorrelationId, other.CorrelationId)
-                   && Equals(ActorInstanceId, other.ActorInstanceId)
                    && Equals(PersistentActor, other.PersistentActor)
                    && Equals(Messages, other.Messages);
         }
@@ -273,7 +300,6 @@ namespace Akka.Persistence
             {
                 var hashCode = (Messages != null ? Messages.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (PersistentActor != null ? PersistentActor.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ ActorInstanceId;
                 hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
                 return hashCode;
             }
@@ -281,7 +307,7 @@ namespace Akka.Persistence
 
 
         /// <inheritdoc/>
-        public override string ToString() => $"WriteMessages<actorInstanceId: {ActorInstanceId}, actor: {PersistentActor}>";
+        public override string ToString() => $"WriteMessages<actor: {PersistentActor}>";
     }
 
     /// <summary>
@@ -329,7 +355,7 @@ namespace Akka.Persistence
     /// to the requester before all subsequent <see cref="WriteMessageFailure"/> replies.
     /// </summary>
     [Serializable]
-    public sealed class WriteMessagesFailed : IJournalResponse, IEquatable<WriteMessagesFailed>
+    public sealed class WriteMessagesFailed : IJournalFailure, IEquatable<WriteMessagesFailed>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="WriteMessagesFailed"/> class.
@@ -394,14 +420,12 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="WriteMessageSuccess"/> class.
         /// </summary>
         /// <param name="persistent">Successfully written message.</param>
-        /// <param name="actorInstanceId">TBD</param>
         /// <param name="correlationId">
         /// Unique identifier used to correlate <see cref="IJournalRequest"/> with <see cref="IJournalResponse"/>.
         /// </param>
-        public WriteMessageSuccess(IPersistentRepresentation persistent, int actorInstanceId, object correlationId = null)
+        public WriteMessageSuccess(IPersistentRepresentation persistent, object correlationId = null)
         {
             Persistent = persistent;
-            ActorInstanceId = actorInstanceId;
             CorrelationId = correlationId;
         }
 
@@ -409,11 +433,6 @@ namespace Akka.Persistence
         /// Successfully written message.
         /// </summary>
         public IPersistentRepresentation Persistent { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int ActorInstanceId { get; }
 
         /// <inheritdoc/>
         public object CorrelationId { get; }
@@ -425,7 +444,6 @@ namespace Akka.Persistence
             if (ReferenceEquals(this, other)) return true;
 
             return Equals(CorrelationId, other.CorrelationId)
-                   && Equals(ActorInstanceId, other.ActorInstanceId)
                    && Equals(Persistent, other.Persistent);
         }
 
@@ -438,7 +456,6 @@ namespace Akka.Persistence
             unchecked
             {
                 var hashCode = (Persistent != null ? Persistent.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ ActorInstanceId;
                 hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
                 return hashCode;
             }
@@ -446,7 +463,7 @@ namespace Akka.Persistence
 
 
         /// <inheritdoc/>
-        public override string ToString() => $"WriteMessageSuccess<actorInstanceId: {ActorInstanceId}, message: {Persistent}>";
+        public override string ToString() => $"WriteMessageSuccess<message: {Persistent}>";
     }
 
     /// <summary>
@@ -455,28 +472,26 @@ namespace Akka.Persistence
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requester.
     /// </summary>
     [Serializable]
-    public sealed class WriteMessageRejected : IJournalResponse, INoSerializationVerificationNeeded, IEquatable<WriteMessageRejected>
+    public sealed class WriteMessageRejected : IJournalFailure, INoSerializationVerificationNeeded, IEquatable<WriteMessageRejected>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="WriteMessageRejected"/> class.
         /// </summary>
         /// <param name="persistent">Message rejected to be written.</param>
         /// <param name="cause">Failure cause.</param>
-        /// <param name="actorInstanceId">TBD</param>
         /// <param name="correlationId">
         /// Unique identifier used to correlate <see cref="IJournalRequest"/> with <see cref="IJournalResponse"/>.
         /// </param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
-        public WriteMessageRejected(IPersistentRepresentation persistent, Exception cause, int actorInstanceId, object correlationId = null)
+        public WriteMessageRejected(IPersistentRepresentation persistent, Exception cause, object correlationId = null)
         {
             if (cause == null)
                 throw new ArgumentNullException(nameof(cause), "WriteMessageRejected cause exception cannot be null");
 
             Persistent = persistent;
             Cause = cause;
-            ActorInstanceId = actorInstanceId;
             CorrelationId = correlationId;
         }
 
@@ -489,12 +504,7 @@ namespace Akka.Persistence
         /// The cause of the failure
         /// </summary>
         public Exception Cause { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int ActorInstanceId { get; }
-
+        
         /// <inheritdoc/>
         public object CorrelationId { get; }
 
@@ -505,7 +515,6 @@ namespace Akka.Persistence
             if (ReferenceEquals(this, other)) return true;
 
             return Equals(CorrelationId, other.CorrelationId)
-                   && Equals(ActorInstanceId, other.ActorInstanceId)
                    && Equals(Persistent, other.Persistent)
                    && Equals(Cause, other.Cause);
         }
@@ -520,7 +529,6 @@ namespace Akka.Persistence
             {
                 var hashCode = (Persistent != null ? Persistent.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ ActorInstanceId;
                 hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
                 return hashCode;
             }
@@ -528,7 +536,7 @@ namespace Akka.Persistence
 
 
         /// <inheritdoc/>
-        public override string ToString() => $"WriteMessageRejected<actorInstanceId: {ActorInstanceId}, message: {Persistent}, cause: {Cause}>";
+        public override string ToString() => $"WriteMessageRejected<message: {Persistent}, cause: {Cause}>";
     }
 
     /// <summary>
@@ -536,28 +544,26 @@ namespace Akka.Persistence
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requester.
     /// </summary>
     [Serializable]
-    public sealed class WriteMessageFailure : IJournalResponse, INoSerializationVerificationNeeded, IEquatable<WriteMessageFailure>
+    public sealed class WriteMessageFailure : IJournalFailure, INoSerializationVerificationNeeded, IEquatable<WriteMessageFailure>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="WriteMessageFailure"/> class.
         /// </summary>
         /// <param name="persistent">Message failed to be written.</param>
         /// <param name="cause">Failure cause.</param>
-        /// <param name="actorInstanceId">TBD</param>
         /// <param name="correlationId">
         /// Unique identifier used to correlate <see cref="IJournalRequest"/> with <see cref="IJournalResponse"/>.
         /// </param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
-        public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause, int actorInstanceId, object correlationId = null)
+        public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause,  object correlationId = null)
         {
             if (cause == null)
                 throw new ArgumentNullException(nameof(cause), "WriteMessageFailure cause exception cannot be null");
 
             Persistent = persistent;
             Cause = cause;
-            ActorInstanceId = actorInstanceId;
             CorrelationId = correlationId;
         }
 
@@ -571,11 +577,6 @@ namespace Akka.Persistence
         /// </summary>
         public Exception Cause { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int ActorInstanceId { get; }
-
         /// <inheritdoc/>
         public object CorrelationId { get; }
 
@@ -586,7 +587,6 @@ namespace Akka.Persistence
             if (ReferenceEquals(this, other)) return true;
 
             return Equals(CorrelationId, other.CorrelationId)
-                   && Equals(ActorInstanceId, other.ActorInstanceId)
                    && Equals(Persistent, other.Persistent)
                    && Equals(Cause, other.Cause);
         }
@@ -601,7 +601,6 @@ namespace Akka.Persistence
             {
                 var hashCode = (Persistent != null ? Persistent.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ ActorInstanceId;
                 hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
                 return hashCode;
             }
@@ -609,7 +608,7 @@ namespace Akka.Persistence
 
 
         /// <inheritdoc/>
-        public override string ToString() => $"WriteMessageFailure<actorInstanceId: {ActorInstanceId}, message: {Persistent}, cause: {Cause}>";
+        public override string ToString() => $"WriteMessageFailure<message: {Persistent}, cause: {Cause}>";
     }
 
     /// <summary>
@@ -622,14 +621,12 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="LoopMessageSuccess"/> class.
         /// </summary>
         /// <param name="message">A looped message.</param>
-        /// <param name="actorInstanceId">TBD</param>
         /// <param name="correlationId">
         /// Unique identifier used to correlate <see cref="IJournalRequest"/> with <see cref="IJournalResponse"/>.
         /// </param>
-        public LoopMessageSuccess(object message, int actorInstanceId, object correlationId = null)
+        public LoopMessageSuccess(object message, object correlationId = null)
         {
             Message = message;
-            ActorInstanceId = actorInstanceId;
             CorrelationId = correlationId;
         }
 
@@ -637,11 +634,6 @@ namespace Akka.Persistence
         /// A looped message.
         /// </summary>
         public object Message { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int ActorInstanceId { get; }
 
         /// <inheritdoc/>
         public object CorrelationId { get; }
@@ -653,7 +645,6 @@ namespace Akka.Persistence
             if (ReferenceEquals(this, other)) return true;
 
             return Equals(CorrelationId, other.CorrelationId)
-                   && Equals(ActorInstanceId, other.ActorInstanceId)
                    && Equals(Message, other.Message);
         }
 
@@ -666,14 +657,13 @@ namespace Akka.Persistence
             unchecked
             {
                 var hashCode = (Message != null ? Message.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ ActorInstanceId;
                 hashCode = (hashCode * 397) ^ (CorrelationId != null ? CorrelationId.GetHashCode() : 0);
                 return hashCode;
             }
         }
 
         /// <inheritdoc/>
-        public override string ToString() => $"LoopMessageSuccess<actorInstanceId: {ActorInstanceId}, message: {Message}>";
+        public override string ToString() => $"LoopMessageSuccess<message: {Message}>";
     }
 
     /// <summary>
@@ -885,7 +875,7 @@ namespace Akka.Persistence
     /// if a replay could not be successfully completed.
     /// </summary>
     [Serializable]
-    public sealed class ReplayMessagesFailure : IJournalResponse, IDeadLetterSuppression, IEquatable<ReplayMessagesFailure>
+    public sealed class ReplayMessagesFailure : IJournalFailure, IDeadLetterSuppression, IEquatable<ReplayMessagesFailure>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayMessagesFailure"/> class.

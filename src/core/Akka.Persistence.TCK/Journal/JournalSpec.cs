@@ -115,7 +115,7 @@ namespace Akka.Persistence.TCK.Journal
                 .ToArray();
             var probe = CreateTestProbe();
 
-            Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
+            Journal.Tell(new WriteMessages(messages, probe.Ref, CorrelationId));
 
             probe.ExpectMsg<WriteMessagesSuccessful>();
             for (int i = from; i <= to; i++)
@@ -288,7 +288,7 @@ namespace Akka.Persistence.TCK.Journal
             }).ToArray();
 
             var probe = CreateTestProbe();
-            Journal.Tell(new WriteMessages(msgs, probe.Ref, ActorInstanceId));
+            Journal.Tell(new WriteMessages(msgs, probe.Ref, CorrelationId));
             probe.ExpectMsg<WriteMessagesSuccessful>();
 
             var pid = Pid;

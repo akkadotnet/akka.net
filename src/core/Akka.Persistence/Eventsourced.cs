@@ -77,7 +77,7 @@ namespace Akka.Persistence
     {
         private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
 
-        private readonly int _instanceId;
+        private readonly object _instanceId;
         private readonly string _writerGuid;
         private readonly IStash _internalStash;
         private IActorRef _snapshotStore;

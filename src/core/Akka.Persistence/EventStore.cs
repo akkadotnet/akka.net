@@ -171,7 +171,7 @@ namespace Akka.Persistence
             var write = new AtomicWrite(persistents.ToImmutable());
 
             var correlationId = CreateCorrelationId();
-            _eventJournal.Tell(new WriteMessages(new IPersistentEnvelope[] { write }, this, 0, correlationId), this);
+            _eventJournal.Tell(new WriteMessages(new IPersistentEnvelope[] { write }, this, correlationId), this);
 
             return SetupCompletion(correlationId, cancellation);
         }
@@ -184,7 +184,7 @@ namespace Akka.Persistence
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: ActorRefs.NoSender));
 
             var correlationId = CreateCorrelationId();
-            _eventJournal.Tell(new WriteMessages(new IPersistentEnvelope[]{ write }, this, 0, correlationId), this);
+            _eventJournal.Tell(new WriteMessages(new IPersistentEnvelope[] { write }, this, correlationId), this);
 
             return SetupCompletion(correlationId, cancellation);
         }
@@ -257,47 +257,44 @@ namespace Akka.Persistence
                 case WriteMessagesSuccessful _: break;
                 case WriteMessagesFailed failed: break;
 
-                case LoadSnapshotResult success:
+                case LoadSnapshotResult result:
                     {
-                        var completion = GetCompletion(success.CorrelationId);
+                        var completion = GetCompletion(result.CorrelationId);
                         if (completion != null)
                         {
-                            var offer = success.Snapshot != null
-                                ? new SnapshotOffer(success.Snapshot.Metadata, success.Snapshot.Snapshot)
+                            var snap = result.Snapshot;
+                            var offer = snap != null
+                                ? new SnapshotOffer(snap.Metadata, snap.Snapshot)
                                 : null;
 
                             completion.TrySetResult(offer);
                         }
                         break;
                     }
-                case LoadSnapshotFailed failure:
+                case IJournalFailure failure:
                     {
                         var completion = GetCompletion(failure.CorrelationId);
                         completion?.TrySetException(failure.Cause);
                         break;
                     }
-
-                case SaveSnapshotSuccess success:
+                case IJournalResponse success:
                     {
                         var completion = GetCompletion(success.CorrelationId);
                         completion?.TrySetResult(0);
                         break;
                     }
-                case SaveSnapshotFailure failure:
+                case ISnapshotFailure failure:
                     {
                         var completion = GetCompletion(failure.CorrelationId);
                         completion?.TrySetException(failure.Cause);
                         break;
                     }
-
-                case DeleteSnapshotSuccess success: break;
-                case DeleteSnapshotFailure failure: break;
-                case DeleteSnapshotsSuccess success: break;
-                case DeleteSnapshotsFailure failure: break;
-
-                case DeleteMessagesSuccess success: break;
-                case DeleteMessagesFailure failure: break;
-
+                case ISnapshotResponse success:
+                    {
+                        var completion = GetCompletion(success.CorrelationId);
+                        completion?.TrySetResult(0);
+                        break;
+                    }
                 case RecoveryCompleted _: break;
             }
         }

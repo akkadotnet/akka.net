@@ -17,7 +17,7 @@ namespace Akka.Persistence.TCK
     {
         private static readonly AtomicCounter Counter = new AtomicCounter(0);
 
-        protected int ActorInstanceId = 1;
+        protected object CorrelationId = 1;
 
         protected PluginSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
             : base(FromConfig(config), actorSystemName, output)

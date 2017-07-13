@@ -33,6 +33,17 @@ namespace Akka.Persistence
     public interface ISnapshotResponse : ISnapshotMessage { }
 
     /// <summary>
+    /// Internal snapshot acknowledgement - response for a failed operation.
+    /// </summary>
+    public interface ISnapshotFailure : ISnapshotResponse
+    {
+        /// <summary>
+        /// Failure cause.
+        /// </summary>
+        Exception Cause { get; }
+    }
+
+    /// <summary>
     /// TBD
     /// </summary>
     [Serializable]
@@ -303,7 +314,7 @@ namespace Akka.Persistence
     /// Sent to <see cref="PersistentActor"/> after failed saving a snapshot.
     /// </summary>
     [Serializable]
-    public sealed class SaveSnapshotFailure : ISnapshotResponse, IEquatable<SaveSnapshotFailure>
+    public sealed class SaveSnapshotFailure : ISnapshotFailure, IEquatable<SaveSnapshotFailure>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SaveSnapshotFailure"/> class.
@@ -369,7 +380,7 @@ namespace Akka.Persistence
     /// Sent to <see cref="PersistentActor"/> after failed deletion of a snapshot.
     /// </summary>
     [Serializable]
-    public sealed class DeleteSnapshotFailure : ISnapshotResponse, IEquatable<DeleteSnapshotFailure>
+    public sealed class DeleteSnapshotFailure : ISnapshotFailure, IEquatable<DeleteSnapshotFailure>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeleteSnapshotFailure"/> class.
@@ -431,7 +442,7 @@ namespace Akka.Persistence
     /// Sent to <see cref="PersistentActor"/> after failed deletion of a range of snapshots.
     /// </summary>
     [Serializable]
-    public sealed class DeleteSnapshotsFailure : ISnapshotResponse, IEquatable<DeleteSnapshotsFailure>
+    public sealed class DeleteSnapshotsFailure : ISnapshotFailure, IEquatable<DeleteSnapshotsFailure>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeleteSnapshotsFailure"/> class.
@@ -839,7 +850,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to a failed <see cref="LoadSnapshot"/> request.
     /// </summary>
-    public sealed class LoadSnapshotFailed : ISnapshotResponse
+    public sealed class LoadSnapshotFailed : ISnapshotFailure, IEquatable<LoadSnapshotFailed>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="LoadSnapshotFailed"/> class.
@@ -862,7 +873,7 @@ namespace Akka.Persistence
         /// <inheritdoc/>
         public object CorrelationId { get; }
 
-        private bool Equals(LoadSnapshotFailed other) => 
+        public bool Equals(LoadSnapshotFailed other) => 
             Equals(CorrelationId, other.CorrelationId) && Equals(Cause, other.Cause);
 
         public override bool Equals(object obj)

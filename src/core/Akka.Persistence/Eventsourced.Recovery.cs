@@ -355,7 +355,7 @@ namespace Akka.Persistence
             if (message is WriteMessageSuccess)
             {
                 var m = (WriteMessageSuccess)message;
-                if (m.ActorInstanceId == _instanceId)
+                if (m.CorrelationId == _instanceId)
                 {
                     UpdateLastSequenceNr(m.Persistent);
                     try
@@ -373,7 +373,7 @@ namespace Akka.Persistence
             else if (message is WriteMessageRejected)
             {
                 var m = (WriteMessageRejected)message;
-                if (m.ActorInstanceId == _instanceId)
+                if (m.CorrelationId == _instanceId)
                 {
                     var p = m.Persistent;
                     UpdateLastSequenceNr(p);
@@ -384,7 +384,7 @@ namespace Akka.Persistence
             else if (message is WriteMessageFailure)
             {
                 var m = (WriteMessageFailure)message;
-                if (m.ActorInstanceId == _instanceId)
+                if (m.CorrelationId == _instanceId)
                 {
                     var p = m.Persistent;
                     onWriteMessageComplete(false);
@@ -401,7 +401,7 @@ namespace Akka.Persistence
             else if (message is LoopMessageSuccess)
             {
                 var m = (LoopMessageSuccess)message;
-                if (m.ActorInstanceId == _instanceId)
+                if (m.CorrelationId == _instanceId)
                 {
                     try
                     {
