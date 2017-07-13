@@ -32,6 +32,8 @@ let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
 Target "Clean" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
+
     CleanDir output
     CleanDir outputTests
     CleanDir outputPerfTests
@@ -172,7 +174,7 @@ Target "MultiNodeTests" (fun _ ->
 )
 
 Target "NBench" <| fun _ ->
-    ActivateFinalTarget "KillCreatedProcesses"
+    ActivateFinalTarget "KillCreatedProcesses"   
     CleanDir outputPerfTests
 
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
