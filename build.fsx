@@ -328,10 +328,14 @@ Target "DocFx" (fun _ ->
 )
 
 FinalTarget "KillCreatedProcesses" (fun _ ->
-    log "The following processes were started during FAKE step..."
-    startedProcesses |> Seq.iter (fun (pid, _) -> logf "%i, " pid)
-    log (Environment.NewLine + "Killing processes started by FAKE...")
+    log "Killing processes started by FAKE:"
+    startedProcesses |> Seq.iter (fun (pid, _) -> logfn "%i" pid)
     killAllCreatedProcesses()
+    log "Killing any remaining dotnet and xunit.console.exe processes:"
+    getProcessesByName "dotnet" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
+    killProcess "dotnet"
+    getProcessesByName "xunit.console" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
+    killProcess "xunit.console"
 )
 
 //--------------------------------------------------------------------------------
