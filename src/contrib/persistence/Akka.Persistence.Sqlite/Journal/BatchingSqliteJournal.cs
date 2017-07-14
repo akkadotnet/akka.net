@@ -51,12 +51,13 @@ namespace Akka.Persistence.Sqlite.Journal
         /// <param name="autoInitialize">TBD</param>
         /// <param name="connectionTimeout">TBD</param>
         /// <param name="isolationLevel">TBD</param>
+        /// <param name="storedAs"></param>
         /// <param name="circuitBreakerSettings">TBD</param>
         /// <param name="replayFilterSettings">TBD</param>
         /// <param name="namingConventions">TBD</param>
         public BatchingSqliteJournalSetup(string connectionString, int maxConcurrentOperations, int maxBatchSize, int maxBufferSize, bool autoInitialize, 
-            TimeSpan connectionTimeout, IsolationLevel isolationLevel, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions) 
-            : base(connectionString, maxConcurrentOperations, maxBatchSize, maxBufferSize, autoInitialize, connectionTimeout, isolationLevel, circuitBreakerSettings, replayFilterSettings, namingConventions)
+            TimeSpan connectionTimeout, IsolationLevel isolationLevel, StoredAs storedAs, CircuitBreakerSettings circuitBreakerSettings, ReplayFilterSettings replayFilterSettings, QueryConfiguration namingConventions) 
+            : base(connectionString, maxConcurrentOperations, maxBatchSize, maxBufferSize, autoInitialize, connectionTimeout, isolationLevel, storedAs, circuitBreakerSettings, replayFilterSettings, namingConventions)
         {
         }
     }
@@ -83,6 +84,7 @@ namespace Akka.Persistence.Sqlite.Journal
         public BatchingSqliteJournal(BatchingSqliteJournalSetup setup) : base(setup)
         {
             var conventions = Setup.NamingConventions;
+            var payloadDataType = setup.StoredAs == StoredAs.Binary ? "BLOB" : "NVARCHAR(2000)";
             Initializers = ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, string>("CreateJournalSql", $@"
@@ -93,7 +95,7 @@ namespace Akka.Persistence.Sqlite.Journal
                     {conventions.IsDeletedColumnName} INTEGER(1) NOT NULL,
                     {conventions.ManifestColumnName} VARCHAR(255) NULL,
                     {conventions.TimestampColumnName} INTEGER NOT NULL,
-                    {conventions.PayloadColumnName} BLOB NOT NULL,
+                    {conventions.PayloadColumnName} {payloadDataType} NOT NULL,
                     {conventions.TagsColumnName} VARCHAR(2000) NULL,
                     UNIQUE ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
                 );"),

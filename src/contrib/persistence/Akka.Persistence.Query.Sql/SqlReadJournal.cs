@@ -105,7 +105,7 @@ namespace Akka.Persistence.Query.Sql
         /// The stream is completed with failure if there is a failure in executing the query in the
         /// backend journal.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
+        public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr = 0, long toSequenceNr = long.MaxValue) =>
                 Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
                     .Named("EventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
@@ -115,7 +115,7 @@ namespace Akka.Persistence.Query.Sql
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
+        public Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr = 0, long toSequenceNr = long.MaxValue) =>
                 Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, null, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
                     .Named("CurrentEventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
@@ -155,7 +155,7 @@ namespace Akka.Persistence.Query.Sql
         /// The stream is completed with failure if there is a failure in executing the query in the
         /// backend journal.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset) =>
+        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset = 0) =>
             Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByTag-" + tag);
@@ -165,9 +165,53 @@ namespace Akka.Persistence.Query.Sql
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, long offset) =>
+        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, long offset = 0) =>
             Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("EventsByTag-" + tag);
+
+        /// <summary>
+        /// <see cref="Events"/> is used for retrieving all events (both current and upcoming) visible by current journal.
+        /// <para></para>
+        /// You can retrieve a subset of all events by specifying <paramref name="fromOffset"/> and <paramref name="toOffset"/> range. 
+        /// Note that the corresponding offset of each event is provided in the <see cref="EventEnvelope"/>, which makes it possible to
+        /// resume the stream at a later point from a given offset.
+        /// <para></para>
+        /// In addition to the <paramref name="EventEnvelope.Offset"/> the <see cref="EventEnvelope"/> also provides `persistenceId` 
+        /// and `sequenceNr` for each event. The `sequenceNr` is the sequence number for the persistent actor with the
+        /// `persistenceId` that persisted the event. The `persistenceId` + `sequenceNr` is an unique
+        /// identifier for the event.
+        /// <para></para>
+        /// The returned event stream is ordered by the offset (tag sequence number), which corresponds
+        /// to the same order as the write journal stored the events. The same stream elements (in same order)
+        /// are returned for multiple executions of the query. Deleted events are not deleted from the
+        /// tagged event stream.
+        /// <para></para>
+        /// The stream is not completed when it reaches the end of the currently stored events,
+        /// but it continues to push new events when new events are persisted.
+        /// Corresponding query that is completed when it reaches the end of the currently
+        /// stored events is provided by <see cref="CurrentEvents"/>.
+        /// <para></para>
+        /// The SQL write journal is notifying the query side as soon as events are persisted, but for
+        /// efficiency reasons the query side retrieves the events in batches that sometimes can
+        /// be delayed up to the configured `refresh-interval`.
+        /// <para></para>
+        /// The stream is completed with failure if there is a failure in executing the query in the
+        /// backend journal.
+        /// </summary>
+        public Source<EventEnvelope, NotUsed> Events(long fromOffset = 0, long toOffset = long.MaxValue) =>
+            Source.ActorPublisher<EventEnvelope>(EventsPublisher.Props(fromOffset, toOffset, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("Events");
+
+        /// <summary>
+        /// Same type of query as <see cref="Events"/> but the event stream
+        /// is completed immediately when it reaches the end of the "result set". Events that are
+        /// stored after the query is completed are not included in the event stream.
+        /// </summary>
+        public Source<EventEnvelope, NotUsed> CurrentEvents(long fromOffset = 0, long toOffset = long.MaxValue) =>
+            Source.ActorPublisher<EventEnvelope>(EventsPublisher.Props(fromOffset, toOffset, null, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("CurrentEvents");
     }
 }

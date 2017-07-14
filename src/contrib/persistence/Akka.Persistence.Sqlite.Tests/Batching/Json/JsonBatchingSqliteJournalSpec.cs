@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="BatchingSqliteJournalSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
+// <copyright file="JsonBatchingSqliteJournalSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -10,14 +10,14 @@ using Akka.Persistence.TCK.Journal;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Sqlite.Tests.Batching
+namespace Akka.Persistence.Sqlite.Tests.Batching.Json
 {
-    public class BatchingSqliteJournalSpec : JournalSpec
+    public class JsonBatchingSqliteJournalSpec : JournalSpec
     {
-        private static AtomicCounter counter = new AtomicCounter(0);
+        private static AtomicCounter counter = new AtomicCounter(300);
 
-        public BatchingSqliteJournalSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig($"Datasource=memdb-journal-batch-{counter.IncrementAndGet()}.db;Mode=Memory;Cache=Shared"), "BatchingSqliteJournalSpec", output)
+        public JsonBatchingSqliteJournalSpec(ITestOutputHelper output)
+            : base(CreateSpecConfig($"Datasource=memdb-journal-batch-json-{counter.IncrementAndGet()}.db;Mode=Memory;Cache=Shared"), "JsonBatchingSqliteJournalSpec", output)
         {
             SqlitePersistence.Get(Sys);
 
@@ -37,7 +37,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                             table-name = event_journal
                             metadata-table-name = journal_metadata
                             auto-initialize = on
-                            store-as = binary
+                            stored-as = json
                             connection-string = """ + connectionString + @"""
                         }
                     }
