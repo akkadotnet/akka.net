@@ -55,9 +55,9 @@ module IncrementalTests =
             |> fun s -> s.Split('m')
         if tmp |> Array.length > 2 then tmp.[1].Substring(0,6) else tmp.[0].Substring(0,6)
     
-    let getBranchesFileDiff repositoryDir branch1 branch2 =
-        let _, msg, error = runGitCommand repositoryDir (sprintf "diff %s..%s --name-status" branch1 branch2)
-        if error <> "" then failwithf "diff %s..%s --name-status failed: %s" branch1 branch2 error
+    let getBranchesFileDiff repositoryDir branch =
+        let _, msg, error = runGitCommand repositoryDir (sprintf "diff %s --name-status" branch)
+        if error <> "" then failwithf "diff %s --name-status failed: %s" branch error
         msg
         |> Seq.map (fun line -> 
             let a = line.Split('\t')
@@ -71,13 +71,9 @@ module IncrementalTests =
         if not (localBranches |> Seq.exists (fun b -> b = akkaDefaultBranch)) then
             log "default branch information not available... fetching"
             directRunGitCommandAndFail srcDir (sprintf "fetch origin %s:%s" akkaDefaultBranch akkaDefaultBranch)
-        let currentBranch = getBranchName srcDir
-        if (not (currentBranch = "")) then
-            getBranchesFileDiff srcDir currentBranch akkaDefaultBranch
-            |> Seq.map (fun (_, fi) -> FullName fi)
-            |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
-        else
-            failwith "Couldn't find commits to compare for incremental tests"
+        getBranchesFileDiff srcDir akkaDefaultBranch
+        |> Seq.map (fun (_, fi) -> FullName fi)
+        |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
   
     // Gather all of the folder paths that contain .csproj files
     let getAllProjectFolders() =
