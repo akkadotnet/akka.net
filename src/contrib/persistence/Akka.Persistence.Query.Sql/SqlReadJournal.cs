@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Query.Sql
 {
@@ -127,11 +128,15 @@ namespace Akka.Persistence.Query.Sql
         /// To tag events you create an <see cref="IEventAdapter"/> that wraps the events
         /// in a <see cref="Tagged"/> with the given `tags`.
         /// <para></para>
-        /// You can retrieve a subset of all events by specifying <paramref name="offset"/>, or use `0L` to retrieve all
-        /// events with a given tag. The <paramref name="offset"/> corresponds to an ordered sequence number for
+        /// You can use <see cref="NoOffset"/> to retrieve all events with a given tag or retrieve a subset of all
+        /// events by specifying a <see cref="Sequence"/>. The `offset` corresponds to an ordered sequence number for
         /// the specific tag. Note that the corresponding offset of each event is provided in the
         /// <see cref="EventEnvelope"/>, which makes it possible to resume the
         /// stream at a later point from a given offset.
+        /// <para></para>
+        /// The `offset` is exclusive, i.e. the event with the exact same sequence number will not be included
+        /// in the returned stream.This means that you can use the offset that is returned in <see cref="EventEnvelope"/>
+        /// as the `offset` parameter in a subsequent query.
         /// <para></para>
         /// In addition to the <paramref name="offset"/> the <see cref="EventEnvelope"/> also provides `persistenceId` and `sequenceNr`
         /// for each event. The `sequenceNr` is the sequence number for the persistent actor with the
@@ -155,19 +160,41 @@ namespace Akka.Persistence.Query.Sql
         /// The stream is completed with failure if there is a failure in executing the query in the
         /// backend journal.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
-                .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("EventsByTag-" + tag);
+        public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset = null)
+        {
+            offset = offset ?? new Sequence(0L);
+            switch (offset)
+            {
+                case Sequence seq:
+                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, long.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+                        .MapMaterializedValue(_ => NotUsed.Instance)
+                        .Named($"EventsByTag-{tag}");
+                case NoOffset _:
+                    return EventsByTag(tag, new Sequence(0L));
+                default:
+                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+            }
+        }
 
         /// <summary>
         /// Same type of query as <see cref="EventsByTag"/> but the event stream
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
-        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, long offset) =>
-            Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, offset, long.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
-                .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("EventsByTag-" + tag);
+        public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset = null)
+        {
+            offset = offset ?? new Sequence(0L);
+            switch (offset)
+            {
+                case Sequence seq:
+                    return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, seq.Value, long.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
+                        .MapMaterializedValue(_ => NotUsed.Instance)
+                        .Named($"CurrentEventsByTag-{tag}");
+                case NoOffset _:
+                    return CurrentEventsByTag(tag, new Sequence(0L));
+                default:
+                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+            }
+        }
     }
 }
