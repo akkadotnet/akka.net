@@ -232,11 +232,11 @@ namespace Akka.Remote.Tests
 
             // child is configured to be deployed on remote-sys (remoteSystem)
             l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
-            var child = ExpectMsg<IActorRef>();
+            var child = ExpectMsg<IActorRef>(TimeSpan.FromSeconds(30));
 
             // grandchild is configured to be deployed on RemotingSpec (Sys)
             child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
-            var grandchild = ExpectMsg<IActorRef>();
+            var grandchild = ExpectMsg<IActorRef>(TimeSpan.FromSeconds(30));
             grandchild.AsInstanceOf<IActorRefScope>().IsLocal.ShouldBeTrue();
             grandchild.Tell(43);
             ExpectMsg(43);
@@ -259,13 +259,13 @@ namespace Akka.Remote.Tests
             ExpectMsg("postStop");
             ExpectTerminated(child);
             l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
-            var child2 = ExpectMsg<IActorRef>();
+            var child2 = ExpectMsg<IActorRef>(TimeSpan.FromSeconds(30));
             child2.Tell(45);
             ExpectMsg(45);
             // msg to old IActorRef (different uid) should not get through
             child2.Path.Uid.ShouldNotBe(child.Path.Uid);
             child.Tell(46);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(TimeSpan.FromSeconds(10));
             Sys.ActorSelection("user/looker/child").Tell(47);
             ExpectMsg(47);
         }
