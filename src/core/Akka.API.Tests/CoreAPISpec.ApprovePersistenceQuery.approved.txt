@@ -1,0 +1,84 @@
+﻿[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+namespace Akka.Persistence.Query
+{
+    public sealed class EventEnvelope : System.IEquatable<Akka.Persistence.Query.EventEnvelope>
+    {
+        public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event) { }
+        public object Event { get; }
+        public Akka.Persistence.Query.Offset Offset { get; }
+        public string PersistenceId { get; }
+        public long SequenceNr { get; }
+        public bool Equals(Akka.Persistence.Query.EventEnvelope other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public interface ICurrentEventsByPersistenceIdQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr);
+    }
+    public interface ICurrentEventsByTagQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentEventsByTag(string tag, Akka.Persistence.Query.Offset offset);
+    }
+    public interface ICurrentPersistenceIdsQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<string, Akka.NotUsed> CurrentPersistenceIds();
+    }
+    public interface IEventsByPersistenceIdQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr);
+    }
+    public interface IEventsByTagQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> EventsByTag(string tag, Akka.Persistence.Query.Offset offset);
+    }
+    public interface IPersistenceIdsQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<string, Akka.NotUsed> PersistenceIds();
+    }
+    public interface IReadJournal { }
+    public interface IReadJournalProvider
+    {
+        Akka.Persistence.Query.IReadJournal GetReadJournal();
+    }
+    public sealed class NoOffset : Akka.Persistence.Query.Offset
+    {
+        public static Akka.Persistence.Query.NoOffset Instance { get; }
+    }
+    public abstract class Offset
+    {
+        protected Offset() { }
+        public static Akka.Persistence.Query.Offset NoOffset() { }
+        public static Akka.Persistence.Query.Offset Sequence(long value) { }
+    }
+    public sealed class PersistenceQuery : Akka.Actor.IExtension
+    {
+        public PersistenceQuery(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.Event.ILoggingAdapter Log { get; }
+        public static Akka.Persistence.Query.PersistenceQuery Get(Akka.Actor.ActorSystem system) { }
+        public static Akka.Configuration.Config GetDefaultConfig<TJournal>() { }
+        public TJournal ReadJournalFor<TJournal>(string readJournalPluginId)
+            where TJournal : Akka.Persistence.Query.IReadJournal { }
+    }
+    public class static PersistenceQueryExtensions
+    {
+        public static TJournal ReadJournalFor<TJournal>(this Akka.Actor.ActorSystem system, string readJournalPluginId)
+            where TJournal : Akka.Persistence.Query.IReadJournal { }
+    }
+    public class PersistenceQueryProvider : Akka.Actor.ExtensionIdProvider<Akka.Persistence.Query.PersistenceQuery>
+    {
+        public PersistenceQueryProvider() { }
+        public override Akka.Persistence.Query.PersistenceQuery CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public sealed class Sequence : Akka.Persistence.Query.Offset, System.IComparable<Akka.Persistence.Query.Sequence>
+    {
+        public Sequence(long value) { }
+        public long Value { get; }
+        public int CompareTo(Akka.Persistence.Query.Sequence other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+}
