@@ -53,6 +53,14 @@ module IncrementalTests =
             |> Seq.head
             |> fun s -> s.Split('m')
         if tmp |> Array.length > 2 then tmp.[1].Substring(0,6) else tmp.[0].Substring(0,6)
+    
+    let getBranchesFileDiff repositoryDir branch =
+        let _, msg, error = runGitCommand repositoryDir (sprintf "diff %s --name-status" branch)
+        if error <> "" then failwithf "diff %s --name-status failed: %s" branch error
+        msg
+        |> Seq.map (fun line -> 
+            let a = line.Split('\t')
+            FileStatus.Parse a.[0],a.[1])
 
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
@@ -62,18 +70,9 @@ module IncrementalTests =
         if not (localBranches |> Seq.exists (fun b -> b = akkaDefaultBranch)) then
             log "default branch information not available... fetching"
             directRunGitCommandAndFail srcDir (sprintf "fetch origin %s:%s" akkaDefaultBranch akkaDefaultBranch)
-        let lastCommitToDefaultBranch = getHeadHashFor srcDir akkaDefaultBranch
-        logfn "HEAD commit hash of default branch: %s" lastCommitToDefaultBranch
-        let currentHash = getCurrentHash()
-        logfn "HEAD commit hash of current branch: %s" currentHash
-        let forkPoint = findMergeBase srcDir currentHash lastCommitToDefaultBranch
-        logfn "merge-base of default branch and current branch HEAD: %s" forkPoint
-        if (not (forkPoint = "") && not (currentHash = "")) then
-            getChangedFiles srcDir forkPoint currentHash
-            |> Seq.map (fun (_, fi) -> FullName fi)
-            |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
-        else
-            failwith "Couldn't find commits to compare for incremental tests"
+        getBranchesFileDiff srcDir akkaDefaultBranch
+        |> Seq.map (fun (_, fi) -> FullName fi)
+        |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
   
     // Gather all of the folder paths that contain .csproj files
     let getAllProjectFolders() =

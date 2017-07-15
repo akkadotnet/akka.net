@@ -58,7 +58,7 @@ namespace Akka.Persistence.Query
         /// Corresponding query that is completed when it reaches the end of the currently
         /// stored events is provided by <see cref="ICurrentEventsByTagQuery.CurrentEventsByTag"/>.
         /// </summary>
-        Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset);
+        Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset);
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ namespace Akka.Persistence.Query
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
-        Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, long offset);
+        Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset);
     }
 
     /// <summary>

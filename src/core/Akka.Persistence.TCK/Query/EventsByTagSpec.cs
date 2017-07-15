@@ -13,6 +13,7 @@ using Akka.Streams;
 using Akka.Streams.TestKit;
 using Xunit;
 using Xunit.Abstractions;
+using static Akka.Persistence.Query.Offset;
 
 namespace Akka.Persistence.TCK.Query
 {
@@ -45,7 +46,7 @@ namespace Akka.Persistence.TCK.Query
             b.Tell("a black car");
             ExpectMsg("a black car-done");
 
-            var blackSrc = queries.EventsByTag("black", offset: 0L);
+            var blackSrc = queries.EventsByTag("black", offset: NoOffset());
             var probe = blackSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe.Request(2);
             probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("a black car"));
@@ -64,7 +65,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public virtual void ReadJournal_live_query_EventsByTag_should_find_events_from_offset()
+        public virtual void ReadJournal_live_query_EventsByTag_should_find_events_from_offset_exclusive()
         {
             var queries = ReadJournal as IEventsByTagQuery;
 
@@ -87,14 +88,14 @@ namespace Akka.Persistence.TCK.Query
             c.Tell("a green cucumber");
             ExpectMsg("a green cucumber-done");
 
-            var greenSrc1 = queries.EventsByTag("green", offset: 0L);
+            var greenSrc1 = queries.EventsByTag("green", offset: NoOffset());
             var probe1 = greenSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe1.Request(2);
             probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 2L && p.Event.Equals("a green apple"));
-            var offs = probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 4L && p.Event.Equals("a green banana"));
+            var offs = probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 4L && p.Event.Equals("a green banana")).Offset;
             probe1.Cancel();
 
-            var greenSrc2 = queries.EventsByTag("green", offset: offs.Offset);
+            var greenSrc2 = queries.EventsByTag("green", offset: offs);
             var probe2 = greenSrc2.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe2.Request(10);
             probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 2L && p.Event.Equals("a green leaf"));

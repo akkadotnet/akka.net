@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
     <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
