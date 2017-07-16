@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
@@ -618,7 +619,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected virtual void WriteEvent(DbCommand command, IPersistentRepresentation e, IImmutableSet<string> tags)
         {
-            var manifest = string.IsNullOrEmpty(e.Manifest) ? e.Payload.GetType().QualifiedTypeName() : e.Manifest;
+            var manifest = string.IsNullOrEmpty(e.Manifest) ? e.Payload.GetType().TypeQualifiedName() : e.Manifest;
             var serializer = Serialization.FindSerializerFor(e.Payload);
             var binary = serializer.ToBinary(e.Payload);
 
