@@ -25,7 +25,7 @@ namespace Akka.Tests.Performance.Dispatch
         protected abstract MessageDispatcherConfigurator Configurator();
 
         private const string DispatcherCounterName = "ScheduledActionCompleted";
-        private const long ScheduleCount = 100000000;
+        private const long ScheduleCount = 10000000;
 
         private Counter _dispatcherCounter;
 
