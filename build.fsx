@@ -1,18 +1,24 @@
 ﻿#I @"tools/FAKE/tools"
 #r "FakeLib.dll"
+#load "./buildIncremental.fsx"
 
 open System
 open System.IO
 open System.Text
+open System.Diagnostics
 
 open Fake
 open Fake.DotNetCli
 open Fake.DocFxHelper
+open Fake.Git
 
 // Variables
 let configuration = "Release"
 let solution = "./src/Akka.sln"
-let versionSuffix = getBuildParamOrDefault "versionsuffix" ""
+let versionSuffix = 
+    match (getBuildParamOrDefault "nugetprerelease" "") with
+    | "dev" -> "beta"
+    | _ -> ""
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
@@ -26,6 +32,8 @@ let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
 Target "Clean" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
+
     CleanDir output
     CleanDir outputTests
     CleanDir outputPerfTests
@@ -81,21 +89,19 @@ module internal ResultHandling =
         buildErrorMessage
         >> Option.iter (failBuildWithMessage errorLevel)
 
-Target "RunTests" (fun _ ->
+open BuildIncremental.IncrementalTests
+
+Target "RunTests" (fun _ ->    
+    ActivateFinalTarget "KillCreatedProcesses"
     let projects =
-        match isWindows with
-        // Windows
-        | true -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-        // Linux/Mono
-        | _ -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/Akka.API.Tests.csproj"
-     
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> getIncrementalUnitTests()
+        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
+                            getIncrementalUnitTests() |> Seq.iter log
+                            getUnitTestProjects()
+        | _ -> log "All test projects will be run..."
+               getUnitTestProjects()
+    
     let runSingleProject project =
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
@@ -110,25 +116,21 @@ Target "RunTests" (fun _ ->
 )
 
 Target "RunTestsNetCore" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
     let projects =
-        match isWindows with
-        // Windows
-        | true -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-        // Linux/Mono
-        | _ -> !! "./**/core/**/*.Tests.csproj"
-                  ++ "./**/contrib/**/*.Tests.csproj"
-                  -- "./**/serializers/**/*Wire*.csproj"
-                  -- "./**/Akka.MultiNodeTestRunner.Shared.Tests.csproj"
-                  -- "./**/Akka.API.Tests.csproj"
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> getIncrementalUnitTests()
+        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
+                            getIncrementalUnitTests() |> Seq.iter log
+                            getUnitTestProjects()
+        | _ -> log "All test projects will be run..."
+               getUnitTestProjects()
      
     let runSingleProject project =
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
             info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "xunit -f netcoreapp1.1 -parallel none -teamcity -xml %s_xunit_netcore.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
+            info.Arguments <- (sprintf "xunit -f netcoreapp1.1 -c Release -parallel none -teamcity -xml %s_xunit_netcore.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
         
         ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
@@ -137,12 +139,17 @@ Target "RunTestsNetCore" (fun _ ->
 )
 
 Target "MultiNodeTests" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
-    let multiNodeTestAssemblies = !! "src/**/bin/Release/**/Akka.Remote.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Tools.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.Cluster.Sharding.Tests.MultiNode.dll" ++
-                                     "src/**/bin/Release/**/Akka.DistributedData.Tests.MultiNode.dll"
+
+    let multiNodeTestAssemblies = 
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> getIncrementalMNTRTests()
+        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
+                            getIncrementalMNTRTests() |> Seq.iter log
+                            getAllMntrTestAssemblies()
+        | _ -> log "All test projects will be run"
+               getAllMntrTestAssemblies()
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -167,15 +174,19 @@ Target "MultiNodeTests" (fun _ ->
 )
 
 Target "NBench" <| fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"   
     CleanDir outputPerfTests
-    // .NET Framework
-    let testSearchPath =
-        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
-        sprintf "src/**/bin/Release/**/*%s*.Tests.Performance.dll" assemblyFilter
 
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
-    let nbenchTestAssemblies = !! testSearchPath
     printfn "Using NBench.Runner: %s" nbenchTestPath
+
+    let nbenchTestAssemblies = 
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> getIncrementalPerfTests()
+        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
+                            getIncrementalPerfTests() |> Seq.iter log
+                            getAllPerfTestAssemblies()
+        | _ -> getAllPerfTestAssemblies()
 
     let runNBench assembly =
         let spec = getBuildParam "spec"
@@ -200,7 +211,7 @@ Target "NBench" <| fun _ ->
             info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
         if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
     
-    nbenchTestAssemblies |> Seq.iter (runNBench)
+    nbenchTestAssemblies |> Seq.iter runNBench
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -247,19 +258,20 @@ Target "CreateNuget" (fun _ ->
 )
 
 Target "PublishNuget" (fun _ ->
-    let projects = !! "./build/nuget/*.nupkg" -- "./build/nuget/*.symbols.nupkg"
+    let projects = !! "./bin/nuget/*.nupkg" -- "./bin/nuget/*.symbols.nupkg"
     let apiKey = getBuildParamOrDefault "nugetkey" ""
     let source = getBuildParamOrDefault "nugetpublishurl" ""
     let symbolSource = getBuildParamOrDefault "symbolspublishurl" ""
 
-    let runSingleProject project =
-        DotNetCli.RunCommand
-            (fun p -> 
-                { p with 
-                    TimeOut = TimeSpan.FromMinutes 10. })
-            (sprintf "nuget push %s --api-key %s --source %s --symbol-source %s" project apiKey source symbolSource)
+    if (not (source = "") && not (apiKey = "")) then
+        let runSingleProject project =
+            DotNetCli.RunCommand
+                (fun p -> 
+                    { p with 
+                        TimeOut = TimeSpan.FromMinutes 10. })
+                (sprintf "nuget push %s --api-key %s --source %s --symbol-source %s" project apiKey source symbolSource)
 
-    projects |> Seq.iter (runSingleProject)
+        projects |> Seq.iter (runSingleProject)
 )
 
 //--------------------------------------------------------------------------------
@@ -313,6 +325,17 @@ Target "DocFx" (fun _ ->
                     Timeout = TimeSpan.FromMinutes 5.0; 
                     WorkingDirectory  = docsPath; 
                     DocFxJson = docsPath @@ "docfx.json" })
+)
+
+FinalTarget "KillCreatedProcesses" (fun _ ->
+    log "Killing processes started by FAKE:"
+    startedProcesses |> Seq.iter (fun (pid, _) -> logfn "%i" pid)
+    killAllCreatedProcesses()
+    log "Killing any remaining dotnet and xunit.console.exe processes:"
+    getProcessesByName "dotnet" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
+    killProcess "dotnet"
+    getProcessesByName "xunit.console" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
+    killProcess "xunit.console"
 )
 
 //--------------------------------------------------------------------------------
@@ -381,8 +404,7 @@ Target "Nuget" DoNothing
 
 // nuget dependencies
 "Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
-"CreateNuget" ==> "PublishNuget"
-"PublishNuget" ==> "Nuget"
+"CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "Clean" ==> "Docfx"

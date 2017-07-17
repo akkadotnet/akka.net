@@ -82,6 +82,17 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void DeathWatch_must_notify_with_one_custom_termination_message_when_actor_is_stopped()
+        {
+            const string msg = "hello";
+            const string terminationMsg = "watchee terminated";
+            StartWatchingWith(_terminal, terminationMsg).Tell(msg);
+            ExpectMsg(msg);
+            _terminal.Tell(PoisonPill.Instance);
+            ExpectMsg(terminationMsg);
+        }
+
+        [Fact]
         public void DeathWatch_must_notify_with_all_monitors_with_one_Terminated_message_when_Actor_is_stopped()
         {
             var monitor1 = StartWatching(_terminal);
@@ -243,9 +254,21 @@ namespace Akka.Tests.Actor
             return (IActorRef)task.Result;
         }
 
+        private IActorRef StartWatchingWith(IActorRef target, object message)
+        {
+            var task = _supervisor.Ask(CreateWatchWithAndForwarderProps(target, TestActor, message), TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3));
+            return (IActorRef)task.Result;
+        }
+
         private Props CreateWatchAndForwarderProps(IActorRef target, IActorRef forwardToActor)
         {
             return Props.Create(() => new WatchAndForwardActor(target, forwardToActor));
+        }
+
+        private Props CreateWatchWithAndForwarderProps(IActorRef target, IActorRef forwardToActor, object message)
+        {
+            return Props.Create(() => new WatchWithAndForwardActor(target, forwardToActor, message));
         }
 
         internal class BrotherActor : ReceiveActor
@@ -381,6 +404,23 @@ namespace Akka.Tests.Actor
                     _forwardToActor.Forward(new WrappedTerminated(terminated));
                 else
                     _forwardToActor.Forward(message);
+                return true;
+            }
+        }
+
+        internal class WatchWithAndForwardActor : ActorBase
+        {
+            private readonly IActorRef _forwardToActor;
+
+            public WatchWithAndForwardActor(IActorRef watchedActor, IActorRef forwardToActor, object message)
+            {
+                _forwardToActor = forwardToActor;
+                Context.WatchWith(watchedActor, message);
+            }
+
+            protected override bool Receive(object message)
+            {
+                _forwardToActor.Forward(message);
                 return true;
             }
         }

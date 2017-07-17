@@ -1,6 +1,17 @@
 #### 1.3.0 June 28 2017 ####
 Placeholder
 
+#### 1.2.3 July 07 2017 ####
+**Maintenance Release for Akka.NET 1.2**
+
+Resolves a bug introduced in Akka.NET 1.2.2 that caused Akka.Remote to not terminate properly under some conditions during `ActorSystem.Terminate`.
+
+[See the full set of Akka.NET 1.2.3 fixes here](https://github.com/akkadotnet/akka.net/milestone/18).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 46 | 63 | Aaron Stannard |
+
 #### 1.2.2 June 28 2017 ####
 **Maintenance Release for Akka.NET 1.2**
 

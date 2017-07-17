@@ -122,16 +122,23 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="target">TBD</param>
-        public StartWatch(IActorRef target)
+        /// <param name="message">TBD</param>
+        public StartWatch(IActorRef target, object message)
             : this()
         {
             Target = target;
+            Message = message;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         public IActorRef Target { get; private set; }
+
+        /// <summary>
+        /// The custom termination message or null
+        /// </summary>
+        public object Message { get; private set; }
     }
 
     /// <summary>
@@ -439,7 +446,13 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef Watch(IActorRef subject)
         {
-            Receiver.Tell(new StartWatch(subject));
+            Receiver.Tell(new StartWatch(subject, null));
+            return subject;
+        }
+
+        public IActorRef WatchWith(IActorRef subject, object message)
+        {
+            Receiver.Tell(new StartWatch(subject, message));
             return subject;
         }
 
