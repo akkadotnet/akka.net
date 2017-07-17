@@ -70,11 +70,11 @@ Target "Build" (fun _ ->
     if getBuildParam "nugetprerelease" = "dev" then
         XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" version        
 
-    //DotNetCli.Build
-    //    (fun p -> 
-    //        { p with
-    //            Project = solution
-    //            Configuration = configuration })
+    DotNetCli.Build
+        (fun p -> 
+            { p with
+                Project = solution
+                Configuration = configuration })
 )
 
 //--------------------------------------------------------------------------------
