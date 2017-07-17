@@ -93,7 +93,8 @@ akka {
         }
     }
 
-    public class MessageSerializerRemotingSpec : AkkaSpec
+	// TODO: temporary disabled
+    public abstract class MessageSerializerRemotingSpec : AkkaSpec
     {
         internal class LocalActor : ActorBase
         {

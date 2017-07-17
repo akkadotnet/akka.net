@@ -243,4 +243,3 @@ namespace Akka.Persistence.TCK.Snapshot
         }
     }
 }
-
