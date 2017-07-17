@@ -39,8 +39,12 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             "bGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQiYgoNQWN0b3JJZGVudGl0eRJD",
             "Cg1jb3JyZWxhdGlvbklkGAEgASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXph",
             "dGlvbi5Qcm90by5Nc2cuUGF5bG9hZBIMCgRwYXRoGAIgASgJIi0KHlJlbW90",
-            "ZVdhdGNoZXJIZWFydGJlYXRSZXNwb25zZRILCgN1aWQYASABKARiBnByb3Rv",
-            "Mw=="));
+            "ZVdhdGNoZXJIZWFydGJlYXRSZXNwb25zZRILCgN1aWQYASABKAQizgEKDUV4",
+            "Y2VwdGlvbkRhdGESEAoIVHlwZU5hbWUYASABKAkSTgoGZmllbGRzGAIgAygL",
+            "Mj4uQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRXhjZXB0",
+            "aW9uRGF0YS5GaWVsZHNFbnRyeRpbCgtGaWVsZHNFbnRyeRILCgNrZXkYASAB",
+            "KAkSOwoFdmFsdWUYAiABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5QYXlsb2FkOgI4AWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -51,7 +55,8 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Payload), global::Akka.Remote.Serialization.Proto.Msg.Payload.Parser, new[]{ "Message", "SerializerId", "MessageManifest" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Identify), global::Akka.Remote.Serialization.Proto.Msg.Identify.Parser, new[]{ "MessageId" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ActorIdentity), global::Akka.Remote.Serialization.Proto.Msg.ActorIdentity.Parser, new[]{ "CorrelationId", "Path" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteWatcherHeartbeatResponse), global::Akka.Remote.Serialization.Proto.Msg.RemoteWatcherHeartbeatResponse.Parser, new[]{ "Uid" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteWatcherHeartbeatResponse), global::Akka.Remote.Serialization.Proto.Msg.RemoteWatcherHeartbeatResponse.Parser, new[]{ "Uid" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ExceptionData), global::Akka.Remote.Serialization.Proto.Msg.ExceptionData.Parser, new[]{ "TypeName", "Fields" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -348,7 +353,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the Selection message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public enum PatternType {
+      internal enum PatternType {
         [pbr::OriginalName("NO_PATERN")] NoPatern = 0,
         [pbr::OriginalName("PARENT")] Parent = 1,
         [pbr::OriginalName("CHILD_NAME")] ChildName = 2,
@@ -1243,6 +1248,143 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             break;
           case 8: {
             Uid = input.ReadUInt64();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class ExceptionData : pb::IMessage<ExceptionData> {
+    private static readonly pb::MessageParser<ExceptionData> _parser = new pb::MessageParser<ExceptionData>(() => new ExceptionData());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<ExceptionData> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor.MessageTypes[8]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ExceptionData() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ExceptionData(ExceptionData other) : this() {
+      typeName_ = other.typeName_;
+      fields_ = other.fields_.Clone();
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ExceptionData Clone() {
+      return new ExceptionData(this);
+    }
+
+    /// <summary>Field number for the "TypeName" field.</summary>
+    public const int TypeNameFieldNumber = 1;
+    private string typeName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string TypeName {
+      get { return typeName_; }
+      set {
+        typeName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "fields" field.</summary>
+    public const int FieldsFieldNumber = 2;
+    private static readonly pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>.Codec _map_fields_codec
+        = new pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>.Codec(pb::FieldCodec.ForString(10), pb::FieldCodec.ForMessage(18, global::Akka.Remote.Serialization.Proto.Msg.Payload.Parser), 18);
+    private readonly pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload> fields_ = new pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload> Fields {
+      get { return fields_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as ExceptionData);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(ExceptionData other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TypeName != other.TypeName) return false;
+      if (!Fields.Equals(other.Fields)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TypeName.Length != 0) hash ^= TypeName.GetHashCode();
+      hash ^= Fields.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (TypeName.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TypeName);
+      }
+      fields_.WriteTo(output, _map_fields_codec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (TypeName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TypeName);
+      }
+      size += fields_.CalculateSize(_map_fields_codec);
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(ExceptionData other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TypeName.Length != 0) {
+        TypeName = other.TypeName;
+      }
+      fields_.Add(other.fields_);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            TypeName = input.ReadString();
+            break;
+          }
+          case 18: {
+            fields_.AddEntriesFrom(input, _map_fields_codec);
             break;
           }
         }

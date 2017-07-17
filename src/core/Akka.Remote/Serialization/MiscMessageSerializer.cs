@@ -41,10 +41,12 @@ namespace Akka.Remote.Serialization
         private const string ScatterGatherPoolManifest = "ROSGP";
         private const string TailChoppingPoolManifest = "ROTCP";
         private const string RemoteRouterConfigManifest = "RORRC";
+        private const string ExceptionManifest = "EX";
 
         private static readonly byte[] EmptyBytes = {};
 
         private readonly WrappedPayloadSupport _payloadSupport;
+        private readonly ExceptionSupport _exceptionSupport;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MiscMessageSerializer" /> class.
@@ -53,6 +55,7 @@ namespace Akka.Remote.Serialization
         public MiscMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _payloadSupport = new WrappedPayloadSupport(system);
+            _exceptionSupport = new ExceptionSupport(system);
         }
 
         /// <inheritdoc />
@@ -76,6 +79,7 @@ namespace Akka.Remote.Serialization
             if (obj is ScatterGatherFirstCompletedPool) return ScatterGatherFirstCompletedPoolToProto((ScatterGatherFirstCompletedPool)obj);
             if (obj is TailChoppingPool) return TailChoppingPoolToProto((TailChoppingPool)obj);
             if (obj is RemoteRouterConfig) return RemoteRouterConfigToProto((RemoteRouterConfig)obj);
+            if (obj is Exception ex) return _exceptionSupport.SerializeException(ex);
 
             throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
         }
@@ -101,6 +105,7 @@ namespace Akka.Remote.Serialization
             if (obj is ScatterGatherFirstCompletedPool) return ScatterGatherPoolManifest;
             if (obj is TailChoppingPool) return TailChoppingPoolManifest;
             if (obj is RemoteRouterConfig) return RemoteRouterConfigManifest;
+            if (obj is Exception) return ExceptionManifest;
 
             throw new ArgumentException($"Cannot deserialize object of type [{obj.GetType().TypeQualifiedName()}]");
         }
@@ -126,6 +131,7 @@ namespace Akka.Remote.Serialization
             if (manifest == ScatterGatherPoolManifest) return ScatterGatherFirstCompletedPoolFromProto(bytes);
             if (manifest == TailChoppingPoolManifest) return TailChoppingPoolFromProto(bytes);
             if (manifest == RemoteRouterConfigManifest) return RemoteRouterConfigFromProto(bytes);
+            if (manifest == ExceptionManifest) return _exceptionSupport.DeserializeException(bytes);
  
             throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{nameof(MiscMessageSerializer)}]");
         }

@@ -61,3 +61,8 @@ message ActorIdentity {
 message RemoteWatcherHeartbeatResponse {
   uint64 uid = 1;
 }
+
+message ExceptionData {
+	string TypeName = 1;
+    map<string, Payload> fields = 2;
+}

@@ -16,6 +16,7 @@ using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Serialization
 {
@@ -39,46 +40,76 @@ namespace Akka.Remote.Tests.Serialization
         }
         #endregion
 
-        public SystemMessageSerializationSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public SystemMessageSerializationSpec(ITestOutputHelper output) : base(output, ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
         {
         }
 
-        [Fact(Skip = "Not implemented")]
+        [Fact]
         public void Can_serialize_Create()
         {
             var message = new Create(null);
             AssertEqual(message);
         }
 
-        [Fact(Skip = "Not implemented")]
+        [Fact]
         public void Can_serialize_CreateWithException()
         {
             var actorRef = ActorOf<BlackHoleActor>();
             var message = new Create(new ActorInitializationException(actorRef, "Failed"));
             var actual = AssertAndReturn(message);
-            actual.Failure.Actor.Should().Be(actorRef);
             actual.Failure.Message.Should().Be(message.Failure.Message);
+            actual.Failure.Actor.Should().NotBeNull();
+            actual.Failure.Actor.Should().Be(actorRef);
         }
 
-        [Fact(Skip = "Not implemented")]
+        [Fact]
         public void Can_serialize_Recreate()
         {
-            var message = new Recreate(new Exception("test2"));
-            AssertAndReturn(message).Cause.Should().Be(message.Cause);
+            var message = new Recreate(new ArgumentException("test1"));
+            var actual = AssertAndReturn(message);
+            actual.Cause.Should().BeOfType<ArgumentException>();
+            actual.Cause.Message.Should().Be(message.Cause.Message);
         }
 
-        [Fact(Skip = "Not implemented")]
+        [Fact]
+        public void Can_serialize_Recreate_WithInnerException()
+        {
+            var message = new Recreate(new ArgumentException("test1", new ArgumentNullException()));
+            var actual = AssertAndReturn(message);
+            actual.Cause.Should().BeOfType<ArgumentException>();
+            actual.Cause.Message.Should().Be(message.Cause.Message);
+        }
+
+        [Fact]
+        public void Can_serialize_Recreate_WithStackTrace()
+        {
+            try
+            {
+                throw new ArgumentException("test1");
+            }
+            catch (Exception e)
+            {
+                var message = new Recreate(e);
+                var actual = AssertAndReturn(message);
+                actual.Cause.Should().BeOfType<ArgumentException>();
+                actual.Cause.Message.Should().Be(message.Cause.Message);
+            }
+        }
+
+        [Fact]
         public void Can_serialize_Suspend()
         {
             var message = new Suspend();
             AssertAndReturn(message).Should().BeOfType<Suspend>();
         }
 
-        [Fact(Skip = "Not implemented")]
+        [Fact]
         public void Can_serialize_Resume()
         {
-            var message = new Resume(new Exception("test2"));
-            AssertAndReturn(message).CausedByFailure.Should().Be(message.CausedByFailure);
+            var message = new Resume(new ArgumentException("test2"));
+            var actual = AssertAndReturn(message);
+            actual.CausedByFailure.Should().BeOfType<ArgumentException>();
+            actual.CausedByFailure.Message.Should().Be(message.CausedByFailure.Message);
         }
 
         [Fact]
@@ -116,13 +147,14 @@ namespace Akka.Remote.Tests.Serialization
             AssertEqual(unwatch);
         }
 
-        [Fact(Skip = "Not implemented")]
+        [Fact]
         public void Can_serialize_Failed()
         {
             var actorRef = ActorOf<BlackHoleActor>();
-            var message = new Failed(actorRef, new Exception("test2"), 435345);
+            var message = new Failed(actorRef, new ArgumentException("test2"), 435345);
             var actual = AssertAndReturn(message);
-            actual.Cause.Should().Be(message.Cause);
+            actual.Cause.Should().BeOfType<ArgumentException>();
+            actual.Cause.Message.Should().Be(message.Cause.Message);
             actual.Child.Should().Be(actorRef);
             actual.Uid.Should().Be(message.Uid);
         }

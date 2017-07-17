@@ -229,7 +229,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the CoordinatorState message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class ShardEntry : pb::IMessage<ShardEntry> {
+      internal sealed partial class ShardEntry : pb::IMessage<ShardEntry> {
         private static readonly pb::MessageParser<ShardEntry> _parser = new pb::MessageParser<ShardEntry>(() => new ShardEntry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<ShardEntry> Parser { get { return _parser; } }
