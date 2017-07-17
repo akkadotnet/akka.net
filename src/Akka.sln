@@ -163,7 +163,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DependencyInjection", "Depe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DI.Core", "contrib\dependencyinjection\Akka.DI.Core\Akka.DI.Core.csproj", "{3DCFADA2-02DF-41AD-A907-F805B86A5DFE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DI.TestKit", "contrib\dependencyinjection\Akka.DI.TestKit\Akka.DI.TestKit.csproj", "{539317E7-EEEF-4BE5-A12D-6BB048E7A1E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DI.TestKit.Tests", "contrib\dependencyinjection\Akka.DI.TestKit\Akka.DI.TestKit.Tests.csproj", "{539317E7-EEEF-4BE5-A12D-6BB048E7A1E3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.TestKit.Xunit", "contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj", "{E7A836C1-42D3-4ADC-81C6-C6C5398CC740}"
 EndProject
