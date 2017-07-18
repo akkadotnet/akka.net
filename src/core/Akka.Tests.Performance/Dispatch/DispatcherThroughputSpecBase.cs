@@ -25,7 +25,7 @@ namespace Akka.Tests.Performance.Dispatch
         protected abstract MessageDispatcherConfigurator Configurator();
 
         private const string DispatcherCounterName = "ScheduledActionCompleted";
-        private const long ScheduleCount = 1000000;
+        private const long ScheduleCount = 10000000;
 
         private Counter _dispatcherCounter;
 
@@ -71,8 +71,9 @@ namespace Akka.Tests.Performance.Dispatch
             Warmup(_dispatcher);
         }
 
-        [PerfBenchmark(Description = "Tests how long it takes to schedule items onto the dispatcher", RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
+        [PerfBenchmark(Description = "Tests how long it takes to schedule items onto the dispatcher", RunMode = RunMode.Iterations, NumberOfIterations = 5, TestMode = TestMode.Measurement)]
         [CounterMeasurement(DispatcherCounterName)]
+        [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
         public void Schedule_throughput(BenchmarkContext context)
         {
             for (var i = 0L; i < ScheduleCount;)
