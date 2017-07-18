@@ -499,7 +499,14 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return ToString().GetHashCode();
+            unchecked
+            {
+                var hash = 17;
+                hash = (hash * 23) ^ Address.GetHashCode();
+                foreach (var e in Elements)
+                    hash = (hash * 23) ^ e.GetHashCode();
+                return hash;
+            }
         }
 
         /// <inheritdoc/>
