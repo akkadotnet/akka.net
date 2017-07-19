@@ -14,21 +14,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
 {
     public class DiscoverySpec
     {
-        [Fact(DisplayName = "Abstract classes are not discoverable", Skip="Issues with XUnit 2.3-beta2")]
+        [Fact(DisplayName = "Abstract classes are not discoverable")]
         public void No_abstract_classes()
         {
             var discoveredSpecs = DiscoverSpecs();
             Assert.False(discoveredSpecs.ContainsKey(KeyFromSpecName(nameof(DiscoveryCases.NoAbstractClassesSpec))));
         }
 
-        [Fact(DisplayName = "Deeply inherited classes are discoverable", Skip="Issues with XUnit 2.3-beta2")]
+        [Fact(DisplayName = "Deeply inherited classes are discoverable")]
         public void Deeply_inherited_are_ok()
         {
             var discoveredSpecs = DiscoverSpecs();
             Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DeeplyInheritedChildSpec))].First().Role, "DeeplyInheritedChildRole");
         }
 
-        [Fact(DisplayName = "One test case per RoleName per Spec declaration with MultiNodeFact", Skip="Issues with XUnit 2.3-beta2")]
+        [Fact(DisplayName = "One test case per RoleName per Spec declaration with MultiNodeFact")]
         public void Discovered_count_equals_number_of_roles_mult_specs()
         {
             var discoveredSpecs = DiscoverSpecs();
@@ -37,7 +37,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
             Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec3))].Count, 5);
         }
 
-        [Fact(DisplayName = "Only public props and fields are considered when looking for RoleNames", Skip="Issues with XUnit 2.3-beta2")]
+        [Fact(DisplayName = "Only public props and fields are considered when looking for RoleNames")]
         public void Public_props_and_fields_are_considered()
         {
             var discoveredSpecs = DiscoverSpecs();
