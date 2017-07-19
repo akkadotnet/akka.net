@@ -10,10 +10,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using FluentAssertions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using DotNetty.Transport.Channels;
 using Xunit;
 
@@ -23,6 +25,7 @@ namespace Akka.Remote.TestKit.Tests
     {
         private const string Config = @"
             akka.testconductor.barrier-timeout = 5s
+            akka.loglevel = DEBUG
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.actor.debug.fsm = on
             akka.actor.debug.lifecycle = on
@@ -47,13 +50,19 @@ namespace Akka.Remote.TestKit.Tests
 
             try
             {
-                server = await RemoteConnection.CreateConnection(Role.Server, serverEndpoint, 3,
+                var cts = new CancellationTokenSource();
+                cts.CancelAfter(TimeSpan.FromSeconds(10));
+                var t1 = RemoteConnection.CreateConnection(Role.Server, serverEndpoint, 3,
                     new TestConductorHandler(serverProbe.Ref));
+                await t1.WithCancellation(cts.Token);
+                server = t1.Result; // task will already be complete or cancelled
 
-                var reachableEndpoint = (IPEndPoint) server.LocalAddress;
+                var reachableEndpoint = (IPEndPoint)server.LocalAddress;
 
-                client = await RemoteConnection.CreateConnection(Role.Client, reachableEndpoint, 3,
+                var t2 = RemoteConnection.CreateConnection(Role.Client, reachableEndpoint, 3,
                     new PlayerHandler(serverEndpoint, 2, TimeSpan.FromSeconds(1), 3, clientProbe.Ref, Log, Sys.Scheduler));
+                await t2.WithCancellation(cts.Token);
+                client = t2.Result; // task will already be completed or cancelled
 
                 serverProbe.ExpectMsg("active");
                 var serverClientChannel = serverProbe.ExpectMsg<IChannel>();
@@ -81,7 +90,7 @@ namespace Akka.Remote.TestKit.Tests
           
         }
 
-        [Fact(Skip="This causes a deadlock sometimes")]
+        [Fact(Skip = "This causes a deadlock sometimes")]
         public async Task RemoteConnection_should_send_and_decode_Done_message()
         {
             var serverProbe = CreateTestProbe("server");
@@ -95,13 +104,19 @@ namespace Akka.Remote.TestKit.Tests
 
             try
             {
-                server = await RemoteConnection.CreateConnection(Role.Server, serverEndpoint, 3,
+                var cts = new CancellationTokenSource();
+                    cts.CancelAfter(TimeSpan.FromSeconds(10));
+                var t1 = RemoteConnection.CreateConnection(Role.Server, serverEndpoint, 3,
                     new TestConductorHandler(serverProbe.Ref));
+                await t1.WithCancellation(cts.Token);
+                server = t1.Result; // task will already be complete or cancelled
 
                 var reachableEndpoint = (IPEndPoint)server.LocalAddress;
 
-                client = await RemoteConnection.CreateConnection(Role.Client, reachableEndpoint, 3,
+                var t2 = RemoteConnection.CreateConnection(Role.Client, reachableEndpoint, 3,
                     new PlayerHandler(serverEndpoint, 2, TimeSpan.FromSeconds(1), 3, clientProbe.Ref, Log, Sys.Scheduler));
+                await t2.WithCancellation(cts.Token);
+                client = t2.Result; // task will already be completed or cancelled
 
                 serverProbe.ExpectMsg("active");
                 var serverClientChannel = serverProbe.ExpectMsg<IChannel>();
