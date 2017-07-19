@@ -10,6 +10,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
@@ -319,7 +320,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// </summary>
         /// <param name="snapshotType">TBD</param>
         /// <param name="command">TBD</param>
-        protected virtual void SetManifestParameter(Type snapshotType, DbCommand command) => AddParameter(command, "@Manifest", DbType.String, snapshotType.QualifiedTypeName());
+        protected virtual void SetManifestParameter(Type snapshotType, DbCommand command) => AddParameter(command, "@Manifest", DbType.String, snapshotType.TypeQualifiedName());
 
         /// <summary>
         /// TBD

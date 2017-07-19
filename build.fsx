@@ -15,10 +15,6 @@ open Fake.Git
 // Variables
 let configuration = "Release"
 let solution = "./src/Akka.sln"
-let versionSuffix = 
-    match (getBuildParamOrDefault "nugetprerelease" "") with
-    | "dev" -> "beta"
-    | _ -> ""
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
@@ -30,6 +26,12 @@ let outputNuGet = output @@ "nuget"
 let outputMultiNode = outputTests @@ "multinode"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
+
+let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
+let versionSuffix = 
+    match (getBuildParam "nugetprerelease") with
+    | "dev" -> "beta" + (if (not (buildNumber = "0")) then ("-" + buildNumber) else "")
+    | _ -> ""
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -59,12 +61,15 @@ Target "RestorePackages" (fun _ ->
                 AdditionalArgs = additionalArgs })
 )
 
-Target "Build" (fun _ ->
+Target "Build" (fun _ ->   
+    let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
+
     DotNetCli.Build
         (fun p -> 
             { p with
                 Project = solution
-                Configuration = configuration })
+                Configuration = configuration
+                AdditionalArgs = additionalArgs })
 )
 
 //--------------------------------------------------------------------------------
@@ -328,10 +333,14 @@ Target "DocFx" (fun _ ->
 )
 
 FinalTarget "KillCreatedProcesses" (fun _ ->
-    log "The following processes were started during FAKE step..."
-    startedProcesses |> Seq.iter (fun (pid, _) -> logf "%i, " pid)
-    log (Environment.NewLine + "Killing processes started by FAKE...")
+    log "Killing processes started by FAKE:"
+    startedProcesses |> Seq.iter (fun (pid, _) -> logfn "%i" pid)
     killAllCreatedProcesses()
+    log "Killing any remaining dotnet and xunit.console.exe processes:"
+    getProcessesByName "dotnet" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
+    killProcess "dotnet"
+    getProcessesByName "xunit.console" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
+    killProcess "xunit.console"
 )
 
 //--------------------------------------------------------------------------------
