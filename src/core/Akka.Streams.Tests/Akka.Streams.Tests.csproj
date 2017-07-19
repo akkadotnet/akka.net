@@ -4,6 +4,7 @@
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests</AssemblyName>
     <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>

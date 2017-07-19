@@ -8,6 +8,7 @@
     <TargetFrameworks>net45</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>

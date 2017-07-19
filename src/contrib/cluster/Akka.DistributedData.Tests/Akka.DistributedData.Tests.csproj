@@ -4,6 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.DistributedData.Tests</AssemblyTitle>
     <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
  
   <ItemGroup>

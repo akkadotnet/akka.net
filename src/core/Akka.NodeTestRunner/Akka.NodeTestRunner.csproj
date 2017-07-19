@@ -4,6 +4,7 @@
     <AssemblyTitle>Akka.NodeTestRunner</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
     <OutputType>Exe</OutputType>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>

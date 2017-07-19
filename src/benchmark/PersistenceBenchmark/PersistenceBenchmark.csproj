@@ -5,6 +5,7 @@
     <TargetFrameworks>net452</TargetFrameworks>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <Optimize>False</Optimize>
   </PropertyGroup>
 
   <ItemGroup>

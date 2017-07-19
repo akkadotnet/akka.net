@@ -4,6 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>
