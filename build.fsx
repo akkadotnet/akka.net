@@ -15,10 +15,6 @@ open Fake.Git
 // Variables
 let configuration = "Release"
 let solution = "./src/Akka.sln"
-let versionSuffix = 
-    match (getBuildParam "nugetprerelease") with
-    | "dev" -> "beta"
-    | _ -> ""
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
@@ -31,12 +27,11 @@ let outputMultiNode = outputTests @@ "multinode"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
 
-let assemblyVersion = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
-let version = 
+let versionSuffix = 
     match (getBuildParam "nugetprerelease") with
-    | "dev" -> assemblyVersion + "." + buildNumber
-    | _ -> assemblyVersion
+    | "dev" -> "beta" + (if (not (buildNumber = "0")) then ("-" + buildNumber) else "")
+    | _ -> ""
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -67,14 +62,14 @@ Target "RestorePackages" (fun _ ->
 )
 
 Target "Build" (fun _ ->   
-    if getBuildParam "nugetprerelease" = "dev" then
-        XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" version        
+    let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
 
     DotNetCli.Build
         (fun p -> 
             { p with
                 Project = solution
-                Configuration = configuration })
+                Configuration = configuration
+                AdditionalArgs = additionalArgs })
 )
 
 //--------------------------------------------------------------------------------
