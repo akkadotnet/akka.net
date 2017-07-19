@@ -5,7 +5,8 @@
     <AssemblyTitle>Akka.MultiNodeTestRunner.Shared.Tests</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-  </PropertyGroup>
+     <Optimize>False</Optimize>	
+ </PropertyGroup>
  
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj" />

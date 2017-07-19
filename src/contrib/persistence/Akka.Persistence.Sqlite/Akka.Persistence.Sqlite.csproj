@@ -8,6 +8,8 @@
     <TargetFrameworks>net451;netstandard1.6</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;sqlite</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.6' ">$(PackageTargetFallback);portable-net45+win8</PackageTargetFallback>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>

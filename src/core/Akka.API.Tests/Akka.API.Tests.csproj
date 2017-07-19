@@ -4,6 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.API.Tests</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>

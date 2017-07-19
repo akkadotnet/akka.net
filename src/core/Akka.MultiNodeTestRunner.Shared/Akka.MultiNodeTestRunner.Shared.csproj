@@ -5,6 +5,7 @@
     <TargetFrameworks>net452</TargetFrameworks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>

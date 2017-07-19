@@ -4,6 +4,7 @@
     <AssemblyTitle>Akka.Tests.Performance</AssemblyTitle>
     <TargetFrameworks>net452</TargetFrameworks>
     <ServerGarbageCollection>true</ServerGarbageCollection>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>

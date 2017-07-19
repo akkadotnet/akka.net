@@ -7,6 +7,7 @@
     <TargetFrameworks>net45</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);transport;helios</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>

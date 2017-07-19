@@ -2,6 +2,7 @@
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests</AssemblyName>
     <TargetFrameworks>net452</TargetFrameworks>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
  
   <ItemGroup>

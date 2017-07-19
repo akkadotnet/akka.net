@@ -8,6 +8,7 @@
     <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.1</NetStandardImplicitPackageVersion>
+    <Optimize>False</Optimize>	
   </PropertyGroup>
 
   <ItemGroup>
