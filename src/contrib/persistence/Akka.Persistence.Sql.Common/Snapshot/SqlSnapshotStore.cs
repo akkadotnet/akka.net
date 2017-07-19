@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
+using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
@@ -224,7 +225,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 persistenceId: metadata.PersistenceId,
                 sequenceNr: metadata.SequenceNr,
                 timestamp: metadata.Timestamp,
-                manifest: snapshotType.QualifiedTypeName(),
+                manifest: snapshotType.TypeQualifiedName(),
                 payload: binary);
         }
     }
