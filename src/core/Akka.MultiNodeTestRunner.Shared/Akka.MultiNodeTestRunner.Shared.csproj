@@ -12,6 +12,8 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+    <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
 

@@ -17,9 +17,13 @@ using Akka.Remote.TestKit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Akka.MultiNodeTestRunner
+namespace Akka.MultiNodeTestRunner.Shared
 {
-    internal class Discovery : MarshalByRefObject, IMessageSink, IDisposable
+#if CORECLR
+    public class Discovery : IMessageSink, IDisposable
+#else
+    public class Discovery : MarshalByRefObject, IMessageSink, IDisposable
+#endif
     {
         public Dictionary<string, List<NodeTest>> Tests { get; set; }
 
@@ -42,14 +46,15 @@ namespace Akka.MultiNodeTestRunner
             if (testCaseDiscoveryMessage != null)
             {
                 var testClass = testCaseDiscoveryMessage.TestClass.Class;
-
                 if (testClass.IsAbstract) return true;
-
+#if CORECLR
+                var specType = testCaseDiscoveryMessage.TestAssembly.Assembly.GetType(testClass.Name).ToRuntimeType();
+#else
                 var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
                 var specType = testAssembly.GetType(testClass.Name);
-
+#endif
                 var roles = RoleNames(specType);
-
+                
                 var details = roles.Select((r, i) => new NodeTest
                 {
                     Node = i + 1,
@@ -88,19 +93,34 @@ namespace Akka.MultiNodeTestRunner
         private ConstructorInfo FindConfigConstructor(Type configUser)
         {
             var baseConfigType = typeof(MultiNodeConfig);
+            
+#if CORECLR
+            var ctorWithConfig = configUser
+                .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.GetTypeInfo().IsSubclassOf(baseConfigType)));
+            return ctorWithConfig ?? FindConfigConstructor(configUser.GetTypeInfo().BaseType);
+#else
             var ctorWithConfig = configUser
                 .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                 .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.IsSubclassOf(baseConfigType)));
             return ctorWithConfig ?? FindConfigConstructor(configUser.BaseType);
+#endif
         }
 
         private object[] ConfigConstructorParamValues(Type configType)
         {
             var ctors = configType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var empty = ctors.FirstOrDefault(c => !c.GetParameters().Any());
+
+#if CORECLR
+            return empty != null
+                ? new object[0]
+                : ctors.First().GetParameters().Select(p => p.ParameterType.GetTypeInfo().IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
+#else
             return empty != null
                 ? new object[0]
                 : ctors.First().GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
+#endif
         }
 
         /// <inheritdoc/>
