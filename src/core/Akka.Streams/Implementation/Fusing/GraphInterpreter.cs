@@ -270,7 +270,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly bool IsDebug = false;
+        public const bool IsDebug = false;
 
         /// <summary>
         /// TBD
