@@ -165,7 +165,7 @@ namespace Akka.Actor
         protected ActorPath(Akka.Actor.Address address, string name) { }
         protected ActorPath(Akka.Actor.ActorPath parentPath, string name, long uid) { }
         public Akka.Actor.Address Address { get; }
-        public System.Collections.Generic.IReadOnlyList<string> Elements { get; }
+        public abstract System.Collections.Generic.IReadOnlyList<string> Elements { get; }
         public string Name { get; }
         public abstract Akka.Actor.ActorPath Parent { get; }
         public abstract Akka.Actor.ActorPath Root { get; }
