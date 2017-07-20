@@ -319,10 +319,6 @@ Target "Protobuf" <| fun _ ->
 // Documentation 
 //--------------------------------------------------------------------------------  
 Target "DocFx" (fun _ ->
-    let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
-    DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
-    DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
-
     let docsPath = "./docs"
 
     DocFx (fun p -> 
