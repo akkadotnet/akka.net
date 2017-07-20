@@ -45,14 +45,9 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        protected override UdpExt Udp
-        {
-            get { return _udp; }
-        }
-        protected override Socket Socket
-        {
-            get { return _socket; }
-        }
+        protected override UdpExt Udp => _udp;
+
+        protected override Socket Socket => _socket;
 
         public override void AroundPreStart()
         {

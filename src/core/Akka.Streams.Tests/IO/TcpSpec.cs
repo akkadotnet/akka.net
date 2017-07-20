@@ -29,8 +29,6 @@ namespace Akka.Streams.Tests.IO
     public class TcpSpec : TcpHelper
     {
         public TcpSpec(ITestOutputHelper helper) : base(@"
-            akka.loglevel = DEBUG
-            #akka.io.tcp.trace-logging = true
             akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
         }

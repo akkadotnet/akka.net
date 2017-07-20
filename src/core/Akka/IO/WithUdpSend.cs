@@ -24,7 +24,7 @@ namespace Akka.IO
         private IActorRef _pendingCommander;
         private bool _retriedSend;
 
-        private bool HasWritePending => _pendingSend != null;
+        private bool HasWritePending => !ReferenceEquals(_pendingSend, null);
         
         protected abstract Socket Socket { get; }
         protected abstract UdpExt Udp { get; }
