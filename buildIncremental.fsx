@@ -66,6 +66,7 @@ module IncrementalTests =
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
         log srcDir
+        log gitPath
         let localBranches = getLocalBranches srcDir
         !! (srcDir @@ ".git/*") |> Seq.iter log
         log "Local branches..."
