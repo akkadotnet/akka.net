@@ -298,6 +298,7 @@ namespace Akka.Actor
         protected bool Equals(Akka.Actor.ActorSelection other) { }
         public override int GetHashCode() { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> ResolveOne(System.TimeSpan timeout) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> ResolveOne(System.TimeSpan timeout, System.Threading.CancellationToken ct) { }
         public void Tell(object message, Akka.Actor.IActorRef sender = null) { }
         public override string ToString() { }
     }
