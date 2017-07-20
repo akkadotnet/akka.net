@@ -244,116 +244,87 @@ namespace Akka.Streams.Implementation.Fusing
 
             if (_waitingForShutdown)
             {
-                if (e is ActorGraphInterpreter.ExposedPublisher)
+                switch (e)
                 {
-                    var exposedPublisher = (ActorGraphInterpreter.ExposedPublisher) e;
-                    _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
-                    _publishersPending--;
-                    if (CanShutdown)
-                        _interpreterCompleted = true;
-                }
-                else if (e is ActorGraphInterpreter.OnSubscribe)
-                {
-                    var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
-                    ReactiveStreamsCompliance.TryCancel(onSubscribe.Subscription);
-                    _subscribersPending--;
-                    if (CanShutdown)
-                        _interpreterCompleted = true;
-                }
-                else if (e is ActorGraphInterpreter.Abort)
-                {
-                    TryAbort(new TimeoutException(
-                        $"Streaming actor has been already stopped processing (normally), but not all of its inputs or outputs have been subscribed in [{_settings.SubscriptionTimeoutSettings.Timeout}]. Aborting actor now."));
+                    case ActorGraphInterpreter.ExposedPublisher exposedPublisher:
+                        _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
+                        _publishersPending--;
+                        if (CanShutdown)
+                            _interpreterCompleted = true;
+                        break;
+
+                    case ActorGraphInterpreter.OnSubscribe onSubscribe:
+                        ReactiveStreamsCompliance.TryCancel(onSubscribe.Subscription);
+                        _subscribersPending--;
+                        if (CanShutdown)
+                            _interpreterCompleted = true;
+                        break;
+
+                    case ActorGraphInterpreter.Abort _:
+                        TryAbort(new TimeoutException(
+                            $"Streaming actor has been already stopped processing (normally), but not all of its inputs or outputs have been subscribed in [{_settings.SubscriptionTimeoutSettings.Timeout}]. Aborting actor now."));
+                        break;
                 }
                 return eventLimit;
             }
 
             // Cases that are most likely on the hot path, in decreasing order of frequency
-            if (e is ActorGraphInterpreter.OnNext)
+            switch (e)
             {
-                var onNext = (ActorGraphInterpreter.OnNext) e;
-                if (IsDebug)
-                    Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
-                _inputs[onNext.Id].OnNext(onNext.Event);
-                return RunBatch(eventLimit);
-            }
-
-            if (e is ActorGraphInterpreter.RequestMore)
-            {
-                var requestMore = (ActorGraphInterpreter.RequestMore) e;
-                if (IsDebug)
-                    Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
-                _outputs[requestMore.Id].RequestMore(requestMore.Demand);
-                return RunBatch(eventLimit);
-            }
-
-            if (e is ActorGraphInterpreter.Resume)
-            {
-                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
-                if (Interpreter.IsSuspended)
+                case ActorGraphInterpreter.OnNext onNext:
+                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
+                    _inputs[onNext.Id].OnNext(onNext.Event);
                     return RunBatch(eventLimit);
-                return eventLimit;
-            }
 
-            if (e is ActorGraphInterpreter.AsyncInput)
-            {
-                var asyncInput = (ActorGraphInterpreter.AsyncInput) e;
-                Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
-                if (eventLimit == 1 && _interpreter.IsSuspended)
-                {
-                    SendResume(true);
-                    return 0;
-                }
-                return RunBatch(eventLimit - 1);
-            }
+                case ActorGraphInterpreter.RequestMore requestMore:
+                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
+                    _outputs[requestMore.Id].RequestMore(requestMore.Demand);
+                    return RunBatch(eventLimit);
 
-            // Initialization and completion messages
-            if (e is ActorGraphInterpreter.OnError)
-            {
-                var onError = (ActorGraphInterpreter.OnError) e;
-                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
-                _inputs[onError.Id].OnError(onError.Cause);
-                return RunBatch(eventLimit);
-            }
+                case ActorGraphInterpreter.Resume _:
+                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
+                    if (Interpreter.IsSuspended)
+                        return RunBatch(eventLimit);
+                    return eventLimit;
 
-            if (e is ActorGraphInterpreter.OnComplete)
-            {
-                var onComplete = (ActorGraphInterpreter.OnComplete) e;
-                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnComplete id={onComplete.Id}");
-                _inputs[onComplete.Id].OnComplete();
-                return RunBatch(eventLimit);
-            }
+                case ActorGraphInterpreter.AsyncInput asyncInput:
+                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
+                    if (eventLimit == 1 && _interpreter.IsSuspended)
+                    {
+                        SendResume(true);
+                        return 0;
+                    }
+                    return RunBatch(eventLimit - 1);
 
-            if (e is ActorGraphInterpreter.OnSubscribe)
-            {
-                var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
-                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnSubscribe id={onSubscribe.Id}");
-                _subscribersPending--;
-                _inputs[onSubscribe.Id].OnSubscribe(onSubscribe.Subscription);
-                return RunBatch(eventLimit);
-            }
+                case ActorGraphInterpreter.OnError onError:
+                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
+                    _inputs[onError.Id].OnError(onError.Cause);
+                    return RunBatch(eventLimit);
 
-            if (e is ActorGraphInterpreter.Cancel)
-            {
-                var cancel = (ActorGraphInterpreter.Cancel) e;
-                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Cancel id={cancel.Id}");
-                _outputs[cancel.Id].Cancel();
-                return RunBatch(eventLimit);
-            }
+                case ActorGraphInterpreter.OnComplete onComplete:
+                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnComplete id={onComplete.Id}");
+                    _inputs[onComplete.Id].OnComplete();
+                    return RunBatch(eventLimit);
 
-            if (e is ActorGraphInterpreter.SubscribePending)
-            {
-                var subscribePending = (ActorGraphInterpreter.SubscribePending) e;
-                _outputs[subscribePending.Id].SubscribePending();
-                return eventLimit;
-            }
+                case ActorGraphInterpreter.OnSubscribe onSubscribe:
+                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnSubscribe id={onSubscribe.Id}");
+                    _subscribersPending--;
+                    _inputs[onSubscribe.Id].OnSubscribe(onSubscribe.Subscription);
+                    return RunBatch(eventLimit);
 
-            if (e is ActorGraphInterpreter.ExposedPublisher)
-            {
-                var exposedPublisher = (ActorGraphInterpreter.ExposedPublisher) e;
-                _publishersPending--;
-                _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
-                return eventLimit;
+                case ActorGraphInterpreter.Cancel cancel:
+                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Cancel id={cancel.Id}");
+                    _outputs[cancel.Id].Cancel();
+                    return RunBatch(eventLimit);
+
+                case ActorGraphInterpreter.SubscribePending subscribePending:
+                    _outputs[subscribePending.Id].SubscribePending();
+                    return eventLimit;
+
+                case ActorGraphInterpreter.ExposedPublisher exposedPublisher:
+                    _publishersPending--;
+                    _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
+                    return eventLimit;
             }
 
             return eventLimit;
@@ -1359,10 +1330,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="shell">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(GraphInterpreterShell shell)
-        {
-            return Actor.Props.Create(() => new ActorGraphInterpreter(shell)).WithDeploy(Deploy.Local);
-        }
+        public static Props Props(GraphInterpreterShell shell) => Actor.Props.Create(() => new ActorGraphInterpreter(shell)).WithDeploy(Deploy.Local);
 
         private ISet<GraphInterpreterShell> _activeInterpreters = new HashSet<GraphInterpreterShell>();
         private readonly Queue<GraphInterpreterShell> _newShells = new Queue<GraphInterpreterShell>();
