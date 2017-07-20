@@ -65,16 +65,12 @@ module IncrementalTests =
 
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
-        log srcDir
-        log gitPath
         let localBranches = getLocalBranches srcDir
         !! (srcDir @@ ".git/*") |> Seq.iter log
         log "Local branches..."
         localBranches |> Seq.iter log
         if (not (localBranches |> Seq.exists (fun b -> b = akkaDefaultBranch)) || isMono) then
             log "Default branch information not available... fetching"
-            directRunGitCommandAndFail srcDir ("pull")
-            directRunGitCommandAndFail srcDir ("fsck")
             directRunGitCommandAndFail srcDir (sprintf "fetch origin %s:%s" akkaDefaultBranch akkaDefaultBranch)
         getBranchesFileDiff srcDir akkaDefaultBranch
         |> Seq.map (fun (_, fi) -> FullName fi)
