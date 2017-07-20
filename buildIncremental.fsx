@@ -70,6 +70,7 @@ module IncrementalTests =
         localBranches |> Seq.iter log
         if (not (localBranches |> Seq.exists (fun b -> b = akkaDefaultBranch)) || isMono) then
             log "default branch information not available... fetching"
+            directRunGitCommandAndFail srcDir ("pull")
             directRunGitCommandAndFail srcDir ("fsck")
             directRunGitCommandAndFail srcDir (sprintf "fetch origin %s:%s" akkaDefaultBranch akkaDefaultBranch)
         getBranchesFileDiff srcDir akkaDefaultBranch
