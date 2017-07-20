@@ -614,23 +614,20 @@ namespace Akka.Actor
         {
             get
             {
-                IEnumerable<string> Rec(ActorPath p, Stack<string> acc)
+                ActorPath p = this;
+                var acc = new Stack<string>();
+                while (true)
                 {
-                    while (true)
+                    switch (p)
                     {
-                        switch (p)
-                        {
-                            case RootActorPath r:
-                                return acc;
-                            default:
-                                acc.Push(p.Name);
-                                p = p.Parent;
-                                continue;
-                        }
+                        case RootActorPath r:
+                            return acc.ToList();
+                        default:
+                            acc.Push(p.Name);
+                            p = p.Parent;
+                            continue;
                     }
                 }
-
-                return Rec(this, new Stack<string>()).ToList();
             }
         }
 
