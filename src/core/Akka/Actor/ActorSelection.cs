@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -116,14 +117,34 @@ namespace Akka.Actor
         /// <exception cref="ActorNotFoundException">
         /// This exception is thrown if no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
         /// </exception>
-        /// <returns>TBD</returns>
-        public Task<IActorRef> ResolveOne(TimeSpan timeout) => InnerResolveOne(timeout);
+        /// <returns>A Task that will be completed with the <see cref="IActorRef"/>, if the actor was found. Otherwise it will be failed with an <see cref="ActorNotFoundException"/>.</returns>
+        public Task<IActorRef> ResolveOne(TimeSpan timeout) => InnerResolveOne(timeout, CancellationToken.None);
 
-        private async Task<IActorRef> InnerResolveOne(TimeSpan timeout)
+        /// <summary>
+        /// Resolves the <see cref="IActorRef"/> matching this selection.
+        /// The result is returned as a Task that is completed with the <see cref="IActorRef"/>
+        /// if such an actor exists. It is completed with failure <see cref="ActorNotFoundException"/> if
+        /// no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
+        /// 
+        /// Under the hood it talks to the actor to verify its existence and acquire its <see cref="IActorRef"/>
+        /// </summary>
+        /// <param name="timeout">
+        /// The amount of time to wait while resolving the selection before terminating the operation and generating an error.
+        /// </param>
+        /// <param name="ct">
+        /// The cancellation token that can be used to cancel the operation.
+        /// </param>
+        /// <exception cref="ActorNotFoundException">
+        /// This exception is thrown if no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
+        /// </exception>
+        /// <returns>A Task that will be completed with the <see cref="IActorRef"/>, if the actor was found. Otherwise it will be failed with an <see cref="ActorNotFoundException"/>.</returns>
+        public Task<IActorRef> ResolveOne(TimeSpan timeout, CancellationToken ct) => InnerResolveOne(timeout, ct);
+
+        private async Task<IActorRef> InnerResolveOne(TimeSpan timeout, CancellationToken ct)
         {
             try
             {
-                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout).ConfigureAwait(false);
+                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout, ct).ConfigureAwait(false);
                 if(identity.Subject == null)
                     throw new ActorNotFoundException("subject was null");
 
