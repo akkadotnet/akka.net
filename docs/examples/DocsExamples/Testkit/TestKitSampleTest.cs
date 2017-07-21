@@ -25,7 +25,7 @@ namespace DocsExamples.Testkit
         }
     }
 
-    class TestKitSampleTest : TestKit
+    public class TestKitSampleTest : TestKit
     {
 
         [Fact]

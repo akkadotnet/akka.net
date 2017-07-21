@@ -155,5 +155,41 @@ The `run` method must return the auto-pilot for the next message. There are mult
 You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.KeepRunning` to keep using the current `AutoPilot`. Obviously you can also chain a new `AutoPilot` instance to switch behaviors.
 
 ###Caution about Timing Assertions
-The behavior of `Within` blocks when using test probes might be perceived as counter-intuitive: you need to remember that the nicely scoped deadline as described **above** is local to each probe. Hence, probes to not react to each other's deadlines or to the deadline set in an enclosing `TestKit` instance.
+The behavior of `Within` blocks when using test probes might be perceived as counter-intuitive: you need to remember that the nicely scoped deadline as described **above** is local to each probe. Hence, probes do not react to each other's deadlines or to the deadline set in an enclosing `TestKit` instance.
+
+###Testing parent-child relationships
+
+The parent of an actor is always the actor that created it. At times this leads to a coupling between the two that may not be straightforward to test. There are several approaches to improve testability of a child actor that needs to refer to its parent:
+
+1. When creating a child, pass an explicit reference to its parent
+2. Create the child with a `TestProbe` as parent
+3. Create a fabricated parent when testing
+
+Conversely, a parent's binding to its child can be lessened as follows:
+
+1. When creating a parent, tell the parent how to create its child.
+
+For example, the structure of the code you want to test may follow this pattern:
+
+[!code-csharp[ParentStructure](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=8-36)]
+
+####Introduce child to its parent
+The first option is to avoid use of the `context.parent` function and create a child with a custom parent by passing an explicit reference to its parent instead.
+
+[!code-csharp[DependentChild](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=39-52)]
+
+####Create the child using TestKit
+The `TestKit` class can in fact create actors that will run with the test probe as parent. This will cause any messages the child actor sends to `Context.Parent` to end up in the test probe.
+
+//TODO
+
+####Using a fabricated parent
+If you prefer to avoid modifying the parent or child constructor you can create a fabricated parent in your test. This, however, does not enable you to test the parent actor in isolation.
+
+[!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=58-80)]
+
+####Externalize child making from the parent
+Alternatively, you can tell the parent how to create its child. There are two ways to do this: by giving it a `Props` object or by giving it a function which takes care of creating the child actor:
+
+//TODO
 
