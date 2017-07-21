@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.13
+VisualStudioVersion = 15.0.26430.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
@@ -170,6 +170,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Tests.Performance", "core\Akka.Cluster.Tests.Performance\Akka.Cluster.Tests.Performance.csproj", "{94C10096-C33E-404E-B0FB-F8535512A952}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DistributedData.LightningDB", "contrib\cluster\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj", "{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnBenchmark", "benchmark\SpawnBenchmark\SpawnBenchmark.csproj", "{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -674,6 +676,18 @@ Global
 		{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1}.Release|x64.Build.0 = Release|Any CPU
 		{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1}.Release|x86.ActiveCfg = Release|Any CPU
 		{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1}.Release|x86.Build.0 = Release|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Debug|x64.Build.0 = Debug|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Debug|x86.Build.0 = Debug|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Release|x64.ActiveCfg = Release|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Release|x64.Build.0 = Release|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Release|x86.ActiveCfg = Release|Any CPU
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -744,5 +758,6 @@ Global
 		{E7A836C1-42D3-4ADC-81C6-C6C5398CC740} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
 		{94C10096-C33E-404E-B0FB-F8535512A952} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
+		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D} = {73108242-625A-4D7B-AA09-63375DBAE464}
 	EndGlobalSection
 EndGlobal
