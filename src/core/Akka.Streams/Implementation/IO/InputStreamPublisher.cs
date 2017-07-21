@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -125,7 +125,7 @@ namespace Akka.Streams.Implementation.IO
                 {
                     _readBytesTotal += readBytes;
                     // emit immediately, as this is the only chance to do it before we might block again
-                    OnNext(ByteString.Create(_bytes, 0, readBytes));
+                    OnNext(ByteString.CopyFrom(_bytes, 0, readBytes));
                 }
             }
             catch (Exception ex)
@@ -135,4 +135,3 @@ namespace Akka.Streams.Implementation.IO
         }
     }
 }
-#endif

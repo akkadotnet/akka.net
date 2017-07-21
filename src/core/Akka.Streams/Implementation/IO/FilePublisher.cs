@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -176,7 +176,7 @@ namespace Akka.Streams.Implementation.IO
                     }
 
                     _readBytesTotal += readBytes;
-                    var newChunks = chunks.Add(ByteString.Create(_buffer, 0, readBytes));
+                    var newChunks = chunks.Add(ByteString.CopyFrom(_buffer, 0, readBytes));
                     return ReadAhead(maxChunks, newChunks);
                 }
                 catch (Exception ex)
@@ -210,5 +210,3 @@ namespace Akka.Streams.Implementation.IO
         }
     }
 }
-
-#endif
