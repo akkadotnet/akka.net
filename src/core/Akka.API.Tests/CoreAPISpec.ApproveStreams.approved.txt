@@ -3350,7 +3350,7 @@ namespace Akka.Streams.Implementation.Fusing
         public const int InClosed = 16;
         public const int InFailed = 64;
         public const int InReady = 1;
-        public static readonly bool IsDebug;
+        public const bool IsDebug = false;
         public const int KeepGoingFlag = 67108864;
         public const int KeepGoingMask = 67108863;
         public readonly Akka.Event.ILoggingAdapter Log;

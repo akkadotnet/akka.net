@@ -25,17 +25,18 @@ module IncrementalTests =
         if (csproj.Contains(name) && isSupported) then Some(name)
         else None
 
+    let IsRunnable testProject =
+        match testProject with
+        | IsRunnable "Akka.API.Tests.csproj" Linux proj -> false
+        | IsRunnable "Akka.MultiNodeTestRunner.Shared.Tests.csproj" All proj -> false
+        | _ -> true
+
     let getUnitTestProjects() =
-        let isRunnable testProject =
-            match testProject with
-            | IsRunnable "Akka.API.Tests.csproj" Linux proj -> false
-            | IsRunnable "Akka.MultiNodeTestRunner.Shared.Tests.csproj" All proj -> false
-            | _ -> true
         let allTestProjects = !! "./**/core/**/*.Tests.csproj"
                               ++ "./**/contrib/**/*.Tests.csproj"
                               -- "./**/serializers/**/*Wire*.csproj"
         allTestProjects 
-        |> Seq.filter isRunnable
+        |> Seq.filter IsRunnable
 
     let isBuildScript (file:string) =
         match file with
@@ -181,7 +182,7 @@ module IncrementalTests =
         logfn "Searching for incremental tests to run in %s test mode..." (testMode.ToString())
         let updatedFiles = getUpdatedFiles()
         log "The following files have been updated since forking from v1.3 branch..."
-        updatedFiles |> Seq.iter log
+        updatedFiles |> Seq.iter (fun x -> logfn "\t%s" x)
         log "The following test projects will be run..."
         if (updatedFiles |> Seq.exists (fun p -> isBuildScript p)) then
             match testMode with
@@ -196,6 +197,7 @@ module IncrementalTests =
             |> Seq.concat
             |> Seq.map (fun p -> p.parentProject.projectPath)
             |> Seq.distinct
+            |> Seq.filter IsRunnable
     
     let getIncrementalUnitTests() =
         getIncrementalTestProjects2 Unit
