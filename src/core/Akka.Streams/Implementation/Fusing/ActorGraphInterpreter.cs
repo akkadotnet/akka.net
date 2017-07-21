@@ -1484,42 +1484,40 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is IBoundaryEvent)
+            switch (message)
             {
-                _currentLimit = _eventLimit;
-                ProcessEvent((IBoundaryEvent)message);
-                if(_shortCircuitBuffer != null)
-                    ShortCircuitBatch();
+                case IBoundaryEvent _:
+                    _currentLimit = _eventLimit;
+                    ProcessEvent((IBoundaryEvent)message);
+                    if (_shortCircuitBuffer != null)
+                        ShortCircuitBatch();
+                    return true;
+                case ShellRegistered _:
+                    _currentLimit = _eventLimit;
+                    if (_shortCircuitBuffer != null)
+                        ShortCircuitBatch();
+                    return true;
+                case StreamSupervisor.PrintDebugDump print:
+                    var builder = new StringBuilder($"activeShells (actor: {Self}):\n");
+
+                    foreach (var shell in _activeInterpreters)
+                    {
+                        builder.Append("  " + shell.ToString().Replace("\n", "\n  "));
+                        builder.Append(shell.Interpreter);
+                    }
+
+                    builder.AppendLine("NewShells:\n");
+
+                    foreach (var shell in _newShells)
+                    {
+                        builder.Append("  " + shell.ToString().Replace("\n", "\n  "));
+                        builder.Append(shell.Interpreter);
+                    }
+
+                    Console.WriteLine(builder);
+                    return true;
+                default: return false;
             }
-            else if (message is ShellRegistered)
-            {
-                _currentLimit = _eventLimit;
-                if (_shortCircuitBuffer != null)
-                    ShortCircuitBatch();
-            }
-            else if (message is StreamSupervisor.PrintDebugDump)
-            {
-                var builder = new StringBuilder($"activeShells (actor: {Self}):\n");
-
-                _activeInterpreters.ForEach(shell =>
-                {
-                    builder.Append("  " + shell.ToString().Replace("\n", "\n  "));
-                    builder.Append(shell.Interpreter);
-                });
-
-                builder.AppendLine("NewShells:\n");
-                _newShells.ForEach(shell =>
-                {
-                    builder.Append("  " + shell.ToString().Replace("\n", "\n  "));
-                    builder.Append(shell.Interpreter);
-                });
-
-                Console.WriteLine(builder);
-            }
-            else
-                return false;
-
-            return true;
         }
 
         /// <summary>

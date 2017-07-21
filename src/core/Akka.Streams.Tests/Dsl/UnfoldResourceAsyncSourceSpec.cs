@@ -238,7 +238,7 @@ namespace Akka.Streams.Tests.Dsl
                     var s = reader.Read(buffer, 0, chunkSize);
 
                     promise.SetResult(s > 0
-                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Take(s)
+                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Slice(0, s)
                         : Option<ByteString>.None);
                     return promise.Task;
 
@@ -266,7 +266,7 @@ namespace Akka.Streams.Tests.Dsl
                 Enumerable.Range(0, 122).ForEach(i =>
                 {
                     sub.Request(1);
-                    c.ExpectNext().DecodeString().Should().Be(nextChunk());
+                    c.ExpectNext().ToString().Should().Be(nextChunk());
                 });
                 sub.Request(1);
                 c.ExpectComplete();

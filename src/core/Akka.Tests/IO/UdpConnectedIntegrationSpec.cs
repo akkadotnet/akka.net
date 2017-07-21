@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Linq;
 using System.Net;
@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.IO
 {
@@ -19,7 +20,7 @@ namespace Akka.Tests.IO
     {
         private readonly IPEndPoint[] _addresses;
 
-        public UdpConnectedIntegrationSpec()
+        public UdpConnectedIntegrationSpec(ITestOutputHelper output)
             : base(@"
                     akka.io.udp-connected.nr-of-selectors = 1
                     akka.io.udp-connected.direct-buffer-pool-limit = 100
@@ -27,8 +28,8 @@ namespace Akka.Tests.IO
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100
                     akka.io.udp.direct-buffer-size = 1024
-                    akka.loglevel = INFO
-                    akka.actor.serialize-creators = on")
+                    akka.io.udp.trace-logging = true
+                    akka.loglevel = DEBUG", output)
         {
             _addresses = TestUtils.TemporaryServerAddresses(3, udp: true).ToArray();
         }
@@ -37,7 +38,7 @@ namespace Akka.Tests.IO
         {
             var commander = CreateTestProbe();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(handler, address));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Equals(address)); 
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(address)); 
             return commander.Sender;
         }
 
@@ -91,7 +92,7 @@ namespace Akka.Tests.IO
                 if (received != null)
                 {
                     received.Data.ShouldBe(data1);
-                    received.Sender.ShouldBe(clientAddress);
+                    Assert.True(received.Sender.Is(clientAddress));
                     return received.Sender;
                 }
                 throw new Exception();
@@ -103,4 +104,3 @@ namespace Akka.Tests.IO
         }
     }
 }
-#endif

@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Akka.Actor;
@@ -863,17 +864,19 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessPush(Connection connection)
         {
-            if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {connection.Slot} ({connection.InHandler}) [{InLogicName(connection)}]");
+            //if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {connection.Slot} ({connection.InHandler}) [{InLogicName(connection)}]");
             ActiveStage = connection.InOwner;
             connection.PortState ^= PushEndFlip;
             connection.InHandler.OnPush();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessPull(Connection connection)
         {
-            if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)}, ({connection.OutHandler}) [{OutLogicName(connection)}]");
+            //if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)}, ({connection.OutHandler}) [{OutLogicName(connection)}]");
             ActiveStage = connection.OutOwner;
             connection.PortState ^= PullEndFlip;
             connection.OutHandler.OnPull();
