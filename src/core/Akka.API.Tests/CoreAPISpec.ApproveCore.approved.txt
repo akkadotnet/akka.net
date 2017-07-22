@@ -298,6 +298,7 @@ namespace Akka.Actor
         protected bool Equals(Akka.Actor.ActorSelection other) { }
         public override int GetHashCode() { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> ResolveOne(System.TimeSpan timeout) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> ResolveOne(System.TimeSpan timeout, System.Threading.CancellationToken ct) { }
         public void Tell(object message, Akka.Actor.IActorRef sender = null) { }
         public override string ToString() { }
     }
@@ -2998,108 +2999,73 @@ namespace Akka.Event
         public override Akka.Event.LogLevel LogLevel() { }
     }
 }
+namespace Akka.IO.Buffers
+{
+    public class BufferPoolAllocationException : Akka.Actor.AkkaException
+    {
+        public BufferPoolAllocationException(string message) { }
+    }
+    public interface IBufferPool
+    {
+        void Release(System.ArraySegment<byte> buf);
+        void Release(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buf);
+        System.ArraySegment<byte> Rent();
+        System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> Rent(int minimumSize);
+    }
+}
 namespace Akka.IO
 {
-    public class ByteBuffer
-    {
-        public ByteBuffer(byte[] array) { }
-        public ByteBuffer(byte[] array, int offset, int length) { }
-        public bool HasRemaining { get; }
-        public int Remaining { get; }
-        public static Akka.IO.ByteBuffer Allocate(int capacity) { }
-        public byte[] Array() { }
-        public void Clear() { }
-        public void Flip() { }
-        public void Get(byte[] ar, int offset, int length) { }
-        public void Get(byte[] ar) { }
-        public void Limit(int maxBufferSize) { }
-        public void Order(Akka.IO.ByteOrder byteOrder) { }
-        public void Put(byte[] src) { }
-        public void Put(byte[] array, int from, int copyLength) { }
-        public void Put(Akka.IO.ByteBuffer src, int length) { }
-        public static Akka.IO.ByteBuffer Wrap(byte[] array, int start, int len) { }
-        public static Akka.IO.ByteBuffer Wrap(byte[] array) { }
-    }
     public enum ByteOrder
     {
         BigEndian = 0,
         LittleEndian = 1,
     }
-    public abstract class ByteString : System.Collections.Generic.IEnumerable<byte>, System.Collections.Generic.IReadOnlyCollection<byte>, System.Collections.Generic.IReadOnlyList<byte>, System.Collections.IEnumerable, System.IEquatable<Akka.IO.ByteString>
+    [System.Diagnostics.DebuggerDisplayAttribute("(Count = {_count}, Buffers = {_buffers})")]
+    public sealed class ByteString : System.Collections.Generic.IEnumerable<byte>, System.Collections.IEnumerable, System.IEquatable<Akka.IO.ByteString>
     {
-        public static readonly Akka.IO.ByteString Empty;
-        protected ByteString() { }
-        public abstract int Count { get; }
-        public byte Head { get; }
-        public virtual bool IsEmpty { get; }
-        public abstract byte this[int index] { get; }
-        public byte Last { get; }
-        public bool NonEmpty { get; }
-        public abstract Akka.IO.ByteBuffer AsByteBuffer();
-        public abstract Akka.IO.CompactByteString Compact();
-        public abstract Akka.IO.ByteString Concat(Akka.IO.ByteString that);
-        public int CopyToBuffer(Akka.IO.ByteBuffer buffer) { }
-        public static Akka.IO.ByteString Create(Akka.IO.ByteBuffer buffer) { }
-        public static Akka.IO.ByteString Create(byte[] buffer, int offset, int length) { }
-        public static Akka.IO.ByteString Create(byte[] buffer) { }
+        public int Count { get; }
+        public static Akka.IO.ByteString Empty { get; }
+        public bool IsCompact { get; }
+        public bool IsEmpty { get; }
+        public byte this[int index] { get; }
+        public Akka.IO.ByteString Compact() { }
+        public Akka.IO.ByteString Concat(Akka.IO.ByteString other) { }
+        public static Akka.IO.ByteString CopyFrom(byte[] array) { }
+        public static Akka.IO.ByteString CopyFrom(System.ArraySegment<byte> buffer) { }
+        public static Akka.IO.ByteString CopyFrom(byte[] array, int offset, int count) { }
+        public static Akka.IO.ByteString CopyFrom(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
+        public int CopyTo(byte[] buffer, int index, int count) { }
+        [System.ObsoleteAttribute("Use ByteString.CopyFrom instead if you want to copy byte array or ByteString.From" +
+            "Bytes otherwise.")]
+        public static Akka.IO.ByteString Create(byte[] array) { }
+        [System.ObsoleteAttribute("Use ToString() method instead.")]
         public string DecodeString() { }
-        public abstract string DecodeString(System.Text.Encoding charset);
+        [System.ObsoleteAttribute("Use ToString(Encoding) method instead.")]
+        public string DecodeString(System.Text.Encoding encoding) { }
+        [System.ObsoleteAttribute("Use Slice(n) method instead.")]
         public Akka.IO.ByteString Drop(int n) { }
-        public Akka.IO.ByteString DropRight(int n) { }
-        public Akka.IO.ByteString DropWhile(System.Func<byte, bool> p) { }
-        public bool Equals(Akka.IO.ByteString other) { }
         public override bool Equals(object obj) { }
-        public Akka.IO.ByteString FromArray(byte[] array) { }
-        public Akka.IO.ByteString FromArray(byte[] array, int offset, int length) { }
-        public static Akka.IO.ByteString FromByteBuffer(Akka.IO.ByteBuffer buffer) { }
+        public bool Equals(Akka.IO.ByteString other) { }
+        public static Akka.IO.ByteString FromBytes(byte[] array) { }
+        public static Akka.IO.ByteString FromBytes(System.ArraySegment<byte> buffer) { }
+        public static Akka.IO.ByteString FromBytes(byte[] array, int offset, int count) { }
+        public static Akka.IO.ByteString FromBytes(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
         public static Akka.IO.ByteString FromString(string str) { }
         public static Akka.IO.ByteString FromString(string str, System.Text.Encoding encoding) { }
-        public virtual System.Collections.Generic.IEnumerator<byte> GetEnumerator() { }
-        public int IndexOf(byte elem) { }
-        public int IndexWhere(System.Func<byte, bool> p) { }
-        public Akka.IO.ByteString Init() { }
-        public abstract bool IsCompact();
-        public abstract Akka.Util.ByteIterator Iterator();
-        protected virtual Akka.IO.ByteStringBuilder newBuilder() { }
-        public static Akka.IO.ByteStringBuilder NewBuilder() { }
-        public virtual Akka.IO.ByteString Slice(int from, int until) { }
-        public System.Tuple<Akka.IO.ByteString, Akka.IO.ByteString> Span(System.Func<byte, bool> p) { }
-        public System.Tuple<Akka.IO.ByteString, Akka.IO.ByteString> SplitAt(int n) { }
-        public Akka.IO.ByteString Tail() { }
+        public System.Collections.Generic.IEnumerator<byte> GetEnumerator() { }
+        public override int GetHashCode() { }
+        public bool HasSubstring(Akka.IO.ByteString other, int index) { }
+        public int IndexOf(byte b) { }
+        public int IndexOf(byte b, int from) { }
+        public Akka.IO.ByteString Slice(int index) { }
+        public Akka.IO.ByteString Slice(int index, int count) { }
+        [System.ObsoleteAttribute("Use Slice(0, n) method instead.")]
         public Akka.IO.ByteString Take(int n) { }
-        public Akka.IO.ByteString TakeRight(int n) { }
-        public Akka.IO.ByteString TakeWhile(System.Func<byte, bool> p) { }
         public byte[] ToArray() { }
-    }
-    public class ByteStringBuilder
-    {
-        public ByteStringBuilder() { }
-        public int Length { get; }
-        public Akka.IO.ByteStringBuilder Append(System.Collections.Generic.IEnumerable<byte> xs) { }
-        protected System.Func<System.Action<byte[], int>, Akka.IO.ByteStringBuilder> FillArray(int len) { }
-        protected Akka.IO.ByteStringBuilder FillByteBuffer(int len, Akka.IO.ByteOrder byteOrder, System.Action<Akka.IO.ByteBuffer> fill) { }
-        public Akka.IO.ByteStringBuilder PutByte(byte x) { }
-        public Akka.IO.ByteStringBuilder PutBytes(byte[] array) { }
-        public Akka.IO.ByteStringBuilder PutBytes(byte[] array, int start, int len) { }
-        public Akka.IO.ByteStringBuilder PutInt(int x, Akka.IO.ByteOrder byteOrder) { }
-        public Akka.IO.ByteStringBuilder PutShort(int x, Akka.IO.ByteOrder byteOrder) { }
-        public Akka.IO.ByteString Result() { }
-        public void SizeHint(int len) { }
-    }
-    public abstract class CompactByteString : Akka.IO.ByteString
-    {
-        protected CompactByteString() { }
-        public override Akka.IO.CompactByteString Compact() { }
-        public new static Akka.IO.ByteString FromArray(byte[] array, int offset, int length) { }
-        public static Akka.IO.CompactByteString FromString(string str, System.Text.Encoding encoding) { }
-        public override bool IsCompact() { }
-    }
-    public class DatagramChannel : Akka.IO.SocketChannel
-    {
-        public override bool IsOpen() { }
-        public static Akka.IO.DatagramChannel Open() { }
-        public System.Net.EndPoint Receive(Akka.IO.ByteBuffer buffer) { }
-        public int Send(Akka.IO.ByteBuffer buffer, System.Net.EndPoint target) { }
+        public override string ToString() { }
+        public string ToString(System.Text.Encoding encoding) { }
+        public void WriteTo(System.IO.Stream stream) { }
+        public async System.Threading.Tasks.Task WriteToAsync(System.IO.Stream stream) { }
     }
     public class Dns : Akka.Actor.ExtensionIdProvider<Akka.IO.DnsExt>
     {
@@ -3151,11 +3117,6 @@ namespace Akka.IO
             public Akka.Configuration.Config ResolverConfig { get; }
         }
     }
-    public interface IBufferPool
-    {
-        Akka.IO.ByteBuffer Acquire();
-        void Release(Akka.IO.ByteBuffer buf);
-    }
     public interface IDnsProvider
     {
         System.Type ActorClass { get; }
@@ -3176,7 +3137,7 @@ namespace Akka.IO
         public class DatagramChannelCreator : Akka.IO.Inet.SocketOption
         {
             public DatagramChannelCreator() { }
-            public virtual Akka.IO.DatagramChannel Create() { }
+            public virtual System.Net.Sockets.Socket Create() { }
         }
         public class static SO
         {
@@ -3240,15 +3201,10 @@ namespace Akka.IO
         protected IOExtension() { }
         public abstract Akka.Actor.IActorRef Manager { get; }
     }
-    public abstract class SelectionHandlerSettings
+    public interface ISocketEventArgsPool
     {
-        protected SelectionHandlerSettings(Akka.Configuration.Config config) { }
-        public int MaxChannels { get; }
-        public int MaxChannelsPerSelector { get; set; }
-        public int SelectorAssociationRetries { get; }
-        public string SelectorDispatcher { get; }
-        public bool TraceLogging { get; }
-        public string WorkerDispatcher { get; }
+        System.Net.Sockets.SocketAsyncEventArgs Acquire(Akka.Actor.IActorRef actor);
+        void Release(System.Net.Sockets.SocketAsyncEventArgs e);
     }
     public class SimpleDnsCache : Akka.IO.DnsBase, Akka.IO.IPeriodicCacheCleanup
     {
@@ -3263,30 +3219,9 @@ namespace Akka.IO
         protected override void PostStop() { }
         protected override bool Receive(object message) { }
     }
-    public class SocketAsyncEventArgsPool
-    {
-        public SocketAsyncEventArgsPool(int capacity, System.Action<System.Net.Sockets.SocketAsyncEventArgs> select) { }
-        public int BufferSize { get; }
-        public System.Net.Sockets.SocketAsyncEventArgs Request(object token) { }
-        public void Return(System.Net.Sockets.SocketAsyncEventArgs saea) { }
-    }
-    public class SocketChannel
-    {
-        public SocketChannel(System.Net.Sockets.Socket socket) { }
-        public System.Net.Sockets.Socket Socket { get; }
-        public Akka.IO.SocketChannel Accept() { }
-        public void Close() { }
-        public Akka.IO.SocketChannel ConfigureBlocking(bool block) { }
-        public bool Connect(System.Net.EndPoint address) { }
-        public bool FinishConnect() { }
-        public virtual bool IsOpen() { }
-        public static Akka.IO.SocketChannel Open() { }
-        public int Read(Akka.IO.ByteBuffer buffer) { }
-        public void Register(Akka.Actor.IActorRef connection, System.Nullable<System.Net.Sockets.SocketAsyncOperation> initialOps) { }
-        public int Write(Akka.IO.ByteBuffer buffer) { }
-    }
     public class Tcp : Akka.Actor.ExtensionIdProvider<Akka.IO.TcpExt>
     {
+        public static readonly Akka.Actor.SupervisorStrategy ConnectionSupervisorStrategy;
         public static readonly Akka.IO.Tcp Instance;
         public Tcp() { }
         public override Akka.IO.TcpExt CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
@@ -3304,16 +3239,18 @@ namespace Akka.IO
         public class Bind : Akka.IO.Tcp.Command
         {
             public Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint localAddress, int backlog = 100, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null, bool pullMode = False) { }
-            public int Backlog { get; set; }
-            public Akka.Actor.IActorRef Handler { get; set; }
-            public System.Net.EndPoint LocalAddress { get; set; }
-            public System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> Options { get; set; }
-            public bool PullMode { get; set; }
+            public int Backlog { get; }
+            public Akka.Actor.IActorRef Handler { get; }
+            public System.Net.EndPoint LocalAddress { get; }
+            public System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> Options { get; }
+            public bool PullMode { get; }
+            public override string ToString() { }
         }
         public class Bound : Akka.IO.Tcp.Event
         {
             public Bound(System.Net.EndPoint localAddress) { }
             public System.Net.EndPoint LocalAddress { get; }
+            public override string ToString() { }
         }
         public class Close : Akka.IO.Tcp.CloseCommand
         {
@@ -3329,15 +3266,16 @@ namespace Akka.IO
         {
             public static readonly Akka.IO.Tcp.Closed Instance;
         }
-        public class Command : Akka.IO.Tcp.Message, Akka.IO.SelectionHandler.IHasFailureMessage
+        public abstract class Command : Akka.IO.Tcp.Message
         {
-            public Command() { }
+            protected Command() { }
             public Akka.IO.Tcp.CommandFailed FailureMessage { get; }
         }
         public sealed class CommandFailed : Akka.IO.Tcp.Event
         {
             public CommandFailed(Akka.IO.Tcp.Command cmd) { }
             public Akka.IO.Tcp.Command Cmd { get; }
+            public override string ToString() { }
         }
         public class CompoundWrite : Akka.IO.Tcp.WriteCommand, System.Collections.Generic.IEnumerable<Akka.IO.Tcp.SimpleWriteCommand>, System.Collections.IEnumerable
         {
@@ -3345,6 +3283,7 @@ namespace Akka.IO
             public Akka.IO.Tcp.SimpleWriteCommand Head { get; }
             public Akka.IO.Tcp.WriteCommand TailCommand { get; }
             public System.Collections.Generic.IEnumerator<Akka.IO.Tcp.SimpleWriteCommand> GetEnumerator() { }
+            public override string ToString() { }
         }
         public class ConfirmedClose : Akka.IO.Tcp.CloseCommand
         {
@@ -3364,27 +3303,30 @@ namespace Akka.IO
             public bool PullMode { get; }
             public System.Net.EndPoint RemoteAddress { get; }
             public System.Nullable<System.TimeSpan> Timeout { get; }
+            public override string ToString() { }
         }
         public sealed class Connected : Akka.IO.Tcp.Event
         {
             public Connected(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress) { }
             public System.Net.EndPoint LocalAddress { get; }
             public System.Net.EndPoint RemoteAddress { get; }
+            public override string ToString() { }
         }
         public class ConnectionClosed : Akka.IO.Tcp.Event, Akka.Event.IDeadLetterSuppression
         {
             public ConnectionClosed() { }
+            public virtual string Cause { get; }
             public virtual bool IsAborted { get; }
             public virtual bool IsConfirmed { get; }
             public virtual bool IsErrorClosed { get; }
             public virtual bool IsPeerClosed { get; }
-            public virtual string GetErrorCause() { }
         }
-        public class ErrorClosed : Akka.IO.Tcp.ConnectionClosed
+        public sealed class ErrorClosed : Akka.IO.Tcp.ConnectionClosed
         {
             public ErrorClosed(string cause) { }
+            public override string Cause { get; }
             public override bool IsErrorClosed { get; }
-            public override string GetErrorCause() { }
+            public override string ToString() { }
         }
         public class Event : Akka.IO.Tcp.Message
         {
@@ -3399,6 +3341,7 @@ namespace Akka.IO
             public static readonly Akka.IO.Tcp.NoAck Instance;
             public NoAck(object token) { }
             public object Token { get; }
+            public override string ToString() { }
         }
         public class PeerClosed : Akka.IO.Tcp.ConnectionClosed
         {
@@ -3409,18 +3352,21 @@ namespace Akka.IO
         {
             public Received(Akka.IO.ByteString data) { }
             public Akka.IO.ByteString Data { get; }
+            public override string ToString() { }
         }
         public class Register : Akka.IO.Tcp.Command
         {
-            public Register(Akka.Actor.IActorRef handler, bool keepOpenonPeerClosed = False, bool useResumeWriting = True) { }
+            public Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = False, bool useResumeWriting = True) { }
             public Akka.Actor.IActorRef Handler { get; }
-            public bool KeepOpenonPeerClosed { get; }
+            public bool KeepOpenOnPeerClosed { get; }
             public bool UseResumeWriting { get; }
+            public override string ToString() { }
         }
         public class ResumeAccepting : Akka.IO.Tcp.Command
         {
             public ResumeAccepting(int batchSize) { }
             public int BatchSize { get; }
+            public override string ToString() { }
         }
         public class ResumeReading : Akka.IO.Tcp.Command
         {
@@ -3458,6 +3404,7 @@ namespace Akka.IO
             public Akka.IO.ByteString Data { get; }
             public static Akka.IO.Tcp.Write Create(Akka.IO.ByteString data) { }
             public static Akka.IO.Tcp.Write Create(Akka.IO.ByteString data, Akka.IO.Tcp.Event ack) { }
+            public override string ToString() { }
         }
         public abstract class WriteCommand : Akka.IO.Tcp.Command
         {
@@ -3467,40 +3414,18 @@ namespace Akka.IO
             public Akka.IO.Tcp.CompoundWrite Prepend(Akka.IO.Tcp.SimpleWriteCommand other) { }
             public Akka.IO.Tcp.WriteCommand Prepend(System.Collections.Generic.IEnumerable<Akka.IO.Tcp.WriteCommand> writes) { }
         }
-        public class WriteFile : Akka.IO.Tcp.SimpleWriteCommand
-        {
-            public WriteFile(string filePath, long position, long count, Akka.IO.Tcp.Event ack) { }
-            public override Akka.IO.Tcp.Event Ack { get; }
-            public long Count { get; }
-            public string FilePath { get; }
-            public long Position { get; }
-        }
         public class WritingResumed : Akka.IO.Tcp.Event
         {
             public static Akka.IO.Tcp.WritingResumed Instance;
             public WritingResumed() { }
         }
     }
-    public class TcpExt : Akka.IO.IOExtension
+    public sealed class TcpExt : Akka.IO.IOExtension
     {
         public TcpExt(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.IO.Buffers.IBufferPool BufferPool { get; }
         public override Akka.Actor.IActorRef Manager { get; }
-        public Akka.IO.TcpExt.TcpSettings Settings { get; }
-        public Akka.Actor.IActorRef GetManager() { }
-        public class TcpSettings : Akka.IO.SelectionHandlerSettings
-        {
-            public TcpSettings(Akka.Configuration.Config config) { }
-            public int BatchAcceptLimit { get; }
-            public int DirectBufferSize { get; }
-            public string FileIODispatcher { get; }
-            public int FinishConnectRetries { get; }
-            public string ManagementDispatcher { get; }
-            public int MaxDirectBufferPoolSize { get; }
-            public int NrOfSelectors { get; }
-            public int ReceivedMessageSizeLimit { get; }
-            public System.Nullable<System.TimeSpan> RegisterTimeout { get; }
-            public int TransferToLimit { get; set; }
-        }
+        public Akka.IO.TcpSettings Settings { get; }
     }
     public class static TcpExtensions
     {
@@ -3525,6 +3450,22 @@ namespace Akka.IO
         public static Akka.IO.Tcp.Command Unbind() { }
         public static Akka.IO.Tcp.Command Write(Akka.IO.ByteString data, Akka.IO.Tcp.Event ack = null) { }
     }
+    public class TcpSettings
+    {
+        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries) { }
+        public int BatchAcceptLimit { get; }
+        public string BufferPoolConfigPath { get; }
+        public string FileIODispatcher { get; }
+        public int FinishConnectRetries { get; }
+        public int InitialSocketAsyncEventArgs { get; }
+        public string ManagementDispatcher { get; }
+        public int ReceivedMessageSizeLimit { get; }
+        public System.Nullable<System.TimeSpan> RegisterTimeout { get; }
+        public bool TraceLogging { get; }
+        public int TransferToLimit { get; set; }
+        public static Akka.IO.TcpSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.IO.TcpSettings Create(Akka.Configuration.Config config) { }
+    }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {
         public static readonly Akka.IO.Udp Instance;
@@ -3537,13 +3478,15 @@ namespace Akka.IO
             public Akka.Actor.IActorRef Handler { get; }
             public System.Net.EndPoint LocalAddress { get; }
             public System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> Options { get; }
+            public override string ToString() { }
         }
         public sealed class Bound : Akka.IO.Udp.Event
         {
             public Bound(System.Net.EndPoint localAddress) { }
             public System.Net.EndPoint LocalAddress { get; }
+            public override string ToString() { }
         }
-        public abstract class Command : Akka.IO.Udp.Message, Akka.IO.SelectionHandler.IHasFailureMessage
+        public abstract class Command : Akka.IO.Udp.Message
         {
             protected Command() { }
             public object FailureMessage { get; }
@@ -3552,6 +3495,7 @@ namespace Akka.IO
         {
             public CommandFailed(Akka.IO.Udp.Command cmd) { }
             public Akka.IO.Udp.Command Cmd { get; }
+            public override string ToString() { }
         }
         public abstract class Event : Akka.IO.Udp.Message
         {
@@ -3566,12 +3510,14 @@ namespace Akka.IO
             public static readonly Akka.IO.Udp.NoAck Instance;
             public NoAck(object token) { }
             public object Token { get; }
+            public override string ToString() { }
         }
         public sealed class Received : Akka.IO.Udp.Event
         {
             public Received(Akka.IO.ByteString data, System.Net.EndPoint sender) { }
             public Akka.IO.ByteString Data { get; }
             public System.Net.EndPoint Sender { get; }
+            public override string ToString() { }
         }
         public class ResumeReading : Akka.IO.Udp.Command
         {
@@ -3579,12 +3525,13 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.Udp.Command
         {
-            public Send(Akka.IO.ByteString payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
+            public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
             public Akka.IO.Udp.Event Ack { get; }
-            public Akka.IO.ByteString Payload { get; }
+            public System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> Payload { get; }
             public System.Net.EndPoint Target { get; }
             public bool WantsAck { get; }
             public static Akka.IO.Udp.Send Create(Akka.IO.ByteString data, System.Net.EndPoint target) { }
+            public override string ToString() { }
         }
         public class SimpleSender : Akka.IO.Udp.Command
         {
@@ -3624,7 +3571,7 @@ namespace Akka.IO
         public static readonly Akka.IO.UdpConnected Instance;
         public UdpConnected() { }
         public override Akka.IO.UdpConnectedExt CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
-        public abstract class Command : Akka.IO.UdpConnected.Message, Akka.IO.SelectionHandler.IHasFailureMessage
+        public abstract class Command : Akka.IO.UdpConnected.Message
         {
             protected Command() { }
             public object FailureMessage { get; }
@@ -3679,9 +3626,9 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.UdpConnected.Command
         {
-            public Send(Akka.IO.ByteString payload, object ack) { }
+            public Send(System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> payload, object ack) { }
             public object Ack { get; }
-            public Akka.IO.ByteString Payload { get; }
+            public System.Collections.Generic.IEnumerator<System.ArraySegment<byte>> Payload { get; }
             public bool WantsAck { get; }
             public static Akka.IO.UdpConnected.Send Create(Akka.IO.ByteString data) { }
         }
@@ -3693,16 +3640,34 @@ namespace Akka.IO
     public class UdpConnectedExt : Akka.IO.IOExtension
     {
         public UdpConnectedExt(Akka.Actor.ExtendedActorSystem system) { }
+        public UdpConnectedExt(Akka.Actor.ExtendedActorSystem system, Akka.IO.UdpSettings settings) { }
+        public Akka.IO.Buffers.IBufferPool BufferPool { get; }
         public override Akka.Actor.IActorRef Manager { get; }
     }
     public class UdpExt : Akka.IO.IOExtension
     {
         public UdpExt(Akka.Actor.ExtendedActorSystem system) { }
+        public UdpExt(Akka.Actor.ExtendedActorSystem system, Akka.IO.UdpSettings settings) { }
+        public Akka.IO.Buffers.IBufferPool BufferPool { get; }
         public override Akka.Actor.IActorRef Manager { get; }
     }
     public class static UdpExtensions
     {
         public static Akka.Actor.IActorRef Udp(this Akka.Actor.ActorSystem system) { }
+    }
+    public class UdpSettings
+    {
+        public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int directBufferSize, int maxDirectBufferPoolSize, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
+        public int BatchReceiveLimit { get; }
+        public string BufferPoolConfigPath { get; }
+        public int DirectBufferSize { get; }
+        public string FileIODispatcher { get; }
+        public int InitialSocketAsyncEventArgs { get; }
+        public string ManagementDispatcher { get; }
+        public int MaxDirectBufferPoolSize { get; }
+        public bool TraceLogging { get; }
+        public static Akka.IO.UdpSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.IO.UdpSettings Create(Akka.Configuration.Config config) { }
     }
 }
 namespace Akka.Pattern
@@ -4503,14 +4468,6 @@ namespace Akka.Serialization
 }
 namespace Akka.Util
 {
-    public class ArrayLinearSeq<T> : Akka.Util.ILinearSeq<T>, System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable
-    {
-        public ArrayLinearSeq(T[] array) { }
-        public T Head { get; }
-        public bool IsEmpty { get; }
-        public System.Collections.Generic.IEnumerator<T> GetEnumerator() { }
-        public Akka.Util.ILinearSeq<T> Tail() { }
-    }
     public class AtomicBoolean
     {
         public AtomicBoolean(bool initialValue = False) { }
@@ -4538,35 +4495,9 @@ namespace Akka.Util
     {
         public static byte[] ToBytes(this System.Collections.BitArray arr) { }
     }
-    public abstract class ByteIterator
+    public class static ByteHelpers
     {
-        protected ByteIterator() { }
-        public abstract bool HasNext { get; }
-        public abstract byte Head { get; }
-        public abstract int Len { get; }
-        protected abstract void Clear();
-        public virtual Akka.Util.ByteIterator Clone() { }
-        public abstract int CopyToBuffer(Akka.IO.ByteBuffer buffer);
-        public abstract Akka.Util.ByteIterator Drop(int n);
-        public virtual Akka.Util.ByteIterator DropWhile(System.Func<byte, bool> p) { }
-        public System.Tuple<Akka.Util.ByteIterator, Akka.Util.ByteIterator> Duplicate() { }
-        public virtual T FoldLeft<T>(T z, System.Func<T, byte, T> op) { }
-        public virtual void ForEach(System.Action<byte> f) { }
-        public virtual byte GetByte() { }
-        public abstract Akka.Util.ByteIterator GetBytes(byte[] xs, int offset, int n);
-        public byte[] GetBytes(int n) { }
-        public int GetInt(Akka.IO.ByteOrder byteOrder = 0) { }
-        public long GetLong(Akka.IO.ByteOrder byteOrder = 0) { }
-        public short GetShort(Akka.IO.ByteOrder byteOrder = 0) { }
-        public virtual int IndexOf(byte elem) { }
-        public virtual int IndexWhere(System.Func<byte, bool> p) { }
-        public abstract byte Next();
-        public virtual Akka.Util.ByteIterator Slice(int from, int until) { }
-        public virtual System.Tuple<Akka.Util.ByteIterator, Akka.Util.ByteIterator> Span(System.Func<byte, bool> p) { }
-        public abstract Akka.Util.ByteIterator Take(int n);
-        public virtual Akka.Util.ByteIterator TakeWhile(System.Func<byte, bool> p) { }
-        public abstract byte[] ToArray();
-        public abstract Akka.IO.ByteString ToByteString();
+        public static byte[] PutInt(this byte[] target, int x, int offset = 0, Akka.IO.ByteOrder order = 0) { }
     }
     public class ConcurrentSet<T> : System.Collections.Generic.ICollection<T>, System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable
     {
@@ -4615,12 +4546,6 @@ namespace Akka.Util
         public FastLazy(System.Func<S, T> producer, S state) { }
         public bool IsValueCreated { get; }
         public T Value { get; }
-    }
-    public interface ILinearSeq<out T> : System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable
-    {
-        T Head { get; }
-        bool IsEmpty { get; }
-        Akka.Util.ILinearSeq<T> Tail();
     }
     public class Index<TKey, TValue>
         where TValue : System.IComparable<>

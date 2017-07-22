@@ -4,17 +4,17 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.IO
 {
-    // INTERNAL API	
-    /// <summary>
-    /// TBD
-    /// </summary>
-    class UdpConnectedManager : SelectionHandler.SelectorBasedManager
+    using ByteBuffer = ArraySegment<byte>;
+
+    // INTERNAL API
+    class UdpConnectedManager : ActorBase
     {
         private readonly UdpConnectedExt _udpConn;
 
@@ -23,30 +23,38 @@ namespace Akka.IO
         /// </summary>
         /// <param name="udpConn">TBD</param>
         public UdpConnectedManager(UdpConnectedExt udpConn)
-            : base(udpConn.Settings, udpConn.Settings.NrOfSelectors)
         {
             _udpConn = udpConn;
+            Context.System.EventStream.Subscribe(Self, typeof(DeadLetter));
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="m">TBD</param>
-        /// <returns>TBD</returns>
-        protected override bool Receive(object m)
+        
+        protected override bool Receive(object message)
         {
-            return WorkerForCommandHandler(message =>
+            var c = message as UdpConnected.Connect;
+            if (c != null)
             {
-                var c = message as UdpConnected.Connect;
-                if (c != null)
+                var commander = Sender;
+                Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, c)));
+                return true;
+            }
+            var dl = message as DeadLetter;
+            if (dl != null)
+            {
+                var completed = dl.Message as UdpConnected.SocketCompleted;
+                if (completed != null)
                 {
-                    var commander = Sender;
-                    return registry => Props.Create(() => new UdpConnection(_udpConn, registry, commander, c));
+                    var e = completed.EventArgs;
+                    if (e.Buffer != null)
+                    {
+                        var buffer = new ByteBuffer(e.Buffer, e.Offset, e.Count);
+                        _udpConn.BufferPool.Release(buffer);
+                    }
+                    _udpConn.SocketEventArgsPool.Release(e);
                 }
-                throw new ArgumentException("The supplied message type is invalid. Only Connect messages are supported.", nameof(m));
-            })(m);
+                return true;
+            }
+            throw new ArgumentException("The supplied message type is invalid. Only Connect messages are supported.", nameof(message));
         }
 
     }
 }
-#endif

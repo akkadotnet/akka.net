@@ -205,3 +205,4 @@ build/
 .dotnet/
 /src/core/Akka.API.Tests/CoreAPISpec.ApproveStreams.received.txt
 launchSettings.json
+.idea/
