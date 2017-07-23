@@ -41,8 +41,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             foreach (var message in allMessages)
                 consoleMessageSink.Tell(message);
 
-            Task.Delay(1000).Wait();
-            
             //end the spec
             consoleMessageSink.Tell(new EndSpec());
 
