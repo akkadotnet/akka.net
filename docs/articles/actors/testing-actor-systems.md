@@ -249,3 +249,8 @@ akka {
   }
 }
 ```
+
+##Configuration
+There are several configuration properties for the TestKit module, please refer to the [reference configuration](https://github.com/akkadotnet/akka.net/blob/master/src/core/Akka.TestKit/Configs/TestScheduler.conf)
+
+TODO describe how to pass custom config
