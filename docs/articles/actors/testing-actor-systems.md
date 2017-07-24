@@ -230,4 +230,22 @@ To summarize, these are the features with the `CallingThreadDispatcher` has to o
 - Full message processing history leading up to the point of failure in exception stack traces
 - Exclusion of certain classes of dead-lock scenarios
 
+## Tracing Actor Invocations
+The testing facilities described up to this point were aiming at formulating assertions about a system’s behavior. If a test fails, it is usually your job to find the cause, fix it and verify the test again. This process is supported by debuggers as well as logging, where the Akka.NET offers the following options:
 
+- Logging of exceptions thrown within Actor instances. This is always on; in contrast to the other logging mechanisms, this logs at *ERROR* level.
+- Logging of special messages. Actors handle certain special messages automatically, e.g. `Kill`, `PoisonPill`, etc. Tracing of these message invocations is enabled by the setting *akka.actor.debug.autoreceive*, which enables this on all actors.
+- Logging of the actor lifecycle. Actor creation, start, restart, monitor start, monitor stop and stop may be traced by enabling the setting *akka.actor.debug.lifecycle*; this, too, is enabled uniformly on all actors.
+
+All these messages are logged at `DEBUG` level. To summarize, you can enable full logging of actor activities using this configuration fragment:
+```hocon
+akka {
+  loglevel = "DEBUG"
+  actor {
+    debug {
+      autoreceive = on
+      lifecycle = on
+    }
+  }
+}
+```
