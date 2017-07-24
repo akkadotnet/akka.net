@@ -89,8 +89,8 @@ namespace Akka.Remote.Tests.Transport
                 var inboundHandle = p2.ExpectMsg<InboundAssociation>().Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                t1.ConnectionGroup.Count.Should().Be(2);
-                t2.ConnectionGroup.Count.Should().Be(2);
+                AwaitCondition(() => t1.ConnectionGroup.Count == 2);
+                AwaitCondition(() => t2.ConnectionGroup.Count == 2);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -136,8 +136,8 @@ namespace Akka.Remote.Tests.Transport
                 var inboundHandle = p2.ExpectMsg<InboundAssociation>().Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                t1.ConnectionGroup.Count.Should().Be(2);
-                t2.ConnectionGroup.Count.Should().Be(2);
+                AwaitCondition(() => t1.ConnectionGroup.Count == 2);
+                AwaitCondition(() => t2.ConnectionGroup.Count == 2);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -183,8 +183,8 @@ namespace Akka.Remote.Tests.Transport
                 var inboundHandle = p2.ExpectMsg<InboundAssociation>().Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                t1.ConnectionGroup.Count.Should().Be(2);
-                t2.ConnectionGroup.Count.Should().Be(2);
+                AwaitCondition(() => t1.ConnectionGroup.Count == 2);
+                AwaitCondition(() => t2.ConnectionGroup.Count == 2);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -229,8 +229,8 @@ namespace Akka.Remote.Tests.Transport
                 var inboundHandle = p2.ExpectMsg<InboundAssociation>().Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                t1.ConnectionGroup.Count.Should().Be(2);
-                t2.ConnectionGroup.Count.Should().Be(2);
+                AwaitCondition(() => t1.ConnectionGroup.Count == 2);
+                AwaitCondition(() => t2.ConnectionGroup.Count == 2);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -270,9 +270,9 @@ namespace Akka.Remote.Tests.Transport
                 {
                     var a = await t1.Associate(c1.Item1.WithPort(c1.Item1.Port + 100));
                 });
-                
 
-                t1.ConnectionGroup.Count.Should().Be(1);
+
+                AwaitCondition(() => t1.ConnectionGroup.Count == 1);
             }
             finally
             {

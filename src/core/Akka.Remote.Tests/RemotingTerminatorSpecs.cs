@@ -60,6 +60,7 @@ namespace Akka.Remote.Tests
                 Sys.EventStream.Subscribe(TestActor, typeof(RemotingShutdownEvent));
                 Sys.EventStream.Subscribe(TestActor, typeof(RemotingErrorEvent));
                 var terminationTask = Sys.Terminate();
+                ExpectMsg<RemotingShutdownEvent>();
                 Assert.True(terminationTask.Wait(RemainingOrDefault), "Expected to terminate within 10 seconds, but didn't.");
             });
 
@@ -91,7 +92,7 @@ namespace Akka.Remote.Tests
             {
                 var terminationTask = sys2.Terminate();
                 Assert.True(terminationTask.Wait(RemainingOrDefault), "Expected to terminate within 10 seconds, but didn't.");
-                
+
                 ExpectTerminated(associated); // expect that the remote deployed actor is dead
             });
 
