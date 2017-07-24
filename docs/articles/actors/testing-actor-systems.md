@@ -178,11 +178,6 @@ The first option is to avoid use of the `context.parent` function and create a c
 
 [!code-csharp[DependentChild](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=39-52)]
 
-####Create the child using TestKit
-The `TestKit` class can in fact create actors that will run with the test probe as parent. This will cause any messages the child actor sends to `Context.Parent` to end up in the test probe.
-
-//TODO
-
 ####Using a fabricated parent
 If you prefer to avoid modifying the parent or child constructor you can create a fabricated parent in your test. This, however, does not enable you to test the parent actor in isolation.
 
@@ -191,5 +186,19 @@ If you prefer to avoid modifying the parent or child constructor you can create 
 ####Externalize child making from the parent
 Alternatively, you can tell the parent how to create its child. There are two ways to do this: by giving it a `Props` object or by giving it a function which takes care of creating the child actor:
 
-//TODO
+[!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=83-102)]
 
+Creating the Props is straightforward and the function may look like this in your test code:
+
+    Func<IUntypedActorContext, IActorRef> maker = (ctx) => probe.Ref;
+    var parent = Sys.ActorOf(Props.Create<GenericDependentParent>(maker));
+
+
+And like this in your application code:
+
+
+
+    Func<IUntypedActorContext, IActorRef> maker = (ctx) => ctx.ActorOf(Props.Create<Child>())
+    var parent = Sys.ActorOf(Props.Create<GenericDependentParent>(maker));
+
+Which of these methods is the best depends on what is most important to test. The most generic option is to create the parent actor by passing it a function that is responsible for the Actor creation, but the fabricated parent is often sufficient.

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Remoting.Messaging;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit.Xunit2;
@@ -77,6 +78,28 @@ namespace DocsExamples.Testkit
             var parent = Sys.ActorOf(Props.Create(() => new Act(actor)));
             proxy.Send(parent, "ping");
             proxy.ExpectMsg("pong");
+        }
+
+
+        class GenericDependentParent : ReceiveActor
+        {
+            private IActorRef child;
+            private bool ponged;
+
+            public GenericDependentParent(Func<IUntypedActorContext, IActorRef> childMaker)
+            {
+                child = childMaker(Context);
+                ponged = false;
+
+                Receive<string>(str => str.Equals("pingit"), m =>
+                {
+                    child.Tell("ping");
+                });
+                Receive<string>(str => str.Equals("pong"), m =>
+                {
+                    ponged = true;
+                });
+            }
         }
     }
 }
