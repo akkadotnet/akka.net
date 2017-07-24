@@ -23,8 +23,8 @@ namespace Akka.Remote.Tests.Performance.Transports
     public abstract class RemoteMessagingThroughputSpecBase
     {
         private const string RemoteMessageCounterName = "RemoteMessageReceived";
-        private const int RemoteMessageCount = 50000;
-        private const int NumClients = 5;
+        private const int RemoteMessageCount = 10000;
+        private const int NumClients = 10;
         private Counter _remoteMessageThroughput;
         private List<Task> _tasks = new List<Task>();
         private readonly List<IActorRef> _receivers = new List<IActorRef>();
@@ -40,7 +40,7 @@ namespace Akka.Remote.Tests.Performance.Transports
 
         private class AllStartedActor : UntypedActor
         {
-            public class AllStarted{   }
+            public class AllStarted { }
 
             private readonly HashSet<IActorRef> _actors = new HashSet<IActorRef>();
             private int _correlationId = 0;
@@ -53,7 +53,7 @@ namespace Akka.Remote.Tests.Performance.Transports
                         _actors.Add(a);
                         break;
                     case AllStarted a:
-                        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                         var s = Sender;
                         var count = _actors.Count;
                         var c = _correlationId++;
@@ -63,8 +63,6 @@ namespace Akka.Remote.Tests.Performance.Transports
                         {
                             return tr.Result.Length == count && tr.Result.All(x => x.MessageId.Equals(c));
                         }, TaskContinuationOptions.OnlyOnRanToCompletion).PipeTo(s);
-                        t.ContinueWith(tr => false,
-                            TaskContinuationOptions.OnlyOnCanceled).PipeTo(s);
                         break;
                 }
             }
@@ -173,10 +171,14 @@ namespace Akka.Remote.Tests.Performance.Transports
            RunTimeMilliseconds = 1000)]
         [CounterMeasurement(RemoteMessageCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public async void OneWay(BenchmarkContext context)
+        public void PingPong(BenchmarkContext context)
         {
-            _receivers.ForEach(c => c.Tell("hit"));
-            await Task.WhenAll(_tasks);
+            _receivers.ForEach(c =>
+            {
+                c.Tell("hit");
+            });
+            var waiting = Task.WhenAll(_tasks);
+            SpinWait.SpinUntil(() => waiting.IsCompleted);
         }
 
         [PerfCleanup]
