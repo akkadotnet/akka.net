@@ -28,7 +28,7 @@ namespace Akka.Cluster.Sharding
     public class ShardRegion : ActorBase
     {
         #region messages
-        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -382,7 +382,7 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         public int TotalBufferSize { get { return ShardBuffers.Aggregate(0, (acc, entity) => acc + entity.Value.Count); } }
-        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -658,23 +658,37 @@ namespace Akka.Cluster.Sharding
         private void ReplyToRegionStateQuery(IActorRef sender)
         {
             AskAllShardsAsync<Shard.CurrentShardState>(Shard.GetCurrentShardState.Instance)
-                .PipeTo(sender,
-                    success: shardStates => new CurrentShardRegionState(shardStates.Select(x => new ShardState(x.Item1, x.Item2.EntityIds.ToImmutableHashSet())).ToImmutableHashSet()),
-                    failure: err => new CurrentShardRegionState(ImmutableHashSet<ShardState>.Empty));
+                .ContinueWith(shardStates =>
+                {
+                    if (shardStates.IsCanceled)
+                        return new CurrentShardRegionState(ImmutableHashSet<ShardState>.Empty);
+
+                    if (shardStates.IsFaulted)
+                        throw shardStates.Exception; //TODO check if this is the right way
+
+                    return new CurrentShardRegionState(shardStates.Result.Select(x => new ShardState(x.Item1, x.Item2.EntityIds.ToImmutableHashSet())).ToImmutableHashSet());
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(sender);
         }
 
         private void ReplyToRegionStatsQuery(IActorRef sender)
         {
             AskAllShardsAsync<Shard.ShardStats>(Shard.GetShardStats.Instance)
-                .PipeTo(sender,
-                    success: shardStats => new ShardRegionStats(shardStats.ToImmutableDictionary(x => x.Item1, x => x.Item2.EntityCount)),
-                    failure: err => new ShardRegionStats(ImmutableDictionary<string, int>.Empty));
+                .ContinueWith(shardStats =>
+                {
+                    if (shardStats.IsCanceled)
+                        return new ShardRegionStats(ImmutableDictionary<string, int>.Empty);
+
+                    if (shardStats.IsFaulted)
+                        throw shardStats.Exception; //TODO check if this is the right way
+
+                    return new ShardRegionStats(shardStats.Result.ToImmutableDictionary(x => x.Item1, x => x.Item2.EntityCount));
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(sender);
         }
 
         private Task<Tuple<ShardId, T>[]> AskAllShardsAsync<T>(object message)
         {
             var timeout = TimeSpan.FromSeconds(3);
-            var tasks = Shards.Select(entity => entity.Value.Ask<T>(message, timeout).ContinueWith(t => Tuple.Create(entity.Key, t.Result), TaskContinuationOptions.ExecuteSynchronously));
+            var tasks = Shards.Select(entity => entity.Value.Ask<T>(message, timeout).ContinueWith(t => Tuple.Create(entity.Key, t.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion));
             return Task.WhenAll(tasks);
         }
 
@@ -762,8 +776,8 @@ namespace Akka.Cluster.Sharding
 
                     updatedShards = updatedShards.Remove(shard);
 
-                    Regions = updatedShards.Count == 0 
-                        ? Regions = Regions.Remove(regionRef) 
+                    Regions = updatedShards.Count == 0
+                        ? Regions = Regions.Remove(regionRef)
                         : Regions.SetItem(regionRef, updatedShards);
 
                     RegionByShard = RegionByShard.Remove(shard);

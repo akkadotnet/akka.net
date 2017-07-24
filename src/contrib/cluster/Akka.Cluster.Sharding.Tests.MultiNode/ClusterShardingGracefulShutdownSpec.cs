@@ -246,7 +246,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     Watch(regionEmpty);
                     regionEmpty.Tell(GracefulShutdown.Instance);
-                    ExpectTerminated(regionEmpty);
+                    ExpectTerminated(regionEmpty, TimeSpan.FromSeconds(5));
                 }, _config.First);
             });
         }

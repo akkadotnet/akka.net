@@ -29,7 +29,7 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the event sourced PersistentShardCoordinator.
         /// </summary>
         [Serializable]
-        public sealed class State: IClusterShardingSerializable
+        public sealed class State : IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -582,7 +582,8 @@ namespace Akka.Cluster.Sharding
             {
                 Log.Debug("GetShardHome [{0}] request ignored, because not all regions have registered yet.", shard);
             }
-            else {
+            else
+            {
                 if (_currentState.Shards.TryGetValue(shard, out var region))
                 {
                     if (_regionTerminationInProgress.Contains(region))
@@ -706,23 +707,23 @@ namespace Akka.Cluster.Sharding
         {
             var sender = Sender;
             Task.WhenAll(
-                _aliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => Tuple.Create(regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously))
+                _aliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => Tuple.Create(regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion))
                 ).ContinueWith(allRegionStats =>
                 {
-                    if (allRegionStats.IsFaulted || allRegionStats.IsCanceled)
-                    {
+                    if (allRegionStats.IsCanceled)
                         return new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty);
-                    }
-                    else
-                    {
-                        var regions = allRegionStats.Result.ToImmutableDictionary(i => {
-                            Address regionAddress = i.Item1.Path.Address;
-                            Address address = (regionAddress.HasLocalScope && regionAddress.System == Cluster.SelfAddress.System) ? Cluster.SelfAddress : regionAddress;
-                            return address;
-                        }, j => j.Item2);
 
-                        return new ClusterShardingStats(regions);
-                    }
+                    if (allRegionStats.IsFaulted)
+                        throw allRegionStats.Exception; //TODO check if this is the right way
+
+                    var regions = allRegionStats.Result.ToImmutableDictionary(i =>
+                    {
+                        Address regionAddress = i.Item1.Path.Address;
+                        Address address = (regionAddress.HasLocalScope && regionAddress.System == Cluster.SelfAddress.System) ? Cluster.SelfAddress : regionAddress;
+                        return address;
+                    }, j => j.Item2);
+
+                    return new ClusterShardingStats(regions);
                 }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(sender);
         }
 

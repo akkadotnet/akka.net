@@ -222,7 +222,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         public void ClusterSharding_with_flaky_journal_network_should_join_cluster()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            Within(TimeSpan.FromSeconds(20), () =>
             {
                 Join(_config.First, _config.First);
                 Join(_config.Second, _config.First);
