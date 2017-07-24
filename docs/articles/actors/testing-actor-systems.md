@@ -157,7 +157,7 @@ You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.
 ###Caution about Timing Assertions
 The behavior of `Within` blocks when using test probes might be perceived as counter-intuitive: you need to remember that the nicely scoped deadline as described **above** is local to each probe. Hence, probes do not react to each other's deadlines or to the deadline set in an enclosing `TestKit` instance.
 
-###Testing parent-child relationships
+##Testing parent-child relationships
 
 The parent of an actor is always the actor that created it. At times this leads to a coupling between the two that may not be straightforward to test. There are several approaches to improve testability of a child actor that needs to refer to its parent:
 
@@ -173,32 +173,61 @@ For example, the structure of the code you want to test may follow this pattern:
 
 [!code-csharp[ParentStructure](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=8-36)]
 
-####Introduce child to its parent
+###Introduce child to its parent
 The first option is to avoid use of the `context.parent` function and create a child with a custom parent by passing an explicit reference to its parent instead.
 
 [!code-csharp[DependentChild](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=39-52)]
 
-####Using a fabricated parent
+###Using a fabricated parent
 If you prefer to avoid modifying the parent or child constructor you can create a fabricated parent in your test. This, however, does not enable you to test the parent actor in isolation.
 
 [!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=58-80)]
 
-####Externalize child making from the parent
+###Externalize child making from the parent
 Alternatively, you can tell the parent how to create its child. There are two ways to do this: by giving it a `Props` object or by giving it a function which takes care of creating the child actor:
 
 [!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=83-102)]
 
 Creating the Props is straightforward and the function may look like this in your test code:
 
+```csharp
     Func<IUntypedActorContext, IActorRef> maker = (ctx) => probe.Ref;
     var parent = Sys.ActorOf(Props.Create<GenericDependentParent>(maker));
-
+```
 
 And like this in your application code:
 
-
-
+```csharp
     Func<IUntypedActorContext, IActorRef> maker = (ctx) => ctx.ActorOf(Props.Create<Child>())
     var parent = Sys.ActorOf(Props.Create<GenericDependentParent>(maker));
+```
 
 Which of these methods is the best depends on what is most important to test. The most generic option is to create the parent actor by passing it a function that is responsible for the Actor creation, but the fabricated parent is often sufficient.
+
+##CallingThreadDispatcher
+
+The `CallingThreadDispatcher` serves good purposes in unit testing, as described above, but originally it was conceived in order to allow contiguous stack traces to be generated in case of an error. As this special dispatcher runs everything which would normally be queued directly on the current thread, the full history of a message's processing chain is recorded on the call stack, so long as all intervening actors run on this dispatcher.
+
+### How to use it
+Just set the dispatcher as you normally would
+```csharp
+Sys.ActorOf(Props.Create<MyActor>().WithDispatcher(CallingThreadDispatcher.Id));
+```
+
+### How it works
+When receiving an invocation, the `CallingThreadDispatcher` checks whether the receiving actor is already active on the current thread. The simplest example for this situation is an actor which sends a message to itself. In this case, processing cannot continue immediately as that would violate the actor model, so the invocation is queued and will be processed when the active invocation on that actor finishes its processing; thus, it will be processed on the calling thread, but simply after the actor finishes its previous work. In the other case, the invocation is simply processed immediately on the current thread. Tasks scheduled via this dispatcher are also executed immediately.
+
+This scheme makes the `CallingThreadDispatcher` work like a general purpose dispatcher for any actors which never block on external events.
+
+In the presence of multiple threads it may happen that two invocations of an actor running on this dispatcher happen on two different threads at the same time. In this case, both will be processed directly on their respective threads, where both compete for the actor's lock and the loser has to wait. Thus, the actor model is left intact, but the price is loss of concurrency due to limited scheduling. In a sense this is equivalent to traditional mutex style concurrency.
+
+The other remaining difficulty is correct handling of suspend and resume: when an actor is suspended, subsequent invocations will be queued in thread-local queues (the same ones used for queuing in the normal case). The call to resume, however, is done by one specific thread, and all other threads in the system will probably not be executing this specific actor, which leads to the problem that the thread-local queues cannot be emptied by their native threads. Hence, the thread calling resume will collect all currently queued invocations from all threads into its own queue and process them.
+
+### Benefits
+To summarize, these are the features with the `CallingThreadDispatcher` has to offer:
+
+- Deterministic execution of single-threaded tests while retaining nearly full actor semantics
+- Full message processing history leading up to the point of failure in exception stack traces
+- Exclusion of certain classes of dead-lock scenarios
+
+
