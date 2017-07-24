@@ -97,7 +97,7 @@ namespace Akka.Remote.Tests.Performance.Transports
                 {
                     _currentMessages++;
                     _echo.Tell(message);
-                    _counter.Increment();
+                    _counter.Increment(); // TODO: need to add settable counter calls to NBench
                     _counter.Increment();
                 }
                 else
@@ -178,7 +178,7 @@ namespace Akka.Remote.Tests.Performance.Transports
                 c.Tell("hit");
             });
             var waiting = Task.WhenAll(_tasks);
-            SpinWait.SpinUntil(() => waiting.IsCompleted);
+            SpinWait.SpinUntil(() => waiting.IsCompleted); // TODO: would get more accurate results if we could AWAIT and not block here.
         }
 
         [PerfCleanup]
