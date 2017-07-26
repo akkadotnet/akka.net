@@ -254,3 +254,25 @@ akka {
 There are several configuration properties for the TestKit module, please refer to the [reference configuration](https://github.com/akkadotnet/akka.net/blob/master/src/core/Akka.TestKit/Configs/TestScheduler.conf)
 
 TODO describe how to pass custom config
+
+##Synchronous Testing: TestActorRef
+
+Testing the business logic inside `Actor` classes can be divided into two parts: first, each atomic operation must work in isolation, then sequences of incoming events must be processed correctly, even in the presence of some possible variability in the ordering of events. The former is the primary use case for single-threaded unit testing, while the latter can only be verified in integration tests.
+
+Normally, the `IActorRef` shields the underlying `Actor` instance from the outside, the only communications channel is the actor's mailbox. This restriction is an impediment to unit testing, which led to the inception of the `TestActorRef`. This special type of reference is designed specifically for test purposes and allows access to the actor in two ways: either by obtaining a reference to the underlying actor instance, or by invoking or querying the actor's behaviour (receive). Each one warrants its own section below.
+
+> [!NOTE]
+> It is highly recommended to stick to traditional behavioural testing (using messaging to ask the `Actor` to reply with the state you want to run assertions against), instead of using `TestActorRef` whenever possible.
+
+##Obtaining a Reference to an Actor
+Having access to the actual `Actor` object allows application of all traditional unit testing techniques on the contained methods. Obtaining a reference is done like this:
+
+```csharp
+    var props = Props.Create<MyActor>();
+    var myTestActor = new TestActorRef<MyActor>(Sys, props, null, "testA");
+    MyActor myActor = myTestActor.UnderlyingActor;
+```
+
+Since `TestActorRef` is generic in the actor type it returns the underlying actor with its proper static type. From this point on you may bring any unit testing tool to bear on your actor as usual.
+
+
