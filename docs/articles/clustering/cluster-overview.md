@@ -204,9 +204,11 @@ The cluster leader is chosen by a leader election algorithm that randomly picks 
 Each role within the cluster also has a leader, just for that role. Its primary responsibility is enforcing a minimum number of "up" members within the role (if specified in the [cluster config](cluster-configuration.md)).
 
 ### Reachability
-Nodes send each other <a href="https://en.wikipedia.org/wiki/Heartbeat_(computing)">heartbeats</a> on an ongoing basis. If a node misses enough heartbeats, this will trigger `unreachable` gossip messages from its peers.
+Nodes send each other <a href="https://en.wikipedia.org/wiki/Heartbeat_(computing)">heartbeats</a> on an ongoing basis. If a node misses enough heartbeats, this will trigger `unreachable` gossip messages from its peers. The leader will wait for the node to either become reachable again, restart or get downed. Until that happens, the cluster is not in a consistent state and the leader indicates that it is unable to perform its duties. If the gossip from a quorum of cluster nodes agree that the node is unreachable ("convergence"), the leader will mark it as down and begin removing the node from the cluster. You can control how long the cluster waits for unreachable nodes through the auto-down-unreachable-after setting.
 
-If the gossip from a quorum of cluster nodes agree that the node is unreachable ("convergence"), the leader will mark it as down and begin removing the node from the cluster.
+When marked as unreachable, the node can restart and join the cluster again, however the association will only be formed if that node is identified as the same node that became unreachable. If you use dynamic addressing (port 0), starting a node again might result in a different port being assigned upon restart. The result of that is that the cluster remains in an inconsistent state, waiting to the unreachable node to either become reachable or get downed.
+
+A node might also exit the cluster gracefully, preventing it from being marked as unreachable in the first place. Akka.net uses IDowningProvider to take the nodes through all the stages of existing the cluster. Starting in Akka.NET 1.2 [CoordinatedShutdown](https://github.com/akkadotnet/akka.net/releases/tag/v1.2) was introduced allowing the user to easily invoke that mechanism.
 
 ## Location Transparency
 [Location transparency](xref:location-transparency) is the underlying principle powering all of Akka.Remote and Akka.Cluster. The key point is that in a cluster, it's entirely possible that the actors you interface with to do work can be living on any node in the cluster... and you don't have to worry about which one.

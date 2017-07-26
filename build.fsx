@@ -100,7 +100,8 @@ Target "RunTests" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
     let projects =
         match getBuildParamOrDefault "incremental" "" with
-        | "true" -> getIncrementalUnitTests()
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
                             getIncrementalUnitTests() |> Seq.iter log
                             getUnitTestProjects()
@@ -124,7 +125,8 @@ Target "RunTestsNetCore" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
     let projects =
         match getBuildParamOrDefault "incremental" "" with
-        | "true" -> getIncrementalUnitTests()
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
                             getIncrementalUnitTests() |> Seq.iter log
                             getUnitTestProjects()
@@ -149,7 +151,8 @@ Target "MultiNodeTests" (fun _ ->
 
     let multiNodeTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
-        | "true" -> getIncrementalMNTRTests()
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
                             getIncrementalMNTRTests() |> Seq.iter log
                             getAllMntrTestAssemblies()
@@ -187,7 +190,8 @@ Target "NBench" <| fun _ ->
 
     let nbenchTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
-        | "true" -> getIncrementalPerfTests()
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalPerfTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
                             getIncrementalPerfTests() |> Seq.iter log
                             getAllPerfTestAssemblies()

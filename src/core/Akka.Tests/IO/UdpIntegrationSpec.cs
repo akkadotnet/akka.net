@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Linq;
 using System.Net;
@@ -14,6 +14,7 @@ using Akka.IO;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.IO
 {
@@ -21,15 +22,13 @@ namespace Akka.Tests.IO
     {
         private readonly IPEndPoint[] _addresses;
 
-        public UdpIntegrationSpec()
+        public UdpIntegrationSpec(ITestOutputHelper output)
             : base(@"
                     akka.io.udp.max-channels = unlimited
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100
                     akka.io.udp.direct-buffer-size = 1024
-                    akka.loglevel = INFO
-                    akka.actor.serialize-messages = off
-                    akka.actor.serialize-creators = on")
+                    akka.loglevel = INFO", output)
         {
             _addresses = TestUtils.TemporaryServerAddresses(6, udp: true).ToArray();
         }
@@ -38,7 +37,7 @@ namespace Akka.Tests.IO
         {
             var commander = CreateTestProbe();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(handler, address));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Equals(address));
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(address));
             return commander.Sender;
         }
 
@@ -70,32 +69,34 @@ namespace Akka.Tests.IO
             var client = BindUdp(clientAddress, TestActor);
             var data = ByteString.FromString("Fly little packet!");
 
-            Action checkSendingToClient = () =>
+            void CheckSendingToClient(int iteration)
             {
                 server.Tell(Udp.Send.Create(data, clientAddress));
                 ExpectMsg<Udp.Received>(x =>
                 {
                     x.Data.ShouldBe(data);
-                    x.Sender.ShouldBe(serverAddress);
-                });
-            };
-            Action checkSendingToServer = () =>
+                    x.Sender.Is(serverAddress).ShouldBeTrue($"{x.Sender} was expected to be {serverAddress}");
+                }, hint: $"sending to client failed in {iteration} iteration");
+            }
+
+            void CheckSendingToServer(int iteration)
             {
                 client.Tell(Udp.Send.Create(data, serverAddress));
                 ExpectMsg<Udp.Received>(x =>
                 {
                     x.Data.ShouldBe(data);
-                    x.Sender.ShouldBe(clientAddress);
-                });
-            };
+                    Assert.True(x.Sender.Is(clientAddress));
+                }, hint: $"sending to client failed in {iteration} iteration");
+            }
 
-            Enumerable.Range(0, 20).ForEach(_ => checkSendingToServer());
-            Enumerable.Range(0, 20).ForEach(_ => checkSendingToClient());
-            Enumerable.Range(0, 20).ForEach(i =>
+            const int iterations = 20;
+            for (int i = 1; i <= iterations; i++) CheckSendingToServer(i);
+            for (int i = 1; i <= iterations; i++) CheckSendingToClient(i);
+            for (int i = 1; i <= iterations; i++)
             {
-                if (i%2 == 0) checkSendingToServer();
-                else checkSendingToClient();
-            });
+                if (i % 2 == 0) CheckSendingToServer(i);
+                else CheckSendingToClient(i);
+            }
         }
 
         [Fact]
@@ -104,7 +105,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             var assertOption = new AssertBeforeBind();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(TestActor, _addresses[2], options: new[] {assertOption}));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.ShouldBe(_addresses[2]));
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(_addresses[2]));
             Assert.Equal(1, assertOption.BeforeCalled);
         }
 
@@ -114,7 +115,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             var assertOption = new AssertAfterChannelBind();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(TestActor, _addresses[3], options: new[] { assertOption }));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.ShouldBe(_addresses[3]));
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(_addresses[3]));
             Assert.Equal(1, assertOption.AfterCalled);
         }
 
@@ -124,7 +125,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             var assertOption = new AssertOpenDatagramChannel();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(TestActor, _addresses[4], options: new[] { assertOption }));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.ShouldBe(_addresses[4]));
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(_addresses[4]));
             Assert.Equal(1, assertOption.OpenCalled);
         }
 
@@ -154,7 +155,8 @@ namespace Akka.Tests.IO
         {
             public int OpenCalled { get; set; }
 
-            public override DatagramChannel Create()
+
+            public override Socket Create()
             {
                 OpenCalled += 1;
                 return base.Create();
@@ -162,4 +164,3 @@ namespace Akka.Tests.IO
         }
     }
 }
-#endif

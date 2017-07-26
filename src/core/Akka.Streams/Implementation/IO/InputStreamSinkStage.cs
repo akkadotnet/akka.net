@@ -163,7 +163,7 @@ namespace Akka.Streams.Implementation.IO
                 _stage = stage;
                 _callback = GetAsyncCallback((IAdapterToStageMessage message) =>
                 {
-                    if(message is ReadElementAcknowledgement)
+                    if (message is ReadElementAcknowledgement)
                         SendPullIfAllowed();
                     else if (message is Close)
                         CompleteStage();
@@ -499,7 +499,7 @@ namespace Akka.Streams.Implementation.IO
             }
 
             Array.Copy(chunk.ToArray(), 0, buffer, offset, count);
-            _detachedChunk = chunk.Drop(count);
+            _detachedChunk = chunk.Slice(count);
             return gotBytes + count;
         }
 
