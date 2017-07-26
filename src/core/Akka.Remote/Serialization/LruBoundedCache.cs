@@ -12,7 +12,7 @@ namespace Akka.Remote.Serialization
     /// <remarks>
     /// Fast hash based on the 128 bit Xorshift128+ PRNG. Mixes in character bits into the random generator state.
     /// </remarks>
-    public static class FastHash
+    internal static class FastHash
     {
         public static int OfString(string s)
         {
@@ -72,7 +72,38 @@ namespace Akka.Remote.Serialization
         }
     }
 
-    public abstract class LruBoundedCache<TKey, TValue> where TValue:class
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class CacheStatistics
+    {
+        public CacheStatistics(int entries, int maxProbeDistance, double averageProbeDistance)
+        {
+            Entries = entries;
+            MaxProbeDistance = maxProbeDistance;
+            AverageProbeDistance = averageProbeDistance;
+        }
+
+        public int Entries { get; }
+
+        public int MaxProbeDistance { get; }
+
+        public double AverageProbeDistance { get; }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// This class is based on a Robin-Hood hashmap
+    /// (http://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/)
+    /// with backshift(http://codecapsule.com/2013/11/17/robin-hood-hashing-backward-shift-deletion/).
+    /// The main modification compared to an RH hashmap is that it never grows the map (no rehashes) instead it is allowed
+    /// to kick out entires that are considered old.The implementation tries to keep the map close to full, only evicting
+    /// old entries when needed.
+    /// </summary>
+    /// <typeparam name="TKey">The type of key used by the hash.</typeparam>
+    /// <typeparam name="TValue">The type of value used in the cache.</typeparam>
+    internal abstract class LruBoundedCache<TKey, TValue> where TValue:class
     {
         protected LruBoundedCache(int capacity, int evictAgeThreshold)
         {
@@ -105,6 +136,203 @@ namespace Akka.Remote.Serialization
         private readonly TValue[] _values;
         private readonly int[] _hashes;
         private readonly int[] _epochs;
-        
+
+        public CacheStatistics Stats
+        {
+            get
+            {
+                var i = 0;
+                var sum = 0;
+                var count = 0;
+                var max = 0;
+                while (i < _hashes.Length)
+                {
+                    if (_values[i] != null)
+                    {
+                        var dist = ProbeDistanceOf(i);
+                        sum += dist;
+                        count += 1;
+                        max = Math.Max(dist, max);
+                    }
+                    i += 1;
+                }
+                return new CacheStatistics(count, max, (double)sum / count);
+            }
+        }
+
+        public TValue Get(TKey k)
+        {
+            var h = Hash(k);
+
+            var position = h & _mask;
+            var probeDistance = 0;
+
+            while (true)
+            {
+                var otherProbeDistance = ProbeDistanceOf(position);
+                if (_values[position] == null)
+                    return null;
+                if (probeDistance > otherProbeDistance)
+                    return null;
+                if (_hashes[position] == h && k.Equals(_keys[position]))
+                {
+                    return _values[position];
+                }
+                position = (position + 1) & _mask;
+                probeDistance = probeDistance + 1;
+            }
+        }
+
+        public TValue GetOrCompute(TKey k)
+        {
+            var h = Hash(k);
+            unchecked{_epoch += 1;}
+
+            var position = h & _mask;
+            var probeDistance = 0;
+
+            while (true)
+            {
+                if (_values[position] == null)
+                {
+                    var value = Compute(k);
+                    if (IsCacheable(value))
+                    {
+                        _keys[position] = k;
+                        _values[position] = value;
+                        _hashes[position] = h;
+                        _epochs[position] = _epoch;
+                    }
+                    return value;
+                }
+                else
+                {
+                    var otherProbeDistance = ProbeDistanceOf(position);
+                    // If probe distance of the element we try to get is larger than the current slot's, then the element cannot be in
+                    // the table since because of the Robin-Hood property we would have swapped it with the current element.
+                    if (probeDistance > otherProbeDistance)
+                    {
+                        var value = Compute(k);
+                        if (IsCacheable(value)) Move(position, k, h, value, _epoch, probeDistance);
+                        return value;
+                    }
+                    else if (_hashes[position] == h && k.Equals(_keys[position]))
+                    {
+                        // Update usage
+                        _epochs[position] = _epoch;
+                        return _values[position];
+                    }
+                    else
+                    {
+                        // This is not our slot yet
+                        position = (position + 1) & _mask;
+                        probeDistance = probeDistance + 1;
+                    }
+                }
+            }
+        }
+
+        private void RemoveAt(int position)
+        {
+            while (true)
+            {
+                var next = (position + 1) & _mask;
+                if (_values[next] == null || ProbeDistanceOf(next) == 0)
+                {
+                    // Next is not movable, just empty this slot
+                    _values[position] = null;
+                }
+                else
+                {
+                    // Shift the next slot here
+                    _keys[position] = _keys[next];
+                    _values[position] = _values[next];
+                    _hashes[position] = _hashes[next];
+                    _epochs[position] = _epochs[next];
+
+                    // remove the shifted slot
+                    position = next;
+                    continue;
+                }
+                break;
+            }
+        }
+
+        private void Move(int position, TKey k, int h, TValue value, int elemEpoch, int probeDistance)
+        {
+            if (_values[position] == null)
+            {
+                // Found an empty place, done
+                _keys[position] = k;
+                _values[position] = value;
+                _hashes[position] = h;
+                _epochs[position] = elemEpoch; // Do NOT update the epoch of the elem. It was not touched, just moved
+            }
+            else
+            {
+                var otherEpoch = _epochs[position];
+                // Check if the current entry is too old
+                if (_epoch - otherEpoch >= EvictAgeThreshold)
+                {
+                    // Remove the old entry to make space
+                    RemoveAt(position);
+
+                    // Try to insert our element in hand to its ideal slot
+                    Move(h & _mask, k, h, value, elemEpoch, 0);
+                }
+                else
+                {
+                    var otherProbeDistance = ProbeDistanceOf(position);
+
+                    // Check whose probe distance is larger. The one with the larger one wins the slot.
+                    if (probeDistance > otherProbeDistance)
+                    {
+                        // Due to the Robin-Hood property, we now take away this slot from the "richer" and take it for ourselves
+                        var otherKey = _keys[position];
+                        var otherValue = _values[position];
+                        var otherHash = _hashes[position];
+
+                        _keys[position] = k;
+                        _values[position] = value;
+                        _hashes[position] = h;
+                        _epochs[position] = elemEpoch;
+
+                        // Move out the old one
+                        Move((position + 1) & _mask, otherKey, otherHash, otherValue, otherEpoch,
+                            otherProbeDistance + 1);
+                    }
+                    else
+                    {
+                        // We are the "richer" so we need to find another slot
+                        Move((position + 1) & _mask, k, h, value, elemEpoch,
+                            probeDistance + 1);
+                    }
+                }
+            }
+        }
+
+        protected int ProbeDistanceOf(int slot)
+        {
+            return ProbeDistanceOf(_hashes[slot] & _mask, slot);
+        }
+
+        protected int ProbeDistanceOf(int idealSlot, int actualSlot)
+        {
+            return ((actualSlot - idealSlot) + Capacity) & _mask;
+        }
+
+
+        protected abstract int Hash(TKey k);
+
+        protected abstract TValue Compute(TKey k);
+
+        protected abstract bool IsCacheable(TValue v);
+
+        public override string ToString()
+        {
+            return $"LruBoundedCache(values = [{string.Join<TValue>(",", _values)}], hashes = [{string.Join(",", _hashes)}], " +
+                   $"epochs = [{string.Join(",", _epochs)}], distances = [{Enumerable.Range(0, _hashes.Length).Select(x => ProbeDistanceOf(x))}]," +
+                   $"epoch = {_epoch})";
+        }
     }
 }

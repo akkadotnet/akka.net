@@ -10,7 +10,7 @@ namespace Akka.Remote.Tests.Serialization
     public class FastHashSpec
     {
         [Property]
-        public Property FastHashSafeAndUnsafeShouldReturnSameValues(NonEmptyString str)
+        public Property FastHash_safe_and_unsafe_should_return_same_values(NonEmptyString str)
         {
             var s = str.Get;
             var safe = FastHash.OfString(s);
