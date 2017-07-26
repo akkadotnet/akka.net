@@ -264,7 +264,7 @@ Normally, the `IActorRef` shields the underlying `Actor` instance from the outsi
 > [!NOTE]
 > It is highly recommended to stick to traditional behavioural testing (using messaging to ask the `Actor` to reply with the state you want to run assertions against), instead of using `TestActorRef` whenever possible.
 
-##Obtaining a Reference to an Actor
+## Obtaining a Reference to an Actor
 Having access to the actual `Actor` object allows application of all traditional unit testing techniques on the contained methods. Obtaining a reference is done like this:
 
 ```csharp
@@ -275,4 +275,28 @@ Having access to the actual `Actor` object allows application of all traditional
 
 Since `TestActorRef` is generic in the actor type it returns the underlying actor with its proper static type. From this point on you may bring any unit testing tool to bear on your actor as usual.
 
+##Testing Finite State Machines
+If your actor under test is a `FSM`, you may use the special `TestFSMRef` which offers all features of a normal `TestActorRef` and in addition allows access to the internal state:
 
+```csharp
+var fsm = new TestFSMRef<TestFsmActor, int, string>();
+            
+Assert.True(fsm.StateName == 1);
+Assert.True(fsm.StateData == "");
+
+fsm.Tell("go"); //being a TestActorRef, this runs on the CallingThreadDispatcher
+
+Assert.True(fsm.StateName == 2);
+Assert.True(fsm.StateData == "go");
+
+fsm.SetState(1);
+Assert.True(fsm.StateName == 1);
+
+Assert.False(fsm.IsTimerActive("test"));
+fsm.SetTimer("test",12, 10.Milliseconds(), true);
+Assert.True(fsm.IsTimerActive("test"));
+fsm.CancelTimer("test");
+Assert.False(fsm.IsTimerActive("test"));
+```
+
+All methods shown above directly access the FSM state without any synchronization; this is perfectly alright if the `CallingThreadDispatcher` is used and no other threads are involved, but it may lead to surprises if you were to actually exercise timer events, because those are executed on the `Scheduler` thread.
