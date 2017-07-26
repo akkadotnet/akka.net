@@ -1103,7 +1103,7 @@ namespace Akka.Actor
         public System.Threading.Tasks.Task<object> ReceiveAsync(System.TimeSpan timeout) { }
         public object ReceiveWhere(System.Predicate<object> predicate) { }
         public object ReceiveWhere(System.Predicate<object> predicate, System.TimeSpan timeout) { }
-        public void Send(Akka.Actor.IActorRef actorRef, object msg) { }
+        public void Send(Akka.Actor.IActorRef actorRef, object message) { }
         public Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject) { }
         public Akka.Actor.IActorRef Watch(Akka.Actor.IActorRef subject) { }
         public Akka.Actor.IActorRef WatchWith(Akka.Actor.IActorRef subject, object message) { }
