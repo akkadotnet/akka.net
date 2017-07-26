@@ -36,4 +36,8 @@
     <Optimize>False</Optimize>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
 </Project>
