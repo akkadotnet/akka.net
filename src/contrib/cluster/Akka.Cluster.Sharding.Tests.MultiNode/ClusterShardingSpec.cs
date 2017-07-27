@@ -300,7 +300,11 @@ namespace Akka.Cluster.Sharding.Tests
 
             foreach (var typeName in typeNames)
             {
+#if CORECLR
+                var rebalanceEnabled = string.Equals(typeName, "rebalancing", StringComparison.CurrentCultureIgnoreCase);
+#else
                 var rebalanceEnabled = string.Equals(typeName, "rebalancing", StringComparison.InvariantCultureIgnoreCase);
+#endif
                 var singletonProps = BackoffSupervisor.Props(
                     CoordinatorProps(typeName, rebalanceEnabled),
                     "coordinator",

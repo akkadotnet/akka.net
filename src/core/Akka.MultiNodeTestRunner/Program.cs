@@ -25,6 +25,9 @@ using Akka.Remote.TestKit;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;
 using JetBrains.TeamCity.ServiceMessages.Write.Special.Impl;
 using Xunit;
+#if CORECLR
+using System.Runtime.Loader;
+#endif
 
 namespace Akka.MultiNodeTestRunner
 {
@@ -105,11 +108,11 @@ namespace Akka.MultiNodeTestRunner
         /// </summary>
         static void Main(string[] args)
         {
-            OutputDirectory = CommandLine.GetProperty("multinode.output-directory") ?? string.Empty;
+            OutputDirectory = CommandLine.GetPropertyOrDefault("multinode.output-directory", string.Empty);
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
 
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
-            var teamCityFormattingOn = CommandLine.GetProperty("multinode.teamcity") ?? "false";
+            var teamCityFormattingOn = CommandLine.GetPropertyOrDefault("multinode.teamcity", "false");
             if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
                 throw new ArgumentException("Invalid argument provided for -Dteamcity");
 
@@ -121,15 +124,36 @@ namespace Akka.MultiNodeTestRunner
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
             var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
+            var platform = CommandLine.GetPropertyOrDefault("multinode.platform", "net");
+
+#if CORECLR
+            if (platform != "net" && platform != "netcore")
+            {
+                throw new Exception($"Target platform not supported: {platform}. Supported platforms are net and netcore");
+            }
+#else
+            if (platform != "net")
+            {
+                throw new Exception($"Target platform not supported: {platform}. Supported platforms are net");
+            }
+#endif
 
             var tcpLogger = TestRunSystem.ActorOf(Props.Create(() => new TcpLoggingServer(SinkCoordinator)), "TcpLogger");
             TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint));
 
-            var assemblyName = Path.GetFullPath(args[0].Trim('"')); //unquote the string first
-            EnableAllSinks(assemblyName);
-            PublishRunnerMessage($"Running MultiNodeTests for {assemblyName}");
+            var assemblyPath = Path.GetFullPath(args[0].Trim('"')); //unquote the string first
 
-            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyName))
+            EnableAllSinks(assemblyPath);
+            PublishRunnerMessage($"Running MultiNodeTests for {assemblyPath}");
+            
+#if CORECLR
+            // Don't know why this is needed. In NetCore, if the assembly file hasn't been touched, 
+            // XunitFrontController would fail loading external assemblies and its dependencies.
+            var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+            var asms = assembly.GetReferencedAssemblies();
+#endif
+
+            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyPath))
             {
                 using (var discovery = new Discovery())
                 {
@@ -167,24 +191,28 @@ namespace Akka.MultiNodeTestRunner
                             process.StartInfo.RedirectStandardOutput = true;
                             process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
                             process.StartInfo.Arguments =
-                                $@"-Dmultinode.test-assembly=""{assemblyName}"" -Dmultinode.test-class=""{
-                                        nodeTest.TypeName
-                                    }"" -Dmultinode.test-method=""{
-                                        nodeTest.MethodName
-                                    }"" -Dmultinode.max-nodes={
-                                        test.Value.Count
-                                    } -Dmultinode.server-host=""{"localhost"}"" -Dmultinode.host=""{
-                                        "localhost"
-                                    }"" -Dmultinode.index={nodeTest.Node - 1} -Dmultinode.role=""{
-                                        nodeTest.Role
-                                    }"" -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={
-                                        listenPort
-                                    }";
+                                $@"-Dmultinode.test-assembly=""{assemblyPath}"" 
+                                    -Dmultinode.test-class=""{nodeTest.TypeName}"" 
+                                    -Dmultinode.test-method=""{nodeTest.MethodName}"" 
+                                    -Dmultinode.max-nodes={test.Value.Count} 
+                                    -Dmultinode.server-host=""{"localhost"}"" 
+                                    -Dmultinode.host=""{"localhost"}"" 
+                                    -Dmultinode.index={nodeTest.Node - 1} 
+                                    -Dmultinode.role=""{nodeTest.Role}"" 
+                                    -Dmultinode.listen-address={listenAddress} 
+                                    -Dmultinode.listen-port={listenPort}";
                             var nodeIndex = nodeTest.Node;
                             var nodeRole = nodeTest.Role;
+
+                            if (platform == "netcore")
+                            {
+                                process.StartInfo.FileName = "dotnet.exe";
+                                process.StartInfo.Arguments = "Akka.NodeTestRunner.dll " + process.StartInfo.Arguments;
+                            }
+
                             //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
                             var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
-                            var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}.txt");
+                            var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}__{platform}.txt");
                             var fileActor = TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
                             process.OutputDataReceived += (sender, eventArgs) =>
                             {
