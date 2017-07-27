@@ -18,15 +18,19 @@ namespace Akka.Remote.Serialization
     /// </remarks>
     internal static class FastHash
     {
+        /// <summary>
+        /// Allocatey, but safe implementation of FastHash
+        /// </summary>
+        /// <param name="s">The input string.</param>
+        /// <returns>A 32-bit pseudo-random hash value.</returns>
         public static int OfString(string s)
         {
             var chars = s.ToCharArray();
-            var s0 = 391408L;
-            var s1 = 601258L;
-            var i = 0;
+            var s0 = 391408L; // seed value 1, DON'T CHANGE
+            var s1 = 601258L; // seed value 2, DON'T CHANGE
             unchecked
             {
-                while (i < chars.Length)
+                for(i = 0; i < chars.Length;i++)
                 {
                     var x = s0 ^ chars[i]; // Mix character into PRNG state
                     var y = s1;
@@ -37,19 +41,23 @@ namespace Akka.Remote.Serialization
                     y ^= (y >> 26);
                     x ^= (x >> 17);
                     s1 = x ^ y;
-
-                    i += 1;
                 }
 
-                return(int)((s0 + s1) & 0xFFFFFFFF);
+                return (int)((s0 + s1) & 0xFFFFFFFF);
             }
         }
 
+        /// <summary>
+        /// Unsafe (uses pointer arithmetic) but faster, allocation-free implementation
+        /// of FastHash
+        /// </summary>
+        /// <param name="s">The input string.</param>
+        /// <returns>A 32-bit pseudo-random hash value.</returns>
         public static int OfStringFast(string s)
         {
             var len = s.Length;
-            var s0 = 391408L;
-            var s1 = 601258L;
+            var s0 = 391408L; // seed value 1, DON'T CHANGE
+            var s1 = 601258L; // seed value 2, DON'T CHANGE
             unsafe
             {
                 fixed (char* p1 = s)
@@ -107,13 +115,13 @@ namespace Akka.Remote.Serialization
     /// </summary>
     /// <typeparam name="TKey">The type of key used by the hash.</typeparam>
     /// <typeparam name="TValue">The type of value used in the cache.</typeparam>
-    internal abstract class LruBoundedCache<TKey, TValue> where TValue:class
+    internal abstract class LruBoundedCache<TKey, TValue> where TValue : class
     {
         protected LruBoundedCache(int capacity, int evictAgeThreshold)
         {
             if (capacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity must be larger than zero.");
-            if((capacity & (capacity - 1)) != 0) throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity must be a power of two.");
+            if ((capacity & (capacity - 1)) != 0) throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity must be a power of two.");
             if (!(evictAgeThreshold <= capacity))
                 throw new ArgumentOutOfRangeException(nameof(evictAgeThreshold),
                     "Age threshold must be less than capacity");
@@ -131,10 +139,10 @@ namespace Akka.Remote.Serialization
 
         public int EvictAgeThreshold { get; private set; }
 
-        private int _mask;
+        private readonly int _mask;
 
         // Practically guarantee an overflow
-        private int _epoch = Int32.MaxValue - 1;
+        private int _epoch = int.MaxValue - 1;
 
         private readonly TKey[] _keys;
         private readonly TValue[] _values;
@@ -190,7 +198,7 @@ namespace Akka.Remote.Serialization
         public TValue GetOrCompute(TKey k)
         {
             var h = Hash(k);
-            unchecked{_epoch += 1;}
+            unchecked { _epoch += 1; }
 
             var position = h & _mask;
             var probeDistance = 0;
