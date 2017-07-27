@@ -37,7 +37,7 @@ $DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/sc
 $NugetVersion = "4.1.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
 $ProtobufVersion = "3.2.0"
-$DocfxVersion = "2.17.3"
+$DocfxVersion = "2.21.1"
 
 # Make sure tools folder exists
 $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
