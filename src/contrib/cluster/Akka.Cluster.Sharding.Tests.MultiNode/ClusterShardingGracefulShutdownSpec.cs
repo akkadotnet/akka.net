@@ -43,8 +43,17 @@ namespace Akka.Cluster.Sharding.Tests
         }
     }
 
-    public class ClusterShardingGracefulShutdownNode1 : ClusterShardingGracefulShutdownSpec { }
-    public class ClusterShardingGracefulShutdownNode2 : ClusterShardingGracefulShutdownSpec { }
+    public class ClusterShardingGracefulShutdownNode1 : ClusterShardingGracefulShutdownSpec
+    {
+        public ClusterShardingGracefulShutdownNode1():base(typeof(ClusterShardingGracefulShutdownNode1))
+        { }
+    }
+
+    public class ClusterShardingGracefulShutdownNode2 : ClusterShardingGracefulShutdownSpec
+    {
+        public ClusterShardingGracefulShutdownNode2():base(typeof(ClusterShardingGracefulShutdownNode2))
+        { }
+    }
 
     public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
     {
@@ -79,7 +88,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly RoleName _first;
         private readonly RoleName _second;
 
-        protected ClusterShardingGracefulShutdownSpec() : base(new ClusterShardingGracefulShutdownSpecConfig())
+        protected ClusterShardingGracefulShutdownSpec(Type type) : base(new ClusterShardingGracefulShutdownSpecConfig(), type)
         {
             _storageLocations = new[]
             {

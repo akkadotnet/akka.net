@@ -75,7 +75,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
         }
 
-        protected ClusterSingletonManagerChaosSpec(ClusterSingletonManagerChaosConfig config) : base(config)
+        protected ClusterSingletonManagerChaosSpec(ClusterSingletonManagerChaosConfig config) : base(config, typeof(ClusterSingletonManagerChaosSpec))
         {
             _config = config;
         }

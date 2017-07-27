@@ -202,9 +202,24 @@ namespace Akka.Cluster.Sharding.Tests
             _count += e.Delta;
         }
     }
-    public class ClusterShardingNode1 : ClusterShardingSpec { }
-    public class ClusterShardingNode2 : ClusterShardingSpec { }
-    public class ClusterShardingNode3 : ClusterShardingSpec { }
+
+    public class ClusterShardingNode1 : ClusterShardingSpec
+    {
+        public ClusterShardingNode1():base(typeof(ClusterShardingNode1))
+        { }
+    }
+
+    public class ClusterShardingNode2 : ClusterShardingSpec
+    {
+        public ClusterShardingNode2():base(typeof(ClusterShardingNode2))
+        { }
+    }
+
+    public class ClusterShardingNode3 : ClusterShardingSpec
+    {
+        public ClusterShardingNode3():base(typeof(ClusterShardingNode3))
+        { }
+    }
 
     public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
@@ -227,7 +242,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly Lazy<IActorRef> _rebalancingPersistentRegion;
         private readonly Lazy<IActorRef> _autoMigrateRegion;
 
-        protected ClusterShardingSpec() : base(new ClusterShardingSpecConfig())
+        protected ClusterShardingSpec(Type type) : base(new ClusterShardingSpecConfig(), type)
         {
             _storageLocations = new[]
             {

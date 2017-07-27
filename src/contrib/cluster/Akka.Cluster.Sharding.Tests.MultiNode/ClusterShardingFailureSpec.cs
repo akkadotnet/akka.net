@@ -50,9 +50,23 @@ namespace Akka.Cluster.Sharding.Tests
         }
     }
 
-    public class ClusterShardingFailureNode1 : ClusterShardingFailureSpec { }
-    public class ClusterShardingFailureNode2 : ClusterShardingFailureSpec { }
-    public class ClusterShardingFailureNode3 : ClusterShardingFailureSpec { }
+    public class ClusterShardingFailureNode1 : ClusterShardingFailureSpec
+    {
+        public ClusterShardingFailureNode1():base(typeof(ClusterShardingFailureNode1))
+        { }
+    }
+
+    public class ClusterShardingFailureNode2 : ClusterShardingFailureSpec
+    {
+        public ClusterShardingFailureNode2():base(typeof(ClusterShardingFailureNode2))
+        { }
+    }
+
+    public class ClusterShardingFailureNode3 : ClusterShardingFailureSpec
+    {
+        public ClusterShardingFailureNode3():base(typeof(ClusterShardingFailureNode3))
+        { }
+    }
 
     public abstract class ClusterShardingFailureSpec : MultiNodeClusterSpec
     {
@@ -123,7 +137,7 @@ namespace Akka.Cluster.Sharding.Tests
         private RoleName _second;
         private RoleName _controller;
 
-        protected ClusterShardingFailureSpec() : base(new ClusterShardingFailureSpecConfig())
+        protected ClusterShardingFailureSpec(Type type) : base(new ClusterShardingFailureSpecConfig(), type)
         {
             _storageLocations = new[]
             {

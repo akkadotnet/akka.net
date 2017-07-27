@@ -52,7 +52,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public JoinWithOfflineSeedNodeSpec() : this(new JoinWithOfflineSeedNodeConfig()) { }
 
-        protected JoinWithOfflineSeedNodeSpec(JoinWithOfflineSeedNodeConfig config) : base(config)
+        protected JoinWithOfflineSeedNodeSpec(JoinWithOfflineSeedNodeConfig config) : base(config, typeof(JoinWithOfflineSeedNodeSpec))
         {
             _config = config;
             _seedSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));

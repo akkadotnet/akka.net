@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
@@ -143,11 +144,11 @@ namespace Akka.MultiNodeTestRunner
 
             var assemblyPath = Path.GetFullPath(args[0].Trim('"')); //unquote the string first
 
-            EnableAllSinks(assemblyPath);
+            EnableAllSinks(assemblyPath, platform);
             PublishRunnerMessage($"Running MultiNodeTests for {assemblyPath}");
             
 #if CORECLR
-            // Don't know why this is needed. In NetCore, if the assembly file hasn't been touched, 
+            // In NetCore, if the assembly file hasn't been touched, 
             // XunitFrontController would fail loading external assemblies and its dependencies.
             var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
             var asms = assembly.GetReferencedAssemblies();
@@ -185,30 +186,41 @@ namespace Akka.MultiNodeTestRunner
                         foreach (var nodeTest in test.Value)
                         {
                             //Loop through each test, work out number of nodes to run on and kick off process
-                            var process = new Process();
+                            var sbArguments = new StringBuilder()
+                                .Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
+                                .Append($@"-Dmultinode.test-class=""{nodeTest.TypeName}"" ")
+                                .Append($@"-Dmultinode.test-method=""{nodeTest.MethodName}"" ")
+                                .Append($@"-Dmultinode.max-nodes={test.Value.Count} ")
+                                .Append($@"-Dmultinode.server-host=""{"localhost"}"" ")
+                                .Append($@"-Dmultinode.host=""{"localhost"}"" ")
+                                .Append($@"-Dmultinode.index={nodeTest.Node - 1} ")
+                                .Append($@"-Dmultinode.role=""{nodeTest.Role}"" ")
+                                .Append($@"-Dmultinode.listen-address={listenAddress} ")
+                                .Append($@"-Dmultinode.listen-port={listenPort}");
+                            
+                            var process = new Process{
+                                StartInfo = new ProcessStartInfo
+                                {
+                                    UseShellExecute = false,
+                                    RedirectStandardOutput = true,
+                                    FileName = "Akka.NodeTestRunner.exe",
+                                    Arguments = sbArguments.ToString()
+                                }
+                            };
+                            
                             processes.Add(process);
-                            process.StartInfo.UseShellExecute = false;
-                            process.StartInfo.RedirectStandardOutput = true;
-                            process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
-                            process.StartInfo.Arguments =
-                                $@"-Dmultinode.test-assembly=""{assemblyPath}"" 
-                                    -Dmultinode.test-class=""{nodeTest.TypeName}"" 
-                                    -Dmultinode.test-method=""{nodeTest.MethodName}"" 
-                                    -Dmultinode.max-nodes={test.Value.Count} 
-                                    -Dmultinode.server-host=""{"localhost"}"" 
-                                    -Dmultinode.host=""{"localhost"}"" 
-                                    -Dmultinode.index={nodeTest.Node - 1} 
-                                    -Dmultinode.role=""{nodeTest.Role}"" 
-                                    -Dmultinode.listen-address={listenAddress} 
-                                    -Dmultinode.listen-port={listenPort}";
                             var nodeIndex = nodeTest.Node;
                             var nodeRole = nodeTest.Role;
 
+#if CORECLR
                             if (platform == "netcore")
                             {
-                                process.StartInfo.FileName = "dotnet.exe";
-                                process.StartInfo.Arguments = "Akka.NodeTestRunner.dll " + process.StartInfo.Arguments;
+                                process.StartInfo.FileName = "dotnet";
+                                var ntrPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Akka.NodeTestRunner", "bin", "Release", "netcoreapp1.1", "Akka.NodeTestRunner.dll");
+                                process.StartInfo.Arguments = Path.GetFullPath(ntrPath) + " " + process.StartInfo.Arguments;
+                                process.StartInfo.WorkingDirectory = Path.GetDirectoryName(assemblyPath);
                             }
+#endif
 
                             //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
                             var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
@@ -268,7 +280,7 @@ namespace Akka.MultiNodeTestRunner
             Environment.Exit(ExitCodeContainer.ExitCode);
         }
 
-        static void EnableAllSinks(string assemblyName)
+        static void EnableAllSinks(string assemblyName, string platform)
         {
             var now = DateTime.UtcNow;
 
@@ -278,7 +290,7 @@ namespace Akka.MultiNodeTestRunner
 
             MessageSink CreateJsonFileSink()
             {
-                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".json", now);
+                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, platform, assemblyName, ".json", now);
                 var jsonStoreProps = Props.Create(() => 
                     new FileSystemMessageSinkActor(
                         new JsonPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
@@ -288,7 +300,7 @@ namespace Akka.MultiNodeTestRunner
 
             MessageSink CreateVisualizerFileSink()
             {
-                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".html", now);
+                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, platform, assemblyName, ".html", now);
                 var visualizerProps = Props.Create(() => 
                     new FileSystemMessageSinkActor(
                         new VisualizerPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));

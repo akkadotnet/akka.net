@@ -34,7 +34,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         public ReplicatorPruningSpec() : this(new ReplicatorPruningSpecConfig()) { }
 
-        protected ReplicatorPruningSpec(ReplicatorPruningSpecConfig config) : base(config)
+        protected ReplicatorPruningSpec(ReplicatorPruningSpecConfig config) : base(config, typeof(ReplicatorPruningSpec))
         {
             _cluster = Akka.Cluster.Cluster.Get(Sys);
             _timeout = Dilated(TimeSpan.FromSeconds(3));

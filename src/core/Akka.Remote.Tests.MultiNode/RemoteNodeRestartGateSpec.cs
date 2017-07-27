@@ -30,7 +30,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         protected RemoteNodeRestartGateSpec(RemoteNodeRestartGateSpecConfig specConfig)
-            : base(specConfig)
+            : base(specConfig, typeof(RemoteNodeRestartGateSpec))
         {
             _specConfig = specConfig;
         }

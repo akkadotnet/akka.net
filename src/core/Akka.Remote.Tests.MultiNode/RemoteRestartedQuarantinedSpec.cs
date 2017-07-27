@@ -65,7 +65,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         protected RemoteRestartedQuarantinedSpec(RemoteRestartedQuarantinedMultiNetSpec config)
-            : base(config)
+            : base(config, typeof(RemoteRestartedQuarantinedSpec))
         {
             _config = config;
 

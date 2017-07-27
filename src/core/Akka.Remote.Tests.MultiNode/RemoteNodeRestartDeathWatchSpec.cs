@@ -28,7 +28,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         protected RemoteNodeRestartDeathWatchSpec(RemoteNodeRestartDeathWatchSpecConfig specConfig)
-            : base(specConfig)
+            : base(specConfig, typeof(RemoteNodeRestartDeathWatchSpec))
         {
             _specConfig = specConfig;
         }

@@ -47,10 +47,29 @@ namespace Akka.Cluster.Sharding.Tests
         }
     }
 
-    public class ClusterShardingLeavingNode1 : ClusterShardinLeavingSpec { }
-    public class ClusterShardingLeavingNode2 : ClusterShardinLeavingSpec { }
-    public class ClusterShardingLeavingNode3 : ClusterShardinLeavingSpec { }
-    public class ClusterShardingLeavingNode4 : ClusterShardinLeavingSpec { }
+    public class ClusterShardingLeavingNode1 : ClusterShardinLeavingSpec
+    {
+        public ClusterShardingLeavingNode1():base(typeof(ClusterShardingLeavingNode1))
+        { }
+    }
+
+    public class ClusterShardingLeavingNode2 : ClusterShardinLeavingSpec
+    {
+        public ClusterShardingLeavingNode2():base(typeof(ClusterShardingLeavingNode2))
+        { }
+    }
+
+    public class ClusterShardingLeavingNode3 : ClusterShardinLeavingSpec
+    {
+        public ClusterShardingLeavingNode3():base(typeof(ClusterShardingLeavingNode3))
+        { }
+    }
+
+    public class ClusterShardingLeavingNode4 : ClusterShardinLeavingSpec
+    {
+        public ClusterShardingLeavingNode4():base(typeof(ClusterShardingLeavingNode4))
+        { }
+    }
 
     public abstract class ClusterShardinLeavingSpec : MultiNodeClusterSpec
     {
@@ -117,7 +136,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly RoleName _third;
         private readonly RoleName _fourth;
 
-        protected ClusterShardinLeavingSpec() : base(new ClusterShardingLeavingSpecConfig())
+        protected ClusterShardinLeavingSpec(Type type) : base(new ClusterShardingLeavingSpecConfig(), type)
         {
             _storageLocations = new[]
             {

@@ -62,7 +62,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             {
             }
 
-            protected ClusterClientStartSpec(ClusterClientStartSpecConfig config) : base(config)
+            protected ClusterClientStartSpec(ClusterClientStartSpecConfig config) : base(config, typeof(ClusterClientStartSpec))
             {
                 _config = config;
             }

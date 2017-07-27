@@ -51,7 +51,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         }
 
-        protected QuickRestartSpec(QuickRestartSpecConfig config) : base(config)
+        protected QuickRestartSpec(QuickRestartSpecConfig config) : base(config, typeof(QuickRestartSpec))
         {
             _config = config;
             _seedNodes = new Lazy<ImmutableList<Address>>(() => ImmutableList<Address>.Empty
