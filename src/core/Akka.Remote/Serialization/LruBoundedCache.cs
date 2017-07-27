@@ -30,7 +30,7 @@ namespace Akka.Remote.Serialization
             var s1 = 601258L; // seed value 2, DON'T CHANGE
             unchecked
             {
-                for(i = 0; i < chars.Length;i++)
+                for(var i = 0; i < chars.Length;i++)
                 {
                     var x = s0 ^ chars[i]; // Mix character into PRNG state
                     var y = s1;
