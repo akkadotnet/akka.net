@@ -62,6 +62,17 @@ namespace Akka.Persistence
         #region event API
 
         /// <summary>
+        /// Initializes full recovery procedure, which involves both snapshot and event replays. Unlike <see cref="ReplayEvents{T}"/>
+        /// or <see cref="LoadSnapshot"/>, it also includes congestion control for situations when too many recoveries are happening 
+        /// at once.
+        /// </summary>
+        /// <param name="snapshotHandler"></param>
+        /// <param name="eventHandler"></param>
+        /// <param name="cancellation"></param>
+        /// <returns></returns>
+        Task Recover(Action<SnapshotOffer> snapshotHandler, Action<object> eventHandler, CancellationToken cancellation = default(CancellationToken));
+
+        /// <summary>
         /// Returns an asynchronous enumerator that can be used to replay a collection of events
         /// fitting into boundaries set by <paramref name="fromSequenceNr"/> and <paramref name="toSequenceNr"/>.
         /// </summary>
@@ -94,26 +105,28 @@ namespace Akka.Persistence
         #endregion
     }
 
-    internal sealed class EventStore : IEventStore, IActorRef
+    internal sealed class EventStoreRef : IEventStore, IActorRef
     {
         private readonly IActorRef _eventJournal;
         private readonly IActorRef _snapshotStore;
-        private readonly Persistence _persistence;
+        private readonly PersistenceExtension _persistence;
         private readonly string _writerGuid;
 
         private readonly Dictionary<object, TaskCompletionSource<object>> _pendingRequests = new Dictionary<object, TaskCompletionSource<object>>();
 
-        EventStore(Persistence persistence, string persistenceId, IActorRef eventJournal, IActorRef snapshotStore)
+        private TaskCompletionSource<int> _recovery;
+
+        public EventStoreRef(PersistenceExtension persistence, string persistenceId, IActorRef eventJournal, IActorRef snapshotStore)
         {
             if (string.IsNullOrEmpty(persistenceId)) throw new ArgumentNullException(nameof(persistenceId), "PersistenceId cannot be empty.");
-
-            PersistenceId = persistenceId;
-            LastSequenceNr = 0;
-
+            
             _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence), $"Persistence plugin was not initialized.");
             _eventJournal = eventJournal ?? throw new ArgumentNullException(nameof(eventJournal), $"No event journal was provided for event store with persistence id [{persistenceId}].");
             _snapshotStore = snapshotStore ?? throw new ArgumentNullException(nameof(snapshotStore), $"No snapshot store was provided for event store with persistence id [{persistenceId}].");
             _writerGuid = Guid.NewGuid().ToString();
+
+            PersistenceId = persistenceId;
+            LastSequenceNr = 0;
         }
 
         #region IEventStore interface
@@ -143,6 +156,25 @@ namespace Akka.Persistence
             var correlationId = CreateCorrelationId();
             _snapshotStore.Tell(new DeleteSnapshots(PersistenceId, criteria, correlationId), this);
             return SetupCompletion(correlationId, cancellation);
+        }
+
+        public Task Recover(Action<SnapshotOffer> snapshotHandler, Action<object> eventHandler, CancellationToken cancellation =default(CancellationToken))
+        {
+            if (_recovery != null) return _recovery.Task;
+
+            _recovery = new TaskCompletionSource<int>();
+            if (cancellation != CancellationToken.None)
+            {
+                cancellation.Register(() =>
+                {
+                    _recovery.TrySetCanceled();
+                    _recovery = null;
+                });
+            }
+
+            _persistence.RecoveryPermitter.Tell(RequestRecoveryPermit.Instance, this);
+
+            return _recovery.Task;
         }
 
         public async Task<SnapshotOffer> LoadSnapshot(SnapshotSelectionCriteria criteria = null, long toSequenceNr = long.MaxValue, string persistenceId = null, CancellationToken cancellation = default(CancellationToken))
@@ -216,7 +248,7 @@ namespace Akka.Persistence
 
         int IComparable<IActorRef>.CompareTo(IActorRef other)
         {
-            if (other is EventStore es)
+            if (other is EventStoreRef es)
             {
                 return string.Compare(this.PersistenceId, es.PersistenceId);
             }
@@ -225,7 +257,7 @@ namespace Akka.Persistence
 
         int IComparable.CompareTo(object obj)
         {
-            if (obj is EventStore es)
+            if (obj is EventStoreRef es)
             {
                 return string.Compare(this.PersistenceId, es.PersistenceId);
             }
@@ -235,7 +267,7 @@ namespace Akka.Persistence
         bool IEquatable<IActorRef>.Equals(IActorRef other)
         {
             if (ReferenceEquals(other, null)) return false;
-            if (other is EventStore es)
+            if (other is EventStoreRef es)
             {
                 return this.PersistenceId == es.PersistenceId;
             }
@@ -246,10 +278,23 @@ namespace Akka.Persistence
         {
             switch (message)
             {
-                case IPersistentRepresentation envelope: break;
-                case ReplayedMessage replayed: break;
-                case RecoverySuccess success: break;
-                case ReplayMessagesFailure failure: break;
+                case IPersistentRepresentation envelope:
+                    
+                    break;
+                case ReplayedMessage replayed:
+                    // start recovering per event
+                    break;
+                case RecoverySuccess success:
+                    LastSequenceNr = success.HighestSequenceNr;
+                    break;
+                case ReplayMessagesFailure failure:
+                    // couldn't replay messages, call for finish
+                    TryReturnRecoveryPermit(failure.Cause);
+                    //TODO
+                    break;
+                case RecoveryPermitGranted _:
+                    // recovery procedure started as is allowed to proceede
+                    break;
 
                 case WriteMessageSuccess success: break;
                 case WriteMessageRejected rejected: break;
@@ -295,12 +340,29 @@ namespace Akka.Persistence
                         completion?.TrySetResult(0);
                         break;
                     }
-                case RecoveryCompleted _: break;
+                case RecoveryCompleted _:
+                    TryReturnRecoveryPermit();
+                    break;
+            }
+        }
+
+        private void TryReturnRecoveryPermit(Exception cause = null)
+        {
+            // check if we asked for permit first
+            if (_recovery != null)
+            {
+                _persistence.RecoveryPermitter.Tell(ReturnRecoveryPermit.Instance, this);
+                if (cause == null)
+                    _recovery.TrySetResult(1);
+                else
+                    _recovery.TrySetException(cause);
+
+                _recovery = null;
             }
         }
 
         ISurrogate ISurrogated.ToSurrogate(ActorSystem system) =>
-            throw new NotSupportedException("EventStore instance serialization is not supported.");
+            throw new NotSupportedException($"{nameof(EventStoreRef)} instance serialization is not supported.");
 
         #endregion
 

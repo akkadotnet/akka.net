@@ -140,19 +140,30 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="actor">TBD</param>
         /// <returns>TBD</returns>
-        public string PersistenceId(IActorRef actor)
+        public string PersistenceId(IActorRef actor) => actor.Path.ToStringWithoutAddress();
+
+        /// <summary>
+        /// Returns an <see cref="IEventStore"/> facade that can be used for communicating with eventsourcing capabilities of actor system.
+        /// Component returned this way should not be called from multiple threads at the same time. There should be only one instance of
+        /// an eventsourced object per <paramref name="persistenceId"/> in the cluster at the same time.
+        /// </summary>
+        /// <remarks>No pun intended.</remarks>
+        /// <param name="persistenceId"></param>
+        /// <param name="journalPluginId"></param>
+        /// <param name="snapshotPluginId"></param>
+        /// <returns></returns>
+        public IEventStore GetEventStore(string persistenceId, string journalPluginId = null, string snapshotPluginId = null)
         {
-            return actor.Path.ToStringWithoutAddress();
+            var eventJournal = JournalFor(journalPluginId);
+            var snapshotStore = SnapshotStoreFor(snapshotPluginId);
+            return new EventStoreRef(this, persistenceId, eventJournal, snapshotStore);
         }
 
         /// <summary>
         /// INTERNAL API: When starting many persistent actors at the same time the journal its data store is protected 
         /// from being overloaded by limiting number of recoveries that can be in progress at the same time.
         /// </summary>
-        internal IActorRef RecoveryPermitter()
-        {
-            return _recoveryPermitter.Value;
-        }
+        internal IActorRef RecoveryPermitter => _recoveryPermitter.Value;
 
         /// <summary>
         /// Returns an <see cref="EventAdapters"/> object which serves as a per-journal collection of bound event adapters. 
