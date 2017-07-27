@@ -71,6 +71,7 @@
       "template"
     ],
     "postProcessors": [],
-    "noLangKeyword": false
+    "noLangKeyword": false,
+    "maxParallelism": 1
   }
 }
