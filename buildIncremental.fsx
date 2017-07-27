@@ -156,10 +156,15 @@ module IncrementalTests =
 
     type ProjectPath = { projectName: string; projectPath: string }
     type ProjectDetails = { parentProject: ProjectPath; dependencies: ProjectPath seq; isTestProject: bool }
+        
+    let getDependentProjectFilePath csprojRef =
+        match isWindows with
+        | true -> FullName csprojRef
+        | _ -> !! ("./src/**" @@ (normalizePath csprojRef)) |> Seq.head
 
     let getDependentProjects csprojFile =
         XMLRead true csprojFile "" "" "//Project/ItemGroup/ProjectReference/@Include"
-        |> Seq.map (fun p -> { projectName = filename p; projectPath = FullName p })
+        |> Seq.map (fun p -> { projectName = filename (normalizePath p); projectPath = getDependentProjectFilePath p })
     
     type TestMode =
     | Unit
