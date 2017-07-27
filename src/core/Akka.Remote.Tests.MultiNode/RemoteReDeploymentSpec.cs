@@ -232,7 +232,7 @@ namespace Akka.Remote.Tests.MultiNode
 
     public class RemoteReDeploymentFastMultiNetSpec : RemoteReDeploymentSpec
     {
-        protected RemoteReDeploymentFastMultiNetSpec() : base(typeof(RemoteReDeploymentFastMultiNetSpec))
+        public RemoteReDeploymentFastMultiNetSpec() : base(typeof(RemoteReDeploymentFastMultiNetSpec))
         { }
 
         // new association will come in while old is still "healthy"
