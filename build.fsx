@@ -458,7 +458,7 @@ Target "Nuget" DoNothing
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
-"Clean" ==> "Docfx"
+"BuildRelease" ==> "Docfx"
 
 // all
 "BuildRelease" ==> "All"
