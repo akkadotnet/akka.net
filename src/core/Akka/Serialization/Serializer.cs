@@ -39,6 +39,8 @@ namespace Akka.Serialization
         /// </summary>
         protected readonly ExtendedActorSystem system;
 
+        private readonly FastLazy<int> _value;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Serializer" /> class.
         /// </summary>
@@ -46,13 +48,14 @@ namespace Akka.Serialization
         protected Serializer(ExtendedActorSystem system)
         {
             this.system = system;
+            _value = new FastLazy<int>(() => SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system));
         }
 
         /// <summary>
         /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
         /// Values from 0 to 16 is reserved for Akka internal usage
         /// </summary>
-        public virtual int Identifier => SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system);
+        public virtual int Identifier => _value.Value;
 
         /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
