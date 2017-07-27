@@ -50,6 +50,14 @@ Target "Clean" (fun _ ->
     CleanDirs !! "./**/obj"
 )
 
+Target "AssemblyInfo" (fun _ ->
+    let releaseNotes =
+        File.ReadLines "./RELEASE_NOTES.md"
+        |> ReleaseNotesHelper.parseReleaseNotes
+    XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" releaseNotes.AssemblyVersion    
+    XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/PackageReleaseNotes" (releaseNotes.Notes |> String.concat "\n")
+)
+
 Target "RestorePackages" (fun _ ->
     let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
 
@@ -419,7 +427,7 @@ Target "Nuget" DoNothing
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
-"Clean" ==> "Docfx"
+"BuildRelease" ==> "Docfx"
 
 // all
 "BuildRelease" ==> "All"

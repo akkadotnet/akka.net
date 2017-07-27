@@ -1,5 +1,6 @@
 ﻿using Akka.Actor;
 using Akka.IO;
+using Akka.Util.Internal;
 
 namespace DocsExamples.Networking.IO
 {
@@ -17,7 +18,7 @@ namespace DocsExamples.Networking.IO
             if (message is Tcp.Received)
             {
                 var received = message as Tcp.Received;
-                if (received.Data.Head == 'x')
+                if (received.Data[0] == 'x')
                     Context.Stop(Self);
                 else
                     _connection.Tell(Tcp.Write.Create(received.Data));
