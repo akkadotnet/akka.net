@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -106,7 +106,7 @@ namespace Akka.Streams.Implementation.IO
                     try
                     {
                         var byteString = (ByteString) next.Element;
-                        var bytes = (byteString.AsByteBuffer()).Array();
+                        var bytes = byteString.ToArray();
                          _chan.Write(bytes, 0, bytes.Length);
                         _bytesWritten += bytes.Length;
                     }
@@ -156,4 +156,3 @@ namespace Akka.Streams.Implementation.IO
         }
     }
 }
-#endif

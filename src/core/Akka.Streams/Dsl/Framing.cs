@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.IO;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
@@ -94,7 +95,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
         {
-            return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Drop(4));
+            return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Slice(4));
         }
 
         /// <summary>
@@ -121,21 +122,22 @@ namespace Akka.Streams.Dsl
             }
         }
 
-        private static readonly Func<ByteIterator, int, int> BigEndianDecoder = (byteString, length) =>
+        private static readonly Func<IEnumerator<byte>, int, int> BigEndianDecoder = (enumerator, length) =>
         {
             var count = length;
             var decoded = 0;
             while (count > 0)
             {
                 decoded <<= 8;
-                decoded |= byteString.Next() & 0xFF;
+                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
+                decoded |= enumerator.Current & 0xFF;
                 count--;
             }
 
             return decoded;
         };
 
-        private static readonly Func<ByteIterator, int, int> LittleEndianDecoder = (byteString, length) =>
+        private static readonly Func<IEnumerator<byte>, int, int> LittleEndianDecoder = (enumerator, length) =>
         {
             var highestOcted = (length - 1) << 3;
             var mask = (int) (1L << (length << 3)) - 1;
@@ -146,7 +148,8 @@ namespace Akka.Streams.Dsl
             {
                 // decoded >>>= 8 on the jvm
                 decoded = (int) ((uint) decoded >> 8);
-                decoded += (byteString.Next() & 0xFF) << highestOcted;
+                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
+                decoded += (enumerator.Current & 0xFF) << highestOcted;
                 count--;
             }
 
@@ -168,7 +171,7 @@ namespace Akka.Streams.Dsl
                 if (messageSize > _maximumMessageLength)
                     return context.Fail(new FramingException($"Maximum allowed message size is {_maximumMessageLength} but tried to send {messageSize} bytes"));
 
-                var header = ByteString.Create(new[]
+                var header = ByteString.FromBytes(new[]
                 {
                     Convert.ToByte((messageSize >> 24) & 0xFF),
                     Convert.ToByte((messageSize >> 16) & 0xFF),
@@ -193,7 +196,7 @@ namespace Akka.Streams.Dsl
                 public Logic(DelimiterFramingStage stage) : base (stage.Shape)
                 {
                     _stage = stage;
-                    _firstSeparatorByte = stage._separatorBytes.Head;
+                    _firstSeparatorByte = stage._separatorBytes[0];
                     _buffer = ByteString.Empty;
 
                     SetHandler(stage.In, this);
@@ -238,58 +241,52 @@ namespace Akka.Streams.Dsl
 
                 private void DoParse()
                 {
-                    var possibleMatchPosition = -1;
-
-                    for (var i = _nextPossibleMatch; i < _buffer.Count; i++)
+                    while (true)
                     {
-                        if (_buffer[i] == _firstSeparatorByte)
+                        var possibleMatchPosition = _buffer.IndexOf(_firstSeparatorByte, from: _nextPossibleMatch);
+
+                        if (possibleMatchPosition > _stage._maximumLineBytes)
                         {
-                            possibleMatchPosition = i;
-                            break;
+                            FailStage(new FramingException($"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
                         }
-                    }
-
-                    if (possibleMatchPosition > _stage._maximumLineBytes)
-                        FailStage(
-                            new FramingException(
-                                $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
-                    else if (possibleMatchPosition == -1)
-                    {
-                        if (_buffer.Count > _stage._maximumLineBytes)
-                            FailStage(
-                                new FramingException(
-                                    $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
-                        else
+                        else if (possibleMatchPosition == -1)
                         {
-                            // No matching character, we need to accumulate more bytes into the buffer 
-                            _nextPossibleMatch = _buffer.Count;
+                            if (_buffer.Count > _stage._maximumLineBytes)
+                                FailStage(new FramingException($"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
+                            else
+                            {
+                                // No matching character, we need to accumulate more bytes into the buffer 
+                                _nextPossibleMatch = _buffer.Count;
+                                TryPull();
+                            }
+                        }
+                        else if (possibleMatchPosition + _stage._separatorBytes.Count > _buffer.Count)
+                        {
+                            // We have found a possible match (we found the first character of the terminator 
+                            // sequence) but we don't have yet enough bytes. We remember the position to 
+                            // retry from next time.
+                            _nextPossibleMatch = possibleMatchPosition;
                             TryPull();
                         }
-                    }
-                    else if (possibleMatchPosition + _stage._separatorBytes.Count > _buffer.Count)
-                    {
-                        // We have found a possible match (we found the first character of the terminator 
-                        // sequence) but we don't have yet enough bytes. We remember the position to 
-                        // retry from next time.
-                        _nextPossibleMatch = possibleMatchPosition;
-                        TryPull();
-                    }
-                    else if (Equals(_buffer.Slice(possibleMatchPosition, possibleMatchPosition + _stage._separatorBytes.Count), _stage._separatorBytes))
-                    {
-                        // Found a match
-                        var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
-                        _buffer = _buffer.Drop(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
-                        _nextPossibleMatch = 0;
-                        Push(_stage.Out, parsedFrame);
+                        else if (_buffer.HasSubstring(_stage._separatorBytes, possibleMatchPosition))
+                        {
+                            // Found a match
+                            var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
+                            _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
+                            _nextPossibleMatch = 0;
+                            Push(_stage.Out, parsedFrame);
 
-                        if (IsClosed(_stage.In) && _buffer.IsEmpty)
-                            CompleteStage();
-                    }
-                    else
-                    {
-                        // possibleMatchPos was not actually a match 
-                        _nextPossibleMatch++;
-                        DoParse();
+                            if (IsClosed(_stage.In) && _buffer.IsEmpty)
+                                CompleteStage();
+                        }
+                        else
+                        {
+                            // possibleMatchPos was not actually a match 
+                            _nextPossibleMatch++;
+                            continue;
+                        }
+
+                        break;
                     }
                 }
             }
@@ -330,7 +327,7 @@ namespace Akka.Streams.Dsl
             private ByteString _buffer = ByteString.Empty;
             private readonly int _minimumChunkSize;
             private int _frameSize;
-            private readonly Func<ByteIterator, int, int> _intDecoder; 
+            private readonly Func<IEnumerator<byte>, int, int> _intDecoder; 
 
             public LengthFieldFramingStage(int lengthFieldLength, int maximumFramelength, int lengthFieldOffset, ByteOrder byteOrder)
             {
@@ -352,7 +349,7 @@ namespace Akka.Streams.Dsl
 
             public override ITerminationDirective OnUpstreamFinish(IContext<ByteString> context)
             {
-                return _buffer.NonEmpty ? context.AbsorbTermination() : context.Finish();
+                return !_buffer.IsEmpty ? context.AbsorbTermination() : context.Finish();
             }
 
             public override void PostStop() => _buffer = null;
@@ -365,31 +362,31 @@ namespace Akka.Streams.Dsl
                 return context.Pull();
             }
 
+            private ISyncDirective EmitFrame(IContext<ByteString> ctx)
+            {
+                var parsedFrame = _buffer.Slice(0, _frameSize).Compact();
+                _buffer = _buffer.Slice(_frameSize);
+                _frameSize = int.MaxValue;
+                if (ctx.IsFinishing && _buffer.IsEmpty)
+                    return ctx.PushAndFinish(parsedFrame);
+                return ctx.Push(parsedFrame);
+            }
+
             private ISyncDirective DoParse(IContext<ByteString> context)
             {
-                Func<IContext<ByteString>, ISyncDirective> emitFrame = ctx =>
-                {
-                    var parsedFrame = _buffer.Take(_frameSize).Compact();
-                    _buffer = _buffer.Drop(_frameSize);
-                    _frameSize = int.MaxValue;
-                    if (ctx.IsFinishing && _buffer.IsEmpty)
-                        return ctx.PushAndFinish(parsedFrame);
-                    return ctx.Push(parsedFrame);
-                };
-
                 var bufferSize = _buffer.Count;
                 if (bufferSize >= _frameSize)
-                    return emitFrame(context);
+                    return EmitFrame(context);
 
                 if (bufferSize >= _minimumChunkSize)
                 {
-                    var parsedLength = _intDecoder(_buffer.Iterator().Drop(_lengthFieldOffset), _lengthFieldLength);
+                    var parsedLength = _intDecoder(_buffer.Slice(_lengthFieldOffset).GetEnumerator(), _lengthFieldLength);
                     _frameSize = parsedLength + _minimumChunkSize;
 
                     if (_frameSize > _maximumFramelength)
                         return context.Fail(new FramingException($"Maximum allowed frame size is {_maximumFramelength} but decoded frame header reported size {_frameSize}"));
                     if (bufferSize >= _frameSize)
-                        return emitFrame(context);
+                        return EmitFrame(context);
 
                     return TryPull(context);
                 }

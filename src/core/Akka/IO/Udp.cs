@@ -4,17 +4,22 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.IO.Buffers;
 
 namespace Akka.IO
 {
+    using ByteBuffer = ArraySegment<byte>;
+
     /// <summary>
     /// UDP Extension for Akka’s IO layer.
     ///
@@ -27,6 +32,52 @@ namespace Akka.IO
     /// </summary>
     public class Udp : ExtensionIdProvider<UdpExt>
     {
+        #region internal connection messages
+
+        internal abstract class SocketCompleted { }
+
+        internal sealed class SocketSent : SocketCompleted
+        {
+            public readonly SocketAsyncEventArgs EventArgs;
+
+            public SocketSent(SocketAsyncEventArgs eventArgs)
+            {
+                EventArgs = eventArgs;
+            }
+        }
+
+        internal sealed class SocketReceived : SocketCompleted
+        {
+            public readonly SocketAsyncEventArgs EventArgs;
+
+            public SocketReceived(SocketAsyncEventArgs eventArgs)
+            {
+                EventArgs = eventArgs;
+            }
+        }
+
+        internal sealed class SocketAccepted : SocketCompleted
+        {
+            public readonly SocketAsyncEventArgs EventArgs;
+
+            public SocketAccepted(SocketAsyncEventArgs eventArgs)
+            {
+                EventArgs = eventArgs;
+            }
+        }
+
+        internal sealed class SocketConnected : SocketCompleted
+        {
+            public readonly SocketAsyncEventArgs EventArgs;
+
+            public SocketConnected(SocketAsyncEventArgs eventArgs)
+            {
+                EventArgs = eventArgs;
+            }
+        }
+
+        #endregion
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -56,7 +107,7 @@ namespace Akka.IO
         public abstract class Message { }
 
         /// <summary>The common type of all commands supported by the UDP implementation.</summary>
-        public abstract class Command : Message, SelectionHandler.IHasFailureMessage
+        public abstract class Command : Message
         {
             private object _failureMessage;
 
@@ -95,7 +146,10 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public object Token { get; private set; }
+            public object Token { get; }
+
+            public override string ToString() =>
+                $"NoAck({Token})";
         }
 
         /// <summary>
@@ -123,35 +177,41 @@ namespace Akka.IO
             /// <param name="target">TBD</param>
             /// <param name="ack">TBD</param>
             /// <exception cref="ArgumentNullException">TBD</exception>
-            public Send(ByteString payload, EndPoint target, Event ack)
+            public Send(IEnumerator<ByteBuffer> payload, EndPoint target, Event ack)
             {
                 if (ack == null)
                     throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
                 Payload = payload;
+                HasData = Payload.MoveNext();
                 Target = target;
                 Ack = ack;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public ByteString Payload { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public EndPoint Target { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public Event Ack { get; private set; }
+            internal bool HasData { get; set; }
+
+            internal Send Advance() => new Send(Payload, Target, Ack);
 
             /// <summary>
             /// TBD
             /// </summary>
-            public bool WantsAck
-            {
-                get { return !(Ack is NoAck); }
-            }
+            public IEnumerator<ByteBuffer> Payload { get; }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public EndPoint Target { get; }
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public Event Ack { get; }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public bool WantsAck => !(Ack is NoAck);
+
+            public override string ToString() =>
+                $"Send(to: {Target}, ack: {Ack})";
 
             /// <summary>
             /// TBD
@@ -161,7 +221,7 @@ namespace Akka.IO
             /// <returns>TBD</returns>
             public static Send Create(ByteString data, EndPoint target)
             {
-                return new Send(data, target, NoAck.Instance);
+                return new Send(data.Buffers.GetEnumerator(), target, NoAck.Instance);
             }
         }
 
@@ -189,15 +249,18 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Handler { get; private set; }
+            public IActorRef Handler { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint LocalAddress { get; private set; }
+            public EndPoint LocalAddress { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerable<Inet.SocketOption> Options { get; private set; }
+            public IEnumerable<Inet.SocketOption> Options { get; }
+
+            public override string ToString() =>
+                $"Bind(addr: {LocalAddress}, handler: {Handler})";
         }
 
         /// <summary>
@@ -244,7 +307,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerable<Inet.SocketOption> Options { get; private set; }
+            public IEnumerable<Inet.SocketOption> Options { get; }
         }
 
         /// <summary>
@@ -302,11 +365,14 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public ByteString Data { get; private set; }
+            public ByteString Data { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint Sender { get; private set; }
+            public EndPoint Sender { get; }
+
+            public override string ToString() =>
+                $"Received(bytes: {Data.Count}, from: {Sender})";
         }
 
         /// <summary>
@@ -326,7 +392,10 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public Command Cmd { get; private set; }
+            public Command Cmd { get; }
+
+            public override string ToString() =>
+                $"CommandFailed({Cmd})";
         }
 
         /// <summary>
@@ -348,7 +417,10 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public EndPoint LocalAddress { get; private set; }
+            public EndPoint LocalAddress { get; }
+
+            public override string ToString() =>
+                $"Bound(local: {LocalAddress})";
         }
 
         /// <summary> The "simple sender" sends this message type in response to a <see cref="SimpleSender"/> query. </summary>
@@ -398,7 +470,7 @@ namespace Akka.IO
                 /// <summary>
                 /// TBD
                 /// </summary>
-                public bool On { get; private set; }
+                public bool On { get; }
 
                 /// <summary>
                 /// TBD
@@ -411,49 +483,6 @@ namespace Akka.IO
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal class UdpSettings : SelectionHandlerSettings
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="config">TBD</param>
-            public UdpSettings(Config config) 
-                : base(config)
-            {
-                NrOfSelectors = config.GetInt("nr-of-selectors");
-                DirectBufferSize = config.GetInt("direct-buffer-size");
-                MaxDirectBufferPoolSize = config.GetInt("direct-buffer-pool-limit");
-                BatchReceiveLimit = config.GetInt("receive-throughput");
-
-                ManagementDispatcher = config.GetString("management-dispatcher");
-
-                MaxChannelsPerSelector = MaxChannels == -1 ? -1 : Math.Max(MaxChannels/NrOfSelectors, 1);
-            }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int NrOfSelectors { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int DirectBufferSize { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int MaxDirectBufferPoolSize { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public int BatchReceiveLimit { get; private set; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public string ManagementDispatcher { get; private set; }
-        }
     }
 
     /// <summary>
@@ -461,40 +490,88 @@ namespace Akka.IO
     /// </summary>
     public class UdpExt : IOExtension
     {
-        private readonly Udp.UdpSettings _settings;
-        private readonly IActorRef _manager;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
         public UdpExt(ExtendedActorSystem system)
+            : this(system, UdpSettings.Create(system.Settings.Config.GetConfig("akka.io.udp")))
         {
-            _settings = new Udp.UdpSettings(system.Settings.Config.GetConfig("akka.io.udp"));
-            _manager = system.SystemActorOf(
+            
+        }
+
+        public UdpExt(ExtendedActorSystem system, UdpSettings settings)
+        {
+            var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
+            if (bufferPoolConfig == null)
+                throw new ArgumentNullException(nameof(settings), $"Couldn't find a HOCON config for `{settings.BufferPoolConfigPath}`");
+
+            Setting = settings;
+            BufferPool = CreateBufferPool(system, bufferPoolConfig);
+            Manager = system.SystemActorOf(
                 props: Props.Create(() => new UdpManager(this)).WithDeploy(Deploy.Local), 
                 name: "IO-UDP-FF");
 
-            BufferPool = new DirectByteBufferPool(_settings.DirectBufferSize, _settings.MaxDirectBufferPoolSize);
+            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(settings.InitialSocketAsyncEventArgs, OnComplete);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override IActorRef Manager
+        public override IActorRef Manager { get; }
+
+        /// <summary>
+        /// A buffer pool used by current plugin.
+        /// </summary>
+        public IBufferPool BufferPool { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal UdpSettings Setting { get; }
+
+        internal PreallocatedSocketEventAgrsPool SocketEventArgsPool { get; }
+
+        private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
         {
-            get { return _manager; }
+            var type = Type.GetType(config.GetString("class"), true);
+
+            if (!typeof(IBufferPool).IsAssignableFrom(type))
+                throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");
+
+            try
+            {
+                // try to construct via `BufferPool(ExtendedActorSystem, Config)` ctor
+                return (IBufferPool)Activator.CreateInstance(type, system, config);
+            }
+            catch
+            {
+                // try to construct via `BufferPool(ExtendedActorSystem)` ctor
+                return (IBufferPool)Activator.CreateInstance(type, system);
+            }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal Udp.UdpSettings Setting { get { return _settings; } }
+        private void OnComplete(object sender, SocketAsyncEventArgs e)
+        {
+            var actorRef = e.UserToken as IActorRef;
+            actorRef?.Tell(ResolveMessage(e));
+        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal DirectByteBufferPool BufferPool { get; private set; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private Udp.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
+        {
+            switch (e.LastOperation)
+            {
+                case SocketAsyncOperation.Receive:
+                case SocketAsyncOperation.ReceiveFrom:
+                    return new Udp.SocketReceived(e);
+                case SocketAsyncOperation.Send:
+                case SocketAsyncOperation.SendTo:
+                    return new Udp.SocketSent(e);
+                case SocketAsyncOperation.Accept:
+                    return new Udp.SocketAccepted(e);
+                case SocketAsyncOperation.Connect:
+                    return new Udp.SocketConnected(e);
+                default:
+                    throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported");
+            }
+        }
     }
 
     /// <summary>
@@ -514,4 +591,3 @@ namespace Akka.IO
     }
 
 }
-#endif

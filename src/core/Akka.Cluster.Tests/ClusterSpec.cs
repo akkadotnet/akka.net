@@ -118,14 +118,21 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void A_cluster_must_publish_member_removed_when_shutdown()
         {
-            _cluster.Join(_selfAddress);
-            LeaderActions(); // Joining -> Up
-
             var callbackProbe = CreateTestProbe();
             _cluster.RegisterOnMemberRemoved(() =>
             {
                 callbackProbe.Tell("OnMemberRemoved");
             });
+
+            _cluster.RegisterOnMemberUp(() =>
+            {
+                callbackProbe.Tell("OnMemberUp");
+            });
+
+            _cluster.Join(_selfAddress);
+            LeaderActions(); // Joining -> Up
+            callbackProbe.ExpectMsg("OnMemberUp"); // verify that callback hooks are registered
+            
 
             _cluster.Subscribe(TestActor, new[] { typeof(ClusterEvent.MemberRemoved) });
             // first, is in response to the subscription

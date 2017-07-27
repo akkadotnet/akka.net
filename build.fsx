@@ -15,10 +15,6 @@ open Fake.Git
 // Variables
 let configuration = "Release"
 let solution = "./src/Akka.sln"
-let versionSuffix = 
-    match (getBuildParamOrDefault "nugetprerelease" "") with
-    | "dev" -> "beta"
-    | _ -> ""
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
@@ -30,6 +26,12 @@ let outputNuGet = output @@ "nuget"
 let outputMultiNode = outputTests @@ "multinode"
 let outputBinariesNet45 = outputBinaries @@ "net45"
 let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
+
+let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
+let versionSuffix = 
+    match (getBuildParam "nugetprerelease") with
+    | "dev" -> "beta" + (if (not (buildNumber = "0")) then ("-" + buildNumber) else "")
+    | _ -> ""
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -59,12 +61,15 @@ Target "RestorePackages" (fun _ ->
                 AdditionalArgs = additionalArgs })
 )
 
-Target "Build" (fun _ ->
+Target "Build" (fun _ ->   
+    let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
+
     DotNetCli.Build
         (fun p -> 
             { p with
                 Project = solution
-                Configuration = configuration })
+                Configuration = configuration
+                AdditionalArgs = additionalArgs })
 )
 
 //--------------------------------------------------------------------------------
@@ -95,7 +100,8 @@ Target "RunTests" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
     let projects =
         match getBuildParamOrDefault "incremental" "" with
-        | "true" -> getIncrementalUnitTests()
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
                             getIncrementalUnitTests() |> Seq.iter log
                             getUnitTestProjects()
@@ -119,7 +125,8 @@ Target "RunTestsNetCore" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
     let projects =
         match getBuildParamOrDefault "incremental" "" with
-        | "true" -> getIncrementalUnitTests()
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
                             getIncrementalUnitTests() |> Seq.iter log
                             getUnitTestProjects()
@@ -144,7 +151,8 @@ Target "MultiNodeTests" (fun _ ->
 
     let multiNodeTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
-        | "true" -> getIncrementalMNTRTests()
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
                             getIncrementalMNTRTests() |> Seq.iter log
                             getAllMntrTestAssemblies()
@@ -182,7 +190,8 @@ Target "NBench" <| fun _ ->
 
     let nbenchTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
-        | "true" -> getIncrementalPerfTests()
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalPerfTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
         | "experimental" -> log "The following test projects would be run under Incremental Test config..."
                             getIncrementalPerfTests() |> Seq.iter log
                             getAllPerfTestAssemblies()
@@ -407,7 +416,7 @@ Target "Nuget" DoNothing
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
-"Clean" ==> "Docfx"
+"BuildRelease" ==> "Docfx"
 
 // all
 "BuildRelease" ==> "All"

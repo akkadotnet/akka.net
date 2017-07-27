@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -83,16 +83,16 @@ namespace Akka.Streams.Tests.IO
                 });
 
                 sub.Request(1);
-                c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 sub.Request(1);
-                c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
 
                 sub.Request(200);
                 var expectedChunk = nextChunk();
                 while (!string.IsNullOrEmpty(expectedChunk))
                 {
-                    var actual = c.ExpectNext().DecodeString(Encoding.UTF8);
+                    var actual = c.ExpectNext().ToString(Encoding.UTF8);
                     actual.Should().Be(expectedChunk);
                     expectedChunk = nextChunk();
                 }
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.IO
                 var expectedChunk = nextChunk();
                 for(int i=0; i<10; ++i)
                 {
-                    c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(expectedChunk);
+                    c.ExpectNext().ToString().Should().Be(expectedChunk);
                     expectedChunk = nextChunk();
                 }
                 c.ExpectComplete();
@@ -188,15 +188,15 @@ namespace Akka.Streams.Tests.IO
 
                 sub.Request(demandAllButOnechunks);
                 for (var i = 0; i < demandAllButOnechunks; i++)
-                    c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                    c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
 
                 sub.Request(1);
-                c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
                 sub.Request(1);
-                c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectComplete();
             }, _materializer);
         }
@@ -231,7 +231,7 @@ namespace Akka.Streams.Tests.IO
             var s = FileIO.FromFile(ManyLines(), chunkSize)
                 .WithAttributes(Attributes.CreateInputBuffer(readAhead, readAhead));
             var f = s.RunWith(
-                Sink.Aggregate<ByteString, int>(0, (acc, l) => acc + l.DecodeString(Encoding.UTF8).Count(c => c == '\n')),
+                Sink.Aggregate<ByteString, int>(0, (acc, l) => acc + l.ToString(Encoding.UTF8).Count(c => c == '\n')),
                 _materializer);
 
             f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -350,4 +350,3 @@ namespace Akka.Streams.Tests.IO
         }
     }
 }
-#endif

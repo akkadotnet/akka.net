@@ -598,7 +598,8 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Command to <see cref="Akka.Cluster.ClusterDaemon"/> to create a
-        /// <see cref="OnMemberStatusChangedListener"/>
+        /// <see cref="OnMemberStatusChangedListener"/> that will be invoked
+        /// when the current member is marked as up.
         /// </summary>
         public sealed class AddOnMemberUpListener : INoSerializationVerificationNeeded
         {
@@ -618,7 +619,8 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Command to the <see cref="ClusterDaemon"/> to create a 
+        /// Command to the <see cref="ClusterDaemon"/> to create a <see cref="OnMemberStatusChangedListener"/>
+        /// that will be invoked when the current member is removed.
         /// </summary>
         public sealed class AddOnMemberRemovedListener : INoSerializationVerificationNeeded
         {

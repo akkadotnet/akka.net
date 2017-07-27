@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -13,58 +13,39 @@ using Akka.Event;
 
 namespace Akka.IO
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
+    using static Udp;
+    using ByteBuffer = ArraySegment<byte>;
+    
     abstract class WithUdpSend : ActorBase
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
-        private Udp.Send _pendingSend;
+        private Send _pendingSend;
         private IActorRef _pendingCommander;
         private bool _retriedSend;
 
-        private bool HasWritePending
-        {
-            get { return _pendingSend != null; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected abstract DatagramChannel Channel { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+        private bool HasWritePending => !ReferenceEquals(_pendingSend, null);
+        
+        protected abstract Socket Socket { get; }
         protected abstract UdpExt Udp { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="registration">TBD</param>
-        /// <returns>TBD</returns>
-        public Receive SendHandlers(ChannelRegistration registration)
+        public bool SendHandlers(object message)
         {
-            return message =>
+            var send = message as Send;
+            if (send != null && HasWritePending)
             {
-                var send = message as Udp.Send;
-                if (send != null && HasWritePending)
-                {
-                    if (Udp.Setting.TraceLogging) _log.Debug("Dropping write because queue is full");
-                    Sender.Tell(new Udp.CommandFailed(send));
-                    return true;
-                }
-                if (send != null && send.Payload.IsEmpty)
-                {
-                    if (send.WantsAck)
-                        Sender.Tell(send.Ack);
-                    return true;
-                }
-                if (send != null)
+                if (Udp.Setting.TraceLogging) _log.Debug("Dropping write because queue is full");
+                Sender.Tell(new CommandFailed(send));
+                return true;
+            }
+            if (send != null)
+            {
+                if (send.HasData)
                 {
                     _pendingSend = send;
                     _pendingCommander = Sender;
 
+                    var e = Udp.SocketEventArgsPool.Acquire(Self);
                     var dns = send.Target as DnsEndPoint;
                     if (dns != null)
                     {
@@ -73,13 +54,14 @@ namespace Akka.IO
                         {
                             try
                             {
-                                _pendingSend = new Udp.Send(_pendingSend.Payload, new IPEndPoint(resolved.Addr, dns.Port), _pendingSend.Ack);
-                                DoSend(registration);
+                                _pendingSend = new Send(_pendingSend.Payload, new IPEndPoint(resolved.Addr, dns.Port), _pendingSend.Ack);
+                                DoSend(e);
                             }
                             catch (Exception ex)
                             {
-                                Sender.Tell(new Udp.CommandFailed(send));
-                                _log.Debug("Failure while sending UDP datagram to remote address [{0}]: {1}", send.Target, ex);
+                                Sender.Tell(new CommandFailed(send));
+                                _log.Debug("Failure while sending UDP datagram to remote address [{0}]: {1}",
+                                    send.Target, ex);
                                 _retriedSend = false;
                                 _pendingSend = null;
                                 _pendingCommander = null;
@@ -88,59 +70,66 @@ namespace Akka.IO
                     }
                     else
                     {
-                        DoSend(registration);
+                        DoSend(e);
                     }
-                    return true;
                 }
-                if (message is SelectionHandler.ChannelWritable && HasWritePending)
+                else
                 {
-                    DoSend(registration);
-                    return true;
+                    if (send.WantsAck)
+                        Sender.Tell(send.Ack);
                 }
-                return false;
-            };
-        }
 
-        private void DoSend(ChannelRegistration registration)
-        {
-            var buffer = Udp.BufferPool.Acquire();
-            try
+                return true;
+            }
+            if (message is SocketSent)
             {
-                buffer.Clear();
-                _pendingSend.Payload.CopyToBuffer(buffer);
-                buffer.Flip();
-                var writtenBytes = Channel.Send(buffer, _pendingSend.Target);
-                if (Udp.Setting.TraceLogging) _log.Debug("Wrote [{0}] bytes to channel", writtenBytes);
+                var sent = (SocketSent) message;
+                if (sent.EventArgs.SocketError == SocketError.Success)
+                {
+                    if (Udp.Setting.TraceLogging)
+                        _log.Debug("Wrote [{0}] bytes to channel", sent.EventArgs.BytesTransferred);
 
-                // Datagram channel either sends the whole message, or nothing
-                if (writtenBytes == 0)
+                    var nextSend = _pendingSend.Advance();
+                    if (nextSend.HasData)
+                    {
+                        Self.Tell(nextSend);
+                    }
+                    else
+                    {
+                        if (_pendingSend.WantsAck) _pendingCommander.Tell(_pendingSend.Ack);
+                        
+                        _retriedSend = false;
+                        _pendingSend = null;
+                        _pendingCommander = null;
+                    }
+                }
+                else
                 {
                     if (_retriedSend)
                     {
-                        _pendingCommander.Tell(new Udp.CommandFailed(_pendingSend));
+                        _pendingCommander.Tell(new CommandFailed(_pendingSend));
                         _retriedSend = false;
                         _pendingSend = null;
                         _pendingCommander = null;
                     }
                     else
                     {
-                        registration.EnableInterest(SocketAsyncOperation.Send);
+                        DoSend(sent.EventArgs);
                         _retriedSend = true;
                     }
                 }
-                else
-                {
-                    if (_pendingSend.WantsAck) _pendingCommander.Tell(_pendingSend.Ack);
-                    _retriedSend = false;
-                    _pendingSend = null;
-                    _pendingCommander = null;
-                }
+                return true;
             }
-            finally
-            {
-                Udp.BufferPool.Release(buffer);
-            }
+            return false;
+        }
+
+        private void DoSend(SocketAsyncEventArgs e)
+        {
+            var buffer = _pendingSend.Payload.Current;
+            e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+            e.RemoteEndPoint = _pendingSend.Target;
+            if (!Socket.SendToAsync(e))
+                Self.Tell(new SocketSent(e));
         }
     }
 }
-#endif

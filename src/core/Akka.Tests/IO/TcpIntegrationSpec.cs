@@ -4,28 +4,27 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
-using Akka.Tests.Actor;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.IO
 {
     public class TcpIntegrationSpec : AkkaSpec
     {
-        public TcpIntegrationSpec()
+        public TcpIntegrationSpec(ITestOutputHelper output)
             : base(@"akka.loglevel = DEBUG
-                     akka.actor.serialize-creators = on")
+                     akka.io.tcp.trace-logging = true", output: output)
         { }
 
         private void VerifyActorTermination(IActorRef actor)
@@ -40,7 +39,7 @@ namespace Akka.Tests.IO
             new TestSetup(this).Run(x => { });
         }
 
-        [Fact]
+        [Fact(Skip="FIXME .net core / linux")]
         public void The_TCP_transport_implementation_should_allow_connecting_to_and_disconnecting_from_the_test_server()
         {
             new TestSetup(this).Run(x =>
@@ -55,7 +54,7 @@ namespace Akka.Tests.IO
             });
         }
 
-        [Fact]
+        [Fact(Skip="FIXME .net core / linux")]
         public void The_TCP_transport_implementation_should_properly_handle_connection_abort_from_client_side()
         {
             new TestSetup(this).Run(x =>
@@ -69,7 +68,7 @@ namespace Akka.Tests.IO
             });
         }
 
-        [Fact]
+        [Fact(Skip="FIXME .net core / linux")]
         public void The_TCP_transport_implementation_should_properly_handle_connection_abort_from_client_side_after_chit_chat()
         {
             new TestSetup(this).Run(x =>
@@ -156,11 +155,11 @@ namespace Akka.Tests.IO
 
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromString("Captain on the bridge!"), Aye.Instance));
                 actors.ClientHandler.ExpectMsg(Aye.Instance);
-                actors.ServerHandler.ExpectMsg<Tcp.Received>().Data.DecodeString(Encoding.ASCII).ShouldBe("Captain on the bridge!");
+                actors.ServerHandler.ExpectMsg<Tcp.Received>().Data.ToString(Encoding.ASCII).ShouldBe("Captain on the bridge!");
 
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(ByteString.FromString("For the king!"), Yes.Instance));
                 actors.ServerHandler.ExpectMsg(Yes.Instance);
-                actors.ClientHandler.ExpectMsg<Tcp.Received>().Data.DecodeString(Encoding.ASCII).ShouldBe("For the king!");
+                actors.ClientHandler.ExpectMsg<Tcp.Received>().Data.ToString(Encoding.ASCII).ShouldBe("For the king!");
 
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Close.Instance);
                 actors.ServerHandler.ExpectMsg<Tcp.Closed>();
@@ -182,7 +181,7 @@ namespace Akka.Tests.IO
 
                 var actors = x.EstablishNewClientConnection();
 
-                actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(ByteString.Create(new byte[100000]), Ack.Instance));
+                actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(ByteString.FromBytes(new byte[100000]), Ack.Instance));
                 actors.ServerHandler.ExpectMsg(Ack.Instance);
 
                 x.ExpectReceivedData(actors.ClientHandler, 100000);
@@ -214,7 +213,8 @@ namespace Akka.Tests.IO
                 connectCommander.Send(Sys.Tcp(), new Tcp.Connect(x.Endpoint));
 
                 var accept = serverSocket.Accept();
-                connectCommander.ExpectMsg<Tcp.Connected>().RemoteAddress.AsInstanceOf<IPEndPoint>().Port.ShouldBe(x.Endpoint.Port);
+                var connected = connectCommander.ExpectMsg<Tcp.Connected>();
+                connected.RemoteAddress.AsInstanceOf<IPEndPoint>().Port.ShouldBe(x.Endpoint.Port);
                 var connectionActor = connectCommander.LastSender;
                 connectCommander.Send(connectionActor, PoisonPill.Instance);
 
@@ -237,14 +237,14 @@ namespace Akka.Tests.IO
 
         private void ChitChat(TestSetup.ConnectionDetail actors, int rounds = 100)
         {
-            var testData = ByteString.Create(new[] {(byte) 0});
-            Enumerable.Range(1, rounds).ForEach(_ =>
+            var testData = ByteString.FromBytes(new[] {(byte) 0});
+            for (int i = 0; i < rounds; i++)
             {
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
-                actors.ServerHandler.ExpectMsg<Tcp.Received>(x => x.Data.Count == 1 && x.Data.Head == 0);
+                actors.ServerHandler.ExpectMsg<Tcp.Received>(x => x.Data.Count == 1 && x.Data[0] == 0, hint: $"server didn't received at {i} round");
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(testData));
-                actors.ClientHandler.ExpectMsg<Tcp.Received>(x => x.Data.Count == 1 && x.Data.Head == 0);
-            });
+                actors.ClientHandler.ExpectMsg<Tcp.Received>(x => x.Data.Count == 1 && x.Data[0] == 0, hint: $"client didn't received at {i} round");
+            }
         }
 
         class TestSetup
@@ -260,7 +260,7 @@ namespace Akka.Tests.IO
                 ConnectOptions = Enumerable.Empty<Inet.SocketOption>(); 
                 _spec = spec;
                 _shouldBindServer = shouldBindServer;
-                _bindHandler = _spec.CreateTestProbe();
+                _bindHandler = _spec.CreateTestProbe("bind-handler-probe");
                 _endpoint = TestUtils.TemporaryServerAddress();
             }
 
@@ -273,14 +273,14 @@ namespace Akka.Tests.IO
 
             public ConnectionDetail EstablishNewClientConnection()
             {
-                var connectCommander = _spec.CreateTestProbe();
+                var connectCommander = _spec.CreateTestProbe("connect-commander-probe");
                 connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(_endpoint, options: ConnectOptions));
                 connectCommander.ExpectMsg<Tcp.Connected>();
-                var clientHandler = _spec.CreateTestProbe();
+                var clientHandler = _spec.CreateTestProbe("client-handler-probe");
                 connectCommander.Sender.Tell(new Tcp.Register(clientHandler.Ref));
 
                 _bindHandler.ExpectMsg<Tcp.Connected>();
-                var serverHandler = _spec.CreateTestProbe();
+                var serverHandler = _spec.CreateTestProbe("server-handler-probe");
                 _bindHandler.Sender.Tell(new Tcp.Register(serverHandler.Ref));
 
                 return new ConnectionDetail
@@ -323,4 +323,3 @@ namespace Akka.Tests.IO
 
     }
 }
-#endif

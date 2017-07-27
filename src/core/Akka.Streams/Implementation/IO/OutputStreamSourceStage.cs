@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#if AKKAIO
+
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -456,7 +456,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="offset">TBD</param>
         /// <param name="count">TBD</param>
         public override void Write(byte[] buffer, int offset, int count)
-            => SendData(ByteString.Create(buffer, offset, count));
+            => SendData(ByteString.FromBytes(buffer, offset, count));
 
         /// <summary>
         /// TBD
@@ -483,4 +483,3 @@ namespace Akka.Streams.Implementation.IO
         public override bool CanWrite => true;
     }
 }
-#endif

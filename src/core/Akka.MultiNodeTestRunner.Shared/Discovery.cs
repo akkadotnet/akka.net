@@ -17,9 +17,9 @@ using Akka.Remote.TestKit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Akka.MultiNodeTestRunner
+namespace Akka.MultiNodeTestRunner.Shared
 {
-    internal class Discovery : MarshalByRefObject, IMessageSink, IDisposable
+    public class Discovery : MarshalByRefObject, IMessageSink, IDisposable
     {
         public Dictionary<string, List<NodeTest>> Tests { get; set; }
 
@@ -42,14 +42,11 @@ namespace Akka.MultiNodeTestRunner
             if (testCaseDiscoveryMessage != null)
             {
                 var testClass = testCaseDiscoveryMessage.TestClass.Class;
-
                 if (testClass.IsAbstract) return true;
-
                 var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
                 var specType = testAssembly.GetType(testClass.Name);
-
                 var roles = RoleNames(specType);
-
+                
                 var details = roles.Select((r, i) => new NodeTest
                 {
                     Node = i + 1,
@@ -88,6 +85,7 @@ namespace Akka.MultiNodeTestRunner
         private ConstructorInfo FindConfigConstructor(Type configUser)
         {
             var baseConfigType = typeof(MultiNodeConfig);
+            
             var ctorWithConfig = configUser
                 .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                 .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.IsSubclassOf(baseConfigType)));
@@ -98,6 +96,7 @@ namespace Akka.MultiNodeTestRunner
         {
             var ctors = configType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var empty = ctors.FirstOrDefault(c => !c.GetParameters().Any());
+
             return empty != null
                 ? new object[0]
                 : ctors.First().GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
