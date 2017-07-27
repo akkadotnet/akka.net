@@ -6,13 +6,17 @@
   <AssemblyTitle>RemotePingPong</AssemblyTitle>
   <AssemblyName>RemotePingPong</AssemblyName>
   <VersionPrefix>1.3.0</VersionPrefix>
-  <Authors>Petabridge</Authors>
+  <Authors>Akka.NET Team</Authors>
   <TargetFrameworks>net461;netcoreapp1.1</TargetFrameworks>
   <OutputType>Exe</OutputType>
 </PropertyGroup>
 
 <PropertyGroup>
   <PlatformTarget>x64</PlatformTarget>
+</PropertyGroup>
+
+<PropertyGroup>
+  <ServerGarbageCollection>true</ServerGarbageCollection>
 </PropertyGroup>
 
 <ItemGroup>
