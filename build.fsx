@@ -331,7 +331,7 @@ Target "DocFx" (fun _ ->
 
     DocFx (fun p -> 
                 { p with 
-                    Timeout = TimeSpan.FromMinutes 5.0; 
+                    Timeout = TimeSpan.FromMinutes 30.0; 
                     WorkingDirectory  = docsPath; 
                     DocFxJson = docsPath @@ "docfx.json" })
 )
