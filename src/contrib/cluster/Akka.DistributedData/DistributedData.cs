@@ -101,11 +101,10 @@ namespace Akka.DistributedData
         /// <summary>
         /// Asynchronously tries to get a replicated value of type <typeparamref name="T"/> stored 
         /// under a given <paramref name="key"/>, while trying to achieve provided read 
-        /// <paramref name="consistency"/>.
+        /// <paramref name="consistency"/>. If no value was found under provided key, a null value will be returned.
         /// 
         /// If no <paramref name="consistency"/> will be provided, a <see cref="ReadLocal"/> will be used.
         /// </summary>
-        /// <exception cref="KeyNotFoundException">Thrown if no value was stored at the moment of get request.</exception>
         /// <exception cref="DataDeletedException">Thrown if value under provided <paramref name="key"/> was permamently deleted. That key can't be used anymore.</exception>
         /// <exception cref="TimeoutException">Thrown if get request consistency was not achieved within possible time limit attached to a provided read <paramref name="consistency"/>.</exception>
         /// <typeparam name="T">Replicated data type to get.</typeparam>
@@ -114,7 +113,7 @@ namespace Akka.DistributedData
         /// <param name="cancellation">Cancellation token used to cancel request prematurelly if needed.</param>
         /// <returns>A task which may return a replicated data value or throw an exception.</returns>
         public async Task<T> GetAsync<T>(IKey<T> key, IReadConsistency consistency = null, CancellationToken cancellation = default(CancellationToken)) 
-            where T : IReplicatedData<T>
+            where T : class, IReplicatedData<T>
         {
             var id = Guid.NewGuid();
             var response = await Replicator.Ask(Dsl.Get(key, consistency, id), cancellation);
@@ -124,7 +123,7 @@ namespace Akka.DistributedData
                     if (Equals(id, success.Request))
                         return success.Get(key);
                     else throw new NotSupportedException($"Received response id [{success.Request}] and request correlation id [{id}] are different.");
-                case NotFound notFound: throw new KeyNotFoundException($"No replicated data could be found under provided key [{key}]");
+                case NotFound notFound: return null;
                 case DataDeleted deleted: throw new DataDeletedException($"Cannot retrieve data under key [{key}]. It has been permanently deleted and the key cannot be reused.");
                 case GetFailure failure: throw new TimeoutException($"Couldn't retrieve the data under key [{key}] within consistency constraints {consistency} and under provided timeout.");
                 case Status.Failure failure:
