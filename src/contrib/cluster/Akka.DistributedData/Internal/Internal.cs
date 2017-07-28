@@ -498,12 +498,11 @@ namespace Akka.DistributedData.Internal
 
             var cleanedData = Cleaned(otherData, Pruning);
             IReplicatedData mergedData;
-            if (cleanedData is IReplicatedDelta)
+            if (cleanedData is IReplicatedDelta d)
             {
-                var delta = Data as IReplicatedDelta;
-                if (delta == null) throw new ArgumentException("Expected IReplicatedDelta");
+                var delta = Data as IDeltaReplicatedData ?? throw new ArgumentException($"Expected {nameof(IDeltaReplicatedData)} but got '{Data}' instead.");
 
-                mergedData = delta.Merge(cleanedData);
+                mergedData = delta.MergeDelta(d);
             }
             else mergedData = Data.Merge(cleanedData);
 
