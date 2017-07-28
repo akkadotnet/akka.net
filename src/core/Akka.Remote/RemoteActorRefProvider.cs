@@ -16,6 +16,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
+using Akka.Remote.Serialization;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -136,6 +137,8 @@ namespace Akka.Remote
         private volatile IActorRef _remotingTerminator;
         private volatile IActorRef _remoteWatcher;
 
+        private volatile ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
+
         /// <summary>
         /// The remote death watcher.
         /// </summary>
@@ -148,6 +151,8 @@ namespace Akka.Remote
             _system = system;
 
             _local.Init(system);
+
+            _actorRefResolveThreadLocalCache = ActorRefResolveThreadLocalCache.For(system);
 
             _remotingTerminator =
                 _system.SystemActorOf(
@@ -387,11 +392,28 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Resolves a deserialized path into an <see cref="IActorRef"/>
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The path of the actor we are attempting to resolve.</param>
+        /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
+        {
+            // using thread local LRU cache, which will call InternalRresolveActorRef
+            // if the value is not cached
+            if (_actorRefResolveThreadLocalCache == null)
+            {
+                return InternalResolveActorRef(path); // cache not initialized yet
+            }
+            return _actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
+        }
+
+        /// <summary>
+        /// INTERNAL API: this is used by the <see cref="ActorRefResolveCache"/> via the public
+        /// <see cref="ResolveActorRef(string)"/> method.
+        /// </summary>
+        /// <param name="path">The path of the actor we intend to resolve.</param>
+        /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
+        internal IActorRef InternalResolveActorRef(string path)
         {
             if (path == String.Empty)
                 return ActorRefs.NoSender;
