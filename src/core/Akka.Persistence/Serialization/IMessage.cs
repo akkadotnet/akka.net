@@ -16,7 +16,8 @@ using Akka.Util;
 namespace Akka.Persistence.Serialization
 {
     /// <summary>
-    /// TBD
+    /// Marked interface used to identify message types which are used in persistence.
+    /// <see cref="IPersistentRepresentation"/>
     /// </summary>
     public interface IMessage { }
 }
