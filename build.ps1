@@ -72,7 +72,7 @@ Function Remove-PathVariable([string]$VariableToRemove)
 $FoundDotNetCliVersion = $null;
 if (Get-Command dotnet -ErrorAction SilentlyContinue) {
     $FoundDotNetCliVersion = dotnet --version;
-	$env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
     $env:DOTNET_CLI_TELEMETRY_OPTOUT=1
 }
 
