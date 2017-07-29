@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Util.Internal;
+using Akka.Util.Reflection;
 
 namespace Akka.Serialization
 {
@@ -191,7 +192,7 @@ namespace Akka.Serialization
             Type type;
             try
             {
-                type = Type.GetType(manifest);
+                type = TypeCache.GetType(manifest);
             }
             catch
             {
