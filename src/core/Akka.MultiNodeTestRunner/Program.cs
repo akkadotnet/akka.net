@@ -321,31 +321,25 @@ namespace Akka.MultiNodeTestRunner
             // to the same directory as the test assembly.
             var outputDirectory = OutputDirectory;
 
-            Func<MessageSink> createJsonFileSink = () =>
+            MessageSink CreateJsonFileSink()
             {
-                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".json", now);
-
-                var jsonStoreProps = Props.Create(() =>
-                    new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
-
+                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, platform, ".json", now);
+                var jsonStoreProps = Props.Create(() => new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
                 return new FileSystemMessageSink(jsonStoreProps);
-            };
+            }
 
-            Func<MessageSink> createVisualizerFileSink = () =>
+            MessageSink CreateVisualizerFileSink()
             {
-                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".html", now);
-
-                var visualizerProps = Props.Create(() =>
-                    new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
-
+                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, platform, ".html", now);
+                var visualizerProps = Props.Create(() => new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
                 return new FileSystemMessageSink(visualizerProps);
-            };
+            }
 
             var fileSystemSink = CommandLine.GetProperty("multinode.enable-filesink");
             if (!string.IsNullOrEmpty(fileSystemSink))
             {
-                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createJsonFileSink()));
-                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createVisualizerFileSink()));
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(CreateJsonFileSink()));
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(CreateVisualizerFileSink()));
             }
         }
 
