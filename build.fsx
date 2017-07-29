@@ -248,7 +248,8 @@ Target "NBench" <| fun _ ->
         | _ -> getAllPerfTestAssemblies()
 
     let runNBench assembly =
-        let spec = getBuildParam "spec"
+        let include = getBuildParam "include"
+        let exclude = getBuildParam "exclude"
         let teamcityStr = (getBuildParam "teamcity")
         let enableTeamCity = 
             match teamcityStr with
@@ -262,6 +263,8 @@ Target "NBench" <| fun _ ->
                 |> append (sprintf "concurrent=\"%b\"" true)
                 |> append (sprintf "trace=\"%b\"" true)
                 |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
+                |> appendIfNotNullOrEmpty include "include="
+                |> appendIfNotNullOrEmpty exclude "include="
                 |> toText
 
         let result = ExecProcess(fun info -> 
@@ -381,7 +384,7 @@ Target "DocFx" (fun _ ->
 
     DocFx (fun p -> 
                 { p with 
-                    Timeout = TimeSpan.FromMinutes 5.0; 
+                    Timeout = TimeSpan.FromMinutes 30.0; 
                     WorkingDirectory  = docsPath; 
                     DocFxJson = docsPath @@ "docfx.json" })
 )
