@@ -25,7 +25,7 @@ namespace Akka.MultiNodeTestRunner
     public class Discovery : MarshalByRefObject, IMessageSink, IDisposable
 #endif
     {
-        public Dictionary<string, List<NodeTest>> Tests { get; set; }
+        public List<List<NodeTest>> Tests { get; set; }
         public List<ErrorMessage> Errors { get; } = new List<ErrorMessage>();
         public bool WasSuccessful => Errors.Count == 0;
         
@@ -34,12 +34,11 @@ namespace Akka.MultiNodeTestRunner
         /// </summary>
         public Discovery()
         {
-            Tests = new Dictionary<string, List<NodeTest>>();
+            Tests = new List<List<NodeTest>>();
             Finished = new ManualResetEvent(false);
         }
 
         public ManualResetEvent Finished { get; private set; }
-
         public IMessageSink NextSink { get; private set; }
 
         public virtual bool OnMessage(IMessageSinkMessage message)
@@ -67,7 +66,7 @@ namespace Akka.MultiNodeTestRunner
                         SkipReason = testCaseDiscoveryMessage.TestCase.SkipReason,
                     }).ToList();
                     if (details.Any())
-                        Tests.Add(details.First().TestName, details);
+                        Tests.Add(details);
                     break;
                 case IDiscoveryCompleteMessage discoveryComplete:
                     Finished.Set();

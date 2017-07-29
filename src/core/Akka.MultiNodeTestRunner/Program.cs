@@ -175,36 +175,36 @@ namespace Akka.MultiNodeTestRunner
 
                     if (discovery.WasSuccessful)
                     {
-                        foreach (var test in discovery.Tests.Reverse())
+                        foreach (var test in discovery.Tests)
                         {
-                            if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
+                            if (!string.IsNullOrEmpty(test.First().SkipReason))
                             {
-                                PublishRunnerMessage($"Skipping test {test.Value.First().MethodName}. Reason - {test.Value.First().SkipReason}");
+                                PublishRunnerMessage($"Skipping test {test.First().MethodName}. Reason - {test.First().SkipReason}");
                                 continue;
                             }
 
                             if (!string.IsNullOrWhiteSpace(specName) &&
-                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName,
+                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.First().TestName,
                                     specName,
                                     CompareOptions.IgnoreCase) < 0)
                             {
-                                PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
+                                PublishRunnerMessage($"Skipping [{test.First().MethodName}] (Filtering)");
                                 continue;
                             }
 
                             var processes = new List<Process>();
 
-                            PublishRunnerMessage($"Starting test {test.Value.First().MethodName}");
+                            PublishRunnerMessage($"Starting test {test.First().MethodName}");
 
-                            StartNewSpec(test.Value);
-                            foreach (var nodeTest in test.Value)
+                            StartNewSpec(test);
+                            foreach (var nodeTest in test)
                             {
                                 //Loop through each test, work out number of nodes to run on and kick off process
                                 var sbArguments = new StringBuilder()
                                     .Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
                                     .Append($@"-Dmultinode.test-class=""{nodeTest.TypeName}"" ")
                                     .Append($@"-Dmultinode.test-method=""{nodeTest.MethodName}"" ")
-                                    .Append($@"-Dmultinode.max-nodes={test.Value.Count} ")
+                                    .Append($@"-Dmultinode.max-nodes={test.Count} ")
                                     .Append($@"-Dmultinode.server-host=""{"localhost"}"" ")
                                     .Append($@"-Dmultinode.host=""{"localhost"}"" ")
                                     .Append($@"-Dmultinode.index={nodeTest.Node - 1} ")
@@ -276,7 +276,7 @@ namespace Akka.MultiNodeTestRunner
 
                             PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
                             Thread.Sleep(TimeSpan.FromSeconds(3));
-                            FinishSpec(test.Value);
+                            FinishSpec(test);
                         }
                         Console.WriteLine("Complete");
                         PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
