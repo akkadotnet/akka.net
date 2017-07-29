@@ -21,12 +21,17 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingLeavingSpecConfig : MultiNodeConfig
     {
+        public RoleName First { get;}
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
+        
         public ClusterShardingLeavingSpecConfig()
         {
-            var first = Role("first");
-            var second = Role("second");
-            var third = Role("third");
-            var fourth = Role("fourth");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
@@ -49,25 +54,37 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class ClusterShardingLeavingNode1 : ClusterShardinLeavingSpec
     {
-        public ClusterShardingLeavingNode1():base(typeof(ClusterShardingLeavingNode1))
+        public ClusterShardingLeavingNode1():this(new ClusterShardingLeavingSpecConfig())
+        { }
+        
+        public ClusterShardingLeavingNode1(ClusterShardingLeavingSpecConfig config) : base(config, typeof(ClusterShardingLeavingNode1))
         { }
     }
 
     public class ClusterShardingLeavingNode2 : ClusterShardinLeavingSpec
     {
-        public ClusterShardingLeavingNode2():base(typeof(ClusterShardingLeavingNode2))
+        public ClusterShardingLeavingNode2(): this(new ClusterShardingLeavingSpecConfig())
+        { }
+
+        public ClusterShardingLeavingNode2(ClusterShardingLeavingSpecConfig config) : base(config, typeof(ClusterShardingLeavingNode2))
         { }
     }
 
     public class ClusterShardingLeavingNode3 : ClusterShardinLeavingSpec
     {
-        public ClusterShardingLeavingNode3():base(typeof(ClusterShardingLeavingNode3))
+        public ClusterShardingLeavingNode3(): this(new ClusterShardingLeavingSpecConfig())
+        { }
+
+        public ClusterShardingLeavingNode3(ClusterShardingLeavingSpecConfig config) : base(config, typeof(ClusterShardingLeavingNode3))
         { }
     }
 
     public class ClusterShardingLeavingNode4 : ClusterShardinLeavingSpec
     {
-        public ClusterShardingLeavingNode4():base(typeof(ClusterShardingLeavingNode4))
+        public ClusterShardingLeavingNode4(): this(new ClusterShardingLeavingSpecConfig())
+        { }
+
+        public ClusterShardingLeavingNode4(ClusterShardingLeavingSpecConfig config) : base(config, typeof(ClusterShardingLeavingNode4))
         { }
     }
 
@@ -136,7 +153,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly RoleName _third;
         private readonly RoleName _fourth;
 
-        protected ClusterShardinLeavingSpec(Type type) : base(new ClusterShardingLeavingSpecConfig(), type)
+        protected ClusterShardinLeavingSpec(ClusterShardingLeavingSpecConfig config, Type type) : base(config, type)
         {
             _storageLocations = new[]
             {
@@ -145,10 +162,10 @@ namespace Akka.Cluster.Sharding.Tests
                 "akka.persistence.snapshot-store.local.dir"
             }.Select(s => new DirectoryInfo(Sys.Settings.Config.GetString(s))).ToArray();
 
-            _first = new RoleName("first");
-            _second = new RoleName("second");
-            _third = new RoleName("third");
-            _fourth = new RoleName("fourth");
+            _first = config.First;
+            _second = config.Second;
+            _third = config.Third;
+            _fourth = config.Fourth;
 
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
         }

@@ -27,15 +27,23 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingSpecConfig : MultiNodeConfig
     {
+        public RoleName Controller { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
+        public RoleName Fifth { get; }
+        public RoleName Sixth { get; }
+
         public ClusterShardingSpecConfig()
         {
-            var controller = Role("controller");
-            var first = Role("first");
-            var second = Role("second");
-            var third = Role("third");
-            var fourth = Role("fourth");
-            var fifth = Role("fifth");
-            var sixth = Role("sixth");
+            Controller = Role("controller");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
+            Fifth = Role("fifth");
+            Sixth = Role("sixth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
@@ -67,7 +75,7 @@ namespace Akka.Cluster.Sharding.Tests
                   }
                 }");
 
-            NodeConfig(new[] { sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [""frontend""]") });
+            NodeConfig(new[] { Sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [""frontend""]") });
         }
     }
 
@@ -205,19 +213,28 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class ClusterShardingNode1 : ClusterShardingSpec
     {
-        public ClusterShardingNode1():base(typeof(ClusterShardingNode1))
+        public ClusterShardingNode1():this(new ClusterShardingSpecConfig())
+        { }
+
+        public ClusterShardingNode1(ClusterShardingSpecConfig config) : base(config, typeof(ClusterShardingNode1))
         { }
     }
 
     public class ClusterShardingNode2 : ClusterShardingSpec
     {
-        public ClusterShardingNode2():base(typeof(ClusterShardingNode2))
+        public ClusterShardingNode2(): this(new ClusterShardingSpecConfig())
+        { }
+
+        public ClusterShardingNode2(ClusterShardingSpecConfig config) : base(config, typeof(ClusterShardingNode2))
         { }
     }
 
     public class ClusterShardingNode3 : ClusterShardingSpec
     {
-        public ClusterShardingNode3():base(typeof(ClusterShardingNode3))
+        public ClusterShardingNode3(): this(new ClusterShardingSpecConfig())
+        { }
+
+        public ClusterShardingNode3(ClusterShardingSpecConfig config) : base(config, typeof(ClusterShardingNode3))
         { }
     }
 
@@ -242,7 +259,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly Lazy<IActorRef> _rebalancingPersistentRegion;
         private readonly Lazy<IActorRef> _autoMigrateRegion;
 
-        protected ClusterShardingSpec(Type type) : base(new ClusterShardingSpecConfig(), type)
+        protected ClusterShardingSpec(ClusterShardingSpecConfig config, Type type) : base(config, type)
         {
             _storageLocations = new[]
             {
@@ -251,13 +268,13 @@ namespace Akka.Cluster.Sharding.Tests
                 "akka.persistence.snapshot-store.local.dir"
             }.Select(s => new DirectoryInfo(Sys.Settings.Config.GetString(s))).ToArray();
 
-            _controller = new RoleName("controller");
-            _first = new RoleName("first");
-            _second = new RoleName("second");
-            _third = new RoleName("third");
-            _fourth = new RoleName("fourth");
-            _fifth = new RoleName("fifth");
-            _sixth = new RoleName("sixth");
+            _controller = config.Controller;
+            _first = config.First;
+            _second = config.Second;
+            _third = config.Third;
+            _fourth = config.Fourth;
+            _fifth = config.Fifth;
+            _sixth = config.Sixth;
 
             _region = new Lazy<IActorRef>(() => CreateRegion("counter", false));
             _rebalancingRegion = new Lazy<IActorRef>(() => CreateRegion("rebalancingCounter", false));

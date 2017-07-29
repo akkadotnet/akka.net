@@ -20,10 +20,13 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingGracefulShutdownSpecConfig : MultiNodeConfig
     {
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        
         public ClusterShardingGracefulShutdownSpecConfig()
         {
-            var first = Role("first");
-            var second = Role("second");
+            First = Role("first");
+            Second = Role("second");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
@@ -45,13 +48,19 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class ClusterShardingGracefulShutdownNode1 : ClusterShardingGracefulShutdownSpec
     {
-        public ClusterShardingGracefulShutdownNode1():base(typeof(ClusterShardingGracefulShutdownNode1))
+        public ClusterShardingGracefulShutdownNode1():this(new ClusterShardingGracefulShutdownSpecConfig())
+        { }
+
+        public ClusterShardingGracefulShutdownNode1(ClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(ClusterShardingGracefulShutdownNode1))
         { }
     }
 
     public class ClusterShardingGracefulShutdownNode2 : ClusterShardingGracefulShutdownSpec
     {
-        public ClusterShardingGracefulShutdownNode2():base(typeof(ClusterShardingGracefulShutdownNode2))
+        public ClusterShardingGracefulShutdownNode2(): this(new ClusterShardingGracefulShutdownSpecConfig())
+        { }
+
+        public ClusterShardingGracefulShutdownNode2(ClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(ClusterShardingGracefulShutdownNode2))
         { }
     }
 
@@ -88,7 +97,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly RoleName _first;
         private readonly RoleName _second;
 
-        protected ClusterShardingGracefulShutdownSpec(Type type) : base(new ClusterShardingGracefulShutdownSpecConfig(), type)
+        protected ClusterShardingGracefulShutdownSpec(ClusterShardingGracefulShutdownSpecConfig config, Type type) : base(config, type)
         {
             _storageLocations = new[]
             {
@@ -99,8 +108,8 @@ namespace Akka.Cluster.Sharding.Tests
 
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
 
-            _first = new RoleName("first");
-            _second = new RoleName("second");
+            _first = config.First;
+            _second = config.Second;
         }
 
         protected override void AtStartup()

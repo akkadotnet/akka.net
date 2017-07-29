@@ -20,11 +20,15 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingFailureSpecConfig : MultiNodeConfig
     {
+        public RoleName Controller { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        
         public ClusterShardingFailureSpecConfig()
         {
-            var controller = Role("controller");
-            var first = Role("first");
-            var second = Role("second");
+            Controller = Role("controller");
+            First = Role("first");
+            Second = Role("second");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
@@ -52,19 +56,28 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class ClusterShardingFailureNode1 : ClusterShardingFailureSpec
     {
-        public ClusterShardingFailureNode1():base(typeof(ClusterShardingFailureNode1))
+        public ClusterShardingFailureNode1():this(new ClusterShardingFailureSpecConfig())
+        { }
+
+        protected ClusterShardingFailureNode1(ClusterShardingFailureSpecConfig config) : base(config, typeof(ClusterShardingFailureNode1))
         { }
     }
 
     public class ClusterShardingFailureNode2 : ClusterShardingFailureSpec
     {
-        public ClusterShardingFailureNode2():base(typeof(ClusterShardingFailureNode2))
+        public ClusterShardingFailureNode2(): this(new ClusterShardingFailureSpecConfig())
+        { }
+
+        protected ClusterShardingFailureNode2(ClusterShardingFailureSpecConfig config) : base(config, typeof(ClusterShardingFailureNode2))
         { }
     }
 
     public class ClusterShardingFailureNode3 : ClusterShardingFailureSpec
     {
-        public ClusterShardingFailureNode3():base(typeof(ClusterShardingFailureNode3))
+        public ClusterShardingFailureNode3(): this(new ClusterShardingFailureSpecConfig())
+        { }
+
+        protected ClusterShardingFailureNode3(ClusterShardingFailureSpecConfig config) : base(config, typeof(ClusterShardingFailureNode3))
         { }
     }
 
@@ -131,13 +144,13 @@ namespace Akka.Cluster.Sharding.Tests
             return null;
         };
 
-        private DirectoryInfo[] _storageLocations;
-        private Lazy<IActorRef> _region;
-        private RoleName _first;
-        private RoleName _second;
-        private RoleName _controller;
+        private readonly DirectoryInfo[] _storageLocations;
+        private readonly Lazy<IActorRef> _region;
+        private readonly RoleName _first;
+        private readonly RoleName _second;
+        private readonly RoleName _controller;
 
-        protected ClusterShardingFailureSpec(Type type) : base(new ClusterShardingFailureSpecConfig(), type)
+        protected ClusterShardingFailureSpec(ClusterShardingFailureSpecConfig config, Type type) : base(config, type)
         {
             _storageLocations = new[]
             {
@@ -148,9 +161,9 @@ namespace Akka.Cluster.Sharding.Tests
 
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
 
-            _controller = new RoleName("controller");
-            _first = new RoleName("first");
-            _second = new RoleName("second");
+            _controller = config.Controller;
+            _first = config.First;
+            _second = config.Second;
         }
 
 
