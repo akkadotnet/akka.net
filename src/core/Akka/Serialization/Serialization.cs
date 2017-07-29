@@ -194,9 +194,9 @@ namespace Akka.Serialization
             {
                 type = TypeCache.GetType(manifest);
             }
-            catch
+            catch(Exception ex)
             {
-                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].");
+                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].", ex);
             }
             return serializer.FromBinary(bytes, type);
         }
