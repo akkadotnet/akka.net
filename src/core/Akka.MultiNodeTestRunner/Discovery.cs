@@ -26,7 +26,9 @@ namespace Akka.MultiNodeTestRunner
 #endif
     {
         public Dictionary<string, List<NodeTest>> Tests { get; set; }
-
+        public List<ErrorMessage> Errors { get; } = new List<ErrorMessage>();
+        public bool WasSuccessful => Errors.Count == 0;
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="Discovery"/> class.
         /// </summary>
@@ -42,66 +44,61 @@ namespace Akka.MultiNodeTestRunner
 
         public virtual bool OnMessage(IMessageSinkMessage message)
         {
-            var testCaseDiscoveryMessage = message as ITestCaseDiscoveryMessage;
-            if (testCaseDiscoveryMessage != null)
+            switch (message)
             {
-                var testClass = testCaseDiscoveryMessage.TestClass.Class;
-                if (testClass.IsAbstract) return true;
+                case ITestCaseDiscoveryMessage testCaseDiscoveryMessage:
+                    var testClass = testCaseDiscoveryMessage.TestClass.Class;
+                    if (testClass.IsAbstract) return true;
 #if CORECLR
-                var specType = testCaseDiscoveryMessage.TestAssembly.Assembly.GetType(testClass.Name).ToRuntimeType();
+                    var specType = testCaseDiscoveryMessage.TestAssembly.Assembly.GetType(testClass.Name).ToRuntimeType();
 #else
-                var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
-                var specType = testAssembly.GetType(testClass.Name);
+                    var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
+                    var specType = testAssembly.GetType(testClass.Name);
 #endif
-                var roles = RoleNames(specType);
-                
-                var details = roles.Select((r, i) => new NodeTest
-                {
-                    Node = i + 1,
-                    Role = r.Name,
-                    TestName = testClass.Name,
-                    TypeName = testClass.Name,
-                    MethodName = testCaseDiscoveryMessage.TestCase.TestMethod.Method.Name,
-                    SkipReason = testCaseDiscoveryMessage.TestCase.SkipReason,
-                }).ToList();
-                if (details.Any())
-                    Tests.Add(details.First().TestName, details);
+                    var roles = RoleNames(specType);
 
+                    var details = roles.Select((r, i) => new NodeTest
+                    {
+                        Node = i + 1,
+                        Role = r.Name,
+                        TestName = testClass.Name,
+                        TypeName = testClass.Name,
+                        MethodName = testCaseDiscoveryMessage.TestCase.TestMethod.Method.Name,
+                        SkipReason = testCaseDiscoveryMessage.TestCase.SkipReason,
+                    }).ToList();
+                    if (details.Any())
+                        Tests.Add(details.First().TestName, details);
+                    break;
+                case IDiscoveryCompleteMessage discoveryComplete:
+                    Finished.Set();
+                    break;
+                case ErrorMessage err:
+                    Errors.Add(err);
+                    break;
             }
-
-            if (message is IDiscoveryCompleteMessage)
-                Finished.Set();
 
             return true;
         }
 
         private IEnumerable<RoleName> RoleNames(Type specType)
         {
-            try
-            {
-                var ctorWithConfig = FindConfigConstructor(specType);
-                var configType = ctorWithConfig.GetParameters().First().ParameterType;
-                var args = ConfigConstructorParamValues(configType);
-                var configInstance = Activator.CreateInstance(configType, args);
-                var roleType = typeof(RoleName);
-                var configProps = configType.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
-                var roleProps = configProps.Where(p => p.PropertyType == roleType).Select(p => (RoleName)p.GetValue(configInstance));
-                var configFields = configType.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
-                var roleFields = configFields.Where(f => f.FieldType == roleType).Select(f => (RoleName)f.GetValue(configInstance));
-                var roles = roleProps.Concat(roleFields).Distinct();
-                return roles;
-            }
-            catch (Exception e)
-            {
-                Console.Out.WriteLine($"Exception thrown while looking for role names: {e}");
-                throw;
-            }
+            var ctorWithConfig = FindConfigConstructor(specType);
+            var configType = ctorWithConfig.GetParameters().First().ParameterType;
+            var args = ConfigConstructorParamValues(configType);
+            var configInstance = Activator.CreateInstance(configType, args);
+            var roleType = typeof(RoleName);
+            var configProps = configType.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
+            var roleProps = configProps.Where(p => p.PropertyType == roleType).Select(p => (RoleName)p.GetValue(configInstance));
+            var configFields = configType.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
+            var roleFields = configFields.Where(f => f.FieldType == roleType).Select(f => (RoleName)f.GetValue(configInstance));
+            var roles = roleProps.Concat(roleFields).Distinct();
+            return roles;
         }
 
         private ConstructorInfo FindConfigConstructor(Type configUser)
         {
             var baseConfigType = typeof(MultiNodeConfig);
-            
+
 #if CORECLR
             var ctorWithConfig = configUser
                 .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)

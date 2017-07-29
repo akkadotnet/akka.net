@@ -173,56 +173,59 @@ namespace Akka.MultiNodeTestRunner
                     controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
 
-                    foreach (var test in discovery.Tests.Reverse())
+                    if (discovery.WasSuccessful)
                     {
-                        if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
+                        foreach (var test in discovery.Tests.Reverse())
                         {
-                            PublishRunnerMessage($"Skipping test {test.Value.First().MethodName}. Reason - {test.Value.First().SkipReason}");
-                            continue;
-                        }
+                            if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
+                            {
+                                PublishRunnerMessage($"Skipping test {test.Value.First().MethodName}. Reason - {test.Value.First().SkipReason}");
+                                continue;
+                            }
 
-                        if (!string.IsNullOrWhiteSpace(specName) &&
-                            CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName,
-                                specName,
-                                CompareOptions.IgnoreCase) < 0)
-                        {
-                            PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
-                            continue;
-                        }
+                            if (!string.IsNullOrWhiteSpace(specName) &&
+                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName,
+                                    specName,
+                                    CompareOptions.IgnoreCase) < 0)
+                            {
+                                PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
+                                continue;
+                            }
 
-                        var processes = new List<Process>();
+                            var processes = new List<Process>();
 
-                        PublishRunnerMessage($"Starting test {test.Value.First().MethodName}");
+                            PublishRunnerMessage($"Starting test {test.Value.First().MethodName}");
 
-                        StartNewSpec(test.Value);
-                        foreach (var nodeTest in test.Value)
-                        {
-                            //Loop through each test, work out number of nodes to run on and kick off process
-                            var sbArguments = new StringBuilder()
-                                .Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
-                                .Append($@"-Dmultinode.test-class=""{nodeTest.TypeName}"" ")
-                                .Append($@"-Dmultinode.test-method=""{nodeTest.MethodName}"" ")
-                                .Append($@"-Dmultinode.max-nodes={test.Value.Count} ")
-                                .Append($@"-Dmultinode.server-host=""{"localhost"}"" ")
-                                .Append($@"-Dmultinode.host=""{"localhost"}"" ")
-                                .Append($@"-Dmultinode.index={nodeTest.Node - 1} ")
-                                .Append($@"-Dmultinode.role=""{nodeTest.Role}"" ")
-                                .Append($@"-Dmultinode.listen-address={listenAddress} ")
-                                .Append($@"-Dmultinode.listen-port={listenPort}");
-                            
-                            var process = new Process{
-                                StartInfo = new ProcessStartInfo
+                            StartNewSpec(test.Value);
+                            foreach (var nodeTest in test.Value)
+                            {
+                                //Loop through each test, work out number of nodes to run on and kick off process
+                                var sbArguments = new StringBuilder()
+                                    .Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
+                                    .Append($@"-Dmultinode.test-class=""{nodeTest.TypeName}"" ")
+                                    .Append($@"-Dmultinode.test-method=""{nodeTest.MethodName}"" ")
+                                    .Append($@"-Dmultinode.max-nodes={test.Value.Count} ")
+                                    .Append($@"-Dmultinode.server-host=""{"localhost"}"" ")
+                                    .Append($@"-Dmultinode.host=""{"localhost"}"" ")
+                                    .Append($@"-Dmultinode.index={nodeTest.Node - 1} ")
+                                    .Append($@"-Dmultinode.role=""{nodeTest.Role}"" ")
+                                    .Append($@"-Dmultinode.listen-address={listenAddress} ")
+                                    .Append($@"-Dmultinode.listen-port={listenPort}");
+
+                                var process = new Process
                                 {
-                                    UseShellExecute = false,
-                                    RedirectStandardOutput = true,
-                                    FileName = "Akka.NodeTestRunner.exe",
-                                    Arguments = sbArguments.ToString()
-                                }
-                            };
-                            
-                            processes.Add(process);
-                            var nodeIndex = nodeTest.Node;
-                            var nodeRole = nodeTest.Role;
+                                    StartInfo = new ProcessStartInfo
+                                    {
+                                        UseShellExecute = false,
+                                        RedirectStandardOutput = true,
+                                        FileName = "Akka.NodeTestRunner.exe",
+                                        Arguments = sbArguments.ToString()
+                                    }
+                                };
+
+                                processes.Add(process);
+                                var nodeIndex = nodeTest.Node;
+                                var nodeRole = nodeTest.Role;
 
 #if CORECLR
                             if (platform == "netcore")
@@ -234,52 +237,70 @@ namespace Akka.MultiNodeTestRunner
                             }
 #endif
 
-                            //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
-                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
-                            var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}__{platform}.txt");
-                            var fileActor = TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
-                            process.OutputDataReceived += (sender, eventArgs) =>
-                            {
-                                if (eventArgs?.Data != null)
+                                //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
+                                var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
+                                var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}__{platform}.txt");
+                                var fileActor = TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
+                                process.OutputDataReceived += (sender, eventArgs) =>
                                 {
-                                    fileActor.Tell(eventArgs.Data);
-                                    if (TeamCityFormattingOn)
+                                    if (eventArgs?.Data != null)
                                     {
-                                        // teamCityTest.WriteStdOutput(eventArgs.Data); TODO: open flood gates
+                                        fileActor.Tell(eventArgs.Data);
+                                        if (TeamCityFormattingOn)
+                                        {
+                                            // teamCityTest.WriteStdOutput(eventArgs.Data); TODO: open flood gates
+                                        }
                                     }
-                                }
-                            };
-                            var closureTest = nodeTest;
-                            process.Exited += (sender, eventArgs) =>
-                            {
-                                if (process.ExitCode == 0)
+                                };
+                                var closureTest = nodeTest;
+                                process.Exited += (sender, eventArgs) =>
                                 {
-                                    ReportSpecPassFromExitCode(nodeIndex, nodeRole,
-                                        closureTest.TestName);
-                                }
-                            };
+                                    if (process.ExitCode == 0)
+                                    {
+                                        ReportSpecPassFromExitCode(nodeIndex, nodeRole,
+                                            closureTest.TestName);
+                                    }
+                                };
 
-                            process.Start();
-                            process.BeginOutputReadLine();
-                            PublishRunnerMessage($"Started node {nodeIndex} : {nodeRole} on pid {process.Id}");
+                                process.Start();
+                                process.BeginOutputReadLine();
+                                PublishRunnerMessage($"Started node {nodeIndex} : {nodeRole} on pid {process.Id}");
+                            }
+
+                            foreach (var process in processes)
+                            {
+                                process.WaitForExit();
+                                var exitCode = process.ExitCode;
+                                process.Dispose();
+                            }
+
+                            PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
+                            Thread.Sleep(TimeSpan.FromSeconds(3));
+                            FinishSpec(test.Value);
                         }
-
-                        foreach (var process in processes)
+                        Console.WriteLine("Complete");
+                        PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
+                        Thread.Sleep(TimeSpan.FromSeconds(5));
+                    }
+                    else
+                    {
+                        var sb = new StringBuilder();
+                        sb.AppendLine("One or more exception was thrown while discovering test cases. Test Aborted.");
+                        foreach (var err in discovery.Errors)
                         {
-                            process.WaitForExit();
-                            var exitCode = process.ExitCode;
-                            process.Dispose();
+                            for (int i = 0; i < err.ExceptionTypes.Length; ++i)
+                            {
+                                sb.AppendLine();
+                                sb.Append($"{err.ExceptionTypes[i]}: {err.Messages[i]}");
+                                sb.Append(err.StackTraces[i]);
+                            }
                         }
-
-                        PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
-                        Thread.Sleep(TimeSpan.FromSeconds(3));
-                        FinishSpec(test.Value);
+                        PublishRunnerMessage(sb.ToString());
+                        Console.Out.WriteLine(sb.ToString());
                     }
                 }
             }
-            Console.WriteLine("Complete");
-            PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
-            Thread.Sleep(TimeSpan.FromSeconds(5));
+            
             CloseAllSinks();
 
             //Block until all Sinks have been terminated.
@@ -323,7 +344,6 @@ namespace Akka.MultiNodeTestRunner
             var fileSystemSink = CommandLine.GetProperty("multinode.enable-filesink");
             if (!string.IsNullOrEmpty(fileSystemSink))
             {
-                Console.Out.WriteLine(">>>>>>>>>>>>>>>>>>>>>>> Creating file sinks");
                 SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createJsonFileSink()));
                 SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createVisualizerFileSink()));
             }
