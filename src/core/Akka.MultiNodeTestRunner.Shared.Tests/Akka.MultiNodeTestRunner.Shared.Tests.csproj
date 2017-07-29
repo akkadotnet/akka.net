@@ -9,6 +9,7 @@
  
   <ItemGroup>
     <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj" />
+    <ProjectReference Include="..\Akka.MultiNodeTestRunner\Akka.MultiNodeTestRunner.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 
