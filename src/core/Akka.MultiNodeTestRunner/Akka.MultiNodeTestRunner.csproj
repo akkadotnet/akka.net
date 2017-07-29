@@ -7,7 +7,6 @@
     <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
-    <RuntimeIdentifiers>win7-x86</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
@@ -46,10 +45,6 @@
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp1.1|AnyCPU'">
-    <Optimize>False</Optimize>
   </PropertyGroup>
 
 </Project>

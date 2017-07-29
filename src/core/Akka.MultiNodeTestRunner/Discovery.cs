@@ -17,7 +17,7 @@ using Akka.Remote.TestKit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Akka.MultiNodeTestRunner.Shared
+namespace Akka.MultiNodeTestRunner
 {
 #if CORECLR
     public class Discovery : IMessageSink, IDisposable
@@ -77,17 +77,25 @@ namespace Akka.MultiNodeTestRunner.Shared
 
         private IEnumerable<RoleName> RoleNames(Type specType)
         {
-            var ctorWithConfig = FindConfigConstructor(specType);
-            var configType = ctorWithConfig.GetParameters().First().ParameterType;
-            var args = ConfigConstructorParamValues(configType);
-            var configInstance = Activator.CreateInstance(configType, args);
-            var roleType = typeof(RoleName);
-            var configProps = configType.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
-            var roleProps = configProps.Where(p => p.PropertyType == roleType).Select(p => (RoleName)p.GetValue(configInstance));
-            var configFields = configType.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
-            var roleFields = configFields.Where(f => f.FieldType == roleType).Select(f => (RoleName)f.GetValue(configInstance));
-            var roles = roleProps.Concat(roleFields).Distinct();
-            return roles;
+            try
+            {
+                var ctorWithConfig = FindConfigConstructor(specType);
+                var configType = ctorWithConfig.GetParameters().First().ParameterType;
+                var args = ConfigConstructorParamValues(configType);
+                var configInstance = Activator.CreateInstance(configType, args);
+                var roleType = typeof(RoleName);
+                var configProps = configType.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
+                var roleProps = configProps.Where(p => p.PropertyType == roleType).Select(p => (RoleName)p.GetValue(configInstance));
+                var configFields = configType.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
+                var roleFields = configFields.Where(f => f.FieldType == roleType).Select(f => (RoleName)f.GetValue(configInstance));
+                var roles = roleProps.Concat(roleFields).Distinct();
+                return roles;
+            }
+            catch (Exception e)
+            {
+                Console.Out.WriteLine($"Exception thrown while looking for role names: {e}");
+                throw;
+            }
         }
 
         private ConstructorInfo FindConfigConstructor(Type configUser)

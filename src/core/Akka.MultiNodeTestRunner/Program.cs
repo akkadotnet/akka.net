@@ -146,12 +146,24 @@ namespace Akka.MultiNodeTestRunner
 
             EnableAllSinks(assemblyPath, platform);
             PublishRunnerMessage($"Running MultiNodeTests for {assemblyPath}");
-            
+
 #if CORECLR
             // In NetCore, if the assembly file hasn't been touched, 
             // XunitFrontController would fail loading external assemblies and its dependencies.
             var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
             var asms = assembly.GetReferencedAssemblies();
+            var basePath = Path.GetDirectoryName(assemblyPath);
+            foreach (var asm in asms)
+            {
+                try
+                {
+                    assembly = Assembly.Load(new AssemblyName(asm.FullName));
+                }
+                catch (Exception)
+                {
+                    assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(basePath, asm.Name + ".dll"));
+                }
+            }
 #endif
 
             using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyPath))
@@ -288,31 +300,32 @@ namespace Akka.MultiNodeTestRunner
             // to the same directory as the test assembly.
             var outputDirectory = OutputDirectory;
 
-            MessageSink CreateJsonFileSink()
+            Func<MessageSink> createJsonFileSink = () =>
             {
-                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, platform, assemblyName, ".json", now);
-                var jsonStoreProps = Props.Create(() => 
-                    new FileSystemMessageSinkActor(
-                        new JsonPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
+                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".json", now);
+
+                var jsonStoreProps = Props.Create(() =>
+                    new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
 
                 return new FileSystemMessageSink(jsonStoreProps);
-            }
+            };
 
-            MessageSink CreateVisualizerFileSink()
+            Func<MessageSink> createVisualizerFileSink = () =>
             {
-                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, platform, assemblyName, ".html", now);
-                var visualizerProps = Props.Create(() => 
-                    new FileSystemMessageSinkActor(
-                        new VisualizerPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
+                var fileName = FileNameGenerator.GenerateFileName(outputDirectory, assemblyName, ".html", now);
+
+                var visualizerProps = Props.Create(() =>
+                    new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, !TeamCityFormattingOn, true));
 
                 return new FileSystemMessageSink(visualizerProps);
-            }
+            };
 
             var fileSystemSink = CommandLine.GetProperty("multinode.enable-filesink");
             if (!string.IsNullOrEmpty(fileSystemSink))
             {
-                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(CreateJsonFileSink()));
-                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(CreateVisualizerFileSink()));
+                Console.Out.WriteLine(">>>>>>>>>>>>>>>>>>>>>>> Creating file sinks");
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createJsonFileSink()));
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createVisualizerFileSink()));
             }
         }
 
