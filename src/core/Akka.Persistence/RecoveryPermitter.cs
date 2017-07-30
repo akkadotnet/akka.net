@@ -16,14 +16,22 @@ namespace Akka.Persistence
 {
     internal sealed class RequestRecoveryPermit
     {
-        public static RequestRecoveryPermit Instance { get; } = new RequestRecoveryPermit();
-        private RequestRecoveryPermit() { }
+        public RequestRecoveryPermit(object correlationId)
+        {
+            CorrelationId = correlationId;
+        }
+
+        public object CorrelationId { get; }
     }
 
     internal sealed class RecoveryPermitGranted
     {
-        public static RecoveryPermitGranted Instance { get; } = new RecoveryPermitGranted();
-        private RecoveryPermitGranted() { }
+        public RecoveryPermitGranted(object correlationId)
+        {
+            CorrelationId = correlationId;
+        }
+
+        public object CorrelationId { get; }
     }
 
     internal sealed class ReturnRecoveryPermit
@@ -55,7 +63,7 @@ namespace Akka.Persistence
 
         protected override void OnReceive(object message)
         {
-            if (message is RequestRecoveryPermit)
+            if (message is RequestRecoveryPermit req)
             {
                 Context.Watch(Sender);
                 if (_usedPermits >= MaxPermits)
@@ -67,7 +75,7 @@ namespace Akka.Persistence
                 }
                 else
                 {
-                    RecoveryPermitGranted(Sender);
+                    RecoveryPermitGranted(Sender, req.CorrelationId);
                 }
             }
             else if (message is ReturnRecoveryPermit)
@@ -102,10 +110,10 @@ namespace Akka.Persistence
             _maxPendingStats = 0;
         }
 
-        private void RecoveryPermitGranted(IActorRef actorRef)
+        private void RecoveryPermitGranted(IActorRef actorRef, object correlationId)
         {
             _usedPermits++;
-            actorRef.Tell(Akka.Persistence.RecoveryPermitGranted.Instance);
+            actorRef.Tell(new RecoveryPermitGranted(correlationId));
         }
     }
 }
