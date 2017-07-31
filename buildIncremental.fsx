@@ -67,6 +67,7 @@ module IncrementalTests =
     let getUpstreamRemote repositoryDir =
         let _, msg, error = runGitCommand repositoryDir "remote add upstream https://github.com/akkadotnet/akka.net"
         match error with
+        | "" -> log "added upstream remote"
         | "fatal: remote upstream already exists." -> log "upstream remote already exists"
         | _ -> failwithf "remote add upstream https://github.com/akkadotnet/akka.net failed: %s" error
 
