@@ -195,6 +195,7 @@ module IncrementalTests =
         updatedFiles |> Seq.iter (fun x -> logfn "\t%s" x)
         log "The following test projects will be run..."
         if (updatedFiles |> Seq.exists (fun p -> isBuildScript p)) then
+            log "Full test suite"
             match testMode with
             | Unit -> getUnitTestProjects()
             | MNTR -> getMntrProjects()
