@@ -89,7 +89,9 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    /// 
+    /// Represents a heartbeat on the wire.
     /// </summary>
     internal sealed class Heartbeat : IAkkaPdu { }
 
