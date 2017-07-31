@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Akka.Util.Reflection
 {
@@ -15,7 +16,7 @@ namespace Akka.Util.Reflection
     /// </summary>
     public static class TypeCache
     {
-        private static readonly ConcurrentDictionary<string, Type> TypeMap = new ConcurrentDictionary<string, Type>();
+        private static readonly ConcurrentDictionary<string, Type> TypeMap = new ConcurrentDictionary<string, Type>(new[] { new KeyValuePair<string, Type>("null", null),  });
 
         /// <summary>
         /// Gets the <see cref="T:System.Type"/> with the specified name, performing a case-sensitive search and throw an exception if the type is not found.

@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Util.Internal;
+using Akka.Util.Reflection;
 
 namespace Akka.Serialization
 {
@@ -191,11 +192,11 @@ namespace Akka.Serialization
             Type type;
             try
             {
-                type = Type.GetType(manifest);
+                type = TypeCache.GetType(manifest);
             }
-            catch
+            catch(Exception ex)
             {
-                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].");
+                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].", ex);
             }
             return serializer.FromBinary(bytes, type);
         }
