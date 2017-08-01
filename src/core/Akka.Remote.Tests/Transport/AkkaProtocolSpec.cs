@@ -48,12 +48,12 @@ namespace Akka.Remote.Tests.Transport
         public AkkaProtocolSpec()
             : base(@"akka.test.default-timeout = 1.5 s")
         {
+            codec = new AkkaPduProtobuffCodec(Sys);
             testEnvelope = codec.ConstructMessage(localAkkaAddress, TestActor, testMsg);
             testMsgPdu = codec.ConstructPayload(testEnvelope);
 
             testHeartbeat = new InboundPayload(codec.ConstructHeartbeat());
             testPayload = new InboundPayload(testMsgPdu);
-            codec = new AkkaPduProtobuffCodec(Sys);
         }
 
         public class Collaborators
