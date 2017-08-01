@@ -59,19 +59,11 @@ namespace Akka.NodeTestRunner
             {
                 try
                 {
-                    Assembly.Load(new AssemblyName(asm.FullName));
+                    assembly = Assembly.Load(new AssemblyName(asm.FullName));
                 }
                 catch (Exception)
                 {
-                    var path = Path.Combine(basePath, asm.Name + ".dll");
-                    try
-                    {
-                        AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.Out.WriteLine($"Failed to load dll: {path}");
-                    }
+                    assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(basePath, asm.Name + ".dll"));
                 }
             }
 #endif
