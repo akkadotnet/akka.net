@@ -618,64 +618,60 @@ namespace Akka.Actor
                 var acc = new Stack<string>();
                 while (true)
                 {
-                    switch (p)
-                    {
-                        case RootActorPath r:
-                            return acc.ToList();
-                        default:
-                            acc.Push(p.Name);
-                            p = p.Parent;
-                            continue;
-                    }
+                    if (p is RootActorPath)
+                        return acc.ToList();
+                    acc.Push(p.Name);
+                    p = p.Parent;
                 }
             }
-        }
-
-        /// <inheritdoc/>
-        public override ActorPath Root
-        {
-            get
-            {
-                var current = _parent;
-                while (current is ChildActorPath)
-                {
-                    current = ((ChildActorPath)current)._parent;
-                }
-                return current.Root;
-            }
-        }
-
-        /// <summary>
-        /// Creates a copy of the given ActorPath and applies a new Uid
-        /// </summary>
-        /// <param name="uid"> The uid. </param>
-        /// <returns> ActorPath. </returns>
-        public override ActorPath WithUid(long uid)
-        {
-            if (uid == Uid)
-                return this;
-            return new ChildActorPath(_parent, _name, uid);
-        }
-
-        /// <inheritdoc/>
-        public override int CompareTo(ActorPath other)
-        {
-            return InternalCompareTo(this, other);
-        }
-
-        private int InternalCompareTo(ActorPath left, ActorPath right)
-        {
-            if (ReferenceEquals(left, right)) return 0;
-            var leftRoot = left as RootActorPath;
-            if (leftRoot != null)
-                return leftRoot.CompareTo(right);
-            var rightRoot = right as RootActorPath;
-            if (rightRoot != null)
-                return -rightRoot.CompareTo(left);
-            var nameCompareResult = Compare(left.Name, right.Name, StringComparison.Ordinal);
-            if (nameCompareResult != 0)
-                return nameCompareResult;
-            return InternalCompareTo(left.Parent, right.Parent);
         }
     }
+
+    /// <inheritdoc/>
+    public override ActorPath Root
+    {
+        get
+        {
+            var current = _parent;
+            while (current is ChildActorPath)
+            {
+                current = ((ChildActorPath)current)._parent;
+            }
+            return current.Root;
+        }
+    }
+
+    /// <summary>
+    /// Creates a copy of the given ActorPath and applies a new Uid
+    /// </summary>
+    /// <param name="uid"> The uid. </param>
+    /// <returns> ActorPath. </returns>
+    public override ActorPath WithUid(long uid)
+    {
+        if (uid == Uid)
+            return this;
+        return new ChildActorPath(_parent, _name, uid);
+    }
+
+    /// <inheritdoc/>
+    public override int CompareTo(ActorPath other)
+    {
+        return InternalCompareTo(this, other);
+    }
+
+    private int InternalCompareTo(ActorPath left, ActorPath right)
+    {
+        if (ReferenceEquals(left, right)) return 0;
+        var leftRoot = left as RootActorPath;
+        if (leftRoot != null)
+            return leftRoot.CompareTo(right);
+        var rightRoot = right as RootActorPath;
+        if (rightRoot != null)
+            return -rightRoot.CompareTo(left);
+        var nameCompareResult = Compare(left.Name, right.Name, StringComparison.Ordinal);
+        if (nameCompareResult != 0)
+            return nameCompareResult;
+        return InternalCompareTo(left.Parent, right.Parent);
+    }
+}
 }
