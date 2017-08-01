@@ -304,13 +304,13 @@ namespace Akka.Cluster.Sharding.Tests
                 }, _config.First);
                 RunOn(() =>
                 {
-                    LastSender.Path.Should().Be(Node(_config.First) / "user" / "sharding" / "Entity" / "2" / "2");
+                    LastSender.Path.Should().Be(Node(_config.First) / "system" / "sharding" / "Entity" / "2" / "2");
                 }, _config.Second);
                 EnterBarrier("second-started");
 
                 RunOn(() =>
                 {
-                    Sys.ActorSelection(Node(_config.Second) / "user" / "sharding" / "Entity").Tell(new Identify(null));
+                    Sys.ActorSelection(Node(_config.Second) / "system" / "sharding" / "Entity").Tell(new Identify(null));
                     var secondRegion = ExpectMsg<ActorIdentity>().Subject;
                     _allocator.Value.Tell(new UseRegion(secondRegion));
                     ExpectMsg<UseRegionAck>();
@@ -326,7 +326,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 RunOn(() =>
                 {
-                    LastSender.Path.Should().Be(Node(_config.Second) / "user" / "sharding" / "Entity" / "3" / "3");
+                    LastSender.Path.Should().Be(Node(_config.Second) / "system" / "sharding" / "Entity" / "3" / "3");
                 }, _config.First);
 
                 EnterBarrier("after-2");
@@ -348,7 +348,7 @@ namespace Akka.Cluster.Sharding.Tests
                         _region.Value.Tell(2, p.Ref);
                         p.ExpectMsg(2, TimeSpan.FromSeconds(2));
 
-                        p.LastSender.Path.Should().Be(Node(_config.Second) / "user" / "sharding" / "Entity" / "2" / "2");
+                        p.LastSender.Path.Should().Be(Node(_config.Second) / "system" / "sharding" / "Entity" / "2" / "2");
                     });
 
                     _region.Value.Tell(1);

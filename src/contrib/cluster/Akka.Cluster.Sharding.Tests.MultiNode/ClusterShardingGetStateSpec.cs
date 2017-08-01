@@ -298,7 +298,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     foreach (var region in regions)
                     {
-                        var path = new RootActorPath(region) / "user" / "sharding" / ShardTypeName;
+                        var path = new RootActorPath(region) / "system" / "sharding" / ShardTypeName;
                         Sys.ActorSelection(path).Tell(GetShardRegionState.Instance, probe.Ref);
                     }
 
