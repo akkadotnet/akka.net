@@ -674,4 +674,3 @@ namespace Akka.Actor
         return InternalCompareTo(left.Parent, right.Parent);
     }
 }
-}
