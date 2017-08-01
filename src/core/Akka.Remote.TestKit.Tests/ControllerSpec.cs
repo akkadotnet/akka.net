@@ -7,6 +7,7 @@
 
 using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -41,6 +42,8 @@ namespace Akka.Remote.TestKit.Tests
             c.Tell(Controller.GetNodes.Instance);
             ExpectMsg<IEnumerable<RoleName>>(names => XAssert.Equivalent(names, new[] {A, B}));
             c.Tell(PoisonPill.Instance);
+            
+            Task.Delay(3000).GetAwaiter().GetResult();
         }
     }
 }
