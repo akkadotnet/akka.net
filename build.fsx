@@ -127,6 +127,7 @@ Target "RunTests" (fun _ ->
         // dotnet process will be killed by ExecProcess (or throw if can't) '
         // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not
         killProcess "xunit.console"
+        killProcess "dotnet"
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
@@ -156,6 +157,7 @@ Target "RunTestsNetCore" (fun _ ->
         // dotnet process will be killed by FAKE.ExecProcess (or throw if can't)
         // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not be killed
         killProcess "xunit.console"
+        killProcess "dotnet"
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
