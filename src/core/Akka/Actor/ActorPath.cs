@@ -126,8 +126,11 @@ namespace Akka.Actor
             return !s.StartsWith("$") && Validate(s.ToCharArray(), s.Length);
         }
 
-        private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
-        private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+        private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                                                   (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
+
+        private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') ||
+                                                 (c >= '0' && c <= '9');
 
         private static bool Validate(IReadOnlyList<char> chars, int len)
         {
@@ -510,6 +513,7 @@ namespace Akka.Actor
 
             return String.Concat(withAddress, "#", Uid.ToString());
         }
+
         /// <summary>
         /// Generate String representation, replacing the Address in the RootActorPath
         /// with the given one unless this path’s address includes host and port
@@ -625,52 +629,52 @@ namespace Akka.Actor
                 }
             }
         }
-    }
 
-    /// <inheritdoc/>
-    public override ActorPath Root
-    {
-        get
+        /// <inheritdoc/>
+        public override ActorPath Root
         {
-            var current = _parent;
-            while (current is ChildActorPath)
+            get
             {
-                current = ((ChildActorPath)current)._parent;
+                var current = _parent;
+                while (current is ChildActorPath)
+                {
+                    current = ((ChildActorPath)current)._parent;
+                }
+                return current.Root;
             }
-            return current.Root;
         }
-    }
 
-    /// <summary>
-    /// Creates a copy of the given ActorPath and applies a new Uid
-    /// </summary>
-    /// <param name="uid"> The uid. </param>
-    /// <returns> ActorPath. </returns>
-    public override ActorPath WithUid(long uid)
-    {
-        if (uid == Uid)
-            return this;
-        return new ChildActorPath(_parent, _name, uid);
-    }
+        /// <summary>
+        /// Creates a copy of the given ActorPath and applies a new Uid
+        /// </summary>
+        /// <param name="uid"> The uid. </param>
+        /// <returns> ActorPath. </returns>
+        public override ActorPath WithUid(long uid)
+        {
+            if (uid == Uid)
+                return this;
+            return new ChildActorPath(_parent, _name, uid);
+        }
 
-    /// <inheritdoc/>
-    public override int CompareTo(ActorPath other)
-    {
-        return InternalCompareTo(this, other);
-    }
+        /// <inheritdoc/>
+        public override int CompareTo(ActorPath other)
+        {
+            return InternalCompareTo(this, other);
+        }
 
-    private int InternalCompareTo(ActorPath left, ActorPath right)
-    {
-        if (ReferenceEquals(left, right)) return 0;
-        var leftRoot = left as RootActorPath;
-        if (leftRoot != null)
-            return leftRoot.CompareTo(right);
-        var rightRoot = right as RootActorPath;
-        if (rightRoot != null)
-            return -rightRoot.CompareTo(left);
-        var nameCompareResult = Compare(left.Name, right.Name, StringComparison.Ordinal);
-        if (nameCompareResult != 0)
-            return nameCompareResult;
-        return InternalCompareTo(left.Parent, right.Parent);
+        private int InternalCompareTo(ActorPath left, ActorPath right)
+        {
+            if (ReferenceEquals(left, right)) return 0;
+            var leftRoot = left as RootActorPath;
+            if (leftRoot != null)
+                return leftRoot.CompareTo(right);
+            var rightRoot = right as RootActorPath;
+            if (rightRoot != null)
+                return -rightRoot.CompareTo(left);
+            var nameCompareResult = Compare(left.Name, right.Name, StringComparison.Ordinal);
+            if (nameCompareResult != 0)
+                return nameCompareResult;
+            return InternalCompareTo(left.Parent, right.Parent);
+        }
     }
 }
