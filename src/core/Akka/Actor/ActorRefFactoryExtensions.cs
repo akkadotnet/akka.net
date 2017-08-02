@@ -8,7 +8,7 @@
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// This class contains extension methods used for working with <see cref="IActorRefFactory"/>.
     /// </summary>
     public static class ActorRefFactoryExtensions
     {
@@ -19,7 +19,8 @@ namespace Akka.Actor
         /// <param name="factory">TBD</param>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public static IActorRef ActorOf<TActor>(this IActorRefFactory factory, string name = null) where TActor : ActorBase, new()
+        public static IActorRef ActorOf<TActor>(this IActorRefFactory factory, string name = null)
+            where TActor : ActorBase, new()
         {
             return factory.ActorOf(Props.Create<TActor>(), name: name);
         }
@@ -38,7 +39,5 @@ namespace Akka.Actor
         {
             return ActorRefFactoryShared.ActorSelection(anchorRef, actorPath);
         }
-
     }
 }
-
