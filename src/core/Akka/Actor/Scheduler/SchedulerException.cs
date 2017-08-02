@@ -8,15 +8,15 @@
 namespace Akka.Actor
 {
     /// <summary>
-    /// An <see cref="AkkaException"/> that is thrown by the <see cref="IScheduler.Schedule*"/> methods
+    /// An <see cref="AkkaException"/> that is thrown by the <see cref="IScheduler">Schedule*</see> methods
     /// when scheduling is not possible, e.g. after shutting down the <see cref="IScheduler"/>.
     /// </summary>
     public sealed class SchedulerException : AkkaException
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="SchedulerException"/> class.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message that describes the error.</param>
         public SchedulerException(string message) : base(message) { }
     }
 }
