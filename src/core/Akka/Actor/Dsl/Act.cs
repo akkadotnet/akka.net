@@ -391,7 +391,7 @@ namespace Akka.Actor.Dsl
     }
 
     /// <summary>
-    /// TBD
+    /// This class contains extension methods used for working with <see cref="IActorRefFactory"/>.
     /// </summary>
     public static class ActExtensions
     {
