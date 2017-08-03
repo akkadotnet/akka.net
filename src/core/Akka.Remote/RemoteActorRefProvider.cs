@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -138,6 +139,7 @@ namespace Akka.Remote
         private volatile IActorRef _remoteWatcher;
 
         private volatile ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
+        private volatile ActorPathThreadLocalCache _actorPathThreadLocalCache;
 
         /// <summary>
         /// The remote death watcher.
@@ -153,6 +155,7 @@ namespace Akka.Remote
             _local.Init(system);
 
             _actorRefResolveThreadLocalCache = ActorRefResolveThreadLocalCache.For(system);
+            _actorPathThreadLocalCache = ActorPathThreadLocalCache.For(system);
 
             _remotingTerminator =
                 _system.SystemActorOf(
@@ -362,6 +365,20 @@ namespace Akka.Remote
             return _local.ActorOf(system, props, supervisor, path, systemService, deploy, lookupDeploy, async);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryParseCachedPath(string actorPath, out ActorPath path)
+        {
+            if (_actorPathThreadLocalCache != null)
+            {
+                path = _actorPathThreadLocalCache.Cache.GetOrCompute(actorPath);
+                return path != null;
+            }
+            else // cache not initialized yet
+            {
+                return ActorPath.TryParse(actorPath, out path);
+            }
+        }
+
 
         /// <summary>
         /// INTERNAL API.
@@ -374,7 +391,7 @@ namespace Akka.Remote
         internal IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
             ActorPath actorPath;
-            if (ActorPath.TryParse(path, out actorPath))
+            if (TryParseCachedPath(path, out actorPath))
             {
                 //the actor's local address was already included in the ActorPath
                 if (HasAddress(actorPath.Address))

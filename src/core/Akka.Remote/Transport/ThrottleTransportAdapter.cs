@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
+using Akka.Remote.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
@@ -1079,7 +1080,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Used for decoding certain types of throttled messages on-the-fly
         /// </summary>
-        private static readonly AkkaPduProtobuffCodec Codec = new AkkaPduProtobuffCodec();
+        private readonly AkkaPduProtobuffCodec _codec;
 
         /// <summary>
         /// TBD
@@ -1090,6 +1091,7 @@ namespace Akka.Remote.Transport
         /// <param name="inbound">TBD</param>
         public ThrottledAssociation(IActorRef manager, IAssociationEventListener associationHandler, AssociationHandle originalHandle, bool inbound)
         {
+            _codec = new AkkaPduProtobuffCodec(Context.System);
             Manager = manager;
             AssociationHandler = associationHandler;
             OriginalHandle = originalHandle;
@@ -1293,7 +1295,7 @@ namespace Akka.Remote.Transport
         {
             try
             {
-                var pdu = Codec.DecodePdu(b);
+                var pdu = _codec.DecodePdu(b);
                 if (pdu is Associate)
                 {
                     return pdu.AsInstanceOf<Associate>().Info.Origin;
