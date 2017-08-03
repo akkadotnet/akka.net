@@ -165,7 +165,7 @@ namespace Akka.Actor
         protected ActorPath(Akka.Actor.Address address, string name) { }
         protected ActorPath(Akka.Actor.ActorPath parentPath, string name, long uid) { }
         public Akka.Actor.Address Address { get; }
-        public System.Collections.Generic.IReadOnlyList<string> Elements { get; }
+        public abstract System.Collections.Generic.IReadOnlyList<string> Elements { get; }
         public string Name { get; }
         public abstract Akka.Actor.ActorPath Parent { get; }
         public abstract Akka.Actor.ActorPath Root { get; }
@@ -471,6 +471,7 @@ namespace Akka.Actor
     public class ChildActorPath : Akka.Actor.ActorPath
     {
         public ChildActorPath(Akka.Actor.ActorPath parentPath, string name, long uid) { }
+        public override System.Collections.Generic.IReadOnlyList<string> Elements { get; }
         public override Akka.Actor.ActorPath Parent { get; }
         public override Akka.Actor.ActorPath Root { get; }
         public override int CompareTo(Akka.Actor.ActorPath other) { }
@@ -1476,6 +1477,7 @@ namespace Akka.Actor
     public class RootActorPath : Akka.Actor.ActorPath
     {
         public RootActorPath(Akka.Actor.Address address, string name = "") { }
+        public override System.Collections.Generic.IReadOnlyList<string> Elements { get; }
         public override Akka.Actor.ActorPath Parent { get; }
         [Newtonsoft.Json.JsonIgnoreAttribute()]
         public override Akka.Actor.ActorPath Root { get; }

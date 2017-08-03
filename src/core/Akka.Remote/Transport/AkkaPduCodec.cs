@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Google.Protobuf;
 using System.Runtime.Serialization;
+using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
@@ -202,6 +203,15 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal abstract class AkkaPduCodec
     {
+        protected readonly ActorSystem System;
+        protected readonly AddressThreadLocalCache AddressCache;
+
+        protected AkkaPduCodec(ActorSystem system)
+        {
+            System = system;
+            AddressCache = AddressThreadLocalCache.For(system);
+        }
+
         /// <summary>
         /// Return an <see cref="IAkkaPdu"/> instance that represents a PDU contained in the raw
         /// <see cref="ByteString"/>.
@@ -407,7 +417,15 @@ namespace Akka.Remote.Transport
                 {
                     var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
                     Address recipientAddress;
-                    ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
+                    if (AddressCache != null)
+                    {
+                        recipientAddress = AddressCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
+                    }
+                    else
+                    {
+                        ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
+                    }
+                    
                     var serializedMessage = envelopeContainer.Message;
                     IActorRef senderOption = null;
                     if (envelopeContainer.Sender != null)
@@ -555,5 +573,9 @@ namespace Akka.Remote.Transport
         }
 
 #endregion
+
+        public AkkaPduProtobuffCodec(ActorSystem system) : base(system)
+        {
+        }
     }
 }
