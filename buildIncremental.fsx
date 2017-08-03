@@ -62,16 +62,21 @@ module IncrementalTests =
         |> Seq.map (fun line -> 
             let a = line.Split('\t')
             FileStatus.Parse a.[0],a.[1])
+    
+    let getUpstreamRemote repositoryDir =
+        let _, msg, error = runGitCommand repositoryDir "remote add upstream https://github.com/akkadotnet/akka.net"
+        match error with
+        | "" -> log "added upstream remote"
+        | "fatal: remote upstream already exists." -> log "upstream remote already exists"
+        | _ -> failwithf "remote add upstream https://github.com/akkadotnet/akka.net failed: %s" error
 
     let getUpdatedFiles() = 
         let srcDir = __SOURCE_DIRECTORY__
-        let localBranches = getLocalBranches srcDir
-        log "Local branches..."
-        localBranches |> Seq.iter log
-        if not (localBranches |> Seq.exists (fun b -> b = akkaDefaultBranch)) then
-            log "default branch information not available... fetching"
-            directRunGitCommandAndFail srcDir (sprintf "fetch origin %s:%s" akkaDefaultBranch akkaDefaultBranch)
-        getBranchesFileDiff srcDir akkaDefaultBranch
+        log "Adding upstream remote..."
+        getUpstreamRemote srcDir
+        log "Fetching upstream remote to compare HEAD file changes with..."
+        directRunGitCommandAndFail srcDir "fetch upstream"
+        getBranchesFileDiff srcDir (sprintf "upstream/%s" akkaDefaultBranch)
         |> Seq.map (fun (_, fi) -> FullName fi)
         |> Seq.filter (fun fi -> (isInFolder (new DirectoryInfo("./src")) (new FileInfo(fi))) || (isBuildScript fi))
   
@@ -202,6 +207,7 @@ module IncrementalTests =
         updatedFiles |> Seq.iter (fun x -> logfn "\t%s" x)
         log "The following test projects will be run..."
         if (updatedFiles |> Seq.exists (fun p -> isBuildScript p)) then
+            log "Full test suite"
             match testMode with
             | Unit -> getUnitTestProjects()
             | MNTR -> getMntrProjects()

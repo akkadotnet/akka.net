@@ -8,17 +8,17 @@
 namespace Akka.Actor
 {
     /// <summary>
-    ///     An extension method class for working with ActorRefs
+    /// This class contains extension methods used for working with <see cref="IActorRef">ActorRefs</see>.
     /// </summary>
     public static class ActorRefExtensions
     {
         /// <summary>
-        ///     If we call a method such as <code>Context.Child(name)</code>
-        ///     and don't receive a valid result in return, this method will indicate
-        ///     whether or not the actor we received is valid.
+        /// Determines if the specified <paramref name="actorRef"/> is valid.
+        /// An <paramref name="actorRef"/> is thought to be invalid if it's one of the following:
+        ///    <see langword="null"/>, <see cref="Nobody"/>, and <see cref="DeadLetterActorRef"/>
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor that is being tested.</param>
+        /// <returns><c>true</c> if the <paramref name="actorRef"/> is valid; otherwise <c>false</c>.</returns>
         public static bool IsNobody(this IActorRef actorRef)
         {
             return actorRef == null || actorRef is Nobody || actorRef is DeadLetterActorRef;
