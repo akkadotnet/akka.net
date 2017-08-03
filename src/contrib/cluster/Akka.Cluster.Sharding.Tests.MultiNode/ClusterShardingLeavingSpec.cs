@@ -23,14 +23,14 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingLeavingSpecConfig : MultiNodeConfig
     {
-        public RoleName First { get;}
+        public RoleName First { get; private set; }
 
-        public RoleName Second { get; }
+        public RoleName Second { get; private set; }
 
-        public RoleName Third { get; }
+        public RoleName Third { get; private set; }
 
-        public RoleName Fourth { get; }
-        
+        public RoleName Fourth { get; private set; }
+
         public ClusterShardingLeavingSpecConfig()
         {
             First = Role("first");
@@ -135,7 +135,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardinLeavingSpec(ClusterShardingLeavingSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardinLeavingSpec))
         {
             _config = config;
 

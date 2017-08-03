@@ -28,15 +28,21 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingSpecConfig : MultiNodeConfig
     {
-        public RoleName Controller { get; }
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
-        public RoleName Fourth { get; }
-        public RoleName Fifth { get; }
-        public RoleName Sixth { get; }
+        public RoleName Controller { get; private set; }
 
-        public ClusterShardingSpecConfig()
+        public RoleName First { get; private set; }
+
+        public RoleName Second { get; private set; }
+
+        public RoleName Third { get; private set; }
+
+        public RoleName Fourth { get; private set; }
+
+        public RoleName Fifth { get; private set; }
+
+        public RoleName Sixth { get; private set; }
+
+        public ClusterShardingSpecConfig(/*string entityRecoveryStrategy*/)
         {
             Controller = Role("controller");
             First = Role("first");
@@ -335,7 +341,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly ClusterShardingSpecConfig _config;
 
         protected ClusterShardingSpec(ClusterShardingSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingSpec))
         {
             _config = config;
 

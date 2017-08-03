@@ -22,9 +22,10 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingGracefulShutdownSpecConfig : MultiNodeConfig
     {
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        
+        public RoleName First { get; private set; }
+
+        public RoleName Second { get; private set; }
+
         public ClusterShardingGracefulShutdownSpecConfig()
         {
             First = Role("first");
@@ -96,7 +97,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingGracefulShutdownSpec(ClusterShardingGracefulShutdownSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingGracefulShutdownSpec))
         {
             _config = config;
 

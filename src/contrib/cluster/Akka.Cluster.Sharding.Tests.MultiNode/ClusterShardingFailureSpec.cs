@@ -23,10 +23,12 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingFailureSpecConfig : MultiNodeConfig
     {
-        public RoleName Controller { get; }
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        
+        public RoleName Controller { get; private set; }
+
+        public RoleName First { get; private set; }
+
+        public RoleName Second { get; private set; }
+
         public ClusterShardingFailureSpecConfig()
         {
             Controller = Role("controller");
@@ -143,7 +145,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingFailureSpec(ClusterShardingFailureSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingFailureSpec))
         {
             _config = config;
 
