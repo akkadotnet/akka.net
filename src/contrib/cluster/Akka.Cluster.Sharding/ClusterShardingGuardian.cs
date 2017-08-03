@@ -160,49 +160,77 @@ namespace Akka.Cluster.Sharding
         {
             Receive<Start>(start =>
             {
-                var settings = start.Settings;
-                var encName = Uri.EscapeDataString(start.TypeName);
-                var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
-                var coordinatorPath = CoordinatorPath(encName);
-                var shardRegion = Context.Child(encName);
-
-                if (Equals(shardRegion, ActorRefs.Nobody))
+                try
                 {
-                    var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
-                    var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
-                    var coordinatorProps = PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy);
-                    var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2).WithDeploy(Deploy.Local);
-                    var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
-                    var shardCoordinatorSingleton = Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings), coordinatorSingletonManagerName);
+                    var settings = start.Settings;
+                    var encName = Uri.EscapeDataString(start.TypeName);
+                    var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
+                    var coordinatorPath = CoordinatorPath(encName);
+                    var shardRegion = Context.Child(encName);
+
+                    if (Equals(shardRegion, ActorRefs.Nobody))
+                    {
+                        if (Equals(Context.Child(coordinatorSingletonManagerName), ActorRefs.Nobody))
+                        {
+                            var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
+                            var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
+                            var coordinatorProps = PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy);
+                            var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2).WithDeploy(Deploy.Local);
+                            var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
+                            Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
+                        }
+                        shardRegion = Context.ActorOf(ShardRegion.Props(
+                            typeName: start.TypeName,
+                            entityProps: start.EntityProps,
+                            settings: settings,
+                            coordinatorPath: coordinatorPath,
+                            extractEntityId: start.IdExtractor,
+                            extractShardId: start.ShardResolver,
+                            handOffStopMessage: start.HandOffStopMessage).WithDispatcher(Context.Props.Dispatcher), encName);
+                    }
+
+                    Sender.Tell(new Started(shardRegion));
                 }
-
-                shardRegion = Context.ActorOf(ShardRegion.Props(
-                    typeName: start.TypeName,
-                    entityProps: start.EntityProps,
-                    settings: settings,
-                    coordinatorPath: coordinatorPath,
-                    extractEntityId: start.IdExtractor,
-                    extractShardId: start.ShardResolver,
-                    handOffStopMessage: start.HandOffStopMessage), encName);
-
-                Sender.Tell(new Started(shardRegion));
+                catch (Exception ex)
+                {
+                    //TODO: JVM version matches NonFatal. Can / should we do something similar?
+                    // don't restart
+                    // could be invalid ReplicatorSettings, or InvalidActorNameException
+                    // if it has already been started
+                    Sender.Tell(new Status.Failure(ex));
+                }
             });
 
             Receive<StartProxy>(startProxy =>
             {
-                var settings = startProxy.Settings;
-                var encName = Uri.EscapeDataString(startProxy.TypeName);
-                var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
-                var coordinatorPath = CoordinatorPath(encName);
+                try
+                {
+                    var settings = startProxy.Settings;
+                    var encName = Uri.EscapeDataString(startProxy.TypeName);
+                    var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
+                    var coordinatorPath = CoordinatorPath(encName);
+                    var shardRegion = Context.Child(encName);
 
-                var shardRegion = Context.ActorOf(ShardRegion.ProxyProps(
-                    typeName: startProxy.TypeName,
-                    settings: settings,
-                    coordinatorPath: coordinatorPath,
-                    extractEntityId: startProxy.ExtractEntityId,
-                    extractShardId: startProxy.ExtractShardId), encName);
+                    if (Equals(shardRegion, ActorRefs.Nobody))
+                    {
 
-                Sender.Tell(new Started(shardRegion));
+                        shardRegion = Context.ActorOf(ShardRegion.ProxyProps(
+                            typeName: startProxy.TypeName,
+                            settings: settings,
+                            coordinatorPath: coordinatorPath,
+                            extractEntityId: startProxy.ExtractEntityId,
+                            extractShardId: startProxy.ExtractShardId).WithDispatcher(Context.Props.Dispatcher), encName);
+                    }
+
+                    Sender.Tell(new Started(shardRegion));
+                }
+                catch (Exception ex)
+                {
+                    //TODO: JVM version matches NonFatal. Can / should we do something similar?
+                    // don't restart
+                    // could be InvalidActorNameException if it has already been started
+                    Sender.Tell(new Status.Failure(ex));
+                }
             });
         }
 

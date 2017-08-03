@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -42,11 +43,11 @@ namespace Akka.Cluster.Sharding.Tests
             }.ToImmutableDictionary();
 
             var result = _allocationStrategy.AllocateShard(_regionA, "shard3", allocations).Result;
-            Assert.Equal(result, _regionC);
+            result.Should().Be(_regionC);
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_should_reallocate_from_region_with_most_number_of_shards()
+        public void LeastShardAllocationStrategy_should_rebalance_from_region_with_most_number_of_shards()
         {
             var allocations = new Dictionary<IActorRef, IImmutableList<string>>
             {
@@ -57,20 +58,35 @@ namespace Akka.Cluster.Sharding.Tests
 
             // so far regionB has 2 shards and regionC has 0 shards, but the diff is less than rebalanceThreshold
             var r1 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
-            Assert.Equal(r1.Count, 0);
+            r1.Count.Should().Be(0);
 
             allocations = allocations.SetItem(_regionB, new[] { "shard2", "shard3", "shard4" }.ToImmutableList());
             var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
-            Assert.Equal(r2.Count, 1);
-            Assert.Equal(r2.First(), "shard2");
+            r2.Should().BeEquivalentTo(new[] { "shard2", "shard3" });
 
-            var r3 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard4")).Result;
-            Assert.Equal(r3.Count, 0);
+            var r3 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("shard4")).Result;
+            r3.Count.Should().Be(0);
 
             allocations = allocations.SetItem(_regionA, new[] { "shard1", "shard5", "shard6" }.ToImmutableList());
-            var r4 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard1")).Result;
-            Assert.Equal(r4.Count, 1);
-            Assert.Equal(r2.First(), "shard2");
+            var r4 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("shard1")).Result;
+            r4.Should().BeEquivalentTo(new[] { "shard2" });
+        }
+
+        [Fact]
+        public void LeastShardAllocationStrategy_should_rebalance_multiple_shards_if_max_simultaneous_rebalances_is_not_exceeded()
+        {
+            var allocations = new Dictionary<IActorRef, IImmutableList<string>>
+            {
+                {_regionA, new []{"shard1"}.ToImmutableList() },
+                {_regionB, new []{ "shard2", "shard3", "shard4", "shard5", "shard6" }.ToImmutableList() },
+                {_regionC, ImmutableList<string>.Empty}
+            }.ToImmutableDictionary();
+
+            var r1 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
+            r1.Should().BeEquivalentTo(new[] { "shard2", "shard3" });
+
+            var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("shard2", "shard3")).Result;
+            r2.Count.Should().Be(0);
         }
 
         [Fact]
@@ -83,12 +99,11 @@ namespace Akka.Cluster.Sharding.Tests
                 {_regionC, ImmutableList<string>.Empty}
             }.ToImmutableDictionary();
 
-            var r1 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard2")).Result;
-            Assert.Equal(r1.Count, 1);
-            Assert.Equal(r1.First(), "shard3");
+            var r1 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("shard2")).Result;
+            r1.Should().BeEquivalentTo(new[] { "shard3" });
 
-            var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("shard2").Add("shard3")).Result;
-            Assert.Equal(r2.Count, 0);
+            var r2 = _allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("shard2", "shard3")).Result;
+            r2.Count.Should().Be(0);
         }
     }
 }
