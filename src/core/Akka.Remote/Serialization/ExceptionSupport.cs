@@ -22,6 +22,7 @@ namespace Akka.Remote.Serialization
     internal class ExceptionSupport
     {
         private readonly WrappedPayloadSupport _wrappedPayloadSupport;
+        private const BindingFlags All = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
         public ExceptionSupport(ExtendedActorSystem system)
         {
@@ -96,7 +97,7 @@ namespace Akka.Remote.Serialization
 
             Exception obj = null;
             ConstructorInfo constructorInfo = exceptionType.GetConstructor(
-                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                All,
                 null,
                 new[] { typeof(SerializationInfo), typeof(StreamingContext) },
                 null);
@@ -129,7 +130,6 @@ namespace Akka.Remote.Serialization
         };
 
         private TypeInfo ExceptionTypeInfo = typeof(Exception).GetTypeInfo();
-        private const BindingFlags All = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
         internal Proto.Msg.ExceptionData ExceptionToProtoNetCore(Exception exception)
         {

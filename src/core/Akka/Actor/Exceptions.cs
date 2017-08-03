@@ -262,6 +262,10 @@ namespace Akka.Actor
     /// </summary>
     public class ActorKilledException : AkkaException
     {
+        public ActorKilledException()
+        {
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorKilledException"/> class.
         /// </summary>
