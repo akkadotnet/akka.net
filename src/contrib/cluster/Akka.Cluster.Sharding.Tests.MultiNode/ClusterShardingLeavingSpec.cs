@@ -16,43 +16,59 @@ using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
 using Xunit;
+using System.Collections.Immutable;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingLeavingSpecConfig : MultiNodeConfig
     {
+        public RoleName First { get; private set; }
+
+        public RoleName Second { get; private set; }
+
+        public RoleName Third { get; private set; }
+
+        public RoleName Fourth { get; private set; }
+
         public ClusterShardingLeavingSpecConfig()
         {
-            var first = Role("first");
-            var second = Role("second");
-            var third = Role("third");
-            var fourth = Role("fourth");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider""
-                akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = 0s
-                akka.persistence.journal.plugin = ""Akka.Persistence.Journal.in-mem""
-                akka.persistence.journal.in-mem {
-                  timeout = 5s
-                  store {
-                    native = off
-                    dir = ""target/journal-ClusterShardingLeavingSpec""
-                  }
-                }
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-                akka.persistence.snapshot-store.local.dir = ""target/snapshots-ClusterShardingLeavingSpec""
-            ");
+            CommonConfig = DebugConfig(false)
+                .WithFallback(ConfigurationFactory.ParseString(@"
+                    akka.actor {
+                        serializers {
+                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                        }
+                        serialization-bindings {
+                            ""System.Object"" = hyperion
+                        }
+                    }
+                    akka.cluster.auto-down-unreachable-after = 0s
+
+                    akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+                    akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
+
+                    akka.persistence.journal.MemoryJournal {
+                        class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    }
+
+                    akka.persistence.journal.memory-journal-shared {
+                        class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                        timeout = 5s
+                    }
+                "))
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
 
-    public class ClusterShardingLeavingNode1 : ClusterShardinLeavingSpec { }
-    public class ClusterShardingLeavingNode2 : ClusterShardinLeavingSpec { }
-    public class ClusterShardingLeavingNode3 : ClusterShardinLeavingSpec { }
-    public class ClusterShardingLeavingNode4 : ClusterShardinLeavingSpec { }
-
-    public abstract class ClusterShardinLeavingSpec : MultiNodeClusterSpec
+    public class ClusterShardinLeavingSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -80,8 +96,8 @@ namespace Akka.Cluster.Sharding.Tests
         [Serializable]
         internal sealed class Locations
         {
-            public readonly IDictionary<string, IActorRef> LocationMap;
-            public Locations(IDictionary<string, IActorRef> locationMap)
+            public readonly IImmutableDictionary<string, IActorRef> LocationMap;
+            public Locations(IImmutableDictionary<string, IActorRef> locationMap)
             {
                 LocationMap = locationMap;
             }
@@ -109,50 +125,24 @@ namespace Akka.Cluster.Sharding.Tests
         internal IdExtractor extractEntityId = message => message is Ping ? Tuple.Create((message as Ping).Id, message) : null;
         internal ShardResolver extractShardId = message => message is Ping ? (message as Ping).Id[0].ToString() : null;
 
-        private readonly DirectoryInfo[] _storageLocations;
         private readonly Lazy<IActorRef> _region;
 
-        private readonly RoleName _first;
-        private readonly RoleName _second;
-        private readonly RoleName _third;
-        private readonly RoleName _fourth;
+        private readonly ClusterShardingLeavingSpecConfig _config;
 
-        protected ClusterShardinLeavingSpec() : base(new ClusterShardingLeavingSpecConfig())
+        public ClusterShardinLeavingSpec()
+            : this(new ClusterShardingLeavingSpecConfig())
         {
-            _storageLocations = new[]
-            {
-                "akka.persistence.journal.leveldb.dir",
-                "akka.persistence.journal.leveldb-shared.store.dir",
-                "akka.persistence.snapshot-store.local.dir"
-            }.Select(s => new DirectoryInfo(Sys.Settings.Config.GetString(s))).ToArray();
+        }
 
-            _first = new RoleName("first");
-            _second = new RoleName("second");
-            _third = new RoleName("third");
-            _fourth = new RoleName("fourth");
+        protected ClusterShardinLeavingSpec(ClusterShardingLeavingSpecConfig config)
+            : base(config)
+        {
+            _config = config;
 
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
         }
 
         protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
-
-        protected override void AtStartup()
-        {
-            base.AtStartup();
-            RunOn(() =>
-            {
-                foreach (var location in _storageLocations) if (location.Exists) location.Delete();
-            }, _first);
-        }
-
-        protected override void AfterTermination()
-        {
-            base.AfterTermination();
-            RunOn(() =>
-            {
-                foreach (var location in _storageLocations) if (location.Exists) location.Delete();
-            }, _first);
-        }
 
         #endregion
 
@@ -162,9 +152,12 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Cluster.Join(Node(to).Address);
                 StartSharding();
-                Within(TimeSpan.FromSeconds(5), () =>
+                Within(TimeSpan.FromSeconds(15), () =>
                 {
-                    AwaitAssert(() => Assert.True(Cluster.ReadView.State.Members.Any(m => m.UniqueAddress == Cluster.SelfUniqueAddress && m.Status == MemberStatus.Up)));
+                    AwaitAssert(() =>
+                    {
+                        Cluster.State.Members.Should().Contain(i => i.UniqueAddress == Cluster.SelfUniqueAddress && i.Status == MemberStatus.Up);
+                    });
                 });
             }, from);
             EnterBarrier(from.Name + "-joined");
@@ -180,45 +173,57 @@ namespace Akka.Cluster.Sharding.Tests
                 shardResolver: extractShardId);
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        [MultiNodeFact]
+        public void ClusterSharding_with_leaving_member_specs()
+        {
+            ClusterSharding_with_leaving_member_should_setup_shared_journal();
+            ClusterSharding_with_leaving_member_should_join_cluster();
+            ClusterSharding_with_leaving_member_should_initialize_shards();
+            ClusterSharding_with_leaving_member_should__recover_after_leaving_coordinator_node();
+        }
+
         public void ClusterSharding_with_leaving_member_should_setup_shared_journal()
         {
             // start the Persistence extension
             Persistence.Persistence.Instance.Apply(Sys);
             RunOn(() =>
             {
-                Sys.ActorOf(Props.Create<MemoryJournal>(), "store");
-            }, _first);
+                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
+            }, _config.First);
             EnterBarrier("persistence-started");
 
-            Sys.ActorSelection(Node(_first) / "user" / "store").Tell(new Identify(null));
-            var sharedStore = ExpectMsg<ActorIdentity>().Subject;
+            Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
+            var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
+            sharedStore.Should().NotBeNull();
 
-            //SharedLeveldbJournal.setStore(sharedStore, system)
+            MemoryJournalShared.SetStore(sharedStore, Sys);
+
             EnterBarrier("after-1");
+
+            //check persistence running
+            var probe = CreateTestProbe();
+            var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
+            journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
+            probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
+
+            EnterBarrier("after-1-test");
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_with_leaving_member_should_join_cluster()
         {
-            ClusterSharding_with_leaving_member_should_setup_shared_journal();
-
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                Join(_first, _first);
-                Join(_second, _first);
-                Join(_third, _first);
-                Join(_fourth, _first);
+                Join(_config.First, _config.First);
+                Join(_config.Second, _config.First);
+                Join(_config.Third, _config.First);
+                Join(_config.Fourth, _config.First);
 
                 EnterBarrier("after-2");
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_with_leaving_member_should_initialize_shards()
         {
-            ClusterSharding_with_leaving_member_should_join_cluster();
-
             RunOn(() =>
             {
                 var shardLocations = Sys.ActorOf(Props.Create<ShardLocations>(), "shardLocations");
@@ -229,60 +234,55 @@ namespace Akka.Cluster.Sharding.Tests
                         _region.Value.Tell(new Ping(id));
                         return new KeyValuePair<string, IActorRef>(id, ExpectMsg<IActorRef>());
                     })
-                    .ToDictionary(kv => kv.Key, kv => kv.Value);
+                    .ToImmutableDictionary(kv => kv.Key, kv => kv.Value);
 
                 shardLocations.Tell(new Locations(locations));
-            }, _first);
+            }, _config.First);
             EnterBarrier("after-3");
         }
 
-        [MultiNodeFact(Skip = "TODO")]
-        public void ClusterSharding_with_leaving_member_should_recover_after_leaving_coordinator_node()
+        public void ClusterSharding_with_leaving_member_should__recover_after_leaving_coordinator_node()
         {
-            ClusterSharding_with_leaving_member_should_initialize_shards();
 
-            Within(TimeSpan.FromSeconds(30), () =>
+            Sys.ActorSelection(Node(_config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
+            var originalLocations = ExpectMsg<Locations>();
+            var firstAddress = Node(_config.First).Address;
+
+            RunOn(() =>
             {
-                RunOn(() =>
-                {
-                    Cluster.Leave(Node(_first).Address);
-                }, _third);
+                Cluster.Leave(Node(_config.First).Address);
+            }, _config.Third);
 
-                RunOn(() =>
-                {
-                    var region = _region.Value;
-                    Watch(region);
-                    ExpectTerminated(region, TimeSpan.FromSeconds(15));
-                }, _first);
-                EnterBarrier("stopped");
+            RunOn(() =>
+            {
+                var region = _region.Value;
+                Watch(region);
+                ExpectTerminated(region, TimeSpan.FromSeconds(15));
+            }, _config.First);
+            EnterBarrier("stopped");
 
-                RunOn(() =>
+            RunOn(() =>
+            {
+                Within(TimeSpan.FromSeconds(15), () =>
                 {
-                    Sys.ActorSelection(Node(_first) / "user" / "sharedLocations").Tell(GetLocations.Instance);
-                    var locations = ExpectMsg<Locations>();
-                    var firstAddress = Node(_first).Address;
                     AwaitAssert(() =>
                     {
                         var region = _region.Value;
                         var probe = CreateTestProbe();
-                        foreach (var kv in locations.LocationMap)
+                        foreach (var kv in originalLocations.LocationMap)
                         {
                             var id = kv.Key;
                             var r = kv.Value;
                             region.Tell(new Ping(id), probe.Ref);
                             if (r.Path.Address.Equals(firstAddress))
-                            {
-                                Assert.NotEqual(r, probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1)));
-                            }
+                                probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1)).Should().NotBe(r);
                             else
-                            {
                                 probe.ExpectMsg(r, TimeSpan.FromSeconds(1)); // should not move
-                            }
                         }
                     });
-                }, _second, _third, _fourth);
-                EnterBarrier("after-4");
-            });
+                });
+            }, _config.Second, _config.Third, _config.Fourth);
+            EnterBarrier("after-4");
         }
     }
 }

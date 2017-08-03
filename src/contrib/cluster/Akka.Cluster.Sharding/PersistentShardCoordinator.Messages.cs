@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Event;
+using System.Collections.Immutable;
 
 namespace Akka.Cluster.Sharding
 {
@@ -547,7 +548,7 @@ namespace Akka.Cluster.Sharding
         /// Result of <see cref="PersistentShardCoordinator.AllocateShard"/> is piped to self with this message.
         /// </summary>
         [Serializable]
-        public sealed class AllocateShardResult : ICoordinatorCommand
+        public sealed class AllocateShardResult
         {
             /// <summary>
             /// TBD
@@ -580,18 +581,18 @@ namespace Akka.Cluster.Sharding
         /// Result of `rebalance` is piped to self with this message.
         /// </summary>
         [Serializable]
-        public sealed class RebalanceResult : ICoordinatorCommand
+        public sealed class RebalanceResult
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly IEnumerable<ShardId> Shards;
+            public readonly IImmutableSet<ShardId> Shards;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="shards">TBD</param>
-            public RebalanceResult(IEnumerable<string> shards)
+            public RebalanceResult(IImmutableSet<string> shards)
             {
                 Shards = shards;
             }

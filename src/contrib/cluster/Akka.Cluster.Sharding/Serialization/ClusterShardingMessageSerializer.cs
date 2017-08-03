@@ -50,6 +50,9 @@ namespace Akka.Cluster.Sharding.Serialization
         private const string EntityStartedManifest = "CB";
         private const string EntityStoppedManifest = "CD";
 
+        private const string StartEntityManifest = "EA";
+        private const string StartEntityAckManifest = "EB";
+
         private const string GetShardStatsManifest = "DA";
         private const string ShardStatsManifest = "DB";
 
@@ -91,7 +94,10 @@ namespace Akka.Cluster.Sharding.Serialization
                 {GracefulShutdownReqManifest, bytes => new PersistentShardCoordinator.GracefulShutdownRequest(ActorRefMessageFromBinary(bytes)) },
 
                 {GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
-                {ShardStatsManifest, ShardStatsFromBinary}
+                {ShardStatsManifest, ShardStatsFromBinary},
+
+                {StartEntityManifest, StartEntityFromBinary },
+                {StartEntityAckManifest, StartEntityAckFromBinary}
             };
         }
 
@@ -127,6 +133,8 @@ namespace Akka.Cluster.Sharding.Serialization
             if (obj is Shard.ShardState) return EntityStateToProto((Shard.ShardState)obj).ToByteArray();
             if (obj is Shard.EntityStarted) return EntityStartedToProto((Shard.EntityStarted)obj).ToByteArray();
             if (obj is Shard.EntityStopped) return EntityStoppedToProto((Shard.EntityStopped)obj).ToByteArray();
+            if (obj is ShardRegion.StartEntity) return StartEntityToProto((ShardRegion.StartEntity)obj).ToByteArray();
+            if (obj is ShardRegion.StartEntityAck) return StartEntityAckToProto((ShardRegion.StartEntityAck)obj).ToByteArray();
             if (obj is Shard.GetShardStats) return new byte[0];
             if (obj is Shard.ShardStats) return ShardStatsToProto((Shard.ShardStats)obj).ToByteArray();
 
@@ -185,6 +193,8 @@ namespace Akka.Cluster.Sharding.Serialization
             if (o is PersistentShardCoordinator.HandOff) return HandOffManifest;
             if (o is PersistentShardCoordinator.ShardStopped) return ShardStoppedManifest;
             if (o is PersistentShardCoordinator.GracefulShutdownRequest) return GracefulShutdownReqManifest;
+            if (o is ShardRegion.StartEntity) return StartEntityManifest;
+            if (o is ShardRegion.StartEntityAck) return StartEntityAckManifest;
             if (o is Shard.GetShardStats) return GetShardStatsManifest;
             if (o is Shard.ShardStats) return ShardStatsManifest;
 
@@ -206,6 +216,39 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             var message = Proto.Msg.ShardStats.Parser.ParseFrom(bytes);
             return new Shard.ShardStats(message.Shard, message.EntityCount);
+        }
+
+        //
+        // ShardRegion.StartEntity
+        //
+        private static Proto.Msg.StartEntity StartEntityToProto(ShardRegion.StartEntity startEntity)
+        {
+            var message = new Proto.Msg.StartEntity();
+            message.EntityId = startEntity.EntityId;
+            return message;
+        }
+
+        private static ShardRegion.StartEntity StartEntityFromBinary(byte[] bytes)
+        {
+            var message = Proto.Msg.StartEntity.Parser.ParseFrom(bytes);
+            return new ShardRegion.StartEntity(message.EntityId);
+        }
+
+        //
+        // ShardRegion.StartEntityAck
+        //
+        private static Proto.Msg.StartEntityAck StartEntityAckToProto(ShardRegion.StartEntityAck startEntityAck)
+        {
+            var message = new Proto.Msg.StartEntityAck();
+            message.EntityId = startEntityAck.EntityId;
+            message.ShardId = startEntityAck.ShardId;
+            return message;
+        }
+
+        private static ShardRegion.StartEntityAck StartEntityAckFromBinary(byte[] bytes)
+        {
+            var message = Proto.Msg.StartEntityAck.Parser.ParseFrom(bytes);
+            return new ShardRegion.StartEntityAck(message.EntityId, message.ShardId);
         }
 
         //
