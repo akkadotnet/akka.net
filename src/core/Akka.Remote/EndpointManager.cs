@@ -1136,7 +1136,7 @@ namespace Akka.Remote
                         //Apply AkkaProtocolTransport wrapper to the end of the chain
                         //The chain at this point:
                         // AkkaProtocolTransport <-- Adapter <-- .. <-- Adapter <-- Driver
-                        transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(_conf), new AkkaPduProtobuffCodec()));
+                        transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(_conf), new AkkaPduProtobuffCodec(Context.System)));
                     }
 
                     // Collect all transports, listen addresses, and listener promises in one Task
@@ -1212,7 +1212,7 @@ namespace Akka.Remote
                     Context.ActorOf(RARP.For(Context.System)
                     .ConfigureDispatcher(
                         ReliableDeliverySupervisor.ReliableDeliverySupervisorProps(handleOption, localAddress,
-                            remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(),
+                            remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(Context.System),
                             _receiveBuffers, endpointSettings.Dispatcher)
                             .WithDeploy(Deploy.Local)),
                         string.Format("reliableEndpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress),
@@ -1224,7 +1224,7 @@ namespace Akka.Remote
                     Context.ActorOf(RARP.For(Context.System)
                     .ConfigureDispatcher(
                         EndpointWriter.EndpointWriterProps(handleOption, localAddress, remoteAddress, refuseUid,
-                            transport, endpointSettings, new AkkaPduProtobuffCodec(), _receiveBuffers,
+                            transport, endpointSettings, new AkkaPduProtobuffCodec(Context.System), _receiveBuffers,
                             reliableDeliverySupervisor: null)
                             .WithDeploy(Deploy.Local)),
                         string.Format("endpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), _endpointId.Next()));
