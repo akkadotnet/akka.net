@@ -29,10 +29,7 @@ namespace Akka.Actor.Internal
         /// TBD
         /// </summary>
         public static ChildNameReserved Instance { get { return _instance; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "Name Reserved";
@@ -140,8 +137,5 @@ namespace Akka.Actor.Internal
             _restartTimeWindowStartTicks = now;
             return true;
         }
-
-
     }
 }
-
