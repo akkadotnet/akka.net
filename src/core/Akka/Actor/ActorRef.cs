@@ -597,25 +597,27 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// Used to power actors that use an <see cref="ActorCell"/>, which is the majority of them.
     /// </summary>
     public abstract class ActorRefWithCell : InternalActorRefBase
     {
         /// <summary>
-        /// TBD
+        /// The <see cref="ActorCell"/>.
         /// </summary>
         public abstract ICell Underlying { get; }
 
         /// <summary>
-        /// TBD
+        /// An iterable collection of the actor's children. Empty if there are none.
         /// </summary>
         public abstract IEnumerable<IActorRef> Children { get; }
 
         /// <summary>
-        /// TBD
+        /// Fetches a reference to a single child actor.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The name of the child we're trying to fetch.</param>
+        /// <returns>If the child exists, it returns the child actor. Otherwise, we return <see cref="ActorRefs.Nobody"/>.</returns>
         public abstract IInternalActorRef GetSingleChild(string name);
 
     }

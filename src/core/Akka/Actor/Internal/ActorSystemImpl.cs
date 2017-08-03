@@ -231,32 +231,19 @@ namespace Akka.Actor.Internal
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override IActorRef ActorOf(Props props, string name = null)
         {
             return _provider.Guardian.Cell.AttachChild(props, false, name);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override ActorSelection ActorSelection(ActorPath actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override ActorSelection ActorSelection(string actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this, _provider.RootGuardian);
