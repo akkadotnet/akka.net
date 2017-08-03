@@ -46,9 +46,10 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly TryToIdentifySingleton Instance = new TryToIdentifySingleton();
+            public static TryToIdentifySingleton Instance { get; } = new TryToIdentifySingleton();
             private TryToIdentifySingleton() { }
         }
+
         /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
@@ -58,12 +59,11 @@ namespace Akka.Cluster.Tools.Singleton
             return ConfigurationFactory.FromResource<ClusterSingletonManager>("Akka.Cluster.Tools.Singleton.reference.conf");
         }
 
-
         /// <summary>
         /// Factory method for <see cref="ClusterSingletonProxy"/> <see cref="Actor.Props"/>.
         /// </summary>
         /// <param name="singletonManagerPath">
-        /// The logical path of the singleton manager, e.g. `/user/singletonManager`, 
+        /// The logical path of the singleton manager, e.g. `/user/singletonManager`,
         /// which ends with the name you defined in `actorOf` when creating the <see cref="ClusterSingletonManager"/>.
         /// </param>
         /// <param name="settings">Cluster singleton proxy settings.</param>
@@ -98,7 +98,13 @@ namespace Akka.Cluster.Tools.Singleton
             Receive<ClusterEvent.CurrentClusterState>(s => HandleInitial(s));
             Receive<ClusterEvent.MemberUp>(m => Add(m.Member));
             Receive<ClusterEvent.MemberExited>(m => Remove(m.Member));
-            Receive<ClusterEvent.MemberRemoved>(m => Remove(m.Member));
+            Receive<ClusterEvent.MemberRemoved>(m =>
+            {
+                if (m.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
+                    Context.Stop(Self);
+                else
+                    Remove(m.Member);
+            });
             Receive<ClusterEvent.IMemberEvent>(m =>
             {
                 /* do nothing */
@@ -222,7 +228,7 @@ namespace Akka.Cluster.Tools.Singleton
             if (MatchingRole(member))
                 TrackChanges(() =>
                 {
-                    _membersByAge = _membersByAge.Remove(member);
+                    _membersByAge = _membersByAge.Remove(member); //replace
                     _membersByAge = _membersByAge.Add(member);
                 });
         }

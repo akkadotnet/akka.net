@@ -8,19 +8,14 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 using Akka.Actor;
+using System;
 
 namespace Akka.IO
 {
-    /**
-    * An actor handling the connection state machine for an incoming, already connected
-    * SocketChannel.
-    *
-    * INTERNAL API
-    */
     /// <summary>
-    /// TBD
+    /// An actor handling the connection state machine for an incoming, already connected SocketChannel.
     /// </summary>
-    internal class TcpIncomingConnection : TcpConnection
+    internal sealed class TcpIncomingConnection : TcpConnection
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
@@ -29,25 +24,28 @@ namespace Akka.IO
         /// TBD
         /// </summary>
         /// <param name="tcp">TBD</param>
-        /// <param name="channel">TBD</param>
-        /// <param name="registry">TBD</param>
+        /// <param name="socket">TBD</param>
         /// <param name="bindHandler">TBD</param>
         /// <param name="options">TBD</param>
         /// <param name="readThrottling">TBD</param>
         public TcpIncomingConnection(TcpExt tcp, 
-                                     SocketChannel channel, 
-                                     IChannelRegistry registry, 
+                                     Socket socket, 
                                      IActorRef bindHandler,
                                      IEnumerable<Inet.SocketOption> options, 
                                      bool readThrottling)
-            : base(tcp, channel, readThrottling)
+            : base(tcp, socket, readThrottling)
         {
             _bindHandler = bindHandler;
             _options = options;
 
             Context.Watch(bindHandler); // sign death pact
+        }
 
-            registry.Register(channel, SocketAsyncOperation.None, Self);
+        protected override void PreStart()
+        {
+            AcquireSocketAsyncEventArgs();
+
+            CompleteConnect(_bindHandler, _options);
         }
 
         /// <summary>
@@ -57,13 +55,7 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            var registration = message as ChannelRegistration;
-            if (registration != null)
-            {
-                CompleteConnect(registration, _bindHandler, _options);
-                return true;
-            }
-            return false;
+            throw new NotSupportedException();
         }
     }
 }

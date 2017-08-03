@@ -56,8 +56,7 @@ namespace Akka.Event
         {
             lock (_classifiers)
             {
-                List<Subscription<TSubscriber, TClassifier>> subscribers;
-                if (!_classifiers.TryGetValue(classifier, out subscribers))
+                if (!_classifiers.TryGetValue(classifier, out var subscribers))
                 {
                     subscribers = new List<Subscription<TSubscriber, TClassifier>>();
                     _classifiers.Add(classifier, subscribers);
@@ -88,8 +87,7 @@ namespace Akka.Event
 
                 foreach (var classifier in _classifiers.Keys)
                 {
-                    List<Subscription<TSubscriber, TClassifier>> subscribers;
-                    if (!_classifiers.TryGetValue(classifier, out subscribers)) 
+                    if (!_classifiers.TryGetValue(classifier, out var subscribers)) 
                         continue;
                     
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
@@ -113,22 +111,19 @@ namespace Akka.Event
             {
                 var res = false;
 
-                List<Subscription<TSubscriber, TClassifier>> subscribers;
-                if (_classifiers.TryGetValue(classifier, out subscribers))
+                if (_classifiers.TryGetValue(classifier, out var subscribers))
                 {
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
                         res = true;
                 }
                 else
                 {
-                    foreach (var kvp in _classifiers)
-                    {
-                        if (!IsSubClassification(kvp.Key, classifier)) 
+                    foreach (var kvp in _classifiers) {
+                        if (!IsSubClassification(kvp.Key, classifier))
                             continue;
 
                         var subscriptions = kvp.Value.Where(ss => ss.Subscriber.Equals(subscriber)).ToList();
-                        foreach (var existingSubscriber in subscriptions)
-                        {
+                        foreach (var existingSubscriber in subscriptions) {
                             existingSubscriber.Unsubscriptions.Add(classifier);
                             res = true;
                         }
@@ -183,11 +178,8 @@ namespace Akka.Event
         {
             var eventClass = GetClassifier(@event);
 
-            List<TSubscriber> cachedSubscribers;
-            if (_cache.TryGetValue(eventClass, out cachedSubscribers))
-            {
+            if (_cache.TryGetValue(eventClass, out var cachedSubscribers))
                 PublishToSubscribers(@event, cachedSubscribers);
-            }
             else
             {
                 cachedSubscribers = UpdateCacheForEventClassifier(@event, eventClass);

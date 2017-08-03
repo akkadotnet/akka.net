@@ -87,8 +87,7 @@ namespace Akka.TestKit
         {
             var scheduledTime = _now.Add(initialDelay ?? delay).UtcTicks;
 
-            ConcurrentQueue<ScheduledItem> tickItems = null;
-            if (!_scheduledWork.TryGetValue(scheduledTime, out tickItems))
+            if (!_scheduledWork.TryGetValue(scheduledTime, out var tickItems))
             {
                 tickItems = new ConcurrentQueue<ScheduledItem>();
                 _scheduledWork.TryAdd(scheduledTime, tickItems);

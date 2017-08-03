@@ -73,8 +73,9 @@ namespace Akka.Streams.TestKit
                 AutoOnSubscribe = autoOnSubscribe;
             }
 
-            public bool AutoOnSubscribe { get; private set; }
-            public IPublisher<T> Publisher { get { return this; } }
+            public bool AutoOnSubscribe { get; }
+
+            public IPublisher<T> Publisher => this;
 
             /// <summary>
             /// Subscribes a given <paramref name="subscriber"/> to this probe.
@@ -82,25 +83,22 @@ namespace Akka.Streams.TestKit
             public void Subscribe(ISubscriber<T> subscriber)
             {
                 var subscription = new StreamTestKit.PublisherProbeSubscription<T>(subscriber, _probe);
-                _probe.Ref.Tell(new TestPublisher.Subscribe(subscription));
+                _probe.Ref.Tell(new Subscribe(subscription));
                 if (AutoOnSubscribe) subscriber.OnSubscribe(subscription);
             }
 
             /// <summary>
             /// Expect a subscription.
             /// </summary>
-            public StreamTestKit.PublisherProbeSubscription<T> ExpectSubscription()
-            {
-                return
-                    (StreamTestKit.PublisherProbeSubscription<T>) _probe.ExpectMsg<Subscribe>().Subscription;
-            }
+            public StreamTestKit.PublisherProbeSubscription<T> ExpectSubscription() =>
+                (StreamTestKit.PublisherProbeSubscription<T>)_probe.ExpectMsg<Subscribe>().Subscription;
 
             /// <summary>
             /// Expect demand from the given subscription.
             /// </summary>
             public ManualProbe<T> ExpectRequest(ISubscription subscription, int n)
             {
-                _probe.ExpectMsg<TestPublisher.RequestMore>(x => x.NrOfElements == n && x.Subscription == subscription);
+                _probe.ExpectMsg<RequestMore>(x => x.NrOfElements == n && x.Subscription == subscription);
                 return this;
             }
 
@@ -130,10 +128,37 @@ namespace Akka.Streams.TestKit
                 return _probe.ReceiveWhile(max, idle, filter, msgs);
             }
 
-            public IPublisherEvent ExpectEvent()
-            {
-                return _probe.ExpectMsg<IPublisherEvent>();
-            }
+            public IPublisherEvent ExpectEvent() => _probe.ExpectMsg<IPublisherEvent>();
+
+            /// <summary>
+            /// Execute code block while bounding its execution time between <paramref name="min"/> and
+            /// <paramref name="max"/>. <see cref="Within{TOther}(TimeSpan,TimeSpan,Func{TOther})"/> blocks may be nested. 
+            /// All methods in this class which take maximum wait times are available in a version which implicitly uses
+            /// the remaining time governed by the innermost enclosing <see cref="Within{TOther}(TimeSpan,TimeSpan,Func{TOther})"/> block.
+            /// 
+            /// <para />
+            /// 
+            /// Note that the timeout is scaled using <see cref="TestKitBase.Dilated"/>, which uses the
+            /// configuration entry "akka.test.timefactor", while the min Duration is not.
+            /// 
+            /// <![CDATA[
+            /// var ret = probe.Within(Timespan.FromMilliseconds(50), () =>
+            /// {
+            ///     test.Tell("ping");
+            ///     return ExpectMsg<string>();
+            /// });
+            /// ]]>
+            /// </summary>
+            /// <param name="min"></param>
+            /// <param name="max"></param>
+            /// <param name="execute"></param>
+            /// <returns></returns>
+            public TOther Within<TOther>(TimeSpan min, TimeSpan max, Func<TOther> execute) => _probe.Within(min, max, execute);
+
+            /// <summary>
+            /// Sane as calling Within(TimeSpan.Zero, max, function).
+            /// </summary>
+            public TOther Within<TOther>(TimeSpan max, Func<TOther> execute) => _probe.Within(max, execute);
         }
 
         /// <summary>
@@ -167,7 +192,8 @@ namespace Akka.Streams.TestKit
             public Probe<T> SendNext(T element)
             {
                 var sub = _subscription.Value;
-                if (Pending == 0) Pending = sub.ExpectRequest();
+                if (Pending == 0)
+                    Pending = sub.ExpectRequest();
                 Pending--;
                 sub.SendNext(element);
                 return this;
@@ -211,14 +237,9 @@ namespace Akka.Streams.TestKit
             private LazyEmptyPublisher() { }
 
             public void Subscribe(ISubscriber<T> subscriber)
-            {
-                subscriber.OnSubscribe(new StreamTestKit.CompletedSubscription<T>(subscriber));
-            }
+                => subscriber.OnSubscribe(new StreamTestKit.CompletedSubscription<T>(subscriber));
 
-            public override string ToString()
-            {
-                return "soon-to-complete-publisher";
-            }
+            public override string ToString() => "soon-to-complete-publisher";
         }
 
         internal sealed class LazyErrorPublisher<T> : IPublisher<T>
@@ -232,60 +253,39 @@ namespace Akka.Streams.TestKit
                 Cause = cause;
             }
 
-            public void Subscribe(ISubscriber<T> subscriber)
-            {
-                subscriber.OnSubscribe(new StreamTestKit.FailedSubscription<T>(subscriber, Cause));
-            }
+            public void Subscribe(ISubscriber<T> subscriber) 
+                => subscriber.OnSubscribe(new StreamTestKit.FailedSubscription<T>(subscriber, Cause));
 
-            public override string ToString()
-            {
-                return Name;
-            }
+            public override string ToString() => Name;
         }
 
         /// <summary>
         /// Publisher that signals complete to subscribers, after handing a void subscription.
         /// </summary>
-        public static IPublisher<T> Empty<T>()
-        {
-            return EmptyPublisher<T>.Instance;
-        }
+        public static IPublisher<T> Empty<T>() => EmptyPublisher<T>.Instance;
 
         /// <summary>
         /// Publisher that subscribes the subscriber and completes after the first request.
         /// </summary>
-        public static IPublisher<T> LazyEmpty<T>()
-        {
-            return LazyEmptyPublisher<T>.Instance;
-        }
+        public static IPublisher<T> LazyEmpty<T>() => LazyEmptyPublisher<T>.Instance;
 
         /// <summary>
         /// Publisher that signals error to subscribers immediately after handing out subscription.
         /// </summary>
-        public static IPublisher<T> Error<T>(Exception exception)
-        {
-            return new ErrorPublisher<T>(exception, "error");
-        }
+        public static IPublisher<T> Error<T>(Exception exception) => new ErrorPublisher<T>(exception, "error");
 
         /// <summary>
         /// Publisher subscribes the subscriber and signals error after the first request.
         /// </summary>
-        public static IPublisher<T> LazyError<T>(Exception exception)
-        {
-            return new LazyErrorPublisher<T>(exception, "error");
-        }
+        public static IPublisher<T> LazyError<T>(Exception exception) => new LazyErrorPublisher<T>(exception, "error");
 
         /// <summary>
         /// Probe that implements <see cref="IPublisher{T}"/> interface.
         /// </summary>
-        public static ManualProbe<T> CreateManualPublisherProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true)
-        {
-            return new ManualProbe<T>(testKit, autoOnSubscribe);
-        }
+        public static ManualProbe<T> CreateManualPublisherProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true) 
+            => new ManualProbe<T>(testKit, autoOnSubscribe);
 
         public static Probe<T> CreatePublisherProbe<T>(this TestKitBase testKit, long initialPendingRequests = 0L)
-        {
-            return new Probe<T>(testKit, initialPendingRequests);
-        }
+            => new Probe<T>(testKit, initialPendingRequests);
     }
 }

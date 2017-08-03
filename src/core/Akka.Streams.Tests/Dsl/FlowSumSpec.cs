@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
+using Akka.Streams.Supervision;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
@@ -114,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Sum_must_complete_task_with_failure_when_reducing_function_throws()
+        public void A_Sum_must_complete_task_with_failure_when_reduce_function_throws_and_the_supervisor_strategy_decides_to_stop()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -127,6 +128,46 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<TestException>().WithMessage("test");
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Sum_must_resume_with_the_accumulated_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_resume()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var error = new Exception("boom");
+                var sum = Sink.Sum((int x, int y) =>
+                {
+                    if (y == 50)
+                        throw error;
+
+                    return x + y;
+                });
+                var task = InputSource.RunWith(
+                    sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)),
+                    Materializer);
+                task.AwaitResult().Should().Be(Expected - 50);
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Aggregate_must_resume_and_reset_the_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_restart()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var error = new Exception("boom");
+                var sum = Sink.Sum((int x, int y) =>
+                {
+                    if (y == 50)
+                        throw error;
+
+                    return x + y;
+                });
+                var task = InputSource.RunWith(
+                    sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider)),
+                    Materializer);
+                task.AwaitResult().Should().Be(Enumerable.Range(51, 50).Sum());
             }, Materializer);
         }
 

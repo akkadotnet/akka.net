@@ -50,6 +50,7 @@ namespace Akka.Streams.Implementation
         private bool _completedObject;
         private bool _inStringExpression;
         private bool _isStartOfEscapeSequence;
+        private byte _lastInput = 0;
 
         /// <summary>
         /// TBD
@@ -88,9 +89,8 @@ namespace Akka.Streams.Implementation
             if(!foundObject || _pos == -1 || _pos == 0)
                 return Option<ByteString>.None;
 
-            var t = _buffer.SplitAt(_pos);
-            var emit = t.Item1;
-            var buffer = t.Item2;
+            var emit = _buffer.Slice(0, _pos);
+            var buffer = _buffer.Slice(_pos);
             _buffer = buffer.Compact();
             _pos = 0;
 
@@ -100,7 +100,7 @@ namespace Akka.Streams.Implementation
             if (trimFront == 0)
                 return emit;
 
-            var trimmed = emit.Drop(trimFront);
+            var trimmed = emit.Slice(trimFront);
             return trimmed.IsEmpty ? Option<ByteString>.None : trimmed;
         }
 
@@ -140,7 +140,7 @@ namespace Akka.Streams.Implementation
             }
             else if (input == Backslash)
             {
-                _isStartOfEscapeSequence = true;
+                _isStartOfEscapeSequence = _lastInput != Backslash;
                 _pos++;
             }
             else if (input == DoubleQuote)
@@ -179,8 +179,9 @@ namespace Akka.Streams.Implementation
                 _pos++;
             }
             else
-                throw new Framing.FramingException($"Invalid JSON encountered at position {_pos} of {_buffer.DecodeString()}");
-        }
+                throw new Framing.FramingException($"Invalid JSON encountered at position {_pos} of {_buffer}");
 
+            _lastInput = input;
+        }
     }
 }

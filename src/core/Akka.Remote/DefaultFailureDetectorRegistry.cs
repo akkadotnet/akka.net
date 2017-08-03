@@ -51,7 +51,9 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public bool IsAvailable(T resource)
         {
-            return !ResourceToFailureDetector.ContainsKey(resource) || ResourceToFailureDetector[resource].IsAvailable;
+            if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
+                return failureDetector.IsAvailable;
+            return true;
         }
 
         /// <summary>
@@ -61,7 +63,9 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public bool IsMonitoring(T resource)
         {
-            return ResourceToFailureDetector.ContainsKey(resource) && ResourceToFailureDetector[resource].IsMonitoring;
+            if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
+                return failureDetector.IsMonitoring;
+            return false;
         }
 
         /// <summary>
@@ -70,10 +74,8 @@ namespace Akka.Remote
         /// <param name="resource">TBD</param>
         public void Heartbeat(T resource)
         {
-            if (ResourceToFailureDetector.ContainsKey(resource))
-            {
-                ResourceToFailureDetector[resource].HeartBeat();
-            }
+            if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
+                failureDetector.HeartBeat();
             else
             {
                 //First one wins and creates the new FailureDetector
@@ -82,10 +84,8 @@ namespace Akka.Remote
                     // First check for non-existing key wa outside the lock, and a second thread might just have released the lock
                     // when this one acquired it, so the second check is needed (double-check locking pattern)
                     var oldTable = new Dictionary<T, FailureDetector>(ResourceToFailureDetector);
-                    if (oldTable.ContainsKey(resource))
-                    {
-                        oldTable[resource].HeartBeat();
-                    }
+                    if (oldTable.TryGetValue(resource, out failureDetector))
+                        failureDetector.HeartBeat();
                     else
                     {
                         var newDetector = _factory();
@@ -141,8 +141,7 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         internal FailureDetector GetFailureDetector(T resource)
         {
-            FailureDetector f;
-            ResourceToFailureDetector.TryGetValue(resource, out f);
+            ResourceToFailureDetector.TryGetValue(resource, out var f);
             return f;
         }
 

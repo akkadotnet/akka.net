@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
@@ -128,10 +127,7 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as RouterConfig);
-        }
+        public override bool Equals(object obj) => Equals(obj as RouterConfig);
     }
 
     /// <summary>
@@ -211,10 +207,7 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return Paths?.GetHashCode() ?? 0;
-        }
+        public override int GetHashCode() => Paths?.GetHashCode() ?? 0;
     }
 
     /// <summary>
@@ -424,19 +417,19 @@ namespace Akka.Routing
     public class FromConfig : Pool
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="FromConfig" /> class.
         /// </summary>
-        protected FromConfig() : this(null, DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
+        public FromConfig() : this(null, DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="FromConfig" /> class.
         /// </summary>
         /// <param name="resizer">TBD</param>
         /// <param name="supervisorStrategy">TBD</param>
         /// <param name="routerDispatcher">TBD</param>
-        protected FromConfig(Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher)
+        public FromConfig(Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher)
             : base(0, resizer, supervisorStrategy, routerDispatcher, false)
         {
         }

@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Configuration;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
+using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
@@ -143,9 +143,15 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual string GetConnectionString()
         {
             var connectionString = _settings.ConnectionString;
-            return string.IsNullOrEmpty(connectionString)
-                ? ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString
-                : connectionString;
+
+#if CONFIGURATION
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+            }
+#endif
+
+            return connectionString;
         }
 
         /// <summary>
@@ -219,7 +225,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 persistenceId: metadata.PersistenceId,
                 sequenceNr: metadata.SequenceNr,
                 timestamp: metadata.Timestamp,
-                manifest: snapshotType.QualifiedTypeName(),
+                manifest: snapshotType.TypeQualifiedName(),
                 payload: binary);
         }
     }

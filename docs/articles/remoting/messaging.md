@@ -7,7 +7,7 @@ title: Remote Messaging
 Once you [form an association between two `ActorSystem`s](index.md#how-to-form-associations-between-remote-systems), you can now send messages transparently between actors regardless of where they are on the network.
 
 ## Serialization
-[Serialization of messages in Akka.NET is transparent](../Serialization), but in order to achieve that transparency there are some practices you need to observe in how you design your project.
+[Serialization of messages in Akka.NET is transparent](xref:serialization), but in order to achieve that transparency there are some practices you need to observe in how you design your project.
 
 * **Akka.NET serialization is strongly typed** - if you serialize a message of type `Foo.FooMessage.MyMessage, Foo.dll` (this is a [Fully Qualified Type Name (FQN)](https://msdn.microsoft.com/en-us/library/yfsftwz6.aspx)) then Akka.NET will look for *that exact type* when it attempts to deserialize your message. If that type isn't found, deserialization fails.
 * **Therefore, all of your network messages should be defined in shared assemblies** that are referenced by all of the applications running Akka.NET `ActorSystem`s who will be communicating remotely.
@@ -16,7 +16,7 @@ Once you [form an association between two `ActorSystem`s](index.md#how-to-form-a
 When your `ActorSystem` boots, it won't have any associations to other remote systems - so you have to establish one by sending a message to a remote actor via `ActorSelection` initially which you can do by sending a message to an [actor's remote `ActorPath`](index.md#addressing-a-remote-actorsystem).
 
 > [!NOTE]
-> You can also establish an association by [deploying actors onto a remote `ActorSystem`](deployment.md).
+> You can also establish an association by [deploying actors onto a remote `ActorSystem`](xref:remote-deployment).
 
 Let's consider the following two actors and some message classes.
 
@@ -71,6 +71,7 @@ In essence, minus the initial `ActorSelection` used to start remote communicatio
 ## `RemoteActorRef` and Location Transparency
 What `RemoteActorRef` gives us is a magical property called [Location Transparency](/concepts/location-transparency.md).
 
+> [!NOTE]
 > What location transparency means is that whenever you send a message to an actor, you don't need to know where they are within an actor system, which might span hundreds of computers. You just have to know that actors' address.
 
 It's the job of the `RemoteActorRef` to make a remote actor running on in a different process look and feel exactly the same as an `IActorRef` running locally inside the same process as your code. This is what it means to "have a transparent location." 

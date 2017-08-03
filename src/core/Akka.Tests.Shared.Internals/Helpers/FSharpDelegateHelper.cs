@@ -4,6 +4,7 @@
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+#if FSCHECK
 
 using System;
 using Microsoft.FSharp.Core;
@@ -37,3 +38,4 @@ namespace Akka.Tests.Shared.Internals.Helpers
         }
     }
 }
+#endif

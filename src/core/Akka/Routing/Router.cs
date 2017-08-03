@@ -26,9 +26,9 @@ namespace Akka.Routing
         /// <param name="sender">TBD</param>
         public override void Send(object message, IActorRef sender)
         {
-            if (sender is LocalActorRef)
+            if (sender is LocalActorRef localActorRef)
             {
-                sender.AsInstanceOf<LocalActorRef>().Provider.DeadLetters.Tell(message);
+                localActorRef.Provider.DeadLetters.Tell(message);
             }
         }
     }
@@ -125,16 +125,10 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        protected bool Equals(ActorRefRoutee other)
-        {
-            return Equals(Actor, other.Actor);
-        }
+        protected bool Equals(ActorRefRoutee other) => Equals(Actor, other.Actor);
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return (Actor != null ? Actor.GetHashCode() : 0);
-        }
+        public override int GetHashCode() => Actor?.GetHashCode() ?? 0;
     }
 
     /// <summary>
@@ -189,16 +183,10 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        protected bool Equals(ActorSelectionRoutee other)
-        {
-            return Equals(_actor, other._actor);
-        }
+        protected bool Equals(ActorSelectionRoutee other) => Equals(_actor, other._actor);
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return (_actor != null ? _actor.GetHashCode() : 0);
-        }
+        public override int GetHashCode() => _actor?.GetHashCode() ?? 0;
     }
 
     /// <summary>
@@ -259,7 +247,7 @@ namespace Akka.Routing
         /// <param name="sender">TBD</param>
         public override void Send(object message, IActorRef sender)
         {
-            foreach (Routee routee in  routees)
+            foreach (Routee routee in routees)
             {
                 routee.Send(message, sender);
             }
@@ -336,11 +324,7 @@ namespace Akka.Routing
         /// <param name="routees">TBD</param>
         public Router(RoutingLogic logic, params Routee[] routees)
         {
-            if(routees == null)
-            {
-                routees = new Routee[0];
-            }
-            _routees = routees;
+            _routees = routees ?? new Routee[0];
             _logic = logic;
         }
         /// <summary>
@@ -362,9 +346,9 @@ namespace Akka.Routing
 
         private object UnWrap(object message)
         {
-            if (message is RouterEnvelope)
+            if (message is RouterEnvelope routerEnvelope)
             {
-                return message.AsInstanceOf<RouterEnvelope>().Message;
+                return routerEnvelope.Message;
             }
 
             return message;

@@ -20,6 +20,7 @@ using Akka.Streams.Implementation.IO;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -47,7 +48,7 @@ namespace Akka.Streams.Tests.IO
                 Convert.ToByte(new Random().Next(256))
             };
 
-            _byteString = ByteString.Create(_bytesArray);
+            _byteString = ByteString.FromBytes(_bytesArray);
         }
 
         private void ExpectTimeout(Task f, TimeSpan duration) => f.Wait(duration).Should().BeFalse();
@@ -306,7 +307,33 @@ namespace Akka.Streams.Tests.IO
 
             ByteString result;
             blockingCollection.TryTake(out result, TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.DecodeString().Should().Be("hello");
+            result.ToString().Should().Be("hello");
+        }
+
+        [Fact]
+        public void OutputStreamSource_must_correctly_complete_the_stage_after_close()
+        {
+            // actually this was a race, so it only happened in at least one of 20 runs
+
+            const int bufferSize = 4;
+
+            var t = StreamConverters.AsOutputStream(Timeout)
+                .AddAttributes(Attributes.CreateInputBuffer(bufferSize, bufferSize))
+                .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
+                .Run(_materializer);
+            var outputStream = t.Item1;
+            var probe = t.Item2;
+
+            // fill the buffer up
+            Enumerable.Range(1, bufferSize - 1).ForEach(i => outputStream.WriteByte((byte)i));
+
+            Task.Run(() => outputStream.Dispose());
+
+            // here is the race, has the elements reached the stage buffer yet?
+            Thread.Sleep(500);
+            probe.Request(bufferSize - 1);
+            probe.ExpectNextN(bufferSize - 1);
+            probe.ExpectComplete();
         }
     }
 }

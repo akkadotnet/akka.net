@@ -7,6 +7,7 @@
 
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using Akka.Configuration;
 
 namespace Akka.Cluster.Configuration
@@ -34,7 +35,7 @@ namespace Akka.Cluster.Configuration
         /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
-            var assembly = typeof(ClusterConfigFactory).Assembly;
+            var assembly = typeof(ClusterConfigFactory).GetTypeInfo().Assembly;
 
             using (var stream = assembly.GetManifestResourceStream(resourceName))
             {

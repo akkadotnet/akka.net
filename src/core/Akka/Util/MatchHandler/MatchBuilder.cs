@@ -171,6 +171,7 @@ namespace Akka.Tools.MatchHandler
             return partialAction;
         }
 
+#if !CORECLR
         /// <summary>
         /// TBD
         /// </summary>
@@ -182,8 +183,8 @@ namespace Akka.Tools.MatchHandler
         {
             _compiler.CompileToMethod(_typeHandlers, _arguments, new MatchBuilderSignature(_signature), typeBuilder, methodName, methodAttributes: attributes);
             _state = State.Built;
-
         }
+#endif
 
         private static void EnsureCanHandleType(Type handlesType)
         {

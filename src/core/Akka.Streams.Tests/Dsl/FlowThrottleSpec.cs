@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Take(length)
                     .Select(Convert.ToByte)
                     .ToArray();
-            return ByteString.Create(bytes);
+            return ByteString.FromBytes(bytes);
         }
 
         [Fact]
