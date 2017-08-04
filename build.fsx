@@ -32,6 +32,9 @@ let versionSuffix =
     match (getBuildParam "nugetprerelease") with
     | "dev" -> "beta" + (if (not (buildNumber = "0")) then ("-" + buildNumber) else "")
     | _ -> ""
+let releaseNotes =
+    File.ReadLines "./RELEASE_NOTES.md"
+    |> ReleaseNotesHelper.parseReleaseNotes
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -51,9 +54,6 @@ Target "Clean" (fun _ ->
 )
 
 Target "AssemblyInfo" (fun _ ->
-    let releaseNotes =
-        File.ReadLines "./RELEASE_NOTES.md"
-        |> ReleaseNotesHelper.parseReleaseNotes
     XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" releaseNotes.AssemblyVersion    
     XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/PackageReleaseNotes" (releaseNotes.Notes |> String.concat "\n")
 )
@@ -317,6 +317,41 @@ Target "CreateNuget" (fun _ ->
                     OutputPath = outputNuGet })
 
     projects |> Seq.iter (runSingleProject)
+)
+
+Target "CreateMntrNuget" (fun _ ->    
+    let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
+    let versionSuffixArg = sprintf "/p:VersionSuffix=%s" versionSuffix
+
+    executableProjects |> Seq.iter (fun project ->
+        DotNetCli.Restore
+            (fun p -> 
+                { p with
+                    Project = project                  
+                    AdditionalArgs = ["-r win7-x64"; versionSuffixArg] })
+    )
+
+    executableProjects |> Seq.iter (fun project ->  
+        DotNetCli.Publish
+            (fun p ->
+                { p with
+                    Project = project
+                    Configuration = configuration
+                    Runtime = "win7-x64"
+                    Framework = "net452"
+                    VersionSuffix = versionSuffix
+                    Output = Path.GetDirectoryName(project) @@ "bin" @@ "Release" @@ "net452" @@ "win7-x64" }))
+    
+    executableProjects |> Seq.iter (fun project ->  
+        DotNetCli.Pack
+            (fun p -> 
+                { p with
+                    Project = project
+                    Configuration = configuration
+                    AdditionalArgs = ["--include-symbols"]
+                    VersionSuffix = versionSuffix
+                    OutputPath = outputNuGet } )
+    )
 )
 
 Target "PublishNuget" (fun _ ->
