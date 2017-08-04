@@ -50,7 +50,7 @@ namespace Akka.Remote.Tests.MultiNode.Router
         {
         }
 
-        protected RemoteRandomSpec(RemoteRandomMultiNodeConfig config) : base(config)
+        protected RemoteRandomSpec(RemoteRandomMultiNodeConfig config) : base(config, typeof(RemoteRandomSpec))
         {
             _config = config;
         }

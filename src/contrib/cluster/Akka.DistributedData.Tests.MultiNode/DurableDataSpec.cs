@@ -81,7 +81,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         private int testStepCounter = 0;
 
-        protected DurableDataSpec(DurableDataSpecConfig config) : base(config)
+        protected DurableDataSpec(DurableDataSpecConfig config, Type type) : base(config, type)
         {
             InitialParticipantsValueFactory = Roles.Count;
             cluster = Akka.Cluster.Cluster.Get(Sys);
@@ -377,11 +377,11 @@ namespace Akka.DistributedData.Tests.MultiNode
 
     public class DurableDataSpecNode1 : DurableDataSpec
     {
-        public DurableDataSpecNode1() : base(new DurableDataSpecConfig(writeBehind: false)) { }
+        public DurableDataSpecNode1() : base(new DurableDataSpecConfig(writeBehind: false), typeof(DurableDataSpecNode1)) { }
     }
 
     public class DurableDataWriteBehindSpecNode1 : DurableDataSpec
     {
-        public DurableDataWriteBehindSpecNode1() : base(new DurableDataSpecConfig(writeBehind: true)) { }
+        public DurableDataWriteBehindSpecNode1() : base(new DurableDataSpecConfig(writeBehind: true), typeof(DurableDataWriteBehindSpecNode1)) { }
     }
 }

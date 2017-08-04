@@ -63,7 +63,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected NodeUpSpec(NodeUpConfig config) : base(config)
+        protected NodeUpSpec(NodeUpConfig config) : base(config, typeof(NodeUpSpec))
         {
             _config = config;
         }

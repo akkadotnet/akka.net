@@ -40,7 +40,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected NodeDowningAndBeingRemovedSpec(NodeDowningAndBeingRemovedSpecSpecConfig config) : base(config)
+        protected NodeDowningAndBeingRemovedSpec(NodeDowningAndBeingRemovedSpecSpecConfig config) : base(config, typeof(NodeDowningAndBeingRemovedSpec))
         {
             _config = config;
         }

@@ -3,12 +3,13 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.MultiNodeTestRunner.Shared.Tests</AssemblyTitle>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>net452;netcoreapp1.1</TargetFrameworks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
  
   <ItemGroup>
     <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj" />
+    <ProjectReference Include="..\Akka.MultiNodeTestRunner\Akka.MultiNodeTestRunner.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 
@@ -24,6 +25,10 @@
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
+    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
+  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>

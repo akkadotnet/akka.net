@@ -58,7 +58,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
         }
 
-        protected DistributedPubSubRestartSpec(DistributedPubSubRestartSpecConfig config) : base(config)
+        protected DistributedPubSubRestartSpec(DistributedPubSubRestartSpecConfig config) : base(config, typeof(DistributedPubSubRestartSpec))
         {
             _config = config;
         }

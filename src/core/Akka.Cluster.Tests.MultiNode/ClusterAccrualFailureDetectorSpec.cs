@@ -48,7 +48,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         protected ClusterAccrualFailureDetectorSpec(ClusterAccrualFailureDetectorMultiSpec config)
-            : base(config)
+            : base(config, typeof(ClusterAccrualFailureDetectorSpec))
         {
             _config = config;
         }

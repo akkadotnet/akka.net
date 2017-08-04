@@ -28,7 +28,6 @@ module IncrementalTests =
     let IsRunnable testProject =
         match testProject with
         | IsRunnable "Akka.API.Tests.csproj" Linux proj -> false
-        | IsRunnable "Akka.MultiNodeTestRunner.Shared.Tests.csproj" All proj -> false
         | _ -> true
 
     let getUnitTestProjects() =
@@ -112,13 +111,22 @@ module IncrementalTests =
 
     let getAssemblyForProject project =
         try
-            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net452" @@ fileNameWithoutExt project + ".dll") // TODO: rework for .NET Core
+            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net452" @@ fileNameWithoutExt project + ".dll")
             |> Seq.head
         with 
         | :? System.ArgumentException as ex ->
             logf "Could not find built assembly for %s.  Make sure project is built in Release config." (fileNameWithoutExt project);
             reraise()
     
+    let getNetCoreAssemblyForProject project =
+        try
+            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ fileNameWithoutExt project + ".dll")
+            |> Seq.head
+        with 
+        | :? System.ArgumentException as ex ->
+            logfn "Could not find built assembly for %s.  Make sure project is built in Release config." (fileNameWithoutExt project);
+            null
+
     //-------------------------------------------------------------------------------- 
     // MultiNodeTestRunner incremental test selection
     //--------------------------------------------------------------------------------
@@ -130,6 +138,10 @@ module IncrementalTests =
     let getAllMntrTestAssemblies() = // if we're not running incremental tests
         getMntrProjects()
         |> Seq.map (fun x -> getAssemblyForProject x)
+    
+    let getAllMntrTestNetCoreAssemblies() = // if we're not running incremental tests
+        getMntrProjects()
+        |> Seq.map (fun x -> getNetCoreAssemblyForProject x)
     
     //--------------------------------------------------------------------------------
     // Performance tests incremental test selection
@@ -231,6 +243,10 @@ module IncrementalTests =
     let getIncrementalMNTRTests() =
         getIncrementalTestProjects2 MNTR
         |> Seq.map (fun p -> getAssemblyForProject p)
+    
+    let getIncrementalNetCoreMNTRTests() =
+        getIncrementalTestProjects2 MNTR
+        |> Seq.map (fun p -> getNetCoreAssemblyForProject p)
     
     let getIncrementalPerfTests() =
         getIncrementalTestProjects2 Perf

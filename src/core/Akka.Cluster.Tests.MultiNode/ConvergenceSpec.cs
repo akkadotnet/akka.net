@@ -45,7 +45,7 @@ namespace Akka.Cluster.Tests.MultiNode
     
     public class ConvergenceWithFailureDetectorPuppetMultiNode : ConvergenceSpec
     {
-        public ConvergenceWithFailureDetectorPuppetMultiNode() : base(true)
+        public ConvergenceWithFailureDetectorPuppetMultiNode() : base(true, typeof(ConvergenceWithFailureDetectorPuppetMultiNode))
         {
         }
     }
@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tests.MultiNode
     public class ConvergenceWithAccrualFailureDetectorMultiNode : ConvergenceSpec
     {
         public ConvergenceWithAccrualFailureDetectorMultiNode()
-            : base(false)
+            : base(false, typeof(ConvergenceWithAccrualFailureDetectorMultiNode))
         {
         }
     }
@@ -62,12 +62,12 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         readonly ConvergenceSpecConfig _config;
 
-        protected ConvergenceSpec(bool failureDetectorPuppet)
-            : this(new ConvergenceSpecConfig(failureDetectorPuppet))
+        protected ConvergenceSpec(bool failureDetectorPuppet, Type type)
+            : this(new ConvergenceSpecConfig(failureDetectorPuppet), type)
         {
         }
 
-        private ConvergenceSpec(ConvergenceSpecConfig config) : base(config)
+        private ConvergenceSpec(ConvergenceSpecConfig config, Type type) : base(config, type)
         {
             _config = config;
             MuteMarkingAsUnreachable();

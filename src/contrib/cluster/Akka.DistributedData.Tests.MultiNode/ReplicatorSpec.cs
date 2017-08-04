@@ -83,7 +83,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         { }
 
         protected ReplicatorSpec(ReplicatorSpecConfig config)
-            : base(config)
+            : base(config, typeof(ReplicatorSpec))
         {
             _config = config;
             _first = config.First;

@@ -69,7 +69,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected MinMembersBeforeUpSpec(MinMembersBeforeUpSpecConfig config) : base(config)
+        protected MinMembersBeforeUpSpec(MinMembersBeforeUpSpecConfig config) : base(config, typeof(MinMembersBeforeUpSpec))
         {
             First = config.First;
             Second = config.Second;
@@ -89,7 +89,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected MinMembersOfRoleBeforeUpSpec(MinMembersOfRoleBeforeUpSpecConfig config) : base(config)
+        protected MinMembersOfRoleBeforeUpSpec(MinMembersOfRoleBeforeUpSpecConfig config) : base(config, typeof(MinMembersOfRoleBeforeUpSpec))
         {
             First = config.First;
             Second = config.Second;
@@ -109,7 +109,7 @@ namespace Akka.Cluster.Tests.MultiNode
         protected RoleName Second;
         protected RoleName Third;
 
-        protected MinMembersBeforeUpBase(MultiNodeConfig config) : base(config)
+        protected MinMembersBeforeUpBase(MultiNodeConfig config, Type type) : base(config, type)
         {
         }
 

@@ -45,7 +45,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected TransitionSpec(TransitionSpecConfig config) : base(config)
+        protected TransitionSpec(TransitionSpecConfig config) : base(config, typeof(TransitionSpec))
         {
             _config = config;
         }

@@ -148,7 +148,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingGetStatsSpec(ClusterShardingGetStatsSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingGetStatsSpec))
         {
             _config = config;
 

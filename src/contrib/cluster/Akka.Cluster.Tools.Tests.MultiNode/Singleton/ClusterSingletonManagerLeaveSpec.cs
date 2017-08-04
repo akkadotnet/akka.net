@@ -83,7 +83,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
         }
 
-        protected ClusterSingletonManagerLeaveSpec(ClusterSingletonManagerLeaveSpecConfig config) : base(config)
+        protected ClusterSingletonManagerLeaveSpec(ClusterSingletonManagerLeaveSpecConfig config) : base(config, typeof(ClusterSingletonManagerLeaveSpec))
         {
             _config = config;
 

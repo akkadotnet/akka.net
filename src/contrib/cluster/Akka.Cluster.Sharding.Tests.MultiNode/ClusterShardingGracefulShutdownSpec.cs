@@ -97,7 +97,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingGracefulShutdownSpec(ClusterShardingGracefulShutdownSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingGracefulShutdownSpec))
         {
             _config = config;
 

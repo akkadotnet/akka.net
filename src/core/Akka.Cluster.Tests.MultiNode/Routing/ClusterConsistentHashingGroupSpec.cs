@@ -78,7 +78,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         protected ClusterConsistentHashingGroupSpec(ClusterConsistentHashingGroupSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterConsistentHashingGroupSpec))
         {
             _config = config;
         }

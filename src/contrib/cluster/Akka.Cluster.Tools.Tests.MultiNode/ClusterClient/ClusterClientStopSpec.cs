@@ -63,7 +63,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         {
         }
 
-        protected ClusterClientStopSpec(ClusterClientStopSpecConfig config) : base(config)
+        protected ClusterClientStopSpec(ClusterClientStopSpecConfig config) : base(config, typeof(ClusterClientStopSpec))
         {
             _config = config;
         }

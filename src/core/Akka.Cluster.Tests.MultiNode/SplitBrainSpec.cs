@@ -46,14 +46,14 @@ namespace Akka.Cluster.Tests.MultiNode
 
     public class SplitBrainWithFailureDetectorPuppetMultiNode : SplitBrainSpec
     {
-        public SplitBrainWithFailureDetectorPuppetMultiNode() : base(true)
+        public SplitBrainWithFailureDetectorPuppetMultiNode() : base(true, typeof(SplitBrainWithFailureDetectorPuppetMultiNode))
         {
         }
     }
 
     public class SplitBrainWithAccrualFailureDetectorMultiNode : SplitBrainSpec
     {
-        public SplitBrainWithAccrualFailureDetectorMultiNode() : base(false)
+        public SplitBrainWithAccrualFailureDetectorMultiNode() : base(false, typeof(SplitBrainWithAccrualFailureDetectorMultiNode))
         {
         }
     }
@@ -64,11 +64,11 @@ namespace Akka.Cluster.Tests.MultiNode
         private List<RoleName> side1;
         private List<RoleName> side2;
 
-        protected SplitBrainSpec(bool failureDetectorPuppet) : this(new SplitBrainConfig(failureDetectorPuppet))
+        protected SplitBrainSpec(bool failureDetectorPuppet, Type type) : this(new SplitBrainConfig(failureDetectorPuppet), type)
         {
         }
 
-        protected SplitBrainSpec(SplitBrainConfig config) : base(config)
+        protected SplitBrainSpec(SplitBrainConfig config, Type type) : base(config, type)
         {
             _config = config;
             side1 = new List<RoleName> { _config.First, _config.Second };

@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected DisallowJoinOfTwoClusterSpec(DisallowJoinOfTwoClusterSpecConfig config) : base(config)
+        protected DisallowJoinOfTwoClusterSpec(DisallowJoinOfTwoClusterSpecConfig config) : base(config, typeof(DisallowJoinOfTwoClusterSpec))
         {
             _config = config;
         }

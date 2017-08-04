@@ -112,11 +112,11 @@ namespace Akka.Remote.Tests.MultiNode
         private readonly Lazy<IActorRef> _remoteWatcher;
         private readonly Func<RoleName, string, IActorRef> _identify;
 
-        protected RemoteNodeDeathWatchSpec() : this(new RemoteNodeDeathWatchMultiNetSpec())
+        protected RemoteNodeDeathWatchSpec(Type type) : this(new RemoteNodeDeathWatchMultiNetSpec(), type)
         {
         }
 
-        protected RemoteNodeDeathWatchSpec(RemoteNodeDeathWatchMultiNetSpec config) : base(config)
+        protected RemoteNodeDeathWatchSpec(RemoteNodeDeathWatchMultiNetSpec config, Type type) : base(config, type)
         {
             _config = config;
 
@@ -538,6 +538,9 @@ namespace Akka.Remote.Tests.MultiNode
 
     public class RemoteNodeDeathWatchFastSpec : RemoteNodeDeathWatchSpec
     {
+        public RemoteNodeDeathWatchFastSpec() : base(typeof(RemoteNodeDeathWatchFastSpec))
+        { }
+
         protected override string Scenario { get; } = "fast";
 
         protected override Action Sleep { get; } = () => Thread.Sleep(100);
@@ -545,6 +548,9 @@ namespace Akka.Remote.Tests.MultiNode
 
     public class RemoteNodeDeathWatchSlowSpec : RemoteNodeDeathWatchSpec
     {
+        public RemoteNodeDeathWatchSlowSpec() : base(typeof(RemoteNodeDeathWatchSlowSpec))
+        { }
+
         protected override string Scenario { get; } = "slow";
 
         protected override Action Sleep { get; } = () => Thread.Sleep(3000);

@@ -241,7 +241,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
         }
 
-        protected DistributedPubSubMediatorSpec(DistributedPubSubMediatorSpecConfig config) : base(config)
+        protected DistributedPubSubMediatorSpec(DistributedPubSubMediatorSpecConfig config) : base(config, typeof(DistributedPubSubMediatorSpec))
         {
             _first = config.First;
             _second = config.Second;

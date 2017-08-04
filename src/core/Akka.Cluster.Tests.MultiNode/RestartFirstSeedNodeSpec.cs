@@ -52,7 +52,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected RestartFirstSeedNodeSpec(RestartFirstSeedNodeSpecConfig config) : base(config)
+        protected RestartFirstSeedNodeSpec(RestartFirstSeedNodeSpecConfig config) : base(config, typeof(RestartFirstSeedNodeSpec))
         {
             _config = config;
             _missedSeed = GetAddress(config.Seed3).WithPort(61313);
