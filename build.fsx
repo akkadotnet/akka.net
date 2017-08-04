@@ -500,7 +500,7 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
+"Clean" ==> "RestorePackages" ==> "Build" ==> "CreateMntrNuget" ==> "CreateNuget"
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
