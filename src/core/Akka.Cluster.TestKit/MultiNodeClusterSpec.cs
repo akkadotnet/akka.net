@@ -148,8 +148,8 @@ namespace Akka.Cluster.TestKit
 
         readonly ITestKitAssertions _assertions;
 
-        protected MultiNodeClusterSpec(MultiNodeConfig config)
-            : base(config)
+        protected MultiNodeClusterSpec(MultiNodeConfig config, Type type)
+            : base(config, type)
         {
             _assertions = new XunitAssertions();
             _roleNameComparer = new RoleNameComparer(this);

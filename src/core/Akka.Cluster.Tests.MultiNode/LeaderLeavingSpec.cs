@@ -59,7 +59,7 @@ akka.cluster.publish-stats-interval = 25 s")
             {
             }
 
-            private LeaderLeavingSpec(LeaderLeavingSpecConfig config) : base(config)
+            private LeaderLeavingSpec(LeaderLeavingSpecConfig config) : base(config, typeof(LeaderLeavingSpec))
             {
                 _config = config;
             }

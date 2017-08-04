@@ -47,7 +47,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliveryMultiNetSpec config) : base(config)
+        protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliveryMultiNetSpec config) : base(config, typeof(AttemptSysMsgRedeliverySpec))
         {
             _config = config;
         }

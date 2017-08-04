@@ -48,7 +48,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliverySpecConfig config) : base(config)
+        protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliverySpecConfig config) : base(config, typeof(AttemptSysMsgRedeliverySpec))
         {
             _config = config;
         }

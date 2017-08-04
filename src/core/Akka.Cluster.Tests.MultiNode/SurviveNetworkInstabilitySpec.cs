@@ -110,7 +110,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected SurviveNetworkInstabilitySpec(SurviveNetworkInstabilitySpecConfig config) : base(config)
+        protected SurviveNetworkInstabilitySpec(SurviveNetworkInstabilitySpecConfig config) : base(config, typeof(SurviveNetworkInstabilitySpec))
         {
             _config = config;
             Sys.ActorOf<SurviveNetworkInstabilitySpecConfig.Echo>("echo");

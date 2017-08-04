@@ -43,7 +43,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         public IEnumerable<int> MyData => _data[Myself];
 
         public JepsenInspiredInsertSpec() : this(new JepsenInspiredInsertSpecConfig()) { }
-        protected JepsenInspiredInsertSpec(JepsenInspiredInsertSpecConfig config) : base(config)
+        protected JepsenInspiredInsertSpec(JepsenInspiredInsertSpecConfig config) : base(config, typeof(JepsenInspiredInsertSpec))
         {
             _cluster = Akka.Cluster.Cluster.Get(Sys);
             _replicator = DistributedData.Get(Sys).Replicator;
