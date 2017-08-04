@@ -164,7 +164,7 @@ namespace Akka.Tests.Actor
             var a = new Address("akka.tcp", "mysys");
             var rootA = new RootActorPath(a);
             var uid = rootA.ElementsWithUid;
-            Assert.True(uid.Count > 0); // always at least 1 element when UID is appended
+            Assert.True(uid.Count == 0); // RootActorPaths return no elements
         }
 
 

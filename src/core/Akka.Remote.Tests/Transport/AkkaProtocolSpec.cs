@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -30,7 +31,7 @@ namespace Akka.Remote.Tests.Transport
         Address remoteAddress = new Address("test", "testsystem2", "testhost2", 1234);
         Address remoteAkkaAddress = new Address("akka.test", "testsystem2", "testhost2", 1234);
 
-        AkkaPduCodec codec = new AkkaPduProtobuffCodec();
+        private AkkaPduCodec codec;
 
         SerializedMessage testMsg =
             new SerializedMessage { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
@@ -47,6 +48,7 @@ namespace Akka.Remote.Tests.Transport
         public AkkaProtocolSpec()
             : base(@"akka.test.default-timeout = 1.5 s")
         {
+            codec = new AkkaPduProtobuffCodec(Sys);
             testEnvelope = codec.ConstructMessage(localAkkaAddress, TestActor, testMsg);
             testMsgPdu = codec.ConstructPayload(testEnvelope);
 

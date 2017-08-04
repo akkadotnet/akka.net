@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
+using Akka.Remote.Serialization;
 using Akka.Util.Internal;
 using Google.Protobuf;
 
@@ -241,7 +242,7 @@ namespace Akka.Remote.Transport
                         handle,
                         stateActorAssociationListener,
                         stateActorSettings,
-                        new AkkaPduProtobuffCodec(),
+                        new AkkaPduProtobuffCodec(Context.System),
                         failureDetector)), ActorNameFor(handle.RemoteAddress));
                 })
                 .With<AssociateUnderlying>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusPromise, null)) //need to create an Outbound ProtocolStateActor
@@ -271,7 +272,7 @@ namespace Akka.Remote.Transport
                 statusPromise,
                 stateActorWrappedTransport,
                 stateActorSettings,
-                new AkkaPduProtobuffCodec(), failureDetector, refuseUid)),
+                new AkkaPduProtobuffCodec(Context.System), failureDetector, refuseUid)),
                 ActorNameFor(remoteAddress));
         }
 

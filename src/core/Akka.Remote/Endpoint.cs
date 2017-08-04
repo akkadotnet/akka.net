@@ -18,6 +18,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
@@ -882,7 +883,7 @@ namespace Akka.Remote
                 Context.ActorOf(RARP.For(Context.System)
                     .ConfigureDispatcher(
                         EndpointWriter.EndpointWriterProps(_currentHandle, _localAddress, _remoteAddress, _refuseUid, _transport,
-                            _settings, new AkkaPduProtobuffCodec(), _receiveBuffers, Self)
+                            _settings, new AkkaPduProtobuffCodec(Context.System), _receiveBuffers, Self)
                             .WithDeploy(Deploy.Local)),
                     "endpointWriter");
             Context.Watch(writer);
