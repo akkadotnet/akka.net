@@ -221,6 +221,7 @@ namespace Akka.MultiNodeTestRunner
                             {
                                 //Loop through each test, work out number of nodes to run on and kick off process
                                 var sbArguments = new StringBuilder()
+                                    .Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
                                     .Append($@"-Dmultinode.test-class=""{nodeTest.TypeName}"" ")
                                     .Append($@"-Dmultinode.test-method=""{nodeTest.MethodName}"" ")
                                     .Append($@"-Dmultinode.max-nodes={test.Value.Count} ")
@@ -287,6 +288,16 @@ namespace Akka.MultiNodeTestRunner
                                 processes.Add(process);
                                 var nodeIndex = nodeTest.Node;
                                 var nodeRole = nodeTest.Role;
+
+#if CORECLR
+                            if (platform == "netcore")
+                            {
+                                process.StartInfo.FileName = "dotnet";
+                                var ntrPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Akka.NodeTestRunner", "bin", "Release", "netcoreapp1.1", "Akka.NodeTestRunner.dll");
+                                process.StartInfo.Arguments = Path.GetFullPath(ntrPath) + " " + process.StartInfo.Arguments;
+                                process.StartInfo.WorkingDirectory = Path.GetDirectoryName(assemblyPath);
+                            }
+#endif
 
                                 //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
                                 var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
