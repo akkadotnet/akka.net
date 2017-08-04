@@ -77,7 +77,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        protected NewRemoteActorSpec(NewRemoteActorMultiNodeSpecConfig config) : base(config)
+        protected NewRemoteActorSpec(NewRemoteActorMultiNodeSpecConfig config) : base(config, typeof(NewRemoteActorSpec))
         {
             _config = config;
         }

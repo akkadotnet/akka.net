@@ -185,7 +185,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         private void PublishToChildren(RunnerMessage message)
         {
             foreach (var sink in Sinks)
+            {
+#if CORECLR
+                sink.LogRunnerMessage(message.Message, Assembly.GetEntryAssembly().GetName().Name, LogLevel.InfoLevel);
+#else
                 sink.LogRunnerMessage(message.Message, Assembly.GetExecutingAssembly().GetName().Name, LogLevel.InfoLevel);
+#endif
+            }
         }
 
         /// <summary>

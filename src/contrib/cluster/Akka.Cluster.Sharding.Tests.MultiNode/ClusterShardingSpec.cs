@@ -341,7 +341,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly ClusterShardingSpecConfig _config;
 
         protected ClusterShardingSpec(ClusterShardingSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingSpec))
         {
             _config = config;
 

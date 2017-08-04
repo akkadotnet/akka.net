@@ -12,6 +12,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 using Akka.Actor;
@@ -375,22 +377,6 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        private static string GetCallerName()
-        {
-            var @this = typeof(MultiNodeSpec).Name;
-            var trace = new StackTrace();
-            var frames = trace.GetFrames();
-            if (frames != null)
-            {
-                for (var i = 1; i < frames.Length; i++)
-                {
-                    var t = frames[i].GetMethod().DeclaringType;
-                    if (t != null && t.Name != @this) return t.Name;
-                }
-            }
-            throw new InvalidOperationException("Unable to find calling type");
-        }
-
         readonly RoleName _myself;
         public RoleName Myself { get { return _myself; } }
         readonly ILoggingAdapter _log;
@@ -400,8 +386,8 @@ namespace Akka.Remote.TestKit
         readonly ImmutableDictionary<RoleName, Replacement> _replacements;
         readonly Address _myAddress;
 
-        protected MultiNodeSpec(MultiNodeConfig config) :
-            this(config.Myself, ActorSystem.Create(GetCallerName(), config.Config), config.Roles, config.Deployments)
+        protected MultiNodeSpec(MultiNodeConfig config, Type type) :
+            this(config.Myself, ActorSystem.Create(type.Name, config.Config), config.Roles, config.Deployments)
         {
         }
 
@@ -416,7 +402,14 @@ namespace Akka.Remote.TestKit
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
+
+#if CORECLR
+            var dnsTask = Dns.GetHostAddressesAsync(ServerName);
+            dnsTask.Wait();
+            var node = new IPEndPoint(dnsTask.Result[0], ServerPort);
+#else
             var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
+#endif
             _controllerAddr = node;
 
             AttachConductor(new TestConductor(system));

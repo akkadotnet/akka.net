@@ -105,7 +105,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingMinMembersSpec(ClusterShardingMinMembersSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingMinMembersSpec))
         {
             _config = config;
 

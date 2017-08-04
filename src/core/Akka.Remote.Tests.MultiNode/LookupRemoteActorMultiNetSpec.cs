@@ -47,7 +47,7 @@ namespace Akka.Remote.Tests.MultiNode
 
         }
         protected LookupRemoteActorSpec(LookupRemoteActorMultiNetSpec config)
-            : base(config)
+            : base(config, typeof(LookupRemoteActorSpec))
         {
             _config = config;
         }

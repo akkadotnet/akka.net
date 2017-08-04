@@ -65,7 +65,7 @@ namespace Akka.Remote.Tests.MultiNode.Router
         {
         }
 
-        protected RemoteScatterGatherSpec(RemoteScatterGatherMultiNetSpec config) : base(config)
+        protected RemoteScatterGatherSpec(RemoteScatterGatherMultiNetSpec config) : base(config, typeof(RemoteScatterGatherSpec))
         {
             _config = config;
         }

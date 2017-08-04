@@ -227,7 +227,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         {
         }
 
-        protected ClusterClientSpec(ClusterClientSpecConfig config) : base(config)
+        protected ClusterClientSpec(ClusterClientSpecConfig config) : base(config, typeof(ClusterClientSpec))
         {
             _config = config;
             _remainingServerRoleNames = ImmutableHashSet.Create(_config.First, _config.Second, _config.Third, _config.Fourth);

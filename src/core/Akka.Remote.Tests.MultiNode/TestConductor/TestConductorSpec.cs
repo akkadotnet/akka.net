@@ -41,7 +41,7 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
 
         public TestConductorSpec() : this(new TestConductorSpecConfig()) { }
 
-        protected TestConductorSpec(TestConductorSpecConfig config) : base(config)
+        protected TestConductorSpec(TestConductorSpecConfig config) : base(config, typeof(TestConductorSpec))
         {
             _config = config;
         }
