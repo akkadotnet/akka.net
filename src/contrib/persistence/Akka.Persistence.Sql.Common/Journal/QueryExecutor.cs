@@ -163,6 +163,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly TimeSpan Timeout;
 
         /// <summary>
+        /// The default serializer used when not type override matching is found
+        /// </summary>
+        public readonly string DefaultSerializer;
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
@@ -177,6 +182,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="tagsColumnName">TBD</param>
         /// <param name="orderingColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
+        /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
         public QueryConfiguration(
             string schemaName,
             string journalEventsTableName,
@@ -189,7 +195,8 @@ namespace Akka.Persistence.Sql.Common.Journal
             string isDeletedColumnName,
             string tagsColumnName,
             string orderingColumnName,
-            TimeSpan timeout)
+            TimeSpan timeout,
+            string defaultSerializer)
         {
             SchemaName = schemaName;
             JournalEventsTableName = journalEventsTableName;
@@ -203,6 +210,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             Timeout = timeout;
             TagsColumnName = tagsColumnName;
             OrderingColumnName = orderingColumnName;
+            DefaultSerializer = defaultSerializer;
         }
 
         /// <summary>
@@ -658,7 +666,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             var payload = reader[PayloadIndex];
 
             var type = Type.GetType(manifest, true);
-            var deserializer = Serialization.FindSerializerForType(type);
+            var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
             var deserialized = deserializer.FromBinary((byte[])payload, type);
 
             return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
