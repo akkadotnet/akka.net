@@ -37,8 +37,14 @@ namespace Akka.MultiNodeTestRunner
     /// </summary>
     class Program
     {
-        protected static ActorSystem TestRunSystem;
+        private static HashSet<string> _validNetCorePlatform = new HashSet<string>
+        {
+            "net",
+            "netcore",
+            "multi"
+        };
 
+        protected static ActorSystem TestRunSystem;
         protected static IActorRef SinkCoordinator;
 
         /// <summary>
@@ -47,6 +53,7 @@ namespace Akka.MultiNodeTestRunner
         protected static string OutputDirectory;
 
         protected static bool TeamCityFormattingOn;
+        protected static bool MultiPlatform;
 
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
@@ -128,9 +135,9 @@ namespace Akka.MultiNodeTestRunner
             var platform = CommandLine.GetPropertyOrDefault("multinode.platform", "net");
 
 #if CORECLR
-            if (platform != "net" && platform != "netcore")
+            if (!_validNetCorePlatform.Contains(platform))
             {
-                throw new Exception($"Target platform not supported: {platform}. Supported platforms are net and netcore");
+                throw new Exception($"Target platform not supported: {platform}. Supported platforms are net, netcore and multi");
             }
 #else
             if (platform != "net")
@@ -146,7 +153,6 @@ namespace Akka.MultiNodeTestRunner
 
             EnableAllSinks(assemblyPath, platform);
             PublishRunnerMessage($"Running MultiNodeTests for {assemblyPath}");
-
 #if CORECLR
             // In NetCore, if the assembly file hasn't been touched, 
             // XunitFrontController would fail loading external assemblies and its dependencies.
@@ -157,11 +163,19 @@ namespace Akka.MultiNodeTestRunner
             {
                 try
                 {
-                    assembly = Assembly.Load(new AssemblyName(asm.FullName));
+                    Assembly.Load(new AssemblyName(asm.FullName));
                 }
                 catch (Exception)
                 {
-                    assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(basePath, asm.Name + ".dll"));
+                    var path = Path.Combine(basePath, asm.Name + ".dll");
+                    try
+                    {
+                        AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Out.WriteLine($"Failed to load dll: {path}");
+                    }
                 }
             }
 #endif
@@ -197,6 +211,12 @@ namespace Akka.MultiNodeTestRunner
                             PublishRunnerMessage($"Starting test {test.Value.First().MethodName}");
 
                             StartNewSpec(test.Value);
+#if CORECLR
+                            var ntrBasePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Akka.NodeTestRunner", "bin", "Release"));
+                            var ntrNetPath = Path.Combine(AppContext.BaseDirectory, "runner", "net", "Akka.NodeTestRunner.exe");
+                            var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "runner", "netcore", "Akka.NodeTestRunner.dll");
+                            var alternateIndex = 0;
+#endif
                             foreach (var nodeTest in test.Value)
                             {
                                 //Loop through each test, work out number of nodes to run on and kick off process
@@ -210,18 +230,60 @@ namespace Akka.MultiNodeTestRunner
                                     .Append($@"-Dmultinode.index={nodeTest.Node - 1} ")
                                     .Append($@"-Dmultinode.role=""{nodeTest.Role}"" ")
                                     .Append($@"-Dmultinode.listen-address={listenAddress} ")
-                                    .Append($@"-Dmultinode.listen-port={listenPort}");
+                                    .Append($@"-Dmultinode.listen-port={listenPort} ");
 
+#if CORECLR
+                                string fileName = null;
+                                switch (platform)
+                                {
+                                    case "net":
+                                        fileName = ntrNetPath;
+                                        sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
+                                        break;
+                                    case "netcore":
+                                        fileName = "dotnet";
+                                        sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
+                                        sbArguments.Insert(0, ntrNetCorePath);
+                                        break;
+                                    case "multi":
+                                        if (alternateIndex % 2 == 0)
+                                        {
+                                            fileName = ntrNetPath;
+                                            sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{ChangeDllPathPlatform(assemblyPath, "net452")}"" ");
+                                        }
+                                        else
+                                        {
+                                            fileName = "dotnet";
+                                            sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{ChangeDllPathPlatform(assemblyPath, "netcoreapp1.1")}"" ");
+                                            sbArguments.Insert(0, ntrNetCorePath);
+                                        }
+                                        ++alternateIndex;
+                                        break;
+                                }
                                 var process = new Process
                                 {
                                     StartInfo = new ProcessStartInfo
                                     {
+                                        FileName = fileName,
                                         UseShellExecute = false,
                                         RedirectStandardOutput = true,
+                                        Arguments = sbArguments.ToString(),
+                                        WorkingDirectory = Path.GetDirectoryName(assemblyPath)
+                                    }
+                                };
+#else
+                                sbArguments.Insert(0, $@"-Dmultinode.test-assembly=""{assemblyPath}"" ");
+                                var process = new Process
+                                {
+                                    StartInfo = new ProcessStartInfo
+                                    {
                                         FileName = "Akka.NodeTestRunner.exe",
+                                        UseShellExecute = false,
+                                        RedirectStandardOutput = true,
                                         Arguments = sbArguments.ToString()
                                     }
                                 };
+#endif
 
                                 processes.Add(process);
                                 var nodeIndex = nodeTest.Node;
@@ -300,7 +362,7 @@ namespace Akka.MultiNodeTestRunner
                     }
                 }
             }
-            
+
             CloseAllSinks();
 
             //Block until all Sinks have been terminated.
@@ -311,6 +373,11 @@ namespace Akka.MultiNodeTestRunner
 
             //Return the proper exit code
             Environment.Exit(ExitCodeContainer.ExitCode);
+        }
+
+        static string ChangeDllPathPlatform(string path, string targetPlatform)
+        {
+            return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path), "..", targetPlatform, Path.GetFileName(path)));
         }
 
         static void EnableAllSinks(string assemblyName, string platform)
