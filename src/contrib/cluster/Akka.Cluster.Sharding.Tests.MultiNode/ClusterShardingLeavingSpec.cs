@@ -135,7 +135,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardinLeavingSpec(ClusterShardingLeavingSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardinLeavingSpec))
         {
             _config = config;
 

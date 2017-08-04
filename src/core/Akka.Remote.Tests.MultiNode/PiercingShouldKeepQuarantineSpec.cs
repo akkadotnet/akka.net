@@ -44,7 +44,7 @@ namespace Akka.Remote.Tests.MultiNode
         {
         }
 
-        protected PiercingShouldKeepQuarantineSpec(PiercingShouldKeepQuarantineMultiNodeConfig config) : base(config)
+        protected PiercingShouldKeepQuarantineSpec(PiercingShouldKeepQuarantineMultiNodeConfig config) : base(config, typeof(PiercingShouldKeepQuarantineSpec))
         {
             _config = config;
         }

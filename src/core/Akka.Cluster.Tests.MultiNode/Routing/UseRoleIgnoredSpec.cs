@@ -88,7 +88,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         protected UseRoleIgnoredSpec(UseRoleIgnoredSpecConfig config)
-            : base(config)
+            : base(config, typeof(UseRoleIgnoredSpec))
         {
             _config = config;
         }

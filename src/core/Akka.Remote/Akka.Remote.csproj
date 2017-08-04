@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNetty.Handlers" version="0.4.3" />
+    <PackageReference Include="DotNetty.Handlers" version="0.4.6" />
     <PackageReference Include="Google.Protobuf" Version="3.3.0" />
   </ItemGroup>
 

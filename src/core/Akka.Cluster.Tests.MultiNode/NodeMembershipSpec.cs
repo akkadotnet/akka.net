@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected NodeMembershipSpec(NodeMembershipSpecConfig config) : base(config)
+        protected NodeMembershipSpec(NodeMembershipSpecConfig config) : base(config, typeof(NodeMembershipSpec))
         {
             _config = config;
         }

@@ -203,7 +203,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingCustomShardAllocationSpec(ClusterShardingCustomShardAllocationSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingCustomShardAllocationSpec))
         {
             _config = config;
 

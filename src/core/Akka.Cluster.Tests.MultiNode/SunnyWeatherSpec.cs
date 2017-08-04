@@ -78,7 +78,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected SunnyWeatherSpec(SunnyWeatherNodeConfig config) : base(config)
+        protected SunnyWeatherSpec(SunnyWeatherNodeConfig config) : base(config, typeof(SunnyWeatherSpec))
         {
             _config = config;
         }

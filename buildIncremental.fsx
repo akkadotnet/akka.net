@@ -28,7 +28,6 @@ module IncrementalTests =
     let IsRunnable testProject =
         match testProject with
         | IsRunnable "Akka.API.Tests.csproj" Linux proj -> false
-        | IsRunnable "Akka.MultiNodeTestRunner.Shared.Tests.csproj" All proj -> false
         | _ -> true
 
     let getUnitTestProjects() =
@@ -112,13 +111,22 @@ module IncrementalTests =
 
     let getAssemblyForProject project =
         try
-            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net452" @@ fileNameWithoutExt project + ".dll") // TODO: rework for .NET Core
+            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "net452" @@ fileNameWithoutExt project + ".dll")
             |> Seq.head
         with 
         | :? System.ArgumentException as ex ->
             logf "Could not find built assembly for %s.  Make sure project is built in Release config." (fileNameWithoutExt project);
             reraise()
     
+    let getNetCoreAssemblyForProject project =
+        try
+            !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ fileNameWithoutExt project + ".dll")
+            |> Seq.head
+        with 
+        | :? System.ArgumentException as ex ->
+            logfn "Could not find built assembly for %s.  Make sure project is built in Release config." (fileNameWithoutExt project);
+            null
+
     //-------------------------------------------------------------------------------- 
     // MultiNodeTestRunner incremental test selection
     //--------------------------------------------------------------------------------
@@ -130,6 +138,10 @@ module IncrementalTests =
     let getAllMntrTestAssemblies() = // if we're not running incremental tests
         getMntrProjects()
         |> Seq.map (fun x -> getAssemblyForProject x)
+    
+    let getAllMntrTestNetCoreAssemblies() = // if we're not running incremental tests
+        getMntrProjects()
+        |> Seq.map (fun x -> getNetCoreAssemblyForProject x)
     
     //--------------------------------------------------------------------------------
     // Performance tests incremental test selection
@@ -149,15 +161,30 @@ module IncrementalTests =
 
     type ProjectPath = { projectName: string; projectPath: string }
     type ProjectDetails = { parentProject: ProjectPath; dependencies: ProjectPath seq; isTestProject: bool }
-        
-    let getDependentProjectFilePath csprojRef =
+       
+    let FullNameLinux baseProj csprojRef =
+        let csprojRef = normalizePath csprojRef
+        let mutable workingDirPath = DirectoryName baseProj
+        let csprojRefParts = split '/' csprojRef
+        let rootPath =
+            csprojRefParts 
+            |> List.filter (fun x -> x = "..") 
+            |> List.iter (fun x -> workingDirPath <- (DirectoryName workingDirPath))
+            workingDirPath
+        let subPath = 
+            csprojRefParts 
+            |> List.filter (fun x -> not (x = "..")) 
+            |> List.reduce (@@)
+        rootPath @@ subPath
+
+    let getDependentProjectFilePath baseProj csprojRef =
         match isWindows with
         | true -> FullName csprojRef
-        | _ -> !! ("./src/**" @@ (normalizePath csprojRef)) |> Seq.head
-
+        | _ -> FullNameLinux baseProj csprojRef
+        
     let getDependentProjects csprojFile =
         XMLRead true csprojFile "" "" "//Project/ItemGroup/ProjectReference/@Include"
-        |> Seq.map (fun p -> { projectName = filename (normalizePath p); projectPath = getDependentProjectFilePath p })
+        |> Seq.map (fun p -> { projectName = filename (normalizePath p); projectPath = getDependentProjectFilePath csprojFile p })
     
     type TestMode =
     | Unit
@@ -182,10 +209,10 @@ module IncrementalTests =
                         // if the altered project is a test project (e.g. Akka.Tests)
                         yield proj;
                     if (dep.projectName = project && proj.isTestProject) then
-                        // logfn "%s references %s and is a test project..." proj.parentProject.projectName project
+                        //logfn "%s references %s and is a test project..." proj.parentProject.projectName project
                         yield proj
                     elif (dep.projectName = project && not proj.isTestProject) then
-                        // logfn "%s references %s but is not a test project..." proj.parentProject.projectName project
+                        //logfn "%s references %s but is not a test project..." proj.parentProject.projectName project
                         yield! findTestProjectsThatHaveDependencyOn proj.parentProject.projectName testMode }
     
     let getIncrementalTestProjects2 testMode =
@@ -216,6 +243,10 @@ module IncrementalTests =
     let getIncrementalMNTRTests() =
         getIncrementalTestProjects2 MNTR
         |> Seq.map (fun p -> getAssemblyForProject p)
+    
+    let getIncrementalNetCoreMNTRTests() =
+        getIncrementalTestProjects2 MNTR
+        |> Seq.map (fun p -> getNetCoreAssemblyForProject p)
     
     let getIncrementalPerfTests() =
         getIncrementalTestProjects2 Perf

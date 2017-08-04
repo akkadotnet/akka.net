@@ -49,7 +49,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected LeaderDowningAllOtherNodesSpec(LeaderDowningAllOtherNodesConfig config) : base(config)
+        protected LeaderDowningAllOtherNodesSpec(LeaderDowningAllOtherNodesConfig config) : base(config, typeof(LeaderDowningAllOtherNodesSpec))
         {
             _config = config;
         }

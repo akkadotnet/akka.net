@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Net;
 using Akka.Actor;
@@ -40,7 +41,12 @@ namespace Akka.Remote.TestKit.Tests
             ExpectMsg<ToClient<Done>>();
             c.Tell(Controller.GetNodes.Instance);
             ExpectMsg<IEnumerable<RoleName>>(names => XAssert.Equivalent(names, new[] {A, B}));
-            c.Tell(PoisonPill.Instance);
+            AwaitAssert(() =>
+            {
+                Watch(c);
+                c.Tell(PoisonPill.Instance);
+                ExpectMsg<Terminated>();
+            }, TimeSpan.FromSeconds(20));
         }
     }
 }

@@ -18,11 +18,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class FileSystemMessageSink : MessageSink
     {
-        public FileSystemMessageSink(string assemblyName)
+        public FileSystemMessageSink(string assemblyName, string platform)
             : this(
                 Props.Create(
                     () =>
-                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), FileNameGenerator.GenerateFileName(assemblyName, ".json"),
+                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), 
+                            FileNameGenerator.GenerateFileName(assemblyName, platform, ".json"),
                             true,
                             true)))
         {

@@ -17,12 +17,18 @@ using Akka.Remote.TestKit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace Akka.MultiNodeTestRunner.Shared
+namespace Akka.MultiNodeTestRunner
 {
+#if CORECLR
+    public class Discovery : IMessageSink, IDisposable
+#else
     public class Discovery : MarshalByRefObject, IMessageSink, IDisposable
+#endif
     {
         public Dictionary<string, List<NodeTest>> Tests { get; set; }
-
+        public List<ErrorMessage> Errors { get; } = new List<ErrorMessage>();
+        public bool WasSuccessful => Errors.Count == 0;
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="Discovery"/> class.
         /// </summary>
@@ -33,36 +39,48 @@ namespace Akka.MultiNodeTestRunner.Shared
         }
 
         public ManualResetEvent Finished { get; private set; }
-
         public IMessageSink NextSink { get; private set; }
 
         public virtual bool OnMessage(IMessageSinkMessage message)
         {
-            var testCaseDiscoveryMessage = message as ITestCaseDiscoveryMessage;
-            if (testCaseDiscoveryMessage != null)
+            switch (message)
             {
-                var testClass = testCaseDiscoveryMessage.TestClass.Class;
-                if (testClass.IsAbstract) return true;
-                var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
-                var specType = testAssembly.GetType(testClass.Name);
-                var roles = RoleNames(specType);
-                
-                var details = roles.Select((r, i) => new NodeTest
-                {
-                    Node = i + 1,
-                    Role = r.Name,
-                    TestName = testClass.Name,
-                    TypeName = testClass.Name,
-                    MethodName = testCaseDiscoveryMessage.TestCase.TestMethod.Method.Name,
-                    SkipReason = testCaseDiscoveryMessage.TestCase.SkipReason,
-                }).ToList();
-                if (details.Any())
-                    Tests.Add(details.First().TestName, details);
+                case ITestCaseDiscoveryMessage testCaseDiscoveryMessage:
+                    var testClass = testCaseDiscoveryMessage.TestClass.Class;
+                    if (testClass.IsAbstract) return true;
+#if CORECLR
+                    var specType = testCaseDiscoveryMessage.TestAssembly.Assembly.GetType(testClass.Name).ToRuntimeType();
+#else
+                    var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
+                    var specType = testAssembly.GetType(testClass.Name);
+#endif
+                    var roles = RoleNames(specType);
 
+                    var details = roles.Select((r, i) => new NodeTest
+                    {
+                        Node = i + 1,
+                        Role = r.Name,
+                        TestName = testClass.Name,
+                        TypeName = testClass.Name,
+                        MethodName = testCaseDiscoveryMessage.TestCase.TestMethod.Method.Name,
+                        SkipReason = testCaseDiscoveryMessage.TestCase.SkipReason,
+                    }).ToList();
+                    if (details.Any())
+                    {
+                        var dictKey = details.First().TestName;
+                        if (Tests.ContainsKey(dictKey))
+                            Tests[dictKey].AddRange(details);
+                        else
+                            Tests.Add(dictKey, details);
+                    }
+                    break;
+                case IDiscoveryCompleteMessage discoveryComplete:
+                    Finished.Set();
+                    break;
+                case ErrorMessage err:
+                    Errors.Add(err);
+                    break;
             }
-
-            if (message is IDiscoveryCompleteMessage)
-                Finished.Set();
 
             return true;
         }
@@ -85,11 +103,18 @@ namespace Akka.MultiNodeTestRunner.Shared
         private ConstructorInfo FindConfigConstructor(Type configUser)
         {
             var baseConfigType = typeof(MultiNodeConfig);
-            
+
+#if CORECLR
+            var ctorWithConfig = configUser
+                .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.GetTypeInfo().IsSubclassOf(baseConfigType)));
+            return ctorWithConfig ?? FindConfigConstructor(configUser.GetTypeInfo().BaseType);
+#else
             var ctorWithConfig = configUser
                 .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                 .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.IsSubclassOf(baseConfigType)));
             return ctorWithConfig ?? FindConfigConstructor(configUser.BaseType);
+#endif
         }
 
         private object[] ConfigConstructorParamValues(Type configType)
@@ -97,9 +122,15 @@ namespace Akka.MultiNodeTestRunner.Shared
             var ctors = configType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var empty = ctors.FirstOrDefault(c => !c.GetParameters().Any());
 
+#if CORECLR
+            return empty != null
+                ? new object[0]
+                : ctors.First().GetParameters().Select(p => p.ParameterType.GetTypeInfo().IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
+#else
             return empty != null
                 ? new object[0]
                 : ctors.First().GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
+#endif
         }
 
         /// <inheritdoc/>

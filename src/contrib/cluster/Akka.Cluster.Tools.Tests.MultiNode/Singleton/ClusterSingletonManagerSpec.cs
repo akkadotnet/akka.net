@@ -323,7 +323,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
         }
 
-        protected ClusterSingletonManagerSpec(ClusterSingletonManagerSpecConfig config) : base(config)
+        protected ClusterSingletonManagerSpec(ClusterSingletonManagerSpecConfig config) : base(config, typeof(ClusterSingletonManagerSpec))
         {
             _controller = config.Controller;
             _observer = config.Observer;

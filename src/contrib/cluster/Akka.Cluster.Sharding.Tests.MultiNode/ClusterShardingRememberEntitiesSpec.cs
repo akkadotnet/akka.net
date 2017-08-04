@@ -117,7 +117,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingRememberEntitiesSpec(ClusterShardingRememberEntitiesSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingRememberEntitiesSpec))
         {
             _config = config;
 

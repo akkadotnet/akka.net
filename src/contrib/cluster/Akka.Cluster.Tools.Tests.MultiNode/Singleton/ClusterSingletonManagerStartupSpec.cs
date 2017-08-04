@@ -57,7 +57,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         }
 
-        protected ClusterSingletonManagerStartupSpec(ClusterSingletonManagerStartupConfig config) : base(config)
+        protected ClusterSingletonManagerStartupSpec(ClusterSingletonManagerStartupConfig config) : base(config, typeof(ClusterSingletonManagerStartupSpec))
         {
             _config = config;
             EchoProxy = new Lazy<IActorRef>(() => Sys.ActorOf(ClusterSingletonProxy.Props(
