@@ -180,6 +180,9 @@ namespace Akka.Remote.Serialization
 
         internal Exception ExceptionFromProtoNetCore(Proto.Msg.ExceptionData proto)
         {
+            if (string.IsNullOrEmpty(proto.TypeName))
+                return null;
+
             Type exceptionType = Type.GetType(proto.TypeName);
 
             var obj = Activator.CreateInstance(exceptionType);
