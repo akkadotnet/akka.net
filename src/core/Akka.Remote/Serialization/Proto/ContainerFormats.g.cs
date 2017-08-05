@@ -39,12 +39,15 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             "bGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQiYgoNQWN0b3JJZGVudGl0eRJD",
             "Cg1jb3JyZWxhdGlvbklkGAEgASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXph",
             "dGlvbi5Qcm90by5Nc2cuUGF5bG9hZBIMCgRwYXRoGAIgASgJIi0KHlJlbW90",
-            "ZVdhdGNoZXJIZWFydGJlYXRSZXNwb25zZRILCgN1aWQYASABKAQizgEKDUV4",
-            "Y2VwdGlvbkRhdGESEAoIVHlwZU5hbWUYASABKAkSTgoGZmllbGRzGAIgAygL",
-            "Mj4uQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRXhjZXB0",
-            "aW9uRGF0YS5GaWVsZHNFbnRyeRpbCgtGaWVsZHNFbnRyeRILCgNrZXkYASAB",
-            "KAkSOwoFdmFsdWUYAiABKAsyLC5Ba2thLlJlbW90ZS5TZXJpYWxpemF0aW9u",
-            "LlByb3RvLk1zZy5QYXlsb2FkOgI4AWIGcHJvdG8z"));
+            "ZVdhdGNoZXJIZWFydGJlYXRSZXNwb25zZRILCgN1aWQYASABKAQi4QIKDUV4",
+            "Y2VwdGlvbkRhdGESEAoIdHlwZU5hbWUYASABKAkSDwoHbWVzc2FnZRgCIAEo",
+            "CRISCgpzdGFja1RyYWNlGAMgASgJEg4KBnNvdXJjZRgEIAEoCRJKCg5pbm5l",
+            "ckV4Y2VwdGlvbhgFIAEoCzIyLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLkV4Y2VwdGlvbkRhdGESWgoMY3VzdG9tRmllbGRzGAYgAygL",
+            "MkQuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRXhjZXB0",
+            "aW9uRGF0YS5DdXN0b21GaWVsZHNFbnRyeRphChFDdXN0b21GaWVsZHNFbnRy",
+            "eRILCgNrZXkYASABKAkSOwoFdmFsdWUYAiABKAsyLC5Ba2thLlJlbW90ZS5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5QYXlsb2FkOgI4AWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -56,7 +59,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.Identify), global::Akka.Remote.Serialization.Proto.Msg.Identify.Parser, new[]{ "MessageId" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ActorIdentity), global::Akka.Remote.Serialization.Proto.Msg.ActorIdentity.Parser, new[]{ "CorrelationId", "Path" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.RemoteWatcherHeartbeatResponse), global::Akka.Remote.Serialization.Proto.Msg.RemoteWatcherHeartbeatResponse.Parser, new[]{ "Uid" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ExceptionData), global::Akka.Remote.Serialization.Proto.Msg.ExceptionData.Parser, new[]{ "TypeName", "Fields" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Remote.Serialization.Proto.Msg.ExceptionData), global::Akka.Remote.Serialization.Proto.Msg.ExceptionData.Parser, new[]{ "TypeName", "Message", "StackTrace", "Source", "InnerException", "CustomFields" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -1281,7 +1284,11 @@ namespace Akka.Remote.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public ExceptionData(ExceptionData other) : this() {
       typeName_ = other.typeName_;
-      fields_ = other.fields_.Clone();
+      message_ = other.message_;
+      stackTrace_ = other.stackTrace_;
+      source_ = other.source_;
+      InnerException = other.innerException_ != null ? other.InnerException.Clone() : null;
+      customFields_ = other.customFields_.Clone();
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1289,7 +1296,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       return new ExceptionData(this);
     }
 
-    /// <summary>Field number for the "TypeName" field.</summary>
+    /// <summary>Field number for the "typeName" field.</summary>
     public const int TypeNameFieldNumber = 1;
     private string typeName_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1300,14 +1307,58 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
     }
 
-    /// <summary>Field number for the "fields" field.</summary>
-    public const int FieldsFieldNumber = 2;
-    private static readonly pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>.Codec _map_fields_codec
-        = new pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>.Codec(pb::FieldCodec.ForString(10), pb::FieldCodec.ForMessage(18, global::Akka.Remote.Serialization.Proto.Msg.Payload.Parser), 18);
-    private readonly pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload> fields_ = new pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>();
+    /// <summary>Field number for the "message" field.</summary>
+    public const int MessageFieldNumber = 2;
+    private string message_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload> Fields {
-      get { return fields_; }
+    public string Message {
+      get { return message_; }
+      set {
+        message_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "stackTrace" field.</summary>
+    public const int StackTraceFieldNumber = 3;
+    private string stackTrace_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string StackTrace {
+      get { return stackTrace_; }
+      set {
+        stackTrace_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "source" field.</summary>
+    public const int SourceFieldNumber = 4;
+    private string source_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string Source {
+      get { return source_; }
+      set {
+        source_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "innerException" field.</summary>
+    public const int InnerExceptionFieldNumber = 5;
+    private global::Akka.Remote.Serialization.Proto.Msg.ExceptionData innerException_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.ExceptionData InnerException {
+      get { return innerException_; }
+      set {
+        innerException_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "customFields" field.</summary>
+    public const int CustomFieldsFieldNumber = 6;
+    private static readonly pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>.Codec _map_customFields_codec
+        = new pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>.Codec(pb::FieldCodec.ForString(10), pb::FieldCodec.ForMessage(18, global::Akka.Remote.Serialization.Proto.Msg.Payload.Parser), 50);
+    private readonly pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload> customFields_ = new pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::MapField<string, global::Akka.Remote.Serialization.Proto.Msg.Payload> CustomFields {
+      get { return customFields_; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1324,7 +1375,11 @@ namespace Akka.Remote.Serialization.Proto.Msg {
         return true;
       }
       if (TypeName != other.TypeName) return false;
-      if (!Fields.Equals(other.Fields)) return false;
+      if (Message != other.Message) return false;
+      if (StackTrace != other.StackTrace) return false;
+      if (Source != other.Source) return false;
+      if (!object.Equals(InnerException, other.InnerException)) return false;
+      if (!CustomFields.Equals(other.CustomFields)) return false;
       return true;
     }
 
@@ -1332,7 +1387,11 @@ namespace Akka.Remote.Serialization.Proto.Msg {
     public override int GetHashCode() {
       int hash = 1;
       if (TypeName.Length != 0) hash ^= TypeName.GetHashCode();
-      hash ^= Fields.GetHashCode();
+      if (Message.Length != 0) hash ^= Message.GetHashCode();
+      if (StackTrace.Length != 0) hash ^= StackTrace.GetHashCode();
+      if (Source.Length != 0) hash ^= Source.GetHashCode();
+      if (innerException_ != null) hash ^= InnerException.GetHashCode();
+      hash ^= CustomFields.GetHashCode();
       return hash;
     }
 
@@ -1347,7 +1406,23 @@ namespace Akka.Remote.Serialization.Proto.Msg {
         output.WriteRawTag(10);
         output.WriteString(TypeName);
       }
-      fields_.WriteTo(output, _map_fields_codec);
+      if (Message.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Message);
+      }
+      if (StackTrace.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(StackTrace);
+      }
+      if (Source.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Source);
+      }
+      if (innerException_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(InnerException);
+      }
+      customFields_.WriteTo(output, _map_customFields_codec);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1356,7 +1431,19 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       if (TypeName.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(TypeName);
       }
-      size += fields_.CalculateSize(_map_fields_codec);
+      if (Message.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
+      }
+      if (StackTrace.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(StackTrace);
+      }
+      if (Source.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Source);
+      }
+      if (innerException_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(InnerException);
+      }
+      size += customFields_.CalculateSize(_map_customFields_codec);
       return size;
     }
 
@@ -1368,7 +1455,22 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       if (other.TypeName.Length != 0) {
         TypeName = other.TypeName;
       }
-      fields_.Add(other.fields_);
+      if (other.Message.Length != 0) {
+        Message = other.Message;
+      }
+      if (other.StackTrace.Length != 0) {
+        StackTrace = other.StackTrace;
+      }
+      if (other.Source.Length != 0) {
+        Source = other.Source;
+      }
+      if (other.innerException_ != null) {
+        if (innerException_ == null) {
+          innerException_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
+        }
+        InnerException.MergeFrom(other.InnerException);
+      }
+      customFields_.Add(other.customFields_);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1384,7 +1486,26 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             break;
           }
           case 18: {
-            fields_.AddEntriesFrom(input, _map_fields_codec);
+            Message = input.ReadString();
+            break;
+          }
+          case 26: {
+            StackTrace = input.ReadString();
+            break;
+          }
+          case 34: {
+            Source = input.ReadString();
+            break;
+          }
+          case 42: {
+            if (innerException_ == null) {
+              innerException_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
+            }
+            input.ReadMessage(innerException_);
+            break;
+          }
+          case 50: {
+            customFields_.AddEntriesFrom(input, _map_customFields_codec);
             break;
           }
         }
