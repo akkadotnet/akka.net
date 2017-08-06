@@ -965,11 +965,20 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// Retrieves the current callback for the events on the given <see cref="Outlet{T}"/>
+        /// Assigns callbacks for the events for an <see cref="Inlet{T}"/> and <see cref="Outlet{T}"/>.
         /// </summary>
-        /// <param name="outlet">TBD</param>
-        /// <returns>TBD</returns>
-        protected IOutHandler GetHandler(Outlet outlet) => (IOutHandler)Handlers[outlet.Id + InCount];
+        protected internal void SetHandler(Inlet inlet, Outlet outlet, InAndOutGraphStageLogic handler)
+        {
+            SetHandler(inlet, handler);
+            SetHandler(outlet, handler);
+        }
+
+    /// <summary>
+    /// Retrieves the current callback for the events on the given <see cref="Outlet{T}"/>
+    /// </summary>
+    /// <param name="outlet">TBD</param>
+    /// <returns>TBD</returns>
+    protected IOutHandler GetHandler(Outlet outlet) => (IOutHandler)Handlers[outlet.Id + InCount];
 
         private Connection GetConnection(Inlet inlet) => PortToConn[inlet.Id];
 

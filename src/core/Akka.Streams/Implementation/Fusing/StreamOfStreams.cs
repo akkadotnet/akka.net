@@ -50,8 +50,7 @@ namespace Akka.Streams.Implementation.Fusing
                         PushOut();
                 };
 
-                SetHandler(_stage._in, this);
-                SetHandler(_stage._out, this);
+                SetHandler(stage._in, stage._out, this);
             }
             public override void OnPush()
             {
