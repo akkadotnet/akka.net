@@ -174,8 +174,7 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Identity<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.Inlet, this);
-                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -222,8 +221,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
 
-                SetHandler(stage.Inlet, this);
-                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, stage.Outlet, this);
             }
 
             public override void PreStart() => TryPull(_stage.Inlet);
@@ -311,8 +309,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _finishPromise = finishPromise;
 
-                SetHandler(stage._inlet, this);
-                SetHandler(stage._outlet, this);
+                SetHandler(stage._inlet, stage._outlet, this);
             }
 
             public override void OnPush() => Push(_stage._outlet, Grab(_stage._inlet));
@@ -435,8 +432,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _monitor = monitor;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
