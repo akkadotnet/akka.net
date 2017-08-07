@@ -67,16 +67,20 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void HandleNodeSpecPass(NodeCompletedSpecWithSuccess nodeSuccess)
         {
+            Console.ForegroundColor = ConsoleColor.Green;
             _teamCityTestWriter?.WriteStdOutput(
                 $"[NODE{nodeSuccess.NodeIndex}:{nodeSuccess.NodeRole}][{DateTime.UtcNow.ToShortTimeString()}]: SPEC PASSED: {nodeSuccess.Message}");
-
+            Console.ResetColor();
+            
             base.HandleNodeSpecPass(nodeSuccess);
         }
 
         protected override void HandleNodeSpecFail(NodeCompletedSpecWithFail nodeFail)
         {
+            Console.ForegroundColor = ConsoleColor.Red;
             _teamCityTestWriter?.WriteFailed(
                 $"[NODE{nodeFail.NodeIndex}:{nodeFail.NodeRole}][{DateTime.UtcNow.ToShortTimeString()}]: SPEC FAILED: {nodeFail.Message}", "");
+            Console.ResetColor();
 
             base.HandleNodeSpecFail(nodeFail);
         }

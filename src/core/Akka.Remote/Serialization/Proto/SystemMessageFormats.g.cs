@@ -24,24 +24,25 @@ namespace Akka.Remote.Serialization.Proto.Msg {
           string.Concat(
             "ChpTeXN0ZW1NZXNzYWdlRm9ybWF0cy5wcm90bxIjQWtrYS5SZW1vdGUuU2Vy",
             "aWFsaXphdGlvbi5Qcm90by5Nc2caFkNvbnRhaW5lckZvcm1hdHMucHJvdG8i",
-            "SQoKQ3JlYXRlRGF0YRI7CgVjYXVzZRgBIAEoCzIsLkFra2EuUmVtb3RlLlNl",
-            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLlBheWxvYWQiSwoMUmVjcmVhdGVEYXRh",
-            "EjsKBWNhdXNlGAEgASgLMiwuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuUGF5bG9hZCJJCgpSZXN1bWVEYXRhEjsKBWNhdXNlGAEgASgL",
-            "MiwuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGF5bG9h",
-            "ZCJgCg1TdXBlcnZpc2VEYXRhEkAKBWNoaWxkGAEgASgLMjEuQWtrYS5SZW1v",
-            "dGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWN0b3JSZWZEYXRhEg0KBWFz",
-            "eW5jGAIgASgIIpMBCglXYXRjaERhdGESQgoHd2F0Y2hlZRgBIAEoCzIxLkFr",
-            "a2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFjdG9yUmVmRGF0",
-            "YRJCCgd3YXRjaGVyGAIgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuQWN0b3JSZWZEYXRhIpgBCgpGYWlsZWREYXRhEkAKBWNo",
-            "aWxkGAEgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5N",
-            "c2cuQWN0b3JSZWZEYXRhEjsKBWNhdXNlGAIgASgLMiwuQWtrYS5SZW1vdGUu",
-            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGF5bG9hZBILCgN1aWQYAyABKAQi",
-            "lQEKGkRlYXRoV2F0Y2hOb3RpZmljYXRpb25EYXRhEkAKBWFjdG9yGAEgASgL",
-            "MjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWN0b3JS",
-            "ZWZEYXRhEhoKEmV4aXN0ZW5jZUNvbmZpcm1lZBgCIAEoCBIZChFhZGRyZXNz",
-            "VGVybWluYXRlZBgDIAEoCGIGcHJvdG8z"));
+            "TwoKQ3JlYXRlRGF0YRJBCgVjYXVzZRgBIAEoCzIyLkFra2EuUmVtb3RlLlNl",
+            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLkV4Y2VwdGlvbkRhdGEiUQoMUmVjcmVh",
+            "dGVEYXRhEkEKBWNhdXNlGAEgASgLMjIuQWtrYS5SZW1vdGUuU2VyaWFsaXph",
+            "dGlvbi5Qcm90by5Nc2cuRXhjZXB0aW9uRGF0YSJPCgpSZXN1bWVEYXRhEkEK",
+            "BWNhdXNlGAEgASgLMjIuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90",
+            "by5Nc2cuRXhjZXB0aW9uRGF0YSJgCg1TdXBlcnZpc2VEYXRhEkAKBWNoaWxk",
+            "GAEgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
+            "QWN0b3JSZWZEYXRhEg0KBWFzeW5jGAIgASgIIpMBCglXYXRjaERhdGESQgoH",
+            "d2F0Y2hlZRgBIAEoCzIxLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLkFjdG9yUmVmRGF0YRJCCgd3YXRjaGVyGAIgASgLMjEuQWtrYS5S",
+            "ZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWN0b3JSZWZEYXRhIp4B",
+            "CgpGYWlsZWREYXRhEkAKBWNoaWxkGAEgASgLMjEuQWtrYS5SZW1vdGUuU2Vy",
+            "aWFsaXphdGlvbi5Qcm90by5Nc2cuQWN0b3JSZWZEYXRhEkEKBWNhdXNlGAIg",
+            "ASgLMjIuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRXhj",
+            "ZXB0aW9uRGF0YRILCgN1aWQYAyABKAQilQEKGkRlYXRoV2F0Y2hOb3RpZmlj",
+            "YXRpb25EYXRhEkAKBWFjdG9yGAEgASgLMjEuQWtrYS5SZW1vdGUuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2cuQWN0b3JSZWZEYXRhEhoKEmV4aXN0ZW5jZUNv",
+            "bmZpcm1lZBgCIAEoCBIZChFhZGRyZXNzVGVybWluYXRlZBgDIAEoCGIGcHJv",
+            "dG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -92,9 +93,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "cause" field.</summary>
     public const int CauseFieldNumber = 1;
-    private global::Akka.Remote.Serialization.Proto.Msg.Payload cause_;
+    private global::Akka.Remote.Serialization.Proto.Msg.ExceptionData cause_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.Payload Cause {
+    public global::Akka.Remote.Serialization.Proto.Msg.ExceptionData Cause {
       get { return cause_; }
       set {
         cause_ = value;
@@ -154,7 +155,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
       if (other.cause_ != null) {
         if (cause_ == null) {
-          cause_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+          cause_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
         }
         Cause.MergeFrom(other.Cause);
       }
@@ -170,7 +171,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             break;
           case 10: {
             if (cause_ == null) {
-              cause_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+              cause_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
             }
             input.ReadMessage(cause_);
             break;
@@ -215,9 +216,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "cause" field.</summary>
     public const int CauseFieldNumber = 1;
-    private global::Akka.Remote.Serialization.Proto.Msg.Payload cause_;
+    private global::Akka.Remote.Serialization.Proto.Msg.ExceptionData cause_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.Payload Cause {
+    public global::Akka.Remote.Serialization.Proto.Msg.ExceptionData Cause {
       get { return cause_; }
       set {
         cause_ = value;
@@ -277,7 +278,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
       if (other.cause_ != null) {
         if (cause_ == null) {
-          cause_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+          cause_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
         }
         Cause.MergeFrom(other.Cause);
       }
@@ -293,7 +294,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             break;
           case 10: {
             if (cause_ == null) {
-              cause_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+              cause_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
             }
             input.ReadMessage(cause_);
             break;
@@ -338,9 +339,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "cause" field.</summary>
     public const int CauseFieldNumber = 1;
-    private global::Akka.Remote.Serialization.Proto.Msg.Payload cause_;
+    private global::Akka.Remote.Serialization.Proto.Msg.ExceptionData cause_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.Payload Cause {
+    public global::Akka.Remote.Serialization.Proto.Msg.ExceptionData Cause {
       get { return cause_; }
       set {
         cause_ = value;
@@ -400,7 +401,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
       if (other.cause_ != null) {
         if (cause_ == null) {
-          cause_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+          cause_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
         }
         Cause.MergeFrom(other.Cause);
       }
@@ -416,7 +417,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
             break;
           case 10: {
             if (cause_ == null) {
-              cause_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+              cause_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
             }
             input.ReadMessage(cause_);
             break;
@@ -782,9 +783,9 @@ namespace Akka.Remote.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "cause" field.</summary>
     public const int CauseFieldNumber = 2;
-    private global::Akka.Remote.Serialization.Proto.Msg.Payload cause_;
+    private global::Akka.Remote.Serialization.Proto.Msg.ExceptionData cause_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::Akka.Remote.Serialization.Proto.Msg.Payload Cause {
+    public global::Akka.Remote.Serialization.Proto.Msg.ExceptionData Cause {
       get { return cause_; }
       set {
         cause_ = value;
@@ -879,7 +880,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
       }
       if (other.cause_ != null) {
         if (cause_ == null) {
-          cause_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+          cause_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
         }
         Cause.MergeFrom(other.Cause);
       }
@@ -905,7 +906,7 @@ namespace Akka.Remote.Serialization.Proto.Msg {
           }
           case 18: {
             if (cause_ == null) {
-              cause_ = new global::Akka.Remote.Serialization.Proto.Msg.Payload();
+              cause_ = new global::Akka.Remote.Serialization.Proto.Msg.ExceptionData();
             }
             input.ReadMessage(cause_);
             break;

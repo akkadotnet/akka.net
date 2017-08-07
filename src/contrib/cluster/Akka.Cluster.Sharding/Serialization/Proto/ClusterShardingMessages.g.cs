@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from ClusterShardingMessages.proto</summary>
-  public static partial class ClusterShardingMessagesReflection {
+  internal static partial class ClusterShardingMessagesReflection {
 
     #region Descriptor
     /// <summary>File descriptor for ClusterShardingMessages.proto</summary>
@@ -58,7 +58,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
   #region Messages
-  public sealed partial class CoordinatorState : pb::IMessage<CoordinatorState> {
+  internal sealed partial class CoordinatorState : pb::IMessage<CoordinatorState> {
     private static readonly pb::MessageParser<CoordinatorState> _parser = new pb::MessageParser<CoordinatorState>(() => new CoordinatorState());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<CoordinatorState> Parser { get { return _parser; } }
@@ -229,7 +229,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the CoordinatorState message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class ShardEntry : pb::IMessage<ShardEntry> {
+      internal sealed partial class ShardEntry : pb::IMessage<ShardEntry> {
         private static readonly pb::MessageParser<ShardEntry> _parser = new pb::MessageParser<ShardEntry>(() => new ShardEntry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<ShardEntry> Parser { get { return _parser; } }
@@ -379,7 +379,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ActorRefMessage : pb::IMessage<ActorRefMessage> {
+  internal sealed partial class ActorRefMessage : pb::IMessage<ActorRefMessage> {
     private static readonly pb::MessageParser<ActorRefMessage> _parser = new pb::MessageParser<ActorRefMessage>(() => new ActorRefMessage());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ActorRefMessage> Parser { get { return _parser; } }
@@ -496,7 +496,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ShardIdMessage : pb::IMessage<ShardIdMessage> {
+  internal sealed partial class ShardIdMessage : pb::IMessage<ShardIdMessage> {
     private static readonly pb::MessageParser<ShardIdMessage> _parser = new pb::MessageParser<ShardIdMessage>(() => new ShardIdMessage());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ShardIdMessage> Parser { get { return _parser; } }
@@ -613,7 +613,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ShardHomeAllocated : pb::IMessage<ShardHomeAllocated> {
+  internal sealed partial class ShardHomeAllocated : pb::IMessage<ShardHomeAllocated> {
     private static readonly pb::MessageParser<ShardHomeAllocated> _parser = new pb::MessageParser<ShardHomeAllocated>(() => new ShardHomeAllocated());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ShardHomeAllocated> Parser { get { return _parser; } }
@@ -758,7 +758,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ShardHome : pb::IMessage<ShardHome> {
+  internal sealed partial class ShardHome : pb::IMessage<ShardHome> {
     private static readonly pb::MessageParser<ShardHome> _parser = new pb::MessageParser<ShardHome>(() => new ShardHome());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ShardHome> Parser { get { return _parser; } }
@@ -903,7 +903,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class EntityState : pb::IMessage<EntityState> {
+  internal sealed partial class EntityState : pb::IMessage<EntityState> {
     private static readonly pb::MessageParser<EntityState> _parser = new pb::MessageParser<EntityState>(() => new EntityState());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<EntityState> Parser { get { return _parser; } }
@@ -1012,7 +1012,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class EntityStarted : pb::IMessage<EntityStarted> {
+  internal sealed partial class EntityStarted : pb::IMessage<EntityStarted> {
     private static readonly pb::MessageParser<EntityStarted> _parser = new pb::MessageParser<EntityStarted>(() => new EntityStarted());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<EntityStarted> Parser { get { return _parser; } }
@@ -1129,7 +1129,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class EntityStopped : pb::IMessage<EntityStopped> {
+  internal sealed partial class EntityStopped : pb::IMessage<EntityStopped> {
     private static readonly pb::MessageParser<EntityStopped> _parser = new pb::MessageParser<EntityStopped>(() => new EntityStopped());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<EntityStopped> Parser { get { return _parser; } }
@@ -1246,7 +1246,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ShardStats : pb::IMessage<ShardStats> {
+  internal sealed partial class ShardStats : pb::IMessage<ShardStats> {
     private static readonly pb::MessageParser<ShardStats> _parser = new pb::MessageParser<ShardStats>(() => new ShardStats());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ShardStats> Parser { get { return _parser; } }
@@ -1391,7 +1391,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class StartEntity : pb::IMessage<StartEntity> {
+  internal sealed partial class StartEntity : pb::IMessage<StartEntity> {
     private static readonly pb::MessageParser<StartEntity> _parser = new pb::MessageParser<StartEntity>(() => new StartEntity());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<StartEntity> Parser { get { return _parser; } }
@@ -1508,7 +1508,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class StartEntityAck : pb::IMessage<StartEntityAck> {
+  internal sealed partial class StartEntityAck : pb::IMessage<StartEntityAck> {
     private static readonly pb::MessageParser<StartEntityAck> _parser = new pb::MessageParser<StartEntityAck>(() => new StartEntityAck());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<StartEntityAck> Parser { get { return _parser; } }

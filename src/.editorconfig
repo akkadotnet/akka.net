@@ -24,6 +24,10 @@ indent_size = 2
 [*.json]
 indent_size = 2
 
+# proto
+[*.proto]
+indent_size = 2
+
 # Dotnet code style settings:
 [*.{cs}]
 # Sort using and Import directives with System.* appearing first
