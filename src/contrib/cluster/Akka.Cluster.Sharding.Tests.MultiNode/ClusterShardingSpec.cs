@@ -308,23 +308,10 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingSpecRecoveryAll(ClusterShardingSpecConfig config)
-            : base(config)
+            : base(config, typeof(ClusterShardingSpec))
         {
         }
     }
-
-    //public class ClusterShardingSpecRecoveryConstant : ClusterShardingSpec
-    //{
-    //    public ClusterShardingSpecRecoveryConstant()
-    //        : this(new ClusterShardingSpecConfig("constant"))
-    //    {
-    //    }
-
-    //    protected ClusterShardingSpecRecoveryConstant(ClusterShardingSpecConfig config)
-    //        : base(config)
-    //    {
-    //    }
-    //}
 
     public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
@@ -340,8 +327,8 @@ namespace Akka.Cluster.Sharding.Tests
 
         private readonly ClusterShardingSpecConfig _config;
 
-        protected ClusterShardingSpec(ClusterShardingSpecConfig config)
-            : base(config, typeof(ClusterShardingSpec))
+        protected ClusterShardingSpec(ClusterShardingSpecConfig config, Type type)
+            : base(config, type)
         {
             _config = config;
 

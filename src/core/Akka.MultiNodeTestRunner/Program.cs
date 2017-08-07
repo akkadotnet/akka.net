@@ -209,10 +209,10 @@ namespace Akka.MultiNodeTestRunner
                             var processes = new List<Process>();
 
                             PublishRunnerMessage($"Starting test {test.Value.First().MethodName}");
+                            Console.Out.WriteLine($"Starting test {test.Value.First().MethodName}");
 
                             StartNewSpec(test.Value);
 #if CORECLR
-                            var ntrBasePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Akka.NodeTestRunner", "bin", "Release"));
                             var ntrNetPath = Path.Combine(AppContext.BaseDirectory, "runner", "net", "Akka.NodeTestRunner.exe");
                             var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "runner", "netcore", "Akka.NodeTestRunner.dll");
                             var alternateIndex = 0;
@@ -221,7 +221,7 @@ namespace Akka.MultiNodeTestRunner
                             {
                                 //Loop through each test, work out number of nodes to run on and kick off process
                                 var sbArguments = new StringBuilder()
-                                    .Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
+                                    //.Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
                                     .Append($@"-Dmultinode.test-class=""{nodeTest.TypeName}"" ")
                                     .Append($@"-Dmultinode.test-method=""{nodeTest.MethodName}"" ")
                                     .Append($@"-Dmultinode.max-nodes={test.Value.Count} ")
@@ -293,8 +293,7 @@ namespace Akka.MultiNodeTestRunner
                             if (platform == "netcore")
                             {
                                 process.StartInfo.FileName = "dotnet";
-                                var ntrPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Akka.NodeTestRunner", "bin", "Release", "netcoreapp1.1", "Akka.NodeTestRunner.dll");
-                                process.StartInfo.Arguments = Path.GetFullPath(ntrPath) + " " + process.StartInfo.Arguments;
+                                process.StartInfo.Arguments = ntrNetCorePath + " " + process.StartInfo.Arguments;
                                 process.StartInfo.WorkingDirectory = Path.GetDirectoryName(assemblyPath);
                             }
 #endif
