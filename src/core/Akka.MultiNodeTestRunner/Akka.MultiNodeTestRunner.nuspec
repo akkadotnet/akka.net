@@ -16,5 +16,6 @@
   </metadata>
   <files>
     <file src="bin\Release\net452\win7-x64\*.*" target="lib\net452\" />
+    <file src="bin\Release\netcoreapp1.1\win7-x64\*.*" target="lib\netcoreapp1.1\" />
   </files>
 </package>

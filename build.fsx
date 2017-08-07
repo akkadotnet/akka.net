@@ -370,10 +370,11 @@ Target "CreateNuget" (fun _ ->
     projects |> Seq.iter (runSingleProject)
 )
 
-Target "CreateMntrNuget" (fun _ ->    
+Target "PublishMntrExes" (fun _ ->
     let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
     let versionSuffixArg = sprintf "/p:VersionSuffix=%s" versionSuffix
 
+    // Windows .NET 4.5.2
     executableProjects |> Seq.iter (fun project ->
         DotNetCli.Restore
             (fun p -> 
@@ -382,6 +383,7 @@ Target "CreateMntrNuget" (fun _ ->
                     AdditionalArgs = ["-r win7-x64"; versionSuffixArg] })
     )
 
+    // Windows .NET 4.5.2
     executableProjects |> Seq.iter (fun project ->  
         DotNetCli.Publish
             (fun p ->
@@ -392,6 +394,22 @@ Target "CreateMntrNuget" (fun _ ->
                     Framework = "net452"
                     VersionSuffix = versionSuffix
                     Output = Path.GetDirectoryName(project) @@ "bin" @@ "Release" @@ "net452" @@ "win7-x64" }))
+
+    // Windows .NET Core
+    executableProjects |> Seq.iter (fun project ->  
+        DotNetCli.Publish
+            (fun p ->
+                { p with
+                    Project = project
+                    Configuration = configuration
+                    Runtime = "win7-x64"
+                    Framework = "netcoreapp1.1"
+                    VersionSuffix = versionSuffix
+                    Output = Path.GetDirectoryName(project) @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" }))
+)
+
+Target "CreateMntrNuget" (fun _ ->    
+    let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
     
     executableProjects |> Seq.iter (fun project ->  
         DotNetCli.Pack
@@ -551,7 +569,7 @@ Target "Nuget" DoNothing
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "CreateMntrNuget" ==> "CreateNuget"
+"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntrExes" ==> "CreateMntrNuget" ==> "CreateNuget"
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
