@@ -445,7 +445,7 @@ Target "Protobuf" <| fun _ ->
         let protoName, destinationPath = assembly
         let args = StringBuilder()
                 |> append (sprintf "-I=%s;%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/") (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
-                |> append (sprintf "--csharp_out=%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
+                |> append (sprintf "--csharp_out=internal_access:%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
                 |> append "--csharp_opt=file_extension=.g.cs"
                 |> append (__SOURCE_DIRECTORY__ @@ "/src/protobuf" @@ protoName)
                 |> toText

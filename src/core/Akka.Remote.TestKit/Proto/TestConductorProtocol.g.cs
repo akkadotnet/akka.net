@@ -10,7 +10,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Remote.TestKit.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from TestConductorProtocol.proto</summary>
-  public static partial class TestConductorProtocolReflection {
+  internal static partial class TestConductorProtocolReflection {
 
     #region Descriptor
     /// <summary>File descriptor for TestConductorProtocol.proto</summary>
@@ -466,7 +466,7 @@ namespace Akka.Remote.TestKit.Proto.Msg {
 
   }
 
-  public sealed partial class EnterBarrier : pb::IMessage<EnterBarrier> {
+  internal sealed partial class EnterBarrier : pb::IMessage<EnterBarrier> {
     private static readonly pb::MessageParser<EnterBarrier> _parser = new pb::MessageParser<EnterBarrier>(() => new EnterBarrier());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<EnterBarrier> Parser { get { return _parser; } }
@@ -641,7 +641,7 @@ namespace Akka.Remote.TestKit.Proto.Msg {
     /// <summary>Container for nested types declared in the EnterBarrier message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public enum BarrierOp {
+      internal enum BarrierOp {
         [pbr::OriginalName("Enter")] Enter = 0,
         [pbr::OriginalName("Fail")] Fail = 1,
         [pbr::OriginalName("Succeeded")] Succeeded = 2,
@@ -1041,7 +1041,7 @@ namespace Akka.Remote.TestKit.Proto.Msg {
     /// <summary>Container for nested types declared in the InjectFailure message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public enum FailType {
+      internal enum FailType {
         [pbr::OriginalName("Throttle")] Throttle = 0,
         [pbr::OriginalName("Disconnect")] Disconnect = 1,
         [pbr::OriginalName("Abort")] Abort = 2,
@@ -1050,7 +1050,7 @@ namespace Akka.Remote.TestKit.Proto.Msg {
         [pbr::OriginalName("ShutdownAbrupt")] ShutdownAbrupt = 5,
       }
 
-      public enum Direction {
+      internal enum Direction {
         [pbr::OriginalName("Send")] Send = 0,
         [pbr::OriginalName("Receive")] Receive = 1,
         [pbr::OriginalName("Both")] Both = 2,

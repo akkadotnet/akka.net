@@ -1491,7 +1491,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the SubjectReachability message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public enum ReachabilityStatus {
+      internal enum ReachabilityStatus {
         [pbr::OriginalName("Reachable")] Reachable = 0,
         [pbr::OriginalName("Unreachable")] Unreachable = 1,
         [pbr::OriginalName("Terminated")] Terminated = 2,
@@ -1701,7 +1701,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the Member message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public enum MemberStatus {
+      internal enum MemberStatus {
         [pbr::OriginalName("Joining")] Joining = 0,
         [pbr::OriginalName("Up")] Up = 1,
         [pbr::OriginalName("Leaving")] Leaving = 2,
@@ -1860,7 +1860,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the VectorClock message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class Version : pb::IMessage<Version> {
+      internal sealed partial class Version : pb::IMessage<Version> {
         private static readonly pb::MessageParser<Version> _parser = new pb::MessageParser<Version>(() => new Version());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Version> Parser { get { return _parser; } }

@@ -134,12 +134,10 @@ namespace Akka.Actor
     /// </summary>
     public class ActorInitializationException : AkkaException
     {
-        private readonly IActorRef _actor;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorInitializationException"/> class.
         /// </summary>
-        protected ActorInitializationException()
+        public ActorInitializationException()
             : base()
         {
         }
@@ -172,7 +170,7 @@ namespace Akka.Actor
         public ActorInitializationException(IActorRef actor, string message, Exception cause = null)
             : base(message, cause)
         {
-            _actor = actor;
+            Actor = actor;
         }
 
 #if SERIALIZATION
@@ -184,13 +182,21 @@ namespace Akka.Actor
         protected ActorInitializationException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
+            Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
+        }
+
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+            info.AddValue("Actor", Actor);
+            base.GetObjectData(info, context);
         }
 #endif
 
         /// <summary>
         /// Retrieves the actor whose initialization logic failed.
         /// </summary>
-        public IActorRef Actor { get { return _actor; } }
+        public IActorRef Actor { get; set; }
 
         /// <summary>
         /// Returns a <see cref="String" /> that represents this instance.
@@ -200,8 +206,8 @@ namespace Akka.Actor
         /// </returns>
         public override string ToString()
         {
-            if (_actor == null) return base.ToString();
-            return _actor + ": " + base.ToString();
+            if (Actor == null) return base.ToString();
+            return Actor + ": " + base.ToString();
         }
     }
 
@@ -256,6 +262,10 @@ namespace Akka.Actor
     /// </summary>
     public class ActorKilledException : AkkaException
     {
+        public ActorKilledException()
+        {
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorKilledException"/> class.
         /// </summary>
