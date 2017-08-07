@@ -205,7 +205,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the Status message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class Version : pb::IMessage<Version> {
+      internal sealed partial class Version : pb::IMessage<Version> {
         private static readonly pb::MessageParser<Version> _parser = new pb::MessageParser<Version>(() => new Version());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Version> Parser { get { return _parser; } }
@@ -472,7 +472,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the Delta message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class ValueHolder : pb::IMessage<ValueHolder> {
+      internal sealed partial class ValueHolder : pb::IMessage<ValueHolder> {
         private static readonly pb::MessageParser<ValueHolder> _parser = new pb::MessageParser<ValueHolder>(() => new ValueHolder());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<ValueHolder> Parser { get { return _parser; } }
@@ -617,7 +617,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization.Proto.Msg {
 
       }
 
-      public sealed partial class Bucket : pb::IMessage<Bucket> {
+      internal sealed partial class Bucket : pb::IMessage<Bucket> {
         private static readonly pb::MessageParser<Bucket> _parser = new pb::MessageParser<Bucket>(() => new Bucket());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Bucket> Parser { get { return _parser; } }

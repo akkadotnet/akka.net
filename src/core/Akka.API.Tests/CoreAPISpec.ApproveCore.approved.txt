@@ -137,12 +137,13 @@ namespace Akka.Actor
     }
     public class ActorInitializationException : Akka.Actor.AkkaException
     {
-        protected ActorInitializationException() { }
+        public ActorInitializationException() { }
         public ActorInitializationException(string message) { }
         public ActorInitializationException(string message, System.Exception cause) { }
         public ActorInitializationException(Akka.Actor.IActorRef actor, string message, System.Exception cause = null) { }
         protected ActorInitializationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public Akka.Actor.IActorRef Actor { get; }
+        public Akka.Actor.IActorRef Actor { get; set; }
+        public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public override string ToString() { }
     }
     public class ActorInterruptedException : Akka.Actor.AkkaException
@@ -151,6 +152,7 @@ namespace Akka.Actor
     }
     public class ActorKilledException : Akka.Actor.AkkaException
     {
+        public ActorKilledException() { }
         public ActorKilledException(string message) { }
         protected ActorKilledException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }

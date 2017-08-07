@@ -302,7 +302,7 @@ namespace Akka.Remote.Tests
             masterSystem.Stop(router);
         }
 
-        [Fact(Skip = "Serialization of custom deciders is currently not supported")]
+        [Fact]
         public void RemoteRouter_must_set_supplied_SupervisorStrategy()
         {
             var probe = CreateTestProbe(masterSystem);
