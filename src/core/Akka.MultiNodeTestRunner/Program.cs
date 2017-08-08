@@ -213,8 +213,8 @@ namespace Akka.MultiNodeTestRunner
 
                             StartNewSpec(test.Value);
 #if CORECLR
-                            var ntrNetPath = Path.Combine(AppContext.BaseDirectory, "runner", "net", "Akka.NodeTestRunner.exe");
-                            var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "runner", "netcore", "Akka.NodeTestRunner.dll");
+                            var ntrNetPath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.exe");
+                            var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.dll");
                             var alternateIndex = 0;
 #endif
                             foreach (var nodeTest in test.Value)

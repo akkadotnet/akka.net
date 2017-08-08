@@ -78,17 +78,6 @@ Target "Build" (fun _ ->
                 Project = solution
                 Configuration = configuration
                 AdditionalArgs = additionalArgs })
-
-    let sourceBasePath = __SOURCE_DIRECTORY__ @@ "src" @@ "core"
-    let ntrBasePath = sourceBasePath @@ "Akka.NodeTestRunner" @@ "bin" @@ "Release"
-    let ntrNetPath =  ntrBasePath @@ "net452"
-    let ntrNetCorePath = ntrBasePath @@ "netcoreapp1.1"
-    let mntrPath = sourceBasePath @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1"
-    let copyNtrNetToMntrTargetPath = mntrPath @@ "runner" @@ "net"
-    let copyNtrNetCoreToMntrTargetPath = mntrPath @@ "runner" @@ "netcore"
-
-    CopyDir (copyNtrNetToMntrTargetPath) (ntrNetPath) allFiles
-    CopyDir (copyNtrNetCoreToMntrTargetPath) (ntrNetCorePath) allFiles
 )
 
 //--------------------------------------------------------------------------------
@@ -176,7 +165,7 @@ Target "RunTestsNetCore" (fun _ ->
 
 Target "MultiNodeTestsNetCore" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1")
+    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" @@ "publish")
 
     let multiNodeTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
@@ -217,7 +206,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 
 Target "MultiNodeTestsMultiPlatform" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1")
+    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" @@ "publish")
 
     let multiNodeTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
@@ -380,7 +369,7 @@ Target "CreateNuget" (fun _ ->
     projects |> Seq.iter (runSingleProject)
 )
 
-Target "PublishMntrExes" (fun _ ->
+Target "PublishMntr" (fun _ ->
     let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
     let versionSuffixArg = sprintf "/p:VersionSuffix=%s" versionSuffix
 
@@ -402,8 +391,7 @@ Target "PublishMntrExes" (fun _ ->
                     Configuration = configuration
                     Runtime = "win7-x64"
                     Framework = "net452"
-                    VersionSuffix = versionSuffix
-                    Output = Path.GetDirectoryName(project) @@ "bin" @@ "Release" @@ "net452" @@ "win7-x64" }))
+                    VersionSuffix = versionSuffix }))
 
     // Windows .NET Core
     executableProjects |> Seq.iter (fun project ->  
@@ -414,8 +402,7 @@ Target "PublishMntrExes" (fun _ ->
                     Configuration = configuration
                     Runtime = "win7-x64"
                     Framework = "netcoreapp1.1"
-                    VersionSuffix = versionSuffix
-                    Output = Path.GetDirectoryName(project) @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" }))
+                    VersionSuffix = versionSuffix }))
 )
 
 Target "CreateMntrNuget" (fun _ ->    
@@ -572,14 +559,14 @@ Target "All" DoNothing
 Target "Nuget" DoNothing
 
 // build dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
+"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
 
 // tests dependencies
 // "RunTests" step doesn't require Clean ==> "RestorePackages" step
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntrExes" ==> "CreateMntrNuget" ==> "CreateNuget"
+"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "CreateMntrNuget" ==> "CreateNuget"
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
