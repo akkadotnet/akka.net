@@ -135,6 +135,11 @@ Target "RunTests" (fun _ ->
         
         ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
 
+        // dotnet process will be killed by ExecProcess (or throw if can't) '
+        // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not
+        killProcess "xunit.console"
+        killProcess "dotnet"
+
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
 
@@ -159,6 +164,11 @@ Target "RunTestsNetCore" (fun _ ->
             info.Arguments <- (sprintf "xunit -f netcoreapp1.1 -c Release -parallel none -teamcity -xml %s_xunit_netcore.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
         
         ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+
+        // dotnet process will be killed by FAKE.ExecProcess (or throw if can't)
+        // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not be killed
+        killProcess "xunit.console"
+        killProcess "dotnet"
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
