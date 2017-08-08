@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26430.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
@@ -174,8 +174,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnBenchmark", "benchmark\SpawnBenchmark\SpawnBenchmark.csproj", "{DA4BDE1E-1ACA-482A-9329-952C3E36F97D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemotePingPong", "benchmark\RemotePingPong\RemotePingPong.csproj", "{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Akka.FSharp", "core\Akka.FSharp\Akka.FSharp.fsproj", "{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -704,18 +702,6 @@ Global
 		{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}.Release|x64.Build.0 = Release|Any CPU
 		{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}.Release|x86.ActiveCfg = Release|Any CPU
 		{5AA81B79-34DD-4DD7-9D40-A5CA389786DF}.Release|x86.Build.0 = Release|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Debug|x64.Build.0 = Debug|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Debug|x86.Build.0 = Debug|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Release|x64.ActiveCfg = Release|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Release|x64.Build.0 = Release|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Release|x86.ActiveCfg = Release|Any CPU
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -788,6 +774,5 @@ Global
 		{99CCB7CA-E1EE-4497-BF52-2200A0EC5CB1} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 		{DA4BDE1E-1ACA-482A-9329-952C3E36F97D} = {73108242-625A-4D7B-AA09-63375DBAE464}
 		{5AA81B79-34DD-4DD7-9D40-A5CA389786DF} = {73108242-625A-4D7B-AA09-63375DBAE464}
-		{F8972185-CD9B-48D2-93A3-3EA5B3F47F81} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 	EndGlobalSection
 EndGlobal
