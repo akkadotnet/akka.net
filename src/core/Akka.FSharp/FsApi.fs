@@ -278,6 +278,7 @@ module Actors =
                         member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
                         member __.Watch(aref:IActorRef) = context.Watch aref
                         member __.Unwatch(aref:IActorRef) = context.Unwatch aref
+                        member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
                         member __.Log = lazy (Akka.Event.Logging.GetLogger(context))
                         member __.Defer fn = deferables <- fn::deferables 
                         member __.Stash() = (this :> IWithUnboundedStash).Stash.Stash()

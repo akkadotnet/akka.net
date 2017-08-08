@@ -32,6 +32,7 @@ module IncrementalTests =
 
     let getUnitTestProjects() =
         let allTestProjects = !! "./**/core/**/*.Tests.csproj"
+                              ++ "./**/core/**/*.Tests.fsproj"
                               ++ "./**/contrib/**/*.Tests.csproj"
                               -- "./**/serializers/**/*Wire*.csproj"
         allTestProjects 
@@ -82,7 +83,7 @@ module IncrementalTests =
   
     // Gather all of the folder paths that contain .csproj files
     let getAllProjectFolders() =
-        !! "./src/**/*.csproj"
+        !! "./src/**/*.csproj" ++ "./src/**/*.fsproj"
         |> Seq.map (fun f -> DirectoryName (FullName f))
 
     // Check if the altered file is inside of any of the folder paths that contain .csproj files
@@ -102,7 +103,7 @@ module IncrementalTests =
         let findCsprojFileFor fileProjectContains =
             //let projectFolder, file, contains = fileProjectContains
             match fileProjectContains.contains with
-            | true -> Some(!! (fileProjectContains.projectFolder @@ "*.csproj") |> Seq.head)
+            | true -> Some(!! (fileProjectContains.projectFolder @@ "*.csproj") ++ (fileProjectContains.projectFolder @@ "*.fsproj") |> Seq.head)
             | false -> None
         fileProjectContainsSeq
         |> Seq.map (fun x -> findCsprojFileFor x) 
@@ -193,12 +194,12 @@ module IncrementalTests =
 
     let isTestProject csproj testMode =
         match testMode with
-        | Unit -> (filename csproj).Contains("Tests.csproj")
+        | Unit -> (filename csproj).Contains("Tests.csproj") || (filename csproj).Contains("Tests.fsproj")
         | MNTR -> (filename csproj).Contains("Tests.MultiNode.csproj")
         | Perf -> (filename csproj).Contains("Tests.Performance.csproj")
 
     let getAllProjectDependencies testMode =
-        !! "./src/**/*.csproj"
+        !! "./src/**/*.csproj" ++ "./src/**/*.fsproj"
         |> Seq.map (fun f -> { parentProject = { projectName = filename f; projectPath = f }; dependencies = getDependentProjects f; isTestProject = isTestProject f testMode })
     
     let rec findTestProjectsThatHaveDependencyOn project testMode =
