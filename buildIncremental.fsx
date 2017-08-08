@@ -140,6 +140,7 @@ module IncrementalTests =
 
     let getMntrProjects() =
         !! "./src/**/*Tests.MultiNode.csproj"
+        |> Seq.filter (fun p -> projectTargetsNetCore p)
         |> Seq.map (fun x -> x.ToString())
     
     let getAllMntrTestAssemblies() = // if we're not running incremental tests
