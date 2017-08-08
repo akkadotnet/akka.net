@@ -118,6 +118,13 @@ module IncrementalTests =
             logf "Could not find built assembly for %s.  Make sure project is built in Release config." (fileNameWithoutExt project);
             reraise()
     
+    // Utility function to check if a .csproj file targets netstandard1.6 or netcoreapp1.1
+    let projectTargetsNetCore project =
+        let targetFrameworks = (XMLRead true project "" "" "//Project/PropertyGroup/TargetFrameworks") |> Seq.head
+        match targetFrameworks with
+        | p when p.Contains("netstandard1.6") || p.Contains("netcoreapp1.1") -> true
+        | _ -> false
+
     let getNetCoreAssemblyForProject project =
         try
             !! ("src" @@ "**" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ fileNameWithoutExt project + ".dll")
@@ -246,6 +253,7 @@ module IncrementalTests =
     
     let getIncrementalNetCoreMNTRTests() =
         getIncrementalTestProjects2 MNTR
+        |> Seq.filter (fun p -> projectTargetsNetCore p)
         |> Seq.map (fun p -> getNetCoreAssemblyForProject p)
     
     let getIncrementalPerfTests() =
