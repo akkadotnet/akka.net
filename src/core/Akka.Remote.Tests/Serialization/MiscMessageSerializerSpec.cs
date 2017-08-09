@@ -260,6 +260,27 @@ namespace Akka.Remote.Tests.Serialization
             AssertEqual(message);
         }
 
+        [Fact]
+        public void Can_serialize_ConsistentHashingPool()
+        {
+            var message = new ConsistentHashingPool(nrOfInstances: 25);
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_ConsistentHashingPoolWithDispatcherAndResizer()
+        {
+            var defaultResizer = new DefaultResizer(2, 4, 1, 0.5D, 0.3D, 0.1D, 55);
+            var message = new ConsistentHashingPool(
+                nrOfInstances: 25,
+                routerDispatcher: "my-dispatcher",
+                usePoolDispatcher: true,
+                resizer: defaultResizer,
+                supervisorStrategy: SupervisorStrategy.DefaultStrategy);
+
+            AssertEqual(message);
+        }
+
         //
         // Remote Messages
         //
