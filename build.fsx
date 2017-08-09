@@ -32,6 +32,9 @@ let versionSuffix =
     match (getBuildParam "nugetprerelease") with
     | "dev" -> "beta" + (if (not (buildNumber = "0")) then ("-" + buildNumber) else "")
     | _ -> ""
+let releaseNotes =
+    File.ReadLines "./RELEASE_NOTES.md"
+    |> ReleaseNotesHelper.parseReleaseNotes
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -51,9 +54,6 @@ Target "Clean" (fun _ ->
 )
 
 Target "AssemblyInfo" (fun _ ->
-    let releaseNotes =
-        File.ReadLines "./RELEASE_NOTES.md"
-        |> ReleaseNotesHelper.parseReleaseNotes
     XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" releaseNotes.AssemblyVersion    
     XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/PackageReleaseNotes" (releaseNotes.Notes |> String.concat "\n")
 )
@@ -78,17 +78,6 @@ Target "Build" (fun _ ->
                 Project = solution
                 Configuration = configuration
                 AdditionalArgs = additionalArgs })
-
-    let sourceBasePath = __SOURCE_DIRECTORY__ @@ "src" @@ "core"
-    let ntrBasePath = sourceBasePath @@ "Akka.NodeTestRunner" @@ "bin" @@ "Release"
-    let ntrNetPath =  ntrBasePath @@ "net452"
-    let ntrNetCorePath = ntrBasePath @@ "netcoreapp1.1"
-    let mntrPath = sourceBasePath @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1"
-    let copyNtrNetToMntrTargetPath = mntrPath @@ "runner" @@ "net"
-    let copyNtrNetCoreToMntrTargetPath = mntrPath @@ "runner" @@ "netcore"
-
-    CopyDir (copyNtrNetToMntrTargetPath) (ntrNetPath) allFiles
-    CopyDir (copyNtrNetCoreToMntrTargetPath) (ntrNetCorePath) allFiles
 )
 
 //--------------------------------------------------------------------------------
@@ -174,9 +163,45 @@ Target "RunTestsNetCore" (fun _ ->
     projects |> Seq.iter (runSingleProject)
 )
 
+Target "MultiNodeTests" (fun _ ->
+    ActivateFinalTarget "KillCreatedProcesses"
+    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
+
+    let multiNodeTestAssemblies = 
+        match getBuildParamOrDefault "incremental" "" with
+        | "true" -> log "The following test projects would be run under Incremental Test config..."
+                    getIncrementalMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
+        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
+                            getIncrementalMNTRTests() |> Seq.iter log
+                            getAllMntrTestAssemblies()
+        | _ -> log "All test projects will be run"
+               getAllMntrTestAssemblies()
+
+    printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+
+    let runMultiNodeSpec assembly =
+        let spec = getBuildParam "spec"
+
+        let args = StringBuilder()
+                |> append assembly
+                |> append "-Dmultinode.teamcity=true"
+                |> append "-Dmultinode.enable-filesink=on"
+                |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
+                |> toText
+
+        let result = ExecProcess(fun info -> 
+            info.FileName <- multiNodeTestPath
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+        if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+    
+    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+)
+
 Target "MultiNodeTestsNetCore" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1")
+    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" @@ "publish")
 
     let multiNodeTestAssemblies = 
         match getBuildParamOrDefault "incremental" "" with
@@ -211,83 +236,6 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                 info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
                 info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
             if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-    
-    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
-)
-
-Target "MultiNodeTestsMultiPlatform" (fun _ ->
-    ActivateFinalTarget "KillCreatedProcesses"
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1")
-
-    let multiNodeTestAssemblies = 
-        match getBuildParamOrDefault "incremental" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalNetCoreMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
-                            getIncrementalNetCoreMNTRTests() |> Seq.iter log
-                            getAllMntrTestNetCoreAssemblies()
-        | _ -> log "All test projects will be run"
-               getAllMntrTestNetCoreAssemblies()
-
-    printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
-
-    let runMultiNodeSpec assembly =
-        match assembly with
-        | null -> ()
-        | _ ->
-            let spec = getBuildParam "spec"
-
-            let args = StringBuilder()
-                    |> append multiNodeTestPath
-                    |> append assembly
-                    |> append "-Dmultinode.teamcity=true"
-                    |> append "-Dmultinode.enable-filesink=on"
-                    |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                    |> append "-Dmultinode.platform=multi"
-                    |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
-                    |> toText
-
-            let result = ExecProcess(fun info -> 
-                info.FileName <- "dotnet"
-                info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-                info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-            if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-    
-    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
-)
-
-Target "MultiNodeTests" (fun _ ->
-    ActivateFinalTarget "KillCreatedProcesses"
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
-
-    let multiNodeTestAssemblies = 
-        match getBuildParamOrDefault "incremental" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
-                            getIncrementalMNTRTests() |> Seq.iter log
-                            getAllMntrTestAssemblies()
-        | _ -> log "All test projects will be run"
-               getAllMntrTestAssemblies()
-
-    printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
-
-    let runMultiNodeSpec assembly =
-        let spec = getBuildParam "spec"
-
-        let args = StringBuilder()
-                |> append assembly
-                |> append "-Dmultinode.teamcity=true"
-                |> append "-Dmultinode.enable-filesink=on"
-                |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
-                |> toText
-
-        let result = ExecProcess(fun info -> 
-            info.FileName <- multiNodeTestPath
-            info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-            info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-        if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
     
     multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
@@ -378,6 +326,57 @@ Target "CreateNuget" (fun _ ->
                     OutputPath = outputNuGet })
 
     projects |> Seq.iter (runSingleProject)
+)
+
+Target "PublishMntr" (fun _ ->
+    let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
+    let versionSuffixArg = sprintf "/p:VersionSuffix=%s" versionSuffix
+
+    // Windows .NET 4.5.2
+    executableProjects |> Seq.iter (fun project ->
+        DotNetCli.Restore
+            (fun p -> 
+                { p with
+                    Project = project                  
+                    AdditionalArgs = ["-r win7-x64"; versionSuffixArg] })
+    )
+
+    // Windows .NET 4.5.2
+    executableProjects |> Seq.iter (fun project ->  
+        DotNetCli.Publish
+            (fun p ->
+                { p with
+                    Project = project
+                    Configuration = configuration
+                    Runtime = "win7-x64"
+                    Framework = "net452"
+                    VersionSuffix = versionSuffix }))
+
+    // Windows .NET Core
+    executableProjects |> Seq.iter (fun project ->  
+        DotNetCli.Publish
+            (fun p ->
+                { p with
+                    Project = project
+                    Configuration = configuration
+                    Runtime = "win7-x64"
+                    Framework = "netcoreapp1.1"
+                    VersionSuffix = versionSuffix }))
+)
+
+Target "CreateMntrNuget" (fun _ ->    
+    let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
+    
+    executableProjects |> Seq.iter (fun project ->  
+        DotNetCli.Pack
+            (fun p -> 
+                { p with
+                    Project = project
+                    Configuration = configuration
+                    AdditionalArgs = ["--include-symbols"]
+                    VersionSuffix = versionSuffix
+                    OutputPath = outputNuGet } )
+    )
 )
 
 Target "PublishNuget" (fun _ ->
@@ -519,14 +518,14 @@ Target "All" DoNothing
 Target "Nuget" DoNothing
 
 // build dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "BuildRelease"
+"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
 
 // tests dependencies
 // "RunTests" step doesn't require Clean ==> "RestorePackages" step
 "Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
 
 // nuget dependencies
-"Clean" ==> "RestorePackages" ==> "Build" ==> "CreateNuget"
+"Clean" ==> "RestorePackages" ==> "Build" ==> "PublishMntr" ==> "CreateMntrNuget" ==> "CreateNuget"
 "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
