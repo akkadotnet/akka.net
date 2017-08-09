@@ -195,7 +195,6 @@ Target "MultiNodeTestsNetCore" (fun _ ->
         | null -> ()
         | _ ->
             let spec = getBuildParam "spec"
-
             let args = StringBuilder()
                     |> append multiNodeTestPath
                     |> append assembly
@@ -231,12 +230,15 @@ Target "MultiNodeTestsMultiPlatform" (fun _ ->
 
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
+    let defaultSpec = "Akka.Remote.Tests.MultiNode.RemoteDeliverySpec"
+    let sampleMntrSpecAssemblyFilter (assemblies:seq<string>) =
+        assemblies |> Seq.filter (fun x -> x.Contains("Akka.Remote.Tests.MultiNode.dll"))
+
     let runMultiNodeSpec assembly =
         match assembly with
         | null -> ()
         | _ ->
-            let spec = getBuildParam "spec"
-
+            let spec = getBuildParamOrDefault "spec" defaultSpec
             let args = StringBuilder()
                     |> append multiNodeTestPath
                     |> append assembly
@@ -253,7 +255,9 @@ Target "MultiNodeTestsMultiPlatform" (fun _ ->
                 info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
             if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
     
-    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+    multiNodeTestAssemblies 
+    |> sampleMntrSpecAssemblyFilter 
+    |> Seq.iter (runMultiNodeSpec)
 )
 
 Target "MultiNodeTests" (fun _ ->
@@ -274,7 +278,6 @@ Target "MultiNodeTests" (fun _ ->
 
     let runMultiNodeSpec assembly =
         let spec = getBuildParam "spec"
-
         let args = StringBuilder()
                 |> append assembly
                 |> append "-Dmultinode.teamcity=true"
