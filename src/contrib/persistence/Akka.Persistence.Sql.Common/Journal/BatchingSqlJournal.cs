@@ -19,7 +19,6 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
-using Akka.Serialization;
 using Akka.Util;
 
 namespace Akka.Persistence.Sql.Common.Journal
@@ -507,7 +506,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly HashSet<IActorRef> _allIdsSubscribers;
         private readonly HashSet<string> _allPersistenceIds;
 
-        private readonly Func<Type, Serializer> _getSerializer;
+        private readonly Akka.Serialization.Serialization _serialization;
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
 
@@ -527,7 +526,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             _remainingOperations = Setup.MaxConcurrentOperations;
             Buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
-            _getSerializer = Context.System.Serialization.FindSerializerFor;
+            _serialization = Context.System.Serialization;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
                 maxFailures: Setup.CircuitBreakerSettings.MaxFailures,
@@ -1151,7 +1150,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             var manifest = string.IsNullOrEmpty(persistent.Manifest)
                 ? payloadType.TypeQualifiedName()
                 : persistent.Manifest;
-            var serializer = _getSerializer(payloadType);
+            var serializer = _serialization.FindSerializerForType(payloadType);
             var binary = serializer.ToBinary(persistent.Payload);
 
             AddParameter(command, "@PersistenceId", DbType.String, persistent.PersistenceId);
@@ -1177,7 +1176,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             var payload = reader[PayloadIndex];
 
             var type = Type.GetType(manifest, true);
-            var deserializer = _getSerializer(type);
+            var deserializer = _serialization.FindSerializerForType(type);
             var deserialized = deserializer.FromBinary((byte[])payload, type);
 
             var persistent = new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
