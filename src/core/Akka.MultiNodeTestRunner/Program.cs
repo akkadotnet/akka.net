@@ -40,8 +40,7 @@ namespace Akka.MultiNodeTestRunner
         private static HashSet<string> _validNetCorePlatform = new HashSet<string>
         {
             "net",
-            "netcore",
-            "multi"
+            "netcore"
         };
 
         protected static ActorSystem TestRunSystem;
@@ -137,7 +136,7 @@ namespace Akka.MultiNodeTestRunner
 #if CORECLR
             if (!_validNetCorePlatform.Contains(platform))
             {
-                throw new Exception($"Target platform not supported: {platform}. Supported platforms are net, netcore and multi");
+                throw new Exception($"Target platform not supported: {platform}. Supported platforms are net and netcore");
             }
 #else
             if (platform != "net")
@@ -244,20 +243,6 @@ namespace Akka.MultiNodeTestRunner
                                         fileName = "dotnet";
                                         sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
                                         sbArguments.Insert(0, ntrNetCorePath);
-                                        break;
-                                    case "multi":
-                                        if (alternateIndex % 2 == 0)
-                                        {
-                                            fileName = ntrNetPath;
-                                            sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{ChangeDllPathPlatform(assemblyPath, "net452")}"" ");
-                                        }
-                                        else
-                                        {
-                                            fileName = "dotnet";
-                                            sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{ChangeDllPathPlatform(assemblyPath, "netcoreapp1.1")}"" ");
-                                            sbArguments.Insert(0, ntrNetCorePath);
-                                        }
-                                        ++alternateIndex;
                                         break;
                                 }
                                 var process = new Process
