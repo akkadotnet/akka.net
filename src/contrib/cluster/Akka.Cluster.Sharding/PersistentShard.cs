@@ -283,7 +283,7 @@ namespace Akka.Cluster.Sharding
         private void RestartRememberedEntities()
         {
             RememberedEntitiesRecoveryStrategy.RecoverEntities(State.Entries).ForEach(scheduledRecovery =>
-                scheduledRecovery.ContinueWith(t => new RestartEntities(t.Result), TaskContinuationOptions.ExecuteSynchronously).PipeTo(_context.Self));
+                scheduledRecovery.ContinueWith(t => new RestartEntities(t.Result), TaskContinuationOptions.ExecuteSynchronously).PipeTo(_context.Self, _context.Self));
         }
     }
 }
